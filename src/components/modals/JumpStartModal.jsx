@@ -1,0 +1,912 @@
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Upload,
+  Link,
+  Search,
+  Image as ImageIcon,
+  Trash2,
+  Eraser,
+  Download,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Video,
+  Play,
+  Clock,
+  ArrowRight,
+  ArrowLeft,
+  Camera,
+  Move,
+  Sparkles,
+  Minus,
+  Plus
+} from 'lucide-react';
+import { Rect } from 'react-konva';
+import CanvasBoard from '@/components/canvas/CanvasBoard';
+import URLImage from '@/components/canvas/URLImage';
+import LoadingModal from '@/components/canvas/LoadingModal';
+import { supabase } from '@/lib/supabase';
+
+// Aspect ratio presets
+const ASPECT_RATIOS = {
+  '16:9': { label: 'Landscape (16:9)', ratio: 16/9, width480: 854, height480: 480, width720: 1280, height720: 720 },
+  '9:16': { label: 'Portrait (9:16)', ratio: 9/16, width480: 480, height480: 854, width720: 720, height720: 1280 },
+  '1:1': { label: 'Square (1:1)', ratio: 1, width480: 480, height480: 480, width720: 720, height720: 720 },
+  '4:3': { label: 'Standard (4:3)', ratio: 4/3, width480: 640, height480: 480, width720: 960, height720: 720 },
+};
+
+// Camera Movement Presets
+const CAMERA_MOVEMENTS = [
+  { value: '', label: 'No Movement' },
+  { value: 'slow zoom in', label: 'Slow Zoom In' },
+  { value: 'slow zoom out', label: 'Slow Zoom Out' },
+  { value: 'pan left to right', label: 'Pan Left to Right' },
+  { value: 'pan right to left', label: 'Pan Right to Left' },
+  { value: 'tilt up', label: 'Tilt Up' },
+  { value: 'tilt down', label: 'Tilt Down' },
+  { value: 'dolly forward', label: 'Dolly Forward' },
+  { value: 'orbit clockwise', label: 'Orbit Clockwise' },
+  { value: 'tracking shot', label: 'Tracking Shot' },
+];
+
+// Camera Angle Presets
+const CAMERA_ANGLES = [
+  { value: '', label: 'Default Angle' },
+  { value: 'eye level', label: 'Eye Level' },
+  { value: 'low angle', label: 'Low Angle (Looking Up)' },
+  { value: 'high angle', label: 'High Angle (Looking Down)' },
+  { value: 'birds eye view', label: "Bird's Eye View" },
+  { value: 'dutch angle', label: 'Dutch Angle (Tilted)' },
+  { value: 'close up', label: 'Close Up' },
+  { value: 'wide shot', label: 'Wide Shot' },
+];
+
+// Video Style Presets
+const VIDEO_STYLES = [
+  { value: '', label: 'No Style' },
+  { value: 'cinematic', label: 'Cinematic' },
+  { value: 'documentary', label: 'Documentary' },
+  { value: 'dreamy', label: 'Dreamy / Ethereal' },
+  { value: 'vintage film', label: 'Vintage Film' },
+  { value: 'noir', label: 'Film Noir' },
+  { value: 'anime', label: 'Anime Style' },
+  { value: 'slow motion', label: 'Slow Motion' },
+  { value: 'vhs retro', label: 'VHS Retro' },
+];
+
+// Special Effects Presets
+const SPECIAL_EFFECTS = [
+  { value: '', label: 'No Effects' },
+  { value: 'particles floating', label: 'Floating Particles' },
+  { value: 'light rays', label: 'Light Rays / God Rays' },
+  { value: 'lens flare', label: 'Lens Flare' },
+  { value: 'bokeh', label: 'Bokeh Blur' },
+  { value: 'rain', label: 'Rain' },
+  { value: 'snow', label: 'Snow' },
+  { value: 'fog', label: 'Fog / Mist' },
+  { value: 'film grain', label: 'Film Grain' },
+];
+
+/**
+ * JumpStartModal - Image to Video Generation
+ */
+export default function JumpStartModal({ 
+  isOpen, 
+  onClose, 
+  username = 'default',
+  onVideoGenerated,
+  isEmbedded = false
+}) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [capturedCanvasData, setCapturedCanvasData] = useState(null);
+  
+  const [images, setImages] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tool, setTool] = useState('move');
+  const [brushSize, setBrushSize] = useState(30);
+  const [showBrushPanel, setShowBrushPanel] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentStroke, setCurrentStroke] = useState([]);
+  const currentStrokeRef = useRef([]);
+  const isDrawingRef = useRef(false);
+  const brushPanelRef = useRef(null);
+  
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800
+  });
+
+  useEffect(() => {
+    const handleResize = () => setWindowSize({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [showUrlImport, setShowUrlImport] = useState(false);
+  const [rightPanel, setRightPanel] = useState(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  
+  // Video settings
+  const [aspectRatio, setAspectRatio] = useState('16:9');
+  const [resolution, setResolution] = useState('480p');
+  const [duration, setDuration] = useState(5);
+  const [cameraMovement, setCameraMovement] = useState('');
+  const [cameraAngle, setCameraAngle] = useState('');
+  const [videoStyle, setVideoStyle] = useState('');
+  const [specialEffects, setSpecialEffects] = useState('');
+  const [description, setDescription] = useState('');
+  
+  // Generated video
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
+  const [hasAddedToEditor, setHasAddedToEditor] = useState(false);
+  const [lastPromptUsed, setLastPromptUsed] = useState('');
+  
+  const stageRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+
+  // Calculate canvas dimensions
+  const getCanvasDimensions = () => {
+    const config = ASPECT_RATIOS[aspectRatio];
+    const targetWidth = resolution === '720p' ? config.width720 : config.width480;
+    const targetHeight = resolution === '720p' ? config.height720 : config.height480;
+    
+    const maxModalWidth = Math.min(windowSize.width * 0.9, 1600);
+    const maxModalHeight = windowSize.height * 0.9;
+
+    const LEFT_SIDEBAR_WIDTH = 64;
+    const RIGHT_PANEL_WIDTH = rightPanel ? 320 : 0;
+    const MODAL_HORIZONTAL_PADDING = 48;
+    const MODAL_VERTICAL_PADDING = 240;
+    const CANVAS_VIEWPORT_PADDING = 20;
+
+    const canvasViewportWidth = maxModalWidth - LEFT_SIDEBAR_WIDTH - RIGHT_PANEL_WIDTH - MODAL_HORIZONTAL_PADDING;
+    const canvasViewportHeight = Math.max(400, Math.round(maxModalHeight - MODAL_VERTICAL_PADDING));
+
+    const canvasAvailableWidth = Math.max(200, Math.floor(canvasViewportWidth - CANVAS_VIEWPORT_PADDING * 2));
+    const canvasAvailableHeight = Math.max(200, Math.floor(canvasViewportHeight - CANVAS_VIEWPORT_PADDING * 2));
+    
+    const scale = Math.min(canvasAvailableWidth / targetWidth, canvasAvailableHeight / targetHeight);
+    
+    return {
+      displayWidth: Math.round(targetWidth * scale),
+      displayHeight: Math.round(targetHeight * scale),
+      outputWidth: targetWidth,
+      outputHeight: targetHeight,
+      viewportWidth: canvasViewportWidth,
+      viewportHeight: canvasViewportHeight
+    };
+  };
+  
+  const canvasDimensions = getCanvasDimensions();
+  const canvasWidth = canvasDimensions.displayWidth;
+  const canvasHeight = canvasDimensions.displayHeight;
+
+  const flattenCanvas = (format = 'image/jpeg') => {
+    if (!stageRef.current) return null;
+    
+    const stage = stageRef.current;
+    const transformers = stage.find('Transformer');
+    transformers.forEach((tr) => tr.hide());
+    
+    const { outputWidth, outputHeight, displayWidth, displayHeight } = canvasDimensions;
+    const pixelRatio = Math.max(outputWidth / displayWidth, outputHeight / displayHeight);
+    
+    const dataURL = stage.toDataURL({ 
+      pixelRatio: pixelRatio,
+      mimeType: format,
+      quality: 0.95
+    });
+    
+    transformers.forEach((tr) => tr.show());
+    return dataURL;
+  };
+
+  const getViewportCenter = useCallback(() => {
+    const stage = stageRef.current;
+    let viewportCenterX = canvasWidth / 2;
+    let viewportCenterY = canvasHeight / 2;
+    
+    if (stage) {
+      const scale = stage.scaleX();
+      const stageX = stage.x();
+      const stageY = stage.y();
+      viewportCenterX = (canvasWidth / 2 - stageX) / scale;
+      viewportCenterY = (canvasHeight / 2 - stageY) / scale;
+    }
+    
+    return { x: viewportCenterX, y: viewportCenterY };
+  }, [canvasWidth, canvasHeight]);
+
+  // Handle import from URL
+  const handleImportFromUrl = async () => {
+    if (!urlInput.trim()) {
+      toast.error('Please enter a URL');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingMessage('Importing image...');
+
+    try {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        const center = getViewportCenter();
+        const newImage = {
+          id: uuidv4(),
+          src: urlInput,
+          x: center.x - img.width / 2,
+          y: center.y - img.height / 2,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          zIndex: images.length,
+          masks: []
+        };
+        setImages((prev) => [...prev, newImage]);
+        toast.success('Image imported!');
+        setIsLoading(false);
+        setShowUrlImport(false);
+        setUrlInput('');
+      };
+      
+      img.onerror = () => {
+        toast.error('Failed to load image from URL');
+        setIsLoading(false);
+      };
+      
+      img.src = urlInput;
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Failed to import image');
+      setIsLoading(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const center = getViewportCenter();
+          const newImage = {
+            id: uuidv4(),
+            src: event.target.result,
+            x: center.x - img.width / 2,
+            y: center.y - img.height / 2,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            zIndex: images.length,
+            masks: []
+          };
+          setImages((prev) => [...prev, newImage]);
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle drag and drop
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      const fakeEvent = { target: { files } };
+      handleFileUpload(fakeEvent);
+    }
+  };
+
+  const handleSelect = (id) => setSelectedId(id);
+
+  const handleImageChange = (updatedImage) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === updatedImage.id ? updatedImage : img))
+    );
+  };
+
+  const handleDelete = () => {
+    if (selectedId) {
+      setImages((prev) => prev.filter((img) => img.id !== selectedId));
+      setSelectedId(null);
+    }
+  };
+
+  const handleBringToFront = () => {
+    if (!selectedId) return;
+    setImages((prev) => {
+      const maxZ = Math.max(...prev.map((img) => img.zIndex));
+      return prev.map((img) =>
+        img.id === selectedId ? { ...img, zIndex: maxZ + 1 } : img
+      );
+    });
+  };
+
+  const handleSendToBack = () => {
+    if (!selectedId) return;
+    setImages((prev) => {
+      const minZ = Math.min(...prev.map((img) => img.zIndex));
+      return prev.map((img) =>
+        img.id === selectedId ? { ...img, zIndex: minZ - 1 } : img
+      );
+    });
+  };
+
+  const handleNextStep = () => {
+    if (images.length === 0) {
+      toast.error('Please add at least one image to the canvas');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingMessage('Capturing composition...');
+
+    setTimeout(() => {
+      try {
+        const data = flattenCanvas('image/jpeg');
+        if (!data) {
+          throw new Error('Failed to capture canvas');
+        }
+        setCapturedCanvasData(data);
+        setCurrentStep(2);
+      } catch (error) {
+        console.error('Capture error:', error);
+        toast.error('Failed to capture canvas. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    }, 100);
+  };
+
+  const buildFullPrompt = () => {
+    const parts = [];
+    if (cameraMovement) parts.push(cameraMovement);
+    if (cameraAngle) parts.push(`${cameraAngle} shot`);
+    if (videoStyle) parts.push(`${videoStyle} style`);
+    if (specialEffects) parts.push(specialEffects);
+    if (description.trim()) parts.push(description.trim());
+    return parts.join(', ') || 'smooth camera motion, high quality video';
+  };
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const pollForResult = async (requestId) => {
+    try {
+      const response = await fetch('/api/jumpstart/result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
+
+      if (!response.ok) throw new Error('Failed to check status');
+
+      const data = await response.json();
+      
+      if (data.status === 'completed') {
+        stopPolling();
+        setIsLoading(false);
+        setGeneratedVideoUrl(data.videoUrl);
+        setCurrentStep(3);
+        setHasAddedToEditor(false);
+        toast.success('Video generated successfully!');
+      } else if (data.status === 'failed') {
+        stopPolling();
+        setIsLoading(false);
+        toast.error(data.error || 'Video generation failed');
+      } else {
+        setLoadingMessage(`Generating video... (${data.status})`);
+      }
+    } catch (error) {
+      console.error('Poll error:', error);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!capturedCanvasData) {
+      toast.error('No composition found. Please go back and try again.');
+      return;
+    }
+
+    const fullPrompt = buildFullPrompt();
+    setLastPromptUsed(fullPrompt);
+
+    setIsLoading(true);
+    setLoadingMessage('Generating video... This may take 1-2 minutes');
+    setGeneratedVideoUrl(null);
+    stopPolling();
+
+    try {
+      const base64Data = capturedCanvasData.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+      const formData = new FormData();
+      formData.append('image', blob, 'canvas.jpg');
+      formData.append('prompt', fullPrompt);
+      formData.append('username', username);
+      formData.append('resolution', resolution);
+      formData.append('duration', duration.toString());
+
+      const result = await fetch('/api/jumpstart/generate', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || 'Failed to generate video');
+      }
+
+      const data = await result.json();
+      
+      if (data.videoUrl) {
+        setIsLoading(false);
+        setGeneratedVideoUrl(data.videoUrl);
+        setCurrentStep(3);
+        setHasAddedToEditor(false);
+        toast.success('Video generated successfully!');
+        return;
+      }
+
+      if (data.requestId) {
+        setLoadingMessage('Video generation started. Checking status...');
+        pollForResult(data.requestId);
+        pollIntervalRef.current = setInterval(() => {
+          pollForResult(data.requestId);
+        }, 3000);
+      } else {
+        throw new Error('No request ID returned from API');
+      }
+    } catch (error) {
+      console.error('Generate error:', error);
+      stopPolling();
+      setIsLoading(false);
+      toast.error(error.message || 'Failed to generate video');
+    }
+  };
+
+  const handleDownloadVideo = () => {
+    if (!generatedVideoUrl) return;
+    
+    const link = document.createElement('a');
+    link.download = 'stitch-video.mp4';
+    link.href = generatedVideoUrl;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Video download started!');
+  };
+
+  const handleAddToEditor = () => {
+    if (!generatedVideoUrl) {
+      toast.error('No video to add yet');
+      return;
+    }
+    if (onVideoGenerated) {
+      onVideoGenerated(generatedVideoUrl);
+      setHasAddedToEditor(true);
+      toast.success('Added to editor!');
+    }
+  };
+
+  const handleClose = () => {
+    stopPolling();
+    setCurrentStep(1);
+    setCapturedCanvasData(null);
+    setImages([]);
+    setSelectedId(null);
+    setGeneratedVideoUrl(null);
+    setHasAddedToEditor(false);
+    setLastPromptUsed('');
+    setRightPanel(null);
+    setSearchResults([]);
+    setAspectRatio('16:9');
+    setResolution('480p');
+    setCameraMovement('');
+    setCameraAngle('');
+    setVideoStyle('');
+    setSpecialEffects('');
+    setDescription('');
+    setDuration(5);
+    onClose();
+  };
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleKeyDown = (e) => {
+      const target = e.target;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+      }
+      else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setTool('move');
+        setShowBrushPanel(false);
+      }
+      else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        if (selectedId) {
+          setTool('eraser');
+          setShowBrushPanel(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedId]);
+
+  const renderContent = () => (
+    <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-4 pb-0 flex-shrink-0">
+        <div className="flex items-center gap-2 text-xl font-semibold">
+          <Video className="w-5 h-5 text-[#2C666E]" />
+          JumpStart - Image to Video
+        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          Compose images and generate animated videos with AI
+        </p>
+      </div>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Left Toolbar (Step 1 only) */}
+        {currentStep === 1 && (
+          <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-3 gap-2 shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image">
+              <Upload className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowUrlImport(true)} title="Import from URL">
+              <Link className="w-5 h-5" />
+            </Button>
+            <div className="h-px w-8 bg-gray-300 my-1" />
+            <Button variant={tool === 'move' ? 'secondary' : 'ghost'} size="icon" onClick={() => { setTool('move'); setShowBrushPanel(false); }} title="Move (V)">
+              <Move className="w-5 h-5" />
+            </Button>
+            <Button variant={tool === 'eraser' ? 'secondary' : 'ghost'} size="icon" onClick={() => { setTool('eraser'); setShowBrushPanel(true); }} title="Eraser (E)" disabled={!selectedId}>
+              <Eraser className="w-5 h-5" />
+            </Button>
+            <div className="h-px w-8 bg-gray-300 my-1" />
+            <Button variant="ghost" size="icon" onClick={handleDelete} disabled={!selectedId} title="Delete Selected" className="text-red-500 hover:text-red-600">
+              <Trash2 className="w-5 h-5" />
+            </Button>
+            <div className="flex-1" />
+            <Button variant="ghost" size="icon" onClick={handleBringToFront} disabled={!selectedId} title="Bring to Front">
+              <ChevronUp className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleSendToBack} disabled={!selectedId} title="Send to Back">
+              <ChevronDown className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          {/* Step Indicator */}
+          <div className="p-3 bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 border-b border-gray-200 flex items-center shrink-0">
+            <div className="flex items-center gap-4">
+              {[1, 2, 3].map((step, idx) => (
+                <React.Fragment key={step}>
+                  <div className={`flex items-center gap-2 ${currentStep === step ? 'text-[#07393C] font-semibold' : 'text-gray-400'}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${currentStep === step ? 'bg-[#2C666E] text-white' : 'bg-gray-200 text-gray-500'}`}>{step}</div>
+                    <span>{step === 1 ? 'Compose Image' : step === 2 ? 'Video Settings' : 'Preview'}</span>
+                  </div>
+                  {idx < 2 && <ArrowRight className="w-4 h-4 text-gray-300" />}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 1: Canvas */}
+          {currentStep === 1 && (
+            <>
+              <div className="p-3 bg-white border-b flex items-center gap-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Aspect Ratio:</label>
+                  <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    {Object.entries(ASPECT_RATIOS).map(([key, config]) => (
+                      <option key={key} value={key}>{config.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Quality:</label>
+                  <select value={resolution} onChange={(e) => setResolution(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    <option value="480p">480p (Fast)</option>
+                    <option value="720p">720p (HD)</option>
+                  </select>
+                </div>
+                <div className="text-xs text-gray-500 ml-auto">
+                  Output: {canvasDimensions.outputWidth} × {canvasDimensions.outputHeight}px
+                </div>
+              </div>
+
+              <div 
+                className="overflow-auto relative bg-gray-100 flex-1 flex items-center justify-center box-border min-h-0"
+                style={{ width: canvasDimensions.viewportWidth, padding: 20 }}
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                <div className="shadow-xl ring-1 ring-slate-300 box-content" style={{ width: canvasWidth, height: canvasHeight }}>
+                  <div className="relative bg-white w-full h-full" style={{ boxShadow: 'inset 0 0 0 4px #475569' }}>
+                    <CanvasBoard ref={stageRef} width={canvasWidth} height={canvasHeight} isPanning={tool === 'move'} onStageClick={() => setSelectedId(null)}>
+                      <Rect width={canvasWidth} height={canvasHeight} fill="white" listening={false} />
+                      {[...images].sort((a, b) => a.zIndex - b.zIndex).map((image) => (
+                        <URLImage key={image.id} image={image} isSelected={image.id === selectedId} onSelect={() => handleSelect(image.id)} onChange={handleImageChange} isDraggable={tool === 'move'} />
+                      ))}
+                    </CanvasBoard>
+
+                    {images.length === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="text-center text-gray-400">
+                          <Upload className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>Drag & drop images or use the tools on the left</p>
+                          <p className="text-xs mt-1">Canvas matches selected video dimensions</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white border-t flex items-center justify-between shrink-0">
+                <span className="text-sm text-gray-500">{images.length} image{images.length !== 1 ? 's' : ''} added</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                  <Button onClick={handleNextStep} disabled={images.length === 0} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                    Next: Video Settings <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Step 2: Video Settings */}
+          {currentStep === 2 && (
+            <>
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div className="max-w-2xl mx-auto space-y-6">
+                  {capturedCanvasData && (
+                    <div className="bg-white rounded-lg p-4 border shadow-sm">
+                      <div className="flex items-center gap-2 mb-3 text-sm font-medium text-gray-500">
+                        <ImageIcon className="w-4 h-4" />
+                        <span>Composition to Animate</span>
+                      </div>
+                      <img src={capturedCanvasData} alt="Captured composition" className="w-full h-auto rounded border bg-gray-50 max-h-[200px] object-contain" />
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Move className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Camera Movement</h3>
+                    </div>
+                    <select value={cameraMovement} onChange={(e) => setCameraMovement(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                      {CAMERA_MOVEMENTS.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                    </select>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Camera className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Camera Angle</h3>
+                    </div>
+                    <select value={cameraAngle} onChange={(e) => setCameraAngle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                      {CAMERA_ANGLES.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                    </select>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Video Style</h3>
+                    </div>
+                    <select value={videoStyle} onChange={(e) => setVideoStyle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                      {VIDEO_STYLES.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                    </select>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-[#07393C]" />
+                      <h3 className="font-semibold text-gray-900">Special Effects</h3>
+                    </div>
+                    <select value={specialEffects} onChange={(e) => setSpecialEffects(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                      {SPECIAL_EFFECTS.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                    </select>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Video Duration</h3>
+                    </div>
+                    <select value={duration} onChange={(e) => setDuration(parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={5}>5 seconds</option>
+                      <option value={8}>8 seconds</option>
+                    </select>
+                    <div className="mt-3 pt-3 border-t text-sm text-gray-500">
+                      <strong>Output:</strong> {ASPECT_RATIOS[aspectRatio].label} @ {resolution}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Video className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Additional Description</h3>
+                      <span className="text-xs text-gray-400">(optional)</span>
+                    </div>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe any additional motion or effects..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white resize-none h-24" />
+                  </div>
+
+                  {(cameraMovement || cameraAngle || videoStyle || specialEffects || description) && (
+                    <div className="bg-[#90DDF0]/20 rounded-lg p-4 border border-[#2C666E]/30">
+                      <h4 className="text-sm font-medium text-[#07393C] mb-2">Generated Prompt:</h4>
+                      <p className="text-sm text-[#07393C] italic">{buildFullPrompt()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 bg-white border-t flex items-center justify-between shrink-0">
+                <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Canvas
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                  <Button onClick={handleGenerateVideo} disabled={isLoading || images.length === 0} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                    <Video className="w-4 h-4 mr-2" /> Create Video
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Step 3: Preview */}
+          {currentStep === 3 && (
+            <>
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Play className="w-5 h-5 text-[#2C666E]" />
+                        <h3 className="font-semibold text-gray-900">Generated Video</h3>
+                      </div>
+                    </div>
+
+                    {generatedVideoUrl ? (
+                      <video src={generatedVideoUrl} controls className="w-full rounded bg-black max-h-[55vh]" style={{ objectFit: 'contain' }} autoPlay loop />
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        No video URL found yet. Please wait a moment.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white border-t flex items-center justify-between shrink-0">
+                <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Settings
+                </Button>
+                <div className="flex gap-2">
+                  {onVideoGenerated && (
+                    <Button onClick={handleAddToEditor} disabled={!generatedVideoUrl || hasAddedToEditor} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                      {hasAddedToEditor ? 'Added' : 'Add to Editor'}
+                    </Button>
+                  )}
+                  <Button onClick={handleDownloadVideo} variant="outline" disabled={!generatedVideoUrl}>
+                    <Download className="w-4 h-4 mr-2" /> Download
+                  </Button>
+                  <Button variant="outline" onClick={handleClose}>Close</Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileUpload} className="hidden" />
+    </div>
+  );
+
+  if (isEmbedded) {
+    return (
+      <div className="flex flex-col h-full bg-white overflow-hidden">
+        {renderContent()}
+        <LoadingModal isOpen={isLoading} message={loadingMessage} />
+        <Dialog open={showUrlImport} onOpenChange={setShowUrlImport}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Import Image from URL</DialogTitle>
+              <DialogDescription>Enter the URL of an image to add it to your composition</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Input type="text" placeholder="https://example.com/image.jpg" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleImportFromUrl()} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowUrlImport(false)}>Cancel</Button>
+                <Button onClick={handleImportFromUrl} className="bg-[#2C666E] hover:bg-[#07393C]">Import</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-h-[95vh] p-0 flex flex-col overflow-hidden" style={{ height: 'auto', maxHeight: '95vh', width: 'auto', maxWidth: '90vw', minWidth: '1100px' }}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>JumpStart - Image to Video</DialogTitle>
+            <DialogDescription>Compose images and generate animated videos with AI</DialogDescription>
+          </DialogHeader>
+          {renderContent()}
+        </DialogContent>
+      </Dialog>
+
+      <LoadingModal isOpen={isLoading} message={loadingMessage} />
+
+      <Dialog open={showUrlImport} onOpenChange={setShowUrlImport}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Image from URL</DialogTitle>
+            <DialogDescription>Enter the URL of an image to add it to your composition</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input type="text" placeholder="https://example.com/image.jpg" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleImportFromUrl()} />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowUrlImport(false)}>Cancel</Button>
+              <Button onClick={handleImportFromUrl} className="bg-[#2C666E] hover:bg-[#07393C]">Import</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
