@@ -253,7 +253,7 @@ export default function TryStyleModal({
                 </Label>
                 <div 
                   onClick={() => !modelImage && modelFileRef.current?.click()}
-                  className={`aspect-[3/4] rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
+                  className={`aspect-square rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
                     modelImage 
                       ? 'border-[#2C666E] bg-slate-50' 
                       : 'border-slate-300 hover:border-[#2C666E] bg-slate-50'
@@ -318,7 +318,7 @@ export default function TryStyleModal({
                 </Label>
                 <div 
                   onClick={() => !garmentImage && garmentFileRef.current?.click()}
-                  className={`aspect-[3/4] rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
+                  className={`aspect-square rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
                     garmentImage 
                       ? 'border-[#2C666E] bg-slate-50' 
                       : 'border-slate-300 hover:border-[#2C666E] bg-slate-50'
@@ -479,7 +479,7 @@ export default function TryStyleModal({
             </div>
 
             {/* Result Image */}
-            <div className="aspect-[3/4] max-w-md mx-auto bg-slate-100 rounded-xl overflow-hidden mb-4">
+            <div className="aspect-square max-w-sm mx-auto bg-slate-100 rounded-xl overflow-hidden mb-4">
               <img 
                 src={resultImages[selectedResult]} 
                 alt="Try-on result" 
