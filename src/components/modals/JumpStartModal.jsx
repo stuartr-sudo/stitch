@@ -211,50 +211,82 @@ const DESCRIPTION_PRESETS = [
   },
 ];
 
-// Special Effects Presets
+// ⭐ EFFECT COMBO PRESETS (Quick multi-effect selections)
+const EFFECT_COMBOS = [
+  { 
+    id: 'realistic-person',
+    label: '🤳 Realistic Person',
+    effects: ['natural eye blinks', 'subtle facial expression changes', 'natural breathing movement', 'subtle hair movement'],
+    description: 'All natural human micro-movements'
+  },
+  { 
+    id: 'talking-head',
+    label: '🗣️ Talking Head',
+    effects: ['natural eye blinks', 'lip and mouth movement', 'subtle head movement', 'natural breathing'],
+    description: 'For speech/talking videos'
+  },
+  { 
+    id: 'lifestyle-natural',
+    label: '✨ Lifestyle Natural',
+    effects: ['natural eye blinks', 'subtle smile', 'gentle body sway', 'soft ambient light'],
+    description: 'Casual lifestyle content'
+  },
+  { 
+    id: 'cinematic-portrait',
+    label: '🎬 Cinematic Portrait',
+    effects: ['subtle expression change', 'light rays', 'bokeh blur background', 'film grain'],
+    description: 'Dramatic portrait style'
+  },
+  { 
+    id: 'dreamy-soft',
+    label: '💫 Dreamy Soft',
+    effects: ['soft glow', 'bokeh', 'light leak', 'gentle floating particles'],
+    description: 'Ethereal dreamy look'
+  },
+  { 
+    id: 'outdoor-natural',
+    label: '🌿 Outdoor Natural',
+    effects: ['natural wind in hair', 'dappled sunlight', 'subtle lens flare', 'ambient nature movement'],
+    description: 'Natural outdoor setting'
+  },
+];
+
+// Individual Special Effects
 const SPECIAL_EFFECTS = [
-  { value: '', label: 'No Effects' },
-  // ⭐ REALISTIC / NATURAL (Best for UGC/Selfie)
-  { value: 'natural-blink', label: '👁️ Natural Eye Blinks' },
-  { value: 'subtle-expression', label: '😊 Subtle Expression Change' },
-  { value: 'natural-breathing', label: '😮‍💨 Natural Breathing' },
-  { value: 'hair-movement', label: '💇 Subtle Hair Movement' },
-  { value: 'lip-movement', label: '👄 Subtle Lip Movement' },
-  // Particles
-  { value: 'particles floating', label: 'Floating Particles' },
-  { value: 'dust motes', label: 'Dust Motes' },
-  { value: 'sparkles', label: 'Sparkles/Glitter' },
-  { value: 'embers', label: 'Floating Embers' },
-  { value: 'fireflies', label: 'Fireflies' },
-  // Light effects
-  { value: 'light rays', label: 'Light Rays / God Rays' },
-  { value: 'lens flare', label: 'Lens Flare' },
-  { value: 'bokeh', label: 'Bokeh Blur' },
-  { value: 'anamorphic flare', label: 'Anamorphic Flare' },
-  { value: 'light leak', label: 'Light Leak' },
-  { value: 'neon glow', label: 'Neon Glow' },
-  // Motion
-  { value: 'motion blur', label: 'Motion Blur' },
-  { value: 'speed lines', label: 'Speed Lines' },
-  // Weather
-  { value: 'rain', label: 'Rain' },
-  { value: 'heavy storm', label: 'Heavy Rain/Storm' },
-  { value: 'snow', label: 'Snow' },
-  { value: 'fog', label: 'Fog / Mist' },
-  { value: 'clouds', label: 'Moving Clouds' },
-  // Fire/Energy
-  { value: 'fire sparks', label: 'Fire Sparks' },
-  { value: 'flames', label: 'Flames' },
-  { value: 'smoke', label: 'Smoke' },
-  { value: 'electricity', label: 'Electricity' },
-  // Nature
-  { value: 'falling leaves', label: 'Falling Leaves' },
-  { value: 'petals', label: 'Flower Petals' },
-  { value: 'butterflies', label: 'Butterflies' },
-  // Film
-  { value: 'film grain', label: 'Film Grain' },
-  { value: 'vignette', label: 'Vignette' },
-  { value: 'chromatic aberration', label: 'Chromatic Aberration' },
+  // 🤳 REALISTIC / NATURAL (Best for UGC/Selfie)
+  { value: 'natural eye blinks', label: '👁️ Natural Eye Blinks', category: 'realistic' },
+  { value: 'subtle facial expression changes', label: '😊 Subtle Expression Change', category: 'realistic' },
+  { value: 'natural breathing movement', label: '😮‍💨 Natural Breathing', category: 'realistic' },
+  { value: 'subtle hair movement', label: '💇 Subtle Hair Movement', category: 'realistic' },
+  { value: 'lip and mouth movement', label: '👄 Lip/Mouth Movement', category: 'realistic' },
+  { value: 'subtle head movement', label: '🙂 Subtle Head Movement', category: 'realistic' },
+  { value: 'gentle body sway', label: '🧍 Gentle Body Sway', category: 'realistic' },
+  { value: 'subtle smile', label: '😊 Subtle Smile', category: 'realistic' },
+  // ✨ Light Effects
+  { value: 'light rays', label: 'Light Rays / God Rays', category: 'light' },
+  { value: 'lens flare', label: 'Lens Flare', category: 'light' },
+  { value: 'bokeh blur background', label: 'Bokeh Blur', category: 'light' },
+  { value: 'soft glow', label: 'Soft Glow', category: 'light' },
+  { value: 'light leak', label: 'Light Leak', category: 'light' },
+  { value: 'neon glow', label: 'Neon Glow', category: 'light' },
+  { value: 'dappled sunlight', label: 'Dappled Sunlight', category: 'light' },
+  // 🎬 Film Effects  
+  { value: 'film grain', label: 'Film Grain', category: 'film' },
+  { value: 'vignette', label: 'Vignette', category: 'film' },
+  { value: 'chromatic aberration', label: 'Chromatic Aberration', category: 'film' },
+  { value: 'motion blur', label: 'Motion Blur', category: 'film' },
+  // 🌟 Particles
+  { value: 'gentle floating particles', label: 'Floating Particles', category: 'particles' },
+  { value: 'dust motes in light', label: 'Dust Motes', category: 'particles' },
+  { value: 'sparkles', label: 'Sparkles/Glitter', category: 'particles' },
+  { value: 'floating embers', label: 'Floating Embers', category: 'particles' },
+  // 🌧️ Weather/Nature
+  { value: 'natural wind in hair', label: 'Wind in Hair', category: 'nature' },
+  { value: 'rain', label: 'Rain', category: 'nature' },
+  { value: 'snow falling', label: 'Snow', category: 'nature' },
+  { value: 'fog mist', label: 'Fog / Mist', category: 'nature' },
+  { value: 'falling leaves', label: 'Falling Leaves', category: 'nature' },
+  { value: 'flower petals', label: 'Flower Petals', category: 'nature' },
 ];
 
 /**
@@ -311,7 +343,7 @@ export default function JumpStartModal({
   const [cameraMovement, setCameraMovement] = useState('');
   const [cameraAngle, setCameraAngle] = useState('');
   const [videoStyle, setVideoStyle] = useState('');
-  const [specialEffects, setSpecialEffects] = useState('');
+  const [specialEffects, setSpecialEffects] = useState([]);
   const [description, setDescription] = useState('');
   
   // Generated video
@@ -346,7 +378,7 @@ export default function JumpStartModal({
       setCameraMovement('');
       setCameraAngle('');
       setVideoStyle('');
-      setSpecialEffects('');
+      setSpecialEffects([]);
       setDescription('');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
@@ -629,7 +661,10 @@ export default function JumpStartModal({
       }
     }
     
-    if (specialEffects && !isRealisticStyle) parts.push(specialEffects);
+    // Add selected effects (now an array)
+    if (specialEffects && specialEffects.length > 0) {
+      parts.push(specialEffects.join(', '));
+    }
     if (description.trim()) parts.push(description.trim());
     
     // Add quality boosters
@@ -1004,10 +1039,79 @@ export default function JumpStartModal({
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="w-5 h-5 text-[#07393C]" />
                       <h3 className="font-semibold text-gray-900">Special Effects</h3>
+                      <span className="text-xs text-gray-400">(multi-select)</span>
                     </div>
-                    <select value={specialEffects} onChange={(e) => setSpecialEffects(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                      {SPECIAL_EFFECTS.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
-                    </select>
+                    
+                    {/* Quick Combo Presets */}
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">🎯 Quick Combos:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {EFFECT_COMBOS.map(combo => (
+                          <button
+                            key={combo.id}
+                            onClick={() => setSpecialEffects(combo.effects)}
+                            title={combo.description}
+                            className={`px-2 py-1 text-xs rounded-full border transition-all ${
+                              JSON.stringify(specialEffects) === JSON.stringify(combo.effects)
+                                ? 'bg-[#07393C] text-white border-[#07393C]'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/30 hover:border-[#2C666E]/50'
+                            }`}
+                          >
+                            {combo.label}
+                          </button>
+                        ))}
+                        {specialEffects.length > 0 && (
+                          <button
+                            onClick={() => setSpecialEffects([])}
+                            className="px-2 py-1 text-xs rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            ✕ Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Individual Effects - Grouped by Category */}
+                    <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                      {['realistic', 'light', 'film', 'particles', 'nature'].map(category => (
+                        <div key={category}>
+                          <p className="text-xs font-medium text-gray-500 capitalize mb-1">
+                            {category === 'realistic' ? '🤳 Realistic' : 
+                             category === 'light' ? '✨ Light' : 
+                             category === 'film' ? '🎬 Film' : 
+                             category === 'particles' ? '🌟 Particles' : '🌿 Nature'}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {SPECIAL_EFFECTS.filter(e => e.category === category).map(effect => (
+                              <button
+                                key={effect.value}
+                                onClick={() => {
+                                  if (specialEffects.includes(effect.value)) {
+                                    setSpecialEffects(specialEffects.filter(e => e !== effect.value));
+                                  } else {
+                                    setSpecialEffects([...specialEffects, effect.value]);
+                                  }
+                                }}
+                                className={`px-1.5 py-0.5 text-xs rounded border transition-all ${
+                                  specialEffects.includes(effect.value)
+                                    ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-[#2C666E]'
+                                }`}
+                              >
+                                {effect.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Selected Effects Display */}
+                    {specialEffects.length > 0 && (
+                      <div className="mt-2 text-xs text-[#07393C]">
+                        <strong>Selected ({specialEffects.length}):</strong> {specialEffects.join(', ')}
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
@@ -1068,7 +1172,7 @@ export default function JumpStartModal({
                     )}
                   </div>
 
-                  {(cameraMovement || cameraAngle || videoStyle || specialEffects || description) && (
+                  {(cameraMovement || cameraAngle || videoStyle || specialEffects.length > 0 || description) && (
                     <div className="bg-[#90DDF0]/20 rounded-lg p-4 border border-[#2C666E]/30">
                       <h4 className="text-sm font-medium text-[#07393C] mb-2">Generated Prompt:</h4>
                       <p className="text-sm text-[#07393C] italic">{buildFullPrompt()}</p>
