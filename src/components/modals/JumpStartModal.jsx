@@ -87,41 +87,129 @@ const ASPECT_RATIO_LABELS = {
 // Camera Movement Presets
 const CAMERA_MOVEMENTS = [
   { value: '', label: 'No Movement' },
-  { value: 'static-stable', label: '📱 Static/Stable' },
-  { value: 'subtle-handheld', label: '🤳 Subtle Handheld' },
+  // Realistic / Natural (Best for UGC/Selfie)
+  { value: 'static-stable', label: '📱 Static/Stable (Selfie)' },
+  { value: 'subtle-handheld', label: '🤳 Subtle Handheld Shake' },
+  { value: 'natural-breathing', label: '😮‍💨 Natural Breathing Motion' },
+  { value: 'gentle-sway', label: '🌊 Gentle Natural Sway' },
+  // Zoom
   { value: 'slow zoom in', label: 'Slow Zoom In' },
   { value: 'slow zoom out', label: 'Slow Zoom Out' },
+  { value: 'fast zoom in', label: 'Fast Zoom (Punch In)' },
+  { value: 'dolly zoom', label: 'Dolly Zoom (Vertigo)' },
+  // Pan
   { value: 'pan left to right', label: 'Pan Left to Right' },
   { value: 'pan right to left', label: 'Pan Right to Left' },
+  { value: 'slow pan', label: 'Slow Pan' },
+  // Tilt
   { value: 'tilt up', label: 'Tilt Up' },
   { value: 'tilt down', label: 'Tilt Down' },
+  { value: 'tilt up reveal', label: 'Tilt Up Reveal' },
+  // Dolly/Track
   { value: 'dolly forward', label: 'Dolly Forward' },
   { value: 'dolly backward', label: 'Dolly Backward' },
-  { value: 'tracking shot', label: 'Tracking Shot' },
+  { value: 'tracking shot', label: 'Tracking Shot (Follow)' },
+  { value: 'lateral track', label: 'Lateral Tracking' },
+  // Complex
   { value: 'orbit', label: 'Orbit Around Subject' },
+  { value: 'crane up', label: 'Crane Up' },
+  { value: 'crane down', label: 'Crane Down' },
+  { value: 'handheld following', label: 'Handheld Following' },
+];
+
+// Camera Angle Presets
+const CAMERA_ANGLES = [
+  { value: '', label: 'Default Angle' },
+  // Realistic / Selfie (Best for UGC)
+  { value: 'selfie-closeup', label: '🤳 Selfie Close-up' },
+  { value: 'talking-head', label: '🗣️ Talking Head' },
+  { value: 'vlog-style', label: '📱 Vlog Style' },
+  { value: 'webcam-angle', label: '💻 Webcam Angle' },
+  // Standard
+  { value: 'eye level', label: 'Eye Level' },
+  { value: 'low angle', label: 'Low Angle (Hero)' },
+  { value: 'high angle', label: 'High Angle' },
+  { value: 'dutch angle', label: 'Dutch Angle (Tilted)' },
+  // Wide
+  { value: 'wide shot', label: 'Wide Shot' },
+  { value: 'medium shot', label: 'Medium Shot' },
+  { value: 'close up', label: 'Close Up' },
+  { value: 'extreme close up', label: 'Extreme Close Up' },
+  // Special
+  { value: 'birds eye', label: "Bird's Eye View" },
+  { value: 'worms eye', label: "Worm's Eye View" },
+  { value: 'over the shoulder', label: 'Over the Shoulder' },
+  { value: 'point of view', label: 'POV (First Person)' },
 ];
 
 // Video Style Presets
 const VIDEO_STYLES = [
   { value: '', label: 'Default' },
-  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone selfie video, front-facing camera, handheld smartphone footage, natural ambient lighting' },
-  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'user generated content, authentic testimonial video, real person talking naturally' },
-  { value: 'cinematic', label: '🎬 Cinematic', prompt: 'cinematic quality, professional lighting, dramatic composition' },
-  { value: 'documentary', label: '📹 Documentary', prompt: 'documentary style, natural movement, observational' },
-  { value: 'social-media', label: '📲 Social Media', prompt: 'social media style, engaging, dynamic, attention-grabbing' },
-  { value: 'product-demo', label: '📦 Product Demo', prompt: 'product demonstration, clean background, professional presentation' },
+  // Realistic / UGC (Best for authentic content)
+  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone selfie video, front-facing camera, handheld smartphone footage, natural ambient lighting, authentic candid moment, realistic skin texture, unfiltered unedited look, genuine facial expression' },
+  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'user generated content, authentic testimonial video, real person talking naturally, genuine emotion, casual setting, believable and relatable' },
+  { value: 'tiktok-style', label: '📲 TikTok/Reels Style', prompt: 'vertical social media video, engaging and dynamic, quick natural movements, relatable content creator vibe' },
+  { value: 'facetime-call', label: '📞 FaceTime/Video Call', prompt: 'video call aesthetic, slightly pixelated, casual conversation, natural webcam lighting, authentic remote communication feel' },
+  // Professional
+  { value: 'cinematic', label: '🎬 Cinematic', prompt: 'cinematic quality, professional lighting, dramatic composition, shallow depth of field, film-like color grading' },
+  { value: 'documentary', label: '📹 Documentary', prompt: 'documentary style, natural movement, observational, authentic moments, journalistic approach' },
+  { value: 'commercial', label: '📺 Commercial/Ad', prompt: 'commercial quality, polished, professional, product-focused, aspirational' },
+  { value: 'product-demo', label: '📦 Product Demo', prompt: 'product demonstration, clean background, professional presentation, clear and informative' },
+  // Artistic
+  { value: 'dreamy', label: '✨ Dreamy/Ethereal', prompt: 'dreamy ethereal quality, soft focus, glowing highlights, romantic atmosphere' },
+  { value: 'vintage', label: '📼 Vintage/Retro', prompt: 'vintage film look, nostalgic, warm tones, slight grain, retro aesthetic' },
+  { value: 'noir', label: '🎞️ Film Noir', prompt: 'film noir style, high contrast, dramatic shadows, moody atmosphere' },
+  { value: 'anime', label: '🎌 Anime Style', prompt: 'anime inspired, vibrant colors, expressive, dynamic movement' },
 ];
 
-// Special Effects
+// Effect Combos (Quick Presets)
+const EFFECT_COMBOS = [
+  { id: 'realistic', label: '🤳 Realistic/Raw', effects: ['natural lighting', 'subtle skin texture', 'authentic movement'] },
+  { id: 'cinematic', label: '🎬 Cinematic', effects: ['film grain', 'lens flare', 'bokeh blur'] },
+  { id: 'dreamy', label: '✨ Dreamy', effects: ['soft glow', 'bokeh blur', 'floating particles'] },
+  { id: 'vintage', label: '📼 Vintage', effects: ['film grain', 'vignette', 'warm tones'] },
+  { id: 'dynamic', label: '⚡ Dynamic', effects: ['motion blur', 'lens flare', 'light rays'] },
+];
+
+// Special Effects (Categorized)
 const SPECIAL_EFFECTS = [
+  // Realistic
   { value: 'natural lighting', label: 'Natural Lighting', category: 'realistic' },
+  { value: 'subtle skin texture', label: 'Subtle Skin Texture', category: 'realistic' },
+  { value: 'authentic movement', label: 'Authentic Movement', category: 'realistic' },
   { value: 'soft focus', label: 'Soft Focus', category: 'realistic' },
+  // Light
   { value: 'lens flare', label: 'Lens Flare', category: 'light' },
   { value: 'bokeh blur', label: 'Bokeh Blur', category: 'light' },
+  { value: 'soft glow', label: 'Soft Glow', category: 'light' },
+  { value: 'light rays', label: 'Light Rays', category: 'light' },
+  { value: 'neon glow', label: 'Neon Glow', category: 'light' },
+  { value: 'dappled sunlight', label: 'Dappled Sunlight', category: 'light' },
+  // Film
   { value: 'film grain', label: 'Film Grain', category: 'film' },
+  { value: 'vignette', label: 'Vignette', category: 'film' },
+  { value: 'chromatic aberration', label: 'Chromatic Aberration', category: 'film' },
   { value: 'motion blur', label: 'Motion Blur', category: 'film' },
+  { value: 'warm tones', label: 'Warm Tones', category: 'film' },
+  // Particles
   { value: 'floating particles', label: 'Floating Particles', category: 'particles' },
   { value: 'dust motes', label: 'Dust Motes', category: 'particles' },
+  { value: 'sparkles', label: 'Sparkles', category: 'particles' },
+  { value: 'floating embers', label: 'Floating Embers', category: 'particles' },
+  // Nature
+  { value: 'wind in hair', label: 'Wind in Hair', category: 'nature' },
+  { value: 'rain', label: 'Rain', category: 'nature' },
+  { value: 'snow falling', label: 'Snow', category: 'nature' },
+  { value: 'fog mist', label: 'Fog/Mist', category: 'nature' },
+];
+
+// Description Presets (for realistic videos)
+const DESCRIPTION_PRESETS = [
+  { id: 'authentic', label: '🤳 Authentic/Raw', prompt: 'real person, genuine emotion, natural lighting, unfiltered, believable, authentic' },
+  { id: 'talking', label: '🗣️ Talking Natural', prompt: 'person talking naturally, conversational, casual, relaxed body language, genuine expression' },
+  { id: 'testimonial', label: '⭐ Testimonial', prompt: 'honest testimonial, sharing experience, enthusiastic but authentic, relatable' },
+  { id: 'product', label: '📦 Product Showcase', prompt: 'showing product naturally, demonstrating features, genuine reaction, hands visible' },
+  { id: 'lifestyle', label: '🌟 Lifestyle', prompt: 'lifestyle content, aspirational yet achievable, natural setting, warm atmosphere' },
 ];
 
 /**
@@ -153,9 +241,11 @@ export default function JumpStartModal({
   const [resolution, setResolution] = useState('720p');
   const [duration, setDuration] = useState(5);
   const [cameraMovement, setCameraMovement] = useState('');
+  const [cameraAngle, setCameraAngle] = useState('');
   const [videoStyle, setVideoStyle] = useState('');
   const [specialEffects, setSpecialEffects] = useState([]);
   const [sceneDescription, setSceneDescription] = useState('');
+  const [description, setDescription] = useState('');
   
   // Model-specific settings
   const [enableAudio, setEnableAudio] = useState(true);
@@ -189,9 +279,11 @@ export default function JumpStartModal({
       setResolution('720p');
       setDuration(5);
       setCameraMovement('');
+      setCameraAngle('');
       setVideoStyle('');
       setSpecialEffects([]);
       setSceneDescription('');
+      setDescription('');
       setEnableAudio(true);
       setAudioTranscript('');
       setCameraFixed(false);
@@ -297,25 +389,43 @@ export default function JumpStartModal({
   const buildPrompt = () => {
     const parts = [];
     
-    // Scene description first
+    // Scene description first (most important)
     if (sceneDescription.trim()) {
       parts.push(sceneDescription.trim());
     }
     
-    // Video style
+    // Video style with prompt
     const styleConfig = VIDEO_STYLES.find(s => s.value === videoStyle);
     if (styleConfig?.prompt) {
       parts.push(styleConfig.prompt);
     }
     
-    // Camera movement
-    if (cameraMovement) {
+    // Description/motion preset
+    if (description.trim()) {
+      parts.push(description.trim());
+    }
+    
+    // Camera movement (skip for realistic styles to preserve authenticity)
+    const isRealisticStyle = ['iphone-selfie', 'ugc-testimonial', 'tiktok-style', 'facetime-call'].includes(videoStyle);
+    if (cameraMovement && !isRealisticStyle) {
       parts.push(cameraMovement);
+    } else if (cameraMovement && isRealisticStyle && cameraMovement.includes('subtle')) {
+      parts.push('subtle natural movement');
+    }
+    
+    // Camera angle
+    if (cameraAngle) {
+      parts.push(`${cameraAngle} shot`);
     }
     
     // Special effects
     if (specialEffects.length > 0) {
       parts.push(specialEffects.join(', '));
+    }
+    
+    // Quality boosters for realistic styles
+    if (isRealisticStyle) {
+      parts.push('photorealistic, authentic, believable, natural motion');
     }
     
     // Aspect ratio hint
@@ -849,7 +959,20 @@ export default function JumpStartModal({
                   </div>
                 )}
 
-                {/* Camera & Style */}
+                {/* Video Style */}
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="w-5 h-5 text-[#2C666E]" />
+                    <h3 className="font-semibold text-gray-900">Video Style</h3>
+                  </div>
+                  <select value={videoStyle} onChange={(e) => setVideoStyle(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                    {VIDEO_STYLES.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Camera Movement & Angle */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -866,44 +989,137 @@ export default function JumpStartModal({
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <Camera className="w-5 h-5 text-[#2C666E]" />
-                      <h3 className="font-semibold text-gray-900">Video Style</h3>
+                      <h3 className="font-semibold text-gray-900">Camera Angle</h3>
                     </div>
-                    <select value={videoStyle} onChange={(e) => setVideoStyle(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
-                      {VIDEO_STYLES.map(opt => (
+                    <select value={cameraAngle} onChange={(e) => setCameraAngle(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                      {CAMERA_ANGLES.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
-                {/* Special Effects */}
+                {/* Special Effects with Combos */}
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="w-5 h-5 text-[#2C666E]" />
                     <h3 className="font-semibold text-gray-900">Special Effects</h3>
-                    <span className="text-xs text-gray-400">(optional)</span>
+                    <span className="text-xs text-gray-400">(multi-select)</span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SPECIAL_EFFECTS.map(effect => (
-                      <button
-                        key={effect.value}
-                        onClick={() => {
-                          setSpecialEffects(prev => 
-                            prev.includes(effect.value) 
-                              ? prev.filter(e => e !== effect.value)
-                              : [...prev, effect.value]
-                          );
-                        }}
-                        className={`px-2 py-1 text-xs rounded-full border transition-all ${
-                          specialEffects.includes(effect.value)
-                            ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/20'
-                        }`}
-                      >
-                        {effect.label}
-                      </button>
+                  
+                  {/* Quick Combo Presets */}
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">🎯 Quick Combos:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {EFFECT_COMBOS.map(combo => (
+                        <button
+                          key={combo.id}
+                          onClick={() => setSpecialEffects(combo.effects)}
+                          className={`px-2 py-1 text-xs rounded-full border transition-all ${
+                            JSON.stringify(specialEffects.sort()) === JSON.stringify(combo.effects.sort())
+                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/20'
+                          }`}
+                        >
+                          {combo.label}
+                        </button>
+                      ))}
+                      {specialEffects.length > 0 && (
+                        <button
+                          onClick={() => setSpecialEffects([])}
+                          className="px-2 py-1 text-xs rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          ✕ Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Individual Effects by Category */}
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                    {['realistic', 'light', 'film', 'particles', 'nature'].map(category => (
+                      <div key={category}>
+                        <p className="text-xs font-medium text-gray-500 capitalize mb-1">
+                          {category === 'realistic' ? '🤳 Realistic' : 
+                           category === 'light' ? '💡 Light' :
+                           category === 'film' ? '🎬 Film' :
+                           category === 'particles' ? '✨ Particles' : '🌿 Nature'}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {SPECIAL_EFFECTS.filter(e => e.category === category).map(effect => (
+                            <button
+                              key={effect.value}
+                              onClick={() => {
+                                setSpecialEffects(prev => 
+                                  prev.includes(effect.value) 
+                                    ? prev.filter(e => e !== effect.value)
+                                    : [...prev, effect.value]
+                                );
+                              }}
+                              className={`px-1.5 py-0.5 text-xs rounded border transition-all ${
+                                specialEffects.includes(effect.value)
+                                  ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:bg-[#90DDF0]/20'
+                              }`}
+                            >
+                              {effect.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
+                  
+                  {specialEffects.length > 0 && (
+                    <div className="mt-2 text-xs text-[#07393C]">
+                      <strong>Selected ({specialEffects.length}):</strong> {specialEffects.join(', ')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description & Motion Presets */}
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Video className="w-5 h-5 text-[#2C666E]" />
+                    <h3 className="font-semibold text-gray-900">Description & Motion</h3>
+                    <span className="text-xs text-gray-400">(optional)</span>
+                  </div>
+                  
+                  {/* Prefilled Preset Buttons */}
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">🎯 Quick Presets for Realistic Videos:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DESCRIPTION_PRESETS.map(preset => (
+                        <button
+                          key={preset.id}
+                          onClick={() => setDescription(preset.prompt)}
+                          className={`px-2 py-1 text-xs rounded-full border transition-all ${
+                            description === preset.prompt
+                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/20'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <textarea 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)} 
+                    placeholder="Add custom motion/style details... (e.g., 'real person, genuine emotion, natural lighting, unfiltered')" 
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
+                  />
+                  
+                  {description && (
+                    <button 
+                      onClick={() => setDescription('')}
+                      className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      ✕ Clear description
+                    </button>
+                  )}
                 </div>
               </div>
             )}
