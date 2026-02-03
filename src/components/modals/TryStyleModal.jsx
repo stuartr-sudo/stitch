@@ -28,6 +28,26 @@ import {
   FolderOpen
 } from 'lucide-react';
 
+// Try-On Model Options
+const TRYON_MODELS = [
+  { 
+    id: 'fashn', 
+    label: '👗 FASHN Virtual Try-On', 
+    description: 'High quality, accurate garment fit',
+    supportsCategory: true,
+    supportsMode: true,
+    supportsGarmentType: true,
+  },
+  { 
+    id: 'flux2-lora', 
+    label: '✨ Flux 2 Stylized Try-On', 
+    description: 'Stylized results, prompt-based',
+    supportsPrompt: true,
+    supportsGuidance: true,
+    supportsLoraScale: true,
+  },
+];
+
 const CATEGORIES = [
   { value: 'auto', label: 'Auto Detect' },
   { value: 'tops', label: 'Tops (Shirts, Jackets, etc.)' },
@@ -58,10 +78,20 @@ export default function TryStyleModal({
 }) {
   const [modelImage, setModelImage] = useState(null);
   const [garmentImage, setGarmentImage] = useState(null);
+  const [tryonModel, setTryonModel] = useState('fashn');
   const [category, setCategory] = useState('auto');
   const [mode, setMode] = useState('balanced');
   const [garmentPhotoType, setGarmentPhotoType] = useState('auto');
   const [numSamples, setNumSamples] = useState(1);
+  
+  // Flux 2 Lora specific settings
+  const [prompt, setPrompt] = useState('A person wearing a stylish outfit, virtual try-on');
+  const [guidanceScale, setGuidanceScale] = useState(2.5);
+  const [loraScale, setLoraScale] = useState(1.0);
+  const [numSteps, setNumSteps] = useState(40);
+  
+  // Get current model config
+  const currentTryonModel = TRYON_MODELS.find(m => m.id === tryonModel) || TRYON_MODELS[0];
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
@@ -83,10 +113,15 @@ export default function TryStyleModal({
     if (isOpen) {
       setModelImage(null);
       setGarmentImage(null);
+      setTryonModel('fashn');
       setCategory('auto');
       setMode('balanced');
       setGarmentPhotoType('auto');
       setNumSamples(1);
+      setPrompt('A person wearing a stylish outfit, virtual try-on');
+      setGuidanceScale(2.5);
+      setLoraScale(1.0);
+      setNumSteps(40);
       setIsLoading(false);
       setLoadingStatus('');
       setResultImages([]);
@@ -160,21 +195,42 @@ export default function TryStyleModal({
     }
 
     setIsLoading(true);
-    setLoadingStatus('Sending to FASHN AI...');
+    const modelLabel = currentTryonModel.label;
+    setLoadingStatus(`Sending to ${modelLabel}...`);
     setResultImages([]);
 
     try {
-      const response = await fetch('/api/trystyle/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model_image: modelImage,
-          garment_image: garmentImage,
+      const requestBody = {
+        model: tryonModel,
+        model_image: modelImage,
+        garment_image: garmentImage,
+      };
+      
+      // FASHN specific params
+      if (tryonModel === 'fashn') {
+        Object.assign(requestBody, {
           category,
           mode,
           garment_photo_type: garmentPhotoType,
           num_samples: numSamples,
-        }),
+        });
+      }
+      
+      // Flux 2 Lora specific params
+      if (tryonModel === 'flux2-lora') {
+        Object.assign(requestBody, {
+          prompt,
+          guidance_scale: guidanceScale,
+          lora_scale: loraScale,
+          num_inference_steps: numSteps,
+          num_images: numSamples,
+        });
+      }
+      
+      const response = await fetch('/api/trystyle/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -204,7 +260,7 @@ export default function TryStyleModal({
       } else if (data.requestId) {
         // Poll for result
         setLoadingStatus('Processing virtual try-on...');
-        pollForResult(data.requestId);
+        pollForResult(data.requestId, tryonModel);
         return;
       } else {
         throw new Error('No images returned');
@@ -217,13 +273,13 @@ export default function TryStyleModal({
     }
   };
 
-  const pollForResult = async (requestId) => {
+  const pollForResult = async (requestId, model = 'fashn') => {
     const poll = async () => {
       try {
         const response = await fetch('/api/trystyle/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId }),
+          body: JSON.stringify({ requestId, model }),
         });
         const data = await response.json();
         
@@ -425,50 +481,137 @@ export default function TryStyleModal({
               </div>
             </div>
 
-            {/* Options */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* Category */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Garment Category</Label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full p-2.5 border rounded-lg text-sm bg-white"
-                >
-                  {CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Mode */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Quality Mode</Label>
-                <select
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value)}
-                  className="w-full p-2.5 border rounded-lg text-sm bg-white"
-                >
-                  {MODES.map(m => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Garment Photo Type */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Garment Photo Type</Label>
-                <select
-                  value={garmentPhotoType}
-                  onChange={(e) => setGarmentPhotoType(e.target.value)}
-                  className="w-full p-2.5 border rounded-lg text-sm bg-white"
-                >
-                  {GARMENT_TYPES.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
+            {/* Model Selector */}
+            <div className="bg-slate-50 rounded-lg p-4 border">
+              <Label className="text-sm font-semibold mb-3 block">Try-On Model</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {TRYON_MODELS.map(model => (
+                  <button
+                    key={model.id}
+                    onClick={() => setTryonModel(model.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      tryonModel === model.id 
+                        ? 'border-[#2C666E] bg-[#2C666E]/5' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">{model.label}</div>
+                    <div className="text-xs text-gray-500 mt-1">{model.description}</div>
+                  </button>
+                ))}
               </div>
             </div>
+
+            {/* FASHN Options */}
+            {tryonModel === 'fashn' && (
+              <div className="grid grid-cols-3 gap-4">
+                {/* Category */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Garment Category</Label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full p-2.5 border rounded-lg text-sm bg-white"
+                  >
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Mode */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Quality Mode</Label>
+                  <select
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value)}
+                    className="w-full p-2.5 border rounded-lg text-sm bg-white"
+                  >
+                    {MODES.map(m => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Garment Photo Type */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Garment Photo Type</Label>
+                  <select
+                    value={garmentPhotoType}
+                    onChange={(e) => setGarmentPhotoType(e.target.value)}
+                    className="w-full p-2.5 border rounded-lg text-sm bg-white"
+                  >
+                    {GARMENT_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Flux 2 Lora Options */}
+            {tryonModel === 'flux2-lora' && (
+              <div className="space-y-4">
+                {/* Prompt */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Style Prompt</Label>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Describe the try-on style you want..."
+                    className="w-full p-3 border rounded-lg text-sm bg-white resize-none h-20"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Describe how you want the outfit to look</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Guidance Scale */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Guidance: {guidanceScale.toFixed(1)}</Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={guidanceScale}
+                      onChange={(e) => setGuidanceScale(parseFloat(e.target.value))}
+                      className="w-full accent-[#2C666E]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">How closely to follow prompt</p>
+                  </div>
+
+                  {/* Lora Scale */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Effect Strength: {loraScale.toFixed(1)}</Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={loraScale}
+                      onChange={(e) => setLoraScale(parseFloat(e.target.value))}
+                      className="w-full accent-[#2C666E]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Try-on effect intensity</p>
+                  </div>
+
+                  {/* Steps */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Quality Steps: {numSteps}</Label>
+                    <input
+                      type="range"
+                      min="20"
+                      max="50"
+                      step="5"
+                      value={numSteps}
+                      onChange={(e) => setNumSteps(parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">More steps = better quality</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Number of Samples */}
             <div>
