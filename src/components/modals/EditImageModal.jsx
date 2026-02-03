@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import LibraryModal from './LibraryModal';
 import {
   Edit3,
   Upload,
@@ -22,7 +23,8 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Download,
-  ExternalLink
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 const MODELS = [
@@ -54,7 +56,20 @@ export default function EditImageModal({
   const [resultImage, setResultImage] = useState(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [showLibrary, setShowLibrary] = useState(false);
   const fileInputRef = useRef(null);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      setImages(prev => [...prev, { 
+        id: Date.now(), 
+        url: url, 
+        name: item.title || 'Library Image',
+        isBase: prev.length === 0 
+      }]);
+    }
+  };
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -265,6 +280,9 @@ export default function EditImageModal({
                 <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)}>
                   <Link2 className="w-4 h-4 mr-2" /> From URL
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)}>
+                  <FolderOpen className="w-4 h-4 mr-2" /> Library
+                </Button>
               </div>
 
               {showUrlInput && (
@@ -402,14 +420,23 @@ export default function EditImageModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[85vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Edit Image</DialogTitle>
-          <DialogDescription>AI-powered image editing</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Edit Image</DialogTitle>
+            <DialogDescription>AI-powered image editing</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
+    </>
   );
 }

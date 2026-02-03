@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import LibraryModal from './LibraryModal';
 import {
   Eraser,
   Paintbrush,
@@ -23,7 +24,8 @@ import {
   Plus,
   Minus,
   Download,
-  ExternalLink
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 /**
@@ -49,6 +51,15 @@ export default function InpaintModal({
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      setImage(url);
+      setResultImage(null);
+    }
+  };
 
   // Initialize canvases when image loads
   useEffect(() => {
@@ -461,9 +472,14 @@ export default function InpaintModal({
           )}
 
           {!image && (
-            <Button onClick={() => fileInputRef.current?.click()} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-              <Upload className="w-4 h-4 mr-2" /> Upload Image
-            </Button>
+            <div className="space-y-2">
+              <Button onClick={() => fileInputRef.current?.click()} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
+                <Upload className="w-4 h-4 mr-2" /> Upload Image
+              </Button>
+              <Button variant="outline" onClick={() => setShowLibrary(true)} className="w-full">
+                <FolderOpen className="w-4 h-4 mr-2" /> From Library
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -475,14 +491,23 @@ export default function InpaintModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Inpaint</DialogTitle>
-          <DialogDescription>Paint to remove or replace objects</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Inpaint</DialogTitle>
+            <DialogDescription>Paint to remove or replace objects</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
+    </>
   );
 }

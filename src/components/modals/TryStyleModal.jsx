@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import LibraryModal from './LibraryModal';
 import {
   Shirt,
   Upload,
@@ -23,7 +24,8 @@ import {
   RefreshCw,
   Download,
   ExternalLink,
-  Info
+  Info,
+  FolderOpen
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -73,6 +75,24 @@ export default function TryStyleModal({
   
   const modelFileRef = useRef(null);
   const garmentFileRef = useRef(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryTarget, setLibraryTarget] = useState('model'); // 'model' or 'garment'
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      if (libraryTarget === 'model') {
+        setModelImage(url);
+      } else {
+        setGarmentImage(url);
+      }
+    }
+  };
+
+  const openLibraryFor = (target) => {
+    setLibraryTarget(target);
+    setShowLibrary(true);
+  };
 
   const handleFileUpload = (e, type) => {
     const file = e.target.files?.[0];
@@ -267,12 +287,15 @@ export default function TryStyleModal({
                   className="hidden"
                   onChange={(e) => handleFileUpload(e, 'model')}
                 />
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => modelFileRef.current?.click()} className="flex-1">
                     <Upload className="w-4 h-4 mr-1" /> Upload
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setShowModelUrlInput(!showModelUrlInput)} className="flex-1">
                     <Link2 className="w-4 h-4 mr-1" /> URL
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openLibraryFor('model')} className="flex-1">
+                    <FolderOpen className="w-4 h-4 mr-1" /> Library
                   </Button>
                 </div>
                 {showModelUrlInput && (
@@ -329,12 +352,15 @@ export default function TryStyleModal({
                   className="hidden"
                   onChange={(e) => handleFileUpload(e, 'garment')}
                 />
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => garmentFileRef.current?.click()} className="flex-1">
                     <Upload className="w-4 h-4 mr-1" /> Upload
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setShowGarmentUrlInput(!showGarmentUrlInput)} className="flex-1">
                     <Link2 className="w-4 h-4 mr-1" /> URL
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openLibraryFor('garment')} className="flex-1">
+                    <FolderOpen className="w-4 h-4 mr-1" /> Library
                   </Button>
                 </div>
                 {showGarmentUrlInput && (
@@ -528,14 +554,23 @@ export default function TryStyleModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[85vh] overflow-hidden flex flex-col p-0 relative">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Try Style - Virtual Try-On</DialogTitle>
-          <DialogDescription>Virtual clothing try-on powered by FASHN AI</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl h-[85vh] overflow-hidden flex flex-col p-0 relative">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Try Style - Virtual Try-On</DialogTitle>
+            <DialogDescription>Virtual clothing try-on powered by FASHN AI</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
+    </>
   );
 }

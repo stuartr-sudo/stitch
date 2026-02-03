@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import URLImage from '@/components/canvas/URLImage';
+import LibraryModal from './LibraryModal';
 import {
   Layers,
   Upload,
@@ -27,7 +28,8 @@ import {
   Move,
   Frame,
   Download,
-  ExternalLink
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 const DIMENSION_PRESETS = [
@@ -61,6 +63,31 @@ export default function SmooshModal({
   const stageRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      // Load the image to get dimensions
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 400;
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const newImage = {
+          id: Date.now() + Math.random(),
+          url: url,
+          x: dimensions.width / 2 - (img.width * scale) / 2,
+          y: dimensions.height / 2 - (img.height * scale) / 2,
+          scaleX: scale,
+          scaleY: scale,
+          rotation: 0,
+          masks: [],
+        };
+        setImages(prev => [...prev, newImage]);
+      };
+      img.src = url;
+    }
+  };
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -391,6 +418,9 @@ export default function SmooshModal({
               <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)} className="flex-1">
                 <Link2 className="w-4 h-4 mr-1" /> URL
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)} className="flex-1">
+                <FolderOpen className="w-4 h-4 mr-1" /> Library
+              </Button>
             </div>
 
             {showUrlInput && (
@@ -513,14 +543,23 @@ export default function SmooshModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[85vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Smoosh</DialogTitle>
-          <DialogDescription>Infinite canvas image compositor</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-6xl h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Smoosh</DialogTitle>
+            <DialogDescription>Infinite canvas image compositor</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
+    </>
   );
 }

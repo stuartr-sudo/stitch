@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import LibraryModal from './LibraryModal';
 import {
   Video,
   Play,
@@ -26,7 +27,8 @@ import {
   Plus,
   Wand2,
   Link2,
-  RefreshCw
+  RefreshCw,
+  FolderOpen
 } from 'lucide-react';
 
 // Style presets for quick inspiration
@@ -85,6 +87,23 @@ export default function TripModal({
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.video_url;
+    if (url) {
+      const newVideo = {
+        id: uuidv4(),
+        title: item.title || 'Library Video',
+        url: url,
+        source: 'library',
+        created_at: new Date().toISOString()
+      };
+      setSelectedVideo(newVideo);
+      setVideoLibrary(prev => [newVideo, ...prev]);
+      toast.success('Video selected from library!');
+    }
+  };
   
   // Prompt State
   const [prompt, setPrompt] = useState('');
@@ -357,6 +376,9 @@ export default function TripModal({
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm" onClick={() => setShowUrlImport(true)} className="gap-2">
                   <Link2 className="w-4 h-4" /> Import URL
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)} className="gap-2">
+                  <FolderOpen className="w-4 h-4" /> Library
                 </Button>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -644,14 +666,23 @@ export default function TripModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Trip - Video Restyling</DialogTitle>
-          <DialogDescription>Transform your videos with AI-powered style transfer</DialogDescription>
-        </DialogHeader>
-        {renderContent()}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Trip - Video Restyling</DialogTitle>
+            <DialogDescription>Transform your videos with AI-powered style transfer</DialogDescription>
+          </DialogHeader>
+          {renderContent()}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="videos"
+      />
+    </>
   );
 }

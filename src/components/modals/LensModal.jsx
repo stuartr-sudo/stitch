@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import LibraryModal from './LibraryModal';
 import {
   Focus,
   Upload,
@@ -21,7 +22,8 @@ import {
   Plus,
   ZoomIn,
   Download,
-  ExternalLink
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 /**
@@ -41,7 +43,16 @@ export default function LensModal({
   const [resultImage, setResultImage] = useState(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [showLibrary, setShowLibrary] = useState(false);
   const fileInputRef = useRef(null);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      setImage(url);
+      setResultImage(null);
+    }
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
@@ -213,12 +224,15 @@ export default function LensModal({
           />
 
           {/* Upload Options */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex-1">
               <Upload className="w-4 h-4 mr-1" /> Upload
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)} className="flex-1">
               <Link2 className="w-4 h-4 mr-1" /> URL
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)} className="flex-1">
+              <FolderOpen className="w-4 h-4 mr-1" /> Library
             </Button>
           </div>
 
@@ -345,14 +359,23 @@ export default function LensModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Lens</DialogTitle>
-          <DialogDescription>Adjust viewing angles with AI</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Lens</DialogTitle>
+            <DialogDescription>Adjust viewing angles with AI</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
+    </>
   );
 }

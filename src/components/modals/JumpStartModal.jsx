@@ -30,12 +30,14 @@ import {
   Move,
   Sparkles,
   Minus,
-  Plus
+  Plus,
+  FolderOpen
 } from 'lucide-react';
 import { Rect } from 'react-konva';
 import CanvasBoard from '@/components/canvas/CanvasBoard';
 import URLImage from '@/components/canvas/URLImage';
 import LoadingModal from '@/components/canvas/LoadingModal';
+import LibraryModal from './LibraryModal';
 import { supabase } from '@/lib/supabase';
 
 // Aspect ratio presets
@@ -216,6 +218,7 @@ export default function JumpStartModal({
 
   const [loadingMessage, setLoadingMessage] = useState('');
   const [showUrlImport, setShowUrlImport] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [rightPanel, setRightPanel] = useState(null);
   const [urlInput, setUrlInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -312,6 +315,38 @@ export default function JumpStartModal({
     
     return { x: viewportCenterX, y: viewportCenterY };
   }, [canvasWidth, canvasHeight]);
+
+  // Handle import from Library
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        const center = getViewportCenter();
+        const newImage = {
+          id: uuidv4(),
+          src: url,
+          x: center.x - img.width / 2,
+          y: center.y - img.height / 2,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          zIndex: images.length,
+          masks: []
+        };
+        setImages((prev) => [...prev, newImage]);
+        toast.success('Image added from library!');
+      };
+      
+      img.onerror = () => {
+        toast.error('Failed to load image from library');
+      };
+      
+      img.src = url;
+    }
+  };
 
   // Handle import from URL
   const handleImportFromUrl = async () => {
@@ -679,6 +714,9 @@ export default function JumpStartModal({
             <Button variant="ghost" size="icon" onClick={() => setShowUrlImport(true)} title="Import from URL">
               <Link className="w-5 h-5" />
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowLibrary(true)} title="From Library">
+              <FolderOpen className="w-5 h-5" />
+            </Button>
             <div className="h-px w-8 bg-gray-300 my-1" />
             <Button variant={tool === 'move' ? 'secondary' : 'ghost'} size="icon" onClick={() => { setTool('move'); setShowBrushPanel(false); }} title="Move (V)">
               <Move className="w-5 h-5" />
@@ -984,6 +1022,13 @@ export default function JumpStartModal({
           </div>
         </DialogContent>
       </Dialog>
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
+      />
     </>
   );
 }

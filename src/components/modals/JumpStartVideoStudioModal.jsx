@@ -23,9 +23,11 @@ import {
   CheckCircle2,
   Edit3,
   Download,
-  Plus
+  Plus,
+  FolderOpen
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
+import LibraryModal from './LibraryModal';
 
 /**
  * JumpStartVideoStudioModal - Video Edit and Extend functionality
@@ -62,6 +64,23 @@ export default function JumpStartVideoStudioModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [showUrlImport, setShowUrlImport] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+
+  const handleLibrarySelect = (item) => {
+    const url = item.url || item.video_url;
+    if (url) {
+      const newVideo = {
+        id: uuidv4(),
+        title: item.title || 'Library Video',
+        url: url,
+        source: 'library',
+        created_at: new Date().toISOString()
+      };
+      setSelectedVideo(newVideo);
+      setVideoLibrary(prev => [newVideo, ...prev]);
+      toast.success('Video selected from library!');
+    }
+  };
   
   // Shared Settings
   const [prompt, setPrompt] = useState('');
@@ -312,6 +331,9 @@ export default function JumpStartVideoStudioModal({
                 <Button variant="outline" onClick={() => setShowUrlImport(true)}>
                   Import from URL
                 </Button>
+                <Button variant="outline" onClick={() => setShowLibrary(true)}>
+                  <FolderOpen className="w-4 h-4 mr-2" /> Library
+                </Button>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input placeholder="Search library..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
@@ -548,6 +570,13 @@ export default function JumpStartVideoStudioModal({
       </Dialog>
 
       <LoadingModal isOpen={isGenerating && currentStep < 3} message={generationStatus} />
+      
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect}
+        mediaType="videos"
+      />
     </>
   );
 }
