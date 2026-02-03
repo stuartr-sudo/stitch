@@ -259,6 +259,28 @@ export default function JumpStartModal({
   const fileInputRef = useRef(null);
   const endFrameInputRef = useRef(null);
   const pollIntervalRef = useRef(null);
+  const contentRef = useRef(null);
+
+  // Helper to save media to library
+  const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
+    try {
+      await fetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type, title, source }),
+      });
+      console.log(`[JumpStart] Saved ${type} to library`);
+    } catch (err) {
+      console.warn('[JumpStart] Failed to save to library:', err);
+    }
+  };
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [currentStep]);
 
   // Get current model config
   const currentModel = VIDEO_MODELS.find(m => m.id === videoModel) || VIDEO_MODELS[0];
@@ -341,16 +363,20 @@ export default function JumpStartModal({
     }
   };
 
-  const handleFileUpload = (e, target = 'start') => {
+  const handleFileUpload = async (e, target = 'start') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
       if (target === 'start') {
-        setUploadedImage(event.target.result);
+        setUploadedImage(dataUrl);
+        // Save uploaded image to library
+        saveToLibrary(dataUrl, 'image', `JumpStart Upload - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else {
-        setEndFrameImage(event.target.result);
+        setEndFrameImage(dataUrl);
+        saveToLibrary(dataUrl, 'image', `JumpStart End Frame - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       }
     };
     reader.readAsDataURL(file);
@@ -359,12 +385,16 @@ export default function JumpStartModal({
   const handleUrlImport = (target = 'start') => {
     if (!urlInput.trim()) return;
     
+    const url = urlInput.trim();
     if (target === 'start') {
-      setUploadedImage(urlInput.trim());
+      setUploadedImage(url);
       setShowUrlImport(false);
+      // Save imported URL to library
+      saveToLibrary(url, 'image', `JumpStart Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
     } else {
-      setEndFrameImage(urlInput.trim());
+      setEndFrameImage(url);
       setShowEndFrameUrlImport(false);
+      saveToLibrary(url, 'image', `JumpStart End Frame Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
     }
     setUrlInput('');
   };
@@ -377,6 +407,7 @@ export default function JumpStartModal({
       setEndFrameImage(url);
     }
     setShowLibrary(false);
+    // No need to save - already in library
   };
 
   const stopPolling = () => {
@@ -460,6 +491,14 @@ export default function JumpStartModal({
         setCurrentStep(3);
         setHasAddedToEditor(false);
         toast.success('Video generated successfully!');
+        
+        // Save generated video to library
+        saveToLibrary(data.videoUrl, 'video', `JumpStart Video - ${videoStyle || 'Generated'}`, 'jumpstart');
+        
+        // Notify parent if callback provided
+        if (onVideoGenerated) {
+          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Video'}`, 'jumpstart');
+        }
       } else if (data.status === 'failed') {
         stopPolling();
         setIsLoading(false);
@@ -538,6 +577,9 @@ export default function JumpStartModal({
         setCurrentStep(3);
         setHasAddedToEditor(false);
         toast.success('Video generated!');
+        
+        // Save generated video to library
+        saveToLibrary(data.videoUrl, 'video', `JumpStart Video - ${videoStyle || 'Generated'}`, 'jumpstart');
         
         if (onVideoGenerated) {
           onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Video'}`, 'jumpstart');
@@ -631,7 +673,7 @@ export default function JumpStartModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div ref={contentRef} className="flex-1 overflow-y-auto p-6 bg-gray-50">
             {/* Step 1: Upload Image */}
             {currentStep === 1 && (
               <div className="max-w-2xl mx-auto space-y-6">
