@@ -344,6 +344,7 @@ export default function JumpStartModal({
   const [cameraAngle, setCameraAngle] = useState('');
   const [videoStyle, setVideoStyle] = useState('');
   const [specialEffects, setSpecialEffects] = useState([]);
+  const [sceneDescription, setSceneDescription] = useState('');
   const [description, setDescription] = useState('');
   
   // Generated video
@@ -379,6 +380,7 @@ export default function JumpStartModal({
       setCameraAngle('');
       setVideoStyle('');
       setSpecialEffects([]);
+      setSceneDescription('');
       setDescription('');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
@@ -640,6 +642,11 @@ export default function JumpStartModal({
   const buildFullPrompt = () => {
     const parts = [];
     
+    // SCENE DESCRIPTION FIRST - What's happening in the video
+    if (sceneDescription.trim()) {
+      parts.push(sceneDescription.trim());
+    }
+    
     // Check if video style has a detailed prompt (for realistic styles)
     const selectedStyle = VIDEO_STYLES.find(s => s.value === videoStyle);
     if (selectedStyle?.prompt) {
@@ -665,6 +672,8 @@ export default function JumpStartModal({
     if (specialEffects && specialEffects.length > 0) {
       parts.push(specialEffects.join(', '));
     }
+    
+    // Add style/motion presets
     if (description.trim()) parts.push(description.trim());
     
     // Add quality boosters
@@ -824,7 +833,8 @@ export default function JumpStartModal({
     setCameraMovement('');
     setCameraAngle('');
     setVideoStyle('');
-    setSpecialEffects('');
+    setSpecialEffects([]);
+    setSceneDescription('');
     setDescription('');
     setDuration(5);
     onClose();
@@ -1006,6 +1016,42 @@ export default function JumpStartModal({
                     </div>
                   )}
 
+                  {/* SCENE DESCRIPTION - What happens in the video */}
+                  <div className="bg-gradient-to-r from-[#2C666E]/10 to-[#90DDF0]/10 rounded-lg p-4 border-2 border-[#2C666E]/30 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Video className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Scene Description</h3>
+                      <span className="text-xs text-[#2C666E] font-medium bg-[#2C666E]/10 px-2 py-0.5 rounded">Important!</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Describe what happens in the video - the action, movement, and story.
+                    </p>
+                    <textarea 
+                      value={sceneDescription} 
+                      onChange={(e) => setSceneDescription(e.target.value)} 
+                      placeholder="e.g., 'A woman smiles and talks to the camera, gesturing with her hands while explaining a product. She looks happy and enthusiastic.'"
+                      className="w-full px-3 py-2 border border-[#2C666E]/30 rounded-lg text-sm bg-white resize-none h-24 focus:ring-2 focus:ring-[#2C666E]/50 focus:border-[#2C666E]" 
+                    />
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="text-xs text-gray-500">Quick ideas:</span>
+                      {[
+                        'Person talking to camera',
+                        'Slow smile and nod',
+                        'Looking around naturally',
+                        'Holding up a product',
+                        'Walking towards camera',
+                      ].map(idea => (
+                        <button
+                          key={idea}
+                          onClick={() => setSceneDescription(prev => prev ? `${prev}, ${idea.toLowerCase()}` : idea)}
+                          className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600 hover:bg-[#90DDF0]/30 hover:text-[#07393C] transition-colors"
+                        >
+                          + {idea}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <Move className="w-5 h-5 text-[#2C666E]" />
@@ -1173,7 +1219,7 @@ export default function JumpStartModal({
                     )}
                   </div>
 
-                  {(cameraMovement || cameraAngle || videoStyle || specialEffects.length > 0 || description) && (
+                  {(sceneDescription || cameraMovement || cameraAngle || videoStyle || specialEffects.length > 0 || description) && (
                     <div className="bg-[#90DDF0]/20 rounded-lg p-4 border border-[#2C666E]/30">
                       <h4 className="text-sm font-medium text-[#07393C] mb-2">Generated Prompt:</h4>
                       <p className="text-sm text-[#07393C] italic">{buildFullPrompt()}</p>
