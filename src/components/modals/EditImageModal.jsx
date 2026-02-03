@@ -34,9 +34,26 @@ const MODELS = [
 ];
 
 const OUTPUT_SIZES = [
-  { id: '1920', label: '1920×1920' },
-  { id: '2560', label: '2560×1440' },
-  { id: '4096', label: '4096×4096' },
+  // Square
+  { id: '1024x1024', label: '1024×1024', ratio: '1:1 Square' },
+  { id: '2048x2048', label: '2048×2048', ratio: '1:1 Square HD' },
+  // Landscape 16:9
+  { id: '1920x1080', label: '1920×1080', ratio: '16:9 Landscape' },
+  { id: '2560x1440', label: '2560×1440', ratio: '16:9 2K' },
+  { id: '3840x2160', label: '3840×2160', ratio: '16:9 4K' },
+  // Portrait 9:16
+  { id: '1080x1920', label: '1080×1920', ratio: '9:16 Portrait' },
+  { id: '1440x2560', label: '1440×2560', ratio: '9:16 2K' },
+  // Standard 4:3
+  { id: '1600x1200', label: '1600×1200', ratio: '4:3 Standard' },
+  { id: '2048x1536', label: '2048×1536', ratio: '4:3 HD' },
+  // Portrait 3:4
+  { id: '1200x1600', label: '1200×1600', ratio: '3:4 Portrait' },
+  // Wide 21:9
+  { id: '2560x1080', label: '2560×1080', ratio: '21:9 Ultrawide' },
+  // Social Media
+  { id: '1200x628', label: '1200×628', ratio: 'Facebook Ad' },
+  { id: '1080x1350', label: '1080×1350', ratio: '4:5 Instagram' },
 ];
 
 /**
@@ -51,7 +68,7 @@ export default function EditImageModal({
   const [images, setImages] = useState([]);
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('wavespeed-nano-ultra');
-  const [outputSize, setOutputSize] = useState('2560');
+  const [outputSize, setOutputSize] = useState('1920x1080');
   const [isLoading, setIsLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -336,27 +353,38 @@ export default function EditImageModal({
               </div>
 
               <div>
-                <Label className="text-sm font-medium mb-2 block">Output Size</Label>
-                <div className="space-y-2">
-                  {OUTPUT_SIZES.map((s) => (
-                    <label 
-                      key={s.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        outputSize === s.id ? 'border-[#2C666E] bg-[#90DDF0]/10' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="outputSize"
-                        value={s.id}
-                        checked={outputSize === s.id}
-                        onChange={(e) => setOutputSize(e.target.value)}
-                        className="accent-[#2C666E]"
-                      />
-                      <span className="text-sm">{s.label}</span>
-                    </label>
-                  ))}
-                </div>
+                <Label className="text-sm font-medium mb-2 block">Output Size & Aspect Ratio</Label>
+                <select
+                  value={outputSize}
+                  onChange={(e) => setOutputSize(e.target.value)}
+                  className="w-full p-3 border rounded-lg text-sm bg-white"
+                >
+                  <optgroup label="Square (1:1)">
+                    {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Landscape (16:9)">
+                    {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Portrait (9:16)">
+                    {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Standard (4:3 / 3:4)">
+                    {OUTPUT_SIZES.filter(s => s.ratio.includes('4:3') || s.ratio.includes('3:4')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Social Media">
+                    {OUTPUT_SIZES.filter(s => s.ratio.includes('Facebook') || s.ratio.includes('Instagram') || s.ratio.includes('Ultrawide')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
             </div>
 

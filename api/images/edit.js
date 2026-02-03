@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { images, prompt, model = 'wavespeed-nano-ultra', outputSize = '2560' } = req.body;
+    const { images, prompt, model = 'wavespeed-nano-ultra', outputSize = '1920x1080' } = req.body;
 
     if (!images || images.length === 0) {
       return res.status(400).json({ error: 'Missing images' });
@@ -23,7 +23,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing prompt' });
     }
 
-    console.log('[Edit Image] Model:', model, 'Images:', images.length);
+    // Parse dimensions from outputSize (e.g., "1920x1080" or "3840x2160")
+    const [width, height] = outputSize.split('x').map(Number);
+    const maxDim = Math.max(width || 1920, height || 1080);
+    
+    // Determine resolution based on dimensions
+    let resolution = '2k';
+    if (maxDim >= 3840) resolution = '4k';
+    else if (maxDim >= 2560) resolution = '2k';
+    else resolution = '1k';
+
+    console.log('[Edit Image] Model:', model, 'Size:', outputSize, 'Resolution:', resolution);
 
     let response;
     let endpoint;
@@ -39,7 +49,8 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           images: images,
           prompt: prompt,
-          resolution: outputSize.includes('4096') ? '4k' : '2k',
+          resolution: resolution,
+          aspect_ratio: width && height ? `${width}:${height}` : undefined,
         }),
       });
     } else if (model === 'wavespeed-qwen') {
