@@ -916,8 +916,8 @@ export default function JumpStartModal({
               </div>
 
               <div 
-                className="overflow-auto relative bg-gray-100 flex-1 flex items-center justify-center box-border min-h-0"
-                style={{ width: canvasDimensions.viewportWidth, padding: 20 }}
+                className="overflow-auto relative bg-gray-100 flex-1 flex items-center justify-center box-border min-h-0 w-full"
+                style={{ padding: 20 }}
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
               >
