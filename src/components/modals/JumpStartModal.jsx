@@ -688,7 +688,7 @@ export default function JumpStartModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
           <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -733,7 +733,7 @@ export default function JumpStartModal({
           <div ref={contentRef} className="flex-1 overflow-y-auto p-6 bg-gray-50">
             {/* Step 1: Upload Image */}
             {currentStep === 1 && (
-              <div className="max-w-2xl mx-auto space-y-6">
+              <div className="max-w-4xl mx-auto space-y-6">
                 {/* Model Selector - Compact Dropdown */}
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
                   <div className="flex items-center justify-between gap-4">
@@ -1028,7 +1028,7 @@ export default function JumpStartModal({
 
             {/* Step 2: Video Settings */}
             {currentStep === 2 && (
-              <div className="max-w-2xl mx-auto space-y-4">
+              <div className="max-w-4xl mx-auto space-y-4">
                 {/* Preview uploaded image */}
                 {uploadedImage && (
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
@@ -1313,7 +1313,7 @@ export default function JumpStartModal({
 
             {/* Step 3: Preview */}
             {currentStep === 3 && generatedVideoUrl && (
-              <div className="max-w-2xl mx-auto space-y-4">
+              <div className="max-w-4xl mx-auto space-y-4">
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Play className="w-5 h-5 text-[#2C666E]" />

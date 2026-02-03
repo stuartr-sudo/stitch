@@ -688,7 +688,7 @@ export default function TripModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Trip - Video Restyling</DialogTitle>
             <DialogDescription>Transform your videos with AI-powered style transfer</DialogDescription>
