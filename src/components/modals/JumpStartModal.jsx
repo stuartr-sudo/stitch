@@ -743,6 +743,7 @@ export default function JumpStartModal({
       formData.append('username', username);
       formData.append('resolution', resolution);
       formData.append('duration', duration.toString());
+      formData.append('aspectRatio', aspectRatio);
 
       const result = await fetch('/api/jumpstart/generate', {
         method: 'POST',

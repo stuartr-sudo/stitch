@@ -51,10 +51,13 @@ export default async function handler(req, res) {
     const username = fields.username?.[0] || 'default';
     const resolution = fields.resolution?.[0] || '480p';
     const duration = parseInt(fields.duration?.[0] || '5', 10);
+    const aspectRatio = fields.aspectRatio?.[0] || '16:9';
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
     }
+
+    console.log('[JumpStart] Aspect Ratio:', aspectRatio);
 
     const imageBuffer = fs.readFileSync(imageFile.filepath);
     
@@ -107,7 +110,7 @@ export default async function handler(req, res) {
 
     console.log('[JumpStart] Submitting to Wavespeed WAN 2.2 Spicy...');
     console.log('[JumpStart] Prompt:', prompt.substring(0, 100) + '...');
-    console.log('[JumpStart] Duration:', duration, 'Resolution:', resolution);
+    console.log('[JumpStart] Duration:', duration, 'Resolution:', resolution, 'Aspect:', aspectRatio);
     
     const submitResponse = await fetch('https://api.wavespeed.ai/api/v3/wavespeed-ai/wan-2.2-spicy/image-to-video', {
       method: 'POST',
@@ -120,6 +123,7 @@ export default async function handler(req, res) {
         prompt: prompt,
         resolution: resolution,
         duration: duration,
+        aspect_ratio: aspectRatio,
         seed: -1,
       }),
     });
