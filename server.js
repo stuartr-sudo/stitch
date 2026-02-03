@@ -90,6 +90,32 @@ app.post('/api/images/import-url', async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/images/edit', async (req, res) => {
+  const handler = await loadApiRoute('images/edit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/images/inpaint', async (req, res) => {
+  const handler = await loadApiRoute('images/inpaint.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Lens route
+app.post('/api/lens/generate', async (req, res) => {
+  const handler = await loadApiRoute('lens/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Smoosh route
+app.post('/api/smoosh/generate', async (req, res) => {
+  const handler = await loadApiRoute('smoosh/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
 });

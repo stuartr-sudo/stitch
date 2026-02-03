@@ -1,0 +1,499 @@
+import React, { useState, useRef, useCallback } from 'react';
+import { Stage, Layer } from 'react-konva';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import URLImage from '@/components/canvas/URLImage';
+import {
+  Layers,
+  Upload,
+  Link2,
+  Loader2,
+  Sparkles,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+  Move,
+  Frame
+} from 'lucide-react';
+
+const DIMENSION_PRESETS = [
+  { id: '1080x1080', label: '1080×1080 (Square)', width: 1080, height: 1080 },
+  { id: '1920x1080', label: '1920×1080 (16:9)', width: 1920, height: 1080 },
+  { id: '1080x1920', label: '1080×1920 (9:16)', width: 1080, height: 1920 },
+  { id: '1200x628', label: '1200×628 (Facebook)', width: 1200, height: 628 },
+  { id: '1080x1350', label: '1080×1350 (Instagram)', width: 1080, height: 1350 },
+];
+
+/**
+ * SmooshModal - Infinite Canvas Image Compositor
+ */
+export default function SmooshModal({ 
+  isOpen, 
+  onClose, 
+  onImageGenerated,
+  isEmbedded = false 
+}) {
+  const [images, setImages] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [prompt, setPrompt] = useState('');
+  const [dimensions, setDimensions] = useState(DIMENSION_PRESETS[0]);
+  const [stageScale, setStageScale] = useState(0.5);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+  const [resultImage, setResultImage] = useState(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  
+  const stageRef = useRef(null);
+  const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const newImage = {
+            id: Date.now() + Math.random(),
+            url: event.target.result,
+            x: dimensions.width / 2 - img.width / 4,
+            y: dimensions.height / 2 - img.height / 4,
+            width: img.width / 2,
+            height: img.height / 2,
+            rotation: 0,
+          };
+          setImages(prev => [...prev, newImage]);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddUrl = () => {
+    if (!urlInput.trim()) return;
+    try {
+      new URL(urlInput);
+      const newImage = {
+        id: Date.now(),
+        url: urlInput.trim(),
+        x: dimensions.width / 2 - 150,
+        y: dimensions.height / 2 - 100,
+        width: 300,
+        height: 200,
+        rotation: 0,
+      };
+      setImages(prev => [...prev, newImage]);
+      setUrlInput('');
+      setShowUrlInput(false);
+    } catch {
+      toast.error('Please enter a valid URL');
+    }
+  };
+
+  const handleImageUpdate = useCallback((id, newAttrs) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, ...newAttrs } : img
+    ));
+  }, []);
+
+  const handleDeleteSelected = () => {
+    if (selectedId) {
+      setImages(prev => prev.filter(img => img.id !== selectedId));
+      setSelectedId(null);
+    }
+  };
+
+  const handleZoom = (delta) => {
+    setStageScale(prev => Math.max(0.1, Math.min(2, prev + delta)));
+  };
+
+  const handleFrameContent = () => {
+    if (images.length === 0) return;
+    
+    // Calculate bounds
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    images.forEach(img => {
+      minX = Math.min(minX, img.x);
+      minY = Math.min(minY, img.y);
+      maxX = Math.max(maxX, img.x + img.width);
+      maxY = Math.max(maxY, img.y + img.height);
+    });
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const padding = 50;
+    const contentWidth = maxX - minX + padding * 2;
+    const contentHeight = maxY - minY + padding * 2;
+    
+    const scaleX = container.clientWidth / contentWidth;
+    const scaleY = container.clientHeight / contentHeight;
+    const newScale = Math.min(scaleX, scaleY, 1);
+
+    setStageScale(newScale);
+    setStagePos({
+      x: (container.clientWidth - contentWidth * newScale) / 2 - minX * newScale + padding * newScale,
+      y: (container.clientHeight - contentHeight * newScale) / 2 - minY * newScale + padding * newScale,
+    });
+  };
+
+  const flattenCanvas = () => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+
+    // Create offscreen canvas at full resolution
+    const offscreen = document.createElement('canvas');
+    offscreen.width = dimensions.width;
+    offscreen.height = dimensions.height;
+    const ctx = offscreen.getContext('2d');
+
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+
+    // Draw images
+    const promises = images.map(img => {
+      return new Promise((resolve) => {
+        const imgEl = new Image();
+        imgEl.crossOrigin = 'anonymous';
+        imgEl.onload = () => {
+          ctx.save();
+          ctx.translate(img.x + img.width / 2, img.y + img.height / 2);
+          ctx.rotate((img.rotation * Math.PI) / 180);
+          ctx.drawImage(imgEl, -img.width / 2, -img.height / 2, img.width, img.height);
+          ctx.restore();
+          resolve();
+        };
+        imgEl.onerror = () => resolve();
+        imgEl.src = img.url;
+      });
+    });
+
+    return Promise.all(promises).then(() => offscreen.toDataURL('image/png'));
+  };
+
+  const handleGenerate = async () => {
+    if (images.length === 0) {
+      toast.error('Please add at least one image');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const flatImage = await flattenCanvas();
+      if (!flatImage) throw new Error('Failed to flatten canvas');
+
+      const response = await fetch('/api/smoosh/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: flatImage,
+          prompt: prompt.trim() || 'A seamless composition',
+          width: dimensions.width,
+          height: dimensions.height,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Generation failed');
+
+      if (data.imageUrl) {
+        setResultImage(data.imageUrl);
+        toast.success('Image generated!');
+      } else if (data.requestId) {
+        toast.info('Processing...');
+        pollForResult(data.requestId);
+      }
+    } catch (error) {
+      console.error('Smoosh error:', error);
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const pollForResult = async (requestId) => {
+    const poll = async () => {
+      try {
+        const response = await fetch('/api/jumpstart/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId }),
+        });
+        const data = await response.json();
+        
+        if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
+          setResultImage(data.imageUrl || data.videoUrl);
+          setIsLoading(false);
+          toast.success('Image generated!');
+        } else if (data.status === 'failed') {
+          setIsLoading(false);
+          toast.error('Failed: ' + (data.error || 'Unknown error'));
+        } else {
+          setTimeout(poll, 3000);
+        }
+      } catch (error) {
+        console.error('Poll error:', error);
+      }
+    };
+    poll();
+  };
+
+  const handleUseResult = () => {
+    if (onImageGenerated && resultImage) {
+      onImageGenerated(resultImage);
+    }
+    onClose();
+  };
+
+  const content = (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Smoosh</h2>
+              <p className="text-slate-500 text-sm">Infinite canvas image compositor</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleZoom(-0.1)}>
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-slate-500 w-16 text-center">{Math.round(stageScale * 100)}%</span>
+            <Button variant="outline" size="sm" onClick={() => handleZoom(0.1)}>
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleFrameContent}>
+              <Frame className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden flex">
+        {/* Canvas Area */}
+        <div ref={containerRef} className="flex-1 bg-slate-200 overflow-hidden relative">
+          {!resultImage ? (
+            <Stage
+              ref={stageRef}
+              width={containerRef.current?.clientWidth || 800}
+              height={containerRef.current?.clientHeight || 600}
+              scaleX={stageScale}
+              scaleY={stageScale}
+              x={stagePos.x}
+              y={stagePos.y}
+              draggable
+              onDragEnd={(e) => setStagePos({ x: e.target.x(), y: e.target.y() })}
+              onClick={(e) => {
+                if (e.target === e.target.getStage()) setSelectedId(null);
+              }}
+            >
+              <Layer>
+                {/* Canvas background */}
+                <URLImage
+                  id="bg"
+                  url=""
+                  x={0}
+                  y={0}
+                  width={dimensions.width}
+                  height={dimensions.height}
+                  isSelected={false}
+                  onSelect={() => {}}
+                  onChange={() => {}}
+                  fill="white"
+                  stroke="#ccc"
+                  strokeWidth={2}
+                />
+                
+                {images.map((img) => (
+                  <URLImage
+                    key={img.id}
+                    id={img.id}
+                    url={img.url}
+                    x={img.x}
+                    y={img.y}
+                    width={img.width}
+                    height={img.height}
+                    rotation={img.rotation}
+                    isSelected={selectedId === img.id}
+                    onSelect={() => setSelectedId(img.id)}
+                    onChange={(newAttrs) => handleImageUpdate(img.id, newAttrs)}
+                  />
+                ))}
+              </Layer>
+            </Stage>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <img src={resultImage} alt="Result" className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+            </div>
+          )}
+        </div>
+
+        {/* Controls Panel */}
+        <div className="w-80 border-l p-4 space-y-4 overflow-y-auto bg-white">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
+          {/* Add Images */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Add Images</Label>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                <Upload className="w-4 h-4 mr-1" /> Upload
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)} className="flex-1">
+                <Link2 className="w-4 h-4 mr-1" /> URL
+              </Button>
+            </div>
+
+            {showUrlInput && (
+              <div className="mt-2 flex gap-2">
+                <Input 
+                  placeholder="https://..." 
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddUrl} size="sm">Add</Button>
+              </div>
+            )}
+          </div>
+
+          {/* Dimension Presets */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Canvas Size</Label>
+            <select
+              value={dimensions.id}
+              onChange={(e) => setDimensions(DIMENSION_PRESETS.find(d => d.id === e.target.value))}
+              className="w-full p-2 border rounded-lg text-sm"
+            >
+              {DIMENSION_PRESETS.map(preset => (
+                <option key={preset.id} value={preset.id}>{preset.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Selected Image Actions */}
+          {selectedId && (
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Selected Image</span>
+                <Button variant="ghost" size="sm" onClick={handleDeleteSelected} className="text-red-500 hover:text-red-600">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Drag to move, corners to resize/rotate</p>
+            </div>
+          )}
+
+          <hr />
+
+          {/* AI Enhancement */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">AI Enhancement (Optional)</Label>
+            <Textarea
+              placeholder="Describe how to enhance the composition..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+
+          {!resultImage ? (
+            <Button 
+              onClick={handleGenerate}
+              disabled={isLoading || images.length === 0}
+              className="w-full bg-[#2C666E] hover:bg-[#07393C] h-11"
+            >
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-2" /> Generate</>
+              )}
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm">
+                  <CheckCircle2 className="w-4 h-4" /> Done!
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
+                Back to Canvas
+              </Button>
+              <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
+                <Plus className="w-4 h-4 mr-2" /> Use This Image
+              </Button>
+            </div>
+          )}
+
+          {/* Image List */}
+          {images.length > 0 && (
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Layers ({images.length})</Label>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {images.map((img, idx) => (
+                  <div 
+                    key={img.id}
+                    onClick={() => setSelectedId(img.id)}
+                    className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
+                      selectedId === img.id ? 'bg-[#90DDF0]/30' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="w-8 h-8 bg-slate-200 rounded overflow-hidden">
+                      <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-sm text-slate-600">Layer {idx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isEmbedded) {
+    return <div className="h-full bg-white">{content}</div>;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Smoosh</DialogTitle>
+          <DialogDescription>Infinite canvas image compositor</DialogDescription>
+        </DialogHeader>
+        {content}
+      </DialogContent>
+    </Dialog>
+  );
+}

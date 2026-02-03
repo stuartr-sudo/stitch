@@ -12,13 +12,23 @@ import {
   Download,
   Plus,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Layers,
+  Eraser,
+  Focus,
+  FolderOpen,
+  Palette
 } from 'lucide-react';
 
 import JumpStartModal from '@/components/modals/JumpStartModal';
 import JumpStartVideoStudioModal from '@/components/modals/JumpStartVideoStudioModal';
 import TripModal from '@/components/modals/TripModal';
 import ImagineerModal from '@/components/modals/ImagineerModal';
+import EditImageModal from '@/components/modals/EditImageModal';
+import InpaintModal from '@/components/modals/InpaintModal';
+import LensModal from '@/components/modals/LensModal';
+import SmooshModal from '@/components/modals/SmooshModal';
+import LibraryModal from '@/components/modals/LibraryModal';
 
 /**
  * VideoAdvertCreator - Main page for creating video adverts
@@ -150,65 +160,127 @@ export default function VideoAdvertCreator() {
 
           {/* Create Tab */}
           <TabsContent value="create" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Generate Image Card */}
-              <div 
-                onClick={() => setActiveModal('imagineer')}
-                className="group bg-white rounded-2xl p-6 border shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-[#2C666E]/30"
-              >
-                <div className="p-3 bg-gradient-to-br from-[#90DDF0]/30 to-[#2C666E]/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-6 h-6 text-[#2C666E]" />
+            {/* Image Tools */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Image className="w-5 h-5 text-[#2C666E]" /> Image Tools
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {/* Generate Image */}
+                <div 
+                  onClick={() => setActiveModal('imagineer')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/30 to-[#2C666E]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Imagineer</h4>
+                  <p className="text-xs text-slate-500">Generate images from text</p>
                 </div>
-                <h3 className="font-bold text-lg text-slate-900 mb-2">Generate Image</h3>
-                <p className="text-sm text-slate-500 mb-4">Create stunning images from text with AI</p>
-                <Button className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-                  <Sparkles className="w-4 h-4 mr-2" /> Create Image
-                </Button>
-              </div>
 
-              {/* Image to Video Card */}
-              <div 
-                onClick={() => setActiveModal('jumpstart')}
-                className="group bg-white rounded-2xl p-6 border shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-[#07393C]/30"
-              >
-                <div className="p-3 bg-gradient-to-br from-[#90DDF0]/40 to-[#2C666E]/30 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                  <Video className="w-6 h-6 text-[#07393C]" />
+                {/* Edit Image */}
+                <div 
+                  onClick={() => setActiveModal('editimage')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Palette className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Edit Image</h4>
+                  <p className="text-xs text-slate-500">AI-powered image editing</p>
                 </div>
-                <h3 className="font-bold text-lg text-slate-900 mb-2">Image to Video</h3>
-                <p className="text-sm text-slate-500 mb-4">Transform images into animated videos</p>
-                <Button className="w-full bg-[#07393C] hover:bg-[#0A090C]">
-                  <Play className="w-4 h-4 mr-2" /> Create Video
-                </Button>
-              </div>
 
-              {/* Video Edit/Extend Card */}
-              <div 
-                onClick={() => setActiveModal('videostudio')}
-                className="group bg-white rounded-2xl p-6 border shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-[#90DDF0]/50"
-              >
-                <div className="p-3 bg-gradient-to-br from-[#90DDF0]/50 to-[#90DDF0]/30 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                  <Edit3 className="w-6 h-6 text-[#2C666E]" />
+                {/* Inpaint */}
+                <div 
+                  onClick={() => setActiveModal('inpaint')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/40 to-[#2C666E]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Eraser className="w-5 h-5 text-[#07393C]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Inpaint</h4>
+                  <p className="text-xs text-slate-500">Remove or replace objects</p>
                 </div>
-                <h3 className="font-bold text-lg text-slate-900 mb-2">Edit & Extend</h3>
-                <p className="text-sm text-slate-500 mb-4">Modify or extend existing videos</p>
-                <Button className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-                  <Edit3 className="w-4 h-4 mr-2" /> Edit Video
-                </Button>
-              </div>
 
-              {/* Video Restyle Card */}
-              <div 
-                onClick={() => setActiveModal('trip')}
-                className="group bg-white rounded-2xl p-6 border shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-[#2C666E]/40"
-              >
-                <div className="p-3 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/30 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                  <Wand2 className="w-6 h-6 text-[#07393C]" />
+                {/* Smoosh */}
+                <div 
+                  onClick={() => setActiveModal('smoosh')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Layers className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Smoosh</h4>
+                  <p className="text-xs text-slate-500">Infinite canvas compositor</p>
                 </div>
-                <h3 className="font-bold text-lg text-slate-900 mb-2">Restyle Video</h3>
-                <p className="text-sm text-slate-500 mb-4">Transform video style with AI</p>
-                <Button className="w-full bg-gradient-to-r from-[#2C666E] to-[#07393C] hover:from-[#07393C] hover:to-[#0A090C]">
-                  <Wand2 className="w-4 h-4 mr-2" /> Restyle
-                </Button>
+
+                {/* Lens */}
+                <div 
+                  onClick={() => setActiveModal('lens')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/50 to-[#90DDF0]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Focus className="w-5 h-5 text-[#07393C]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Lens</h4>
+                  <p className="text-xs text-slate-500">Adjust viewing angles</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Tools */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Video className="w-5 h-5 text-[#07393C]" /> Video Tools
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* JumpStart */}
+                <div 
+                  onClick={() => setActiveModal('jumpstart')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#07393C]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/40 to-[#2C666E]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Play className="w-5 h-5 text-[#07393C]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">JumpStart</h4>
+                  <p className="text-xs text-slate-500">Image to video</p>
+                </div>
+
+                {/* Video Edit */}
+                <div 
+                  onClick={() => setActiveModal('videostudio')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#90DDF0]/50"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/50 to-[#90DDF0]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Edit3 className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Video Studio</h4>
+                  <p className="text-xs text-slate-500">Edit & extend videos</p>
+                </div>
+
+                {/* Trip */}
+                <div 
+                  onClick={() => setActiveModal('trip')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/40"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Wand2 className="w-5 h-5 text-[#07393C]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Trip</h4>
+                  <p className="text-xs text-slate-500">Restyle videos with AI</p>
+                </div>
+
+                {/* Library */}
+                <div 
+                  onClick={() => setActiveModal('library')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/10 to-[#07393C]/10 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <FolderOpen className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Library</h4>
+                  <p className="text-xs text-slate-500">Browse saved media</p>
+                </div>
               </div>
             </div>
 
@@ -360,6 +432,84 @@ export default function VideoAdvertCreator() {
         isOpen={activeModal === 'trip'} 
         onClose={() => setActiveModal(null)}
         onInsert={handleVideoCreated}
+      />
+
+      <EditImageModal 
+        isOpen={activeModal === 'editimage'} 
+        onClose={() => setActiveModal(null)}
+        onImageEdited={(url) => {
+          const newImage = {
+            id: Date.now().toString(),
+            url,
+            prompt: 'Edited image',
+            createdAt: new Date().toISOString(),
+          };
+          setCreatedImages(prev => [newImage, ...prev]);
+          toast.success('Image added!');
+        }}
+      />
+
+      <InpaintModal 
+        isOpen={activeModal === 'inpaint'} 
+        onClose={() => setActiveModal(null)}
+        onImageEdited={(url) => {
+          const newImage = {
+            id: Date.now().toString(),
+            url,
+            prompt: 'Inpainted image',
+            createdAt: new Date().toISOString(),
+          };
+          setCreatedImages(prev => [newImage, ...prev]);
+          toast.success('Image added!');
+        }}
+      />
+
+      <LensModal 
+        isOpen={activeModal === 'lens'} 
+        onClose={() => setActiveModal(null)}
+        onImageEdited={(url) => {
+          const newImage = {
+            id: Date.now().toString(),
+            url,
+            prompt: 'Angle adjusted image',
+            createdAt: new Date().toISOString(),
+          };
+          setCreatedImages(prev => [newImage, ...prev]);
+          toast.success('Image added!');
+        }}
+      />
+
+      <SmooshModal 
+        isOpen={activeModal === 'smoosh'} 
+        onClose={() => setActiveModal(null)}
+        onImageGenerated={(url) => {
+          const newImage = {
+            id: Date.now().toString(),
+            url,
+            prompt: 'Canvas composition',
+            createdAt: new Date().toISOString(),
+          };
+          setCreatedImages(prev => [newImage, ...prev]);
+          toast.success('Image added!');
+        }}
+      />
+
+      <LibraryModal 
+        isOpen={activeModal === 'library'} 
+        onClose={() => setActiveModal(null)}
+        onSelect={(item) => {
+          if (item.type === 'video') {
+            handleVideoCreated(item.url || item.video_url);
+          } else {
+            const newImage = {
+              id: Date.now().toString(),
+              url: item.url || item.image_url,
+              prompt: item.title || 'Library image',
+              createdAt: new Date().toISOString(),
+            };
+            setCreatedImages(prev => [newImage, ...prev]);
+          }
+        }}
       />
     </div>
   );
