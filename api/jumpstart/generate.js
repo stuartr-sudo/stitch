@@ -7,7 +7,7 @@ function getSupabaseClient() {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
-    return null; // Return null instead of throwing
+    return null;
   }
   
   return createClient(supabaseUrl, supabaseKey);
@@ -15,25 +15,13 @@ function getSupabaseClient() {
 
 /**
  * JumpStart - Image to Video Generation API
- * Uses Wavespeed WAN 2.2 Spicy to convert images to videos
- * Supports both Supabase upload (preferred) and direct base64 (fallback)
+ * Supports multiple AI providers:
+ * - Wavespeed WAN 2.2 Spicy
+ * - Grok Imagine Video (FAL.ai / xAI)
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
-  
-  if (!WAVESPEED_API_KEY) {
-    console.error('[JumpStart] Missing WAVESPEED_API_KEY');
-    return res.status(500).json({ error: 'Missing Wavespeed API key. Please configure WAVESPEED_API_KEY.' });
-  }
-
-  // Supabase is optional - we can use base64 directly if not configured
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    console.log('[JumpStart] Supabase not configured, will use base64 fallback');
   }
 
   try {
@@ -48,6 +36,7 @@ export default async function handler(req, res) {
 
     const imageFile = files.image?.[0];
     const prompt = fields.prompt?.[0];
+    const model = fields.model?.[0] || 'wavespeed-wan';
     const username = fields.username?.[0] || 'default';
     const resolution = fields.resolution?.[0] || '480p';
     const duration = parseInt(fields.duration?.[0] || '5', 10);
@@ -59,26 +48,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
     }
 
-    console.log('[JumpStart] Dimensions:', { aspectRatio, width, height, resolution });
+    console.log('[JumpStart] Model:', model);
+    console.log('[JumpStart] Dimensions:', { aspectRatio, width, height, resolution, duration });
 
+    // Read and prepare image
     const imageBuffer = fs.readFileSync(imageFile.filepath);
-    
     let mimeType = imageFile.mimetype || 'image/png';
     if (mimeType === 'text/html' && imageFile.originalFilename?.endsWith('.jpg')) {
       mimeType = 'image/jpeg';
     }
-    
+
+    // Get image URL (Supabase upload or base64)
+    const supabase = getSupabaseClient();
     let imageUrl;
     let tempFileName = null;
 
-    // Try Supabase upload first, fall back to base64
     if (supabase) {
       try {
         const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png';
         tempFileName = `jumpstart-temp-${Date.now()}.${extension}`;
         
-        console.log('[JumpStart] Uploading to Supabase:', tempFileName);
-
         const bucketName = 'videos';
         const uploadResult = await supabase.storage
           .from(bucketName)
@@ -87,107 +76,180 @@ export default async function handler(req, res) {
             upsert: true,
           });
 
-        if (uploadResult.error) {
-          console.warn('[JumpStart] Supabase upload failed, using base64:', uploadResult.error.message);
-          // Fall through to base64
-        } else {
+        if (!uploadResult.error) {
           const { data: { publicUrl } } = supabase.storage
             .from(bucketName)
             .getPublicUrl(`temp/${tempFileName}`);
-          
           imageUrl = publicUrl;
-          console.log('[JumpStart] Using Supabase URL:', imageUrl);
+          console.log('[JumpStart] Using Supabase URL');
         }
       } catch (uploadError) {
-        console.warn('[JumpStart] Supabase error, using base64:', uploadError.message);
+        console.warn('[JumpStart] Supabase error:', uploadError.message);
       }
     }
 
-    // Use base64 data URL if Supabase didn't work
     if (!imageUrl) {
       const base64Image = imageBuffer.toString('base64');
       imageUrl = `data:${mimeType};base64,${base64Image}`;
-      console.log('[JumpStart] Using base64 data URL (length:', imageUrl.length, ')');
+      console.log('[JumpStart] Using base64 data URL');
     }
 
-    console.log('[JumpStart] Submitting to Wavespeed WAN 2.2 Spicy...');
-    console.log('[JumpStart] Prompt:', prompt.substring(0, 150) + '...');
-    console.log('[JumpStart] Settings:', { duration, resolution, aspectRatio, width, height });
-    
-    // Build request body - include all possible dimension parameters
-    const requestBody = {
-      image: imageUrl,
-      prompt: prompt,
-      resolution: resolution,
-      duration: duration,
-      aspect_ratio: aspectRatio,
-      width: width,
-      height: height,
-      seed: -1,
-    };
-    
-    console.log('[JumpStart] Request body (partial):', { 
-      ...requestBody, 
-      image: requestBody.image.substring(0, 50) + '...',
-      prompt: requestBody.prompt.substring(0, 100) + '...'
-    });
-    
-    const submitResponse = await fetch('https://api.wavespeed.ai/api/v3/wavespeed-ai/wan-2.2-spicy/image-to-video', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!submitResponse.ok) {
-      const errorText = await submitResponse.text();
-      console.error('[JumpStart] Wavespeed submit error:', errorText);
-      return res.status(500).json({ error: 'Failed to submit to video generation API: ' + errorText.substring(0, 200) });
-    }
-
-    const submitData = await submitResponse.json();
-    console.log('[JumpStart] Submit response:', JSON.stringify(submitData).substring(0, 500));
-
-    const status = submitData.status || submitData.data?.status;
-    const resultUrl = submitData.outputs?.[0] || submitData.data?.outputs?.[0];
-    
-    if (status === 'completed' && resultUrl) {
-      console.log('[JumpStart] Video ready immediately:', resultUrl);
-      
-      // Clean up temp file if we used Supabase
-      if (supabase && tempFileName) {
-        await supabase.storage.from('videos').remove([`temp/${tempFileName}`]).catch(() => {});
-      }
-      
-      return res.status(200).json({
-        success: true,
-        videoUrl: resultUrl,
-        status: 'completed',
+    // Route to appropriate provider
+    if (model === 'grok-imagine') {
+      return await handleGrokImagine(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, supabase, tempFileName
+      });
+    } else {
+      return await handleWavespeed(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, width, height, supabase, tempFileName
       });
     }
-      
-    const requestId = submitData.id || submitData.request_id || submitData.data?.id;
-    
-    if (!requestId) {
-      console.error('[JumpStart] No request ID in response:', submitData);
-      return res.status(500).json({ error: 'No request ID returned from API' });
-    }
-
-    console.log('[JumpStart] Request ID:', requestId);
-
-    return res.status(200).json({
-      success: true,
-      requestId: requestId,
-      status: status || 'processing',
-      message: 'Video generation started. Polling for result...',
-    });
 
   } catch (error) {
     console.error('[JumpStart] Error:', error);
     return res.status(500).json({ error: error.message });
   }
+}
+
+/**
+ * Handle Wavespeed WAN 2.2 Spicy
+ */
+async function handleWavespeed(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution, width, height, supabase, tempFileName } = params;
+  
+  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
+  if (!WAVESPEED_API_KEY) {
+    return res.status(500).json({ error: 'Missing Wavespeed API key' });
+  }
+
+  console.log('[JumpStart/Wavespeed] Submitting...');
+  
+  const requestBody = {
+    image: imageUrl,
+    prompt: prompt,
+    resolution: resolution,
+    duration: duration,
+    aspect_ratio: aspectRatio,
+    width: width,
+    height: height,
+    seed: -1,
+  };
+  
+  const submitResponse = await fetch('https://api.wavespeed.ai/api/v3/wavespeed-ai/wan-2.2-spicy/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Wavespeed] Error:', errorText);
+    return res.status(500).json({ error: 'Wavespeed API error: ' + errorText.substring(0, 200) });
+  }
+
+  const submitData = await submitResponse.json();
+  console.log('[JumpStart/Wavespeed] Response:', JSON.stringify(submitData).substring(0, 300));
+
+  const status = submitData.status || submitData.data?.status;
+  const resultUrl = submitData.outputs?.[0] || submitData.data?.outputs?.[0];
+  
+  if (status === 'completed' && resultUrl) {
+    if (supabase && tempFileName) {
+      await supabase.storage.from('videos').remove([`temp/${tempFileName}`]).catch(() => {});
+    }
+    return res.status(200).json({ success: true, videoUrl: resultUrl, status: 'completed' });
+  }
+    
+  const requestId = submitData.id || submitData.request_id || submitData.data?.id;
+  if (!requestId) {
+    return res.status(500).json({ error: 'No request ID returned' });
+  }
+
+  return res.status(200).json({
+    success: true,
+    requestId: requestId,
+    model: 'wavespeed-wan',
+    status: status || 'processing',
+  });
+}
+
+/**
+ * Handle Grok Imagine Video (FAL.ai / xAI)
+ */
+async function handleGrokImagine(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  console.log('[JumpStart/Grok] Submitting to xAI Grok Imagine Video...');
+  console.log('[JumpStart/Grok] Settings:', { duration, aspectRatio, resolution });
+  
+  const requestBody = {
+    prompt: prompt,
+    image_url: imageUrl,
+    duration: Math.min(duration, 15), // Max 15 seconds for Grok
+    aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
+    resolution: resolution,
+  };
+
+  console.log('[JumpStart/Grok] Request:', { 
+    ...requestBody, 
+    image_url: requestBody.image_url.substring(0, 50) + '...',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/xai/grok-imagine-video/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Grok] Error:', errorText);
+    return res.status(500).json({ error: 'Grok API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Grok] Response:', JSON.stringify(data).substring(0, 500));
+
+  // FAL returns video directly or a request_id for queuing
+  if (data.video?.url) {
+    console.log('[JumpStart/Grok] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+      videoInfo: {
+        width: data.video.width,
+        height: data.video.height,
+        duration: data.video.duration,
+        fps: data.video.fps,
+      }
+    });
+  }
+
+  // If queued, return request ID for polling
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'grok-imagine',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Grok API' });
 }
 
 export const config = {

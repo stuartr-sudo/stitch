@@ -40,12 +40,36 @@ import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
 import { supabase } from '@/lib/supabase';
 
+// Video Generation Models
+const VIDEO_MODELS = [
+  { 
+    id: 'wavespeed-wan', 
+    label: '🚀 Wavespeed WAN 2.2 Spicy', 
+    description: 'Fast, good quality',
+    provider: 'wavespeed',
+    maxDuration: 8,
+    resolutions: ['480p', '720p'],
+  },
+  { 
+    id: 'grok-imagine', 
+    label: '🤖 Grok Imagine Video (xAI)', 
+    description: 'High quality, supports audio',
+    provider: 'fal',
+    maxDuration: 15,
+    resolutions: ['480p', '720p'],
+    aspectRatios: ['auto', '16:9', '9:16', '1:1', '4:3', '3:2', '2:3', '3:4'],
+  },
+];
+
 // Aspect ratio presets
 const ASPECT_RATIOS = {
   '16:9': { label: 'Landscape (16:9)', ratio: 16/9, width480: 854, height480: 480, width720: 1280, height720: 720 },
   '9:16': { label: 'Portrait (9:16)', ratio: 9/16, width480: 480, height480: 854, width720: 720, height720: 1280 },
   '1:1': { label: 'Square (1:1)', ratio: 1, width480: 480, height480: 480, width720: 720, height720: 720 },
   '4:3': { label: 'Standard (4:3)', ratio: 4/3, width480: 640, height480: 480, width720: 960, height720: 720 },
+  '3:2': { label: 'Photo (3:2)', ratio: 3/2, width480: 720, height480: 480, width720: 1080, height720: 720 },
+  '2:3': { label: 'Portrait Photo (2:3)', ratio: 2/3, width480: 480, height480: 720, width720: 720, height720: 1080 },
+  '3:4': { label: 'Portrait Standard (3:4)', ratio: 3/4, width480: 480, height480: 640, width720: 720, height720: 960 },
 };
 
 // Camera Movement Presets
@@ -337,6 +361,7 @@ export default function JumpStartModal({
   const [searchResults, setSearchResults] = useState([]);
   
   // Video settings
+  const [videoModel, setVideoModel] = useState('wavespeed-wan');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [resolution, setResolution] = useState('480p');
   const [duration, setDuration] = useState(5);
@@ -373,6 +398,7 @@ export default function JumpStartModal({
       setUrlInput('');
       setSearchQuery('');
       setSearchResults([]);
+      setVideoModel('wavespeed-wan');
       setAspectRatio('16:9');
       setResolution('480p');
       setDuration(5);
@@ -706,17 +732,22 @@ export default function JumpStartModal({
     }
   };
 
-  const pollForResult = async (requestId) => {
+  const pollForResult = async (requestId, model = videoModel) => {
     try {
       const response = await fetch('/api/jumpstart/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId }),
+        body: JSON.stringify({ requestId, model }),
       });
 
       if (!response.ok) throw new Error('Failed to check status');
 
       const data = await response.json();
+      
+      // Update loading message with queue info if available
+      if (data.queuePosition) {
+        setLoadingMessage(`In queue (position ${data.queuePosition})...`);
+      }
       
       if (data.status === 'completed') {
         stopPolling();
@@ -772,18 +803,19 @@ export default function JumpStartModal({
       
       formData.append('prompt', promptWithAspect);
       formData.append('username', username);
+      formData.append('model', videoModel);
       formData.append('resolution', resolution);
       formData.append('duration', duration.toString());
       formData.append('aspectRatio', aspectRatio);
       
       // Also send explicit dimensions
-      const config = ASPECT_RATIOS[aspectRatio];
+      const config = ASPECT_RATIOS[aspectRatio] || ASPECT_RATIOS['16:9'];
       const outputWidth = resolution === '720p' ? config.width720 : config.width480;
       const outputHeight = resolution === '720p' ? config.height720 : config.height480;
       formData.append('width', outputWidth.toString());
       formData.append('height', outputHeight.toString());
       
-      console.log('[JumpStart] Sending:', { aspectRatio, outputWidth, outputHeight, resolution });
+      console.log('[JumpStart] Sending:', { model: videoModel, aspectRatio, outputWidth, outputHeight, resolution });
 
       const result = await fetch('/api/jumpstart/generate', {
         method: 'POST',
@@ -807,10 +839,11 @@ export default function JumpStartModal({
       }
 
       if (data.requestId) {
-        setLoadingMessage('Video generation started. Checking status...');
-        pollForResult(data.requestId);
+        const modelName = videoModel === 'grok-imagine' ? 'Grok' : 'Wavespeed';
+        setLoadingMessage(`${modelName} is generating your video...`);
+        pollForResult(data.requestId, videoModel);
         pollIntervalRef.current = setInterval(() => {
-          pollForResult(data.requestId);
+          pollForResult(data.requestId, videoModel);
         }, 3000);
       } else {
         throw new Error('No request ID returned from API');
@@ -859,6 +892,7 @@ export default function JumpStartModal({
     setLastPromptUsed('');
     setRightPanel(null);
     setSearchResults([]);
+    setVideoModel('wavespeed-wan');
     setAspectRatio('16:9');
     setResolution('480p');
     setCameraMovement('');
@@ -1047,6 +1081,44 @@ export default function JumpStartModal({
                     </div>
                   )}
 
+                  {/* AI MODEL SELECTOR */}
+                  <div className="bg-gradient-to-r from-[#07393C]/10 to-[#2C666E]/10 rounded-lg p-4 border-2 border-[#07393C]/30 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-[#07393C]" />
+                      <h3 className="font-semibold text-gray-900">AI Model</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {VIDEO_MODELS.map(model => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setVideoModel(model.id);
+                            // Adjust duration if exceeds max
+                            if (duration > model.maxDuration) {
+                              setDuration(model.maxDuration);
+                            }
+                          }}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            videoModel === model.id
+                              ? 'border-[#2C666E] bg-[#2C666E]/10'
+                              : 'border-gray-200 bg-white hover:border-[#2C666E]/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{model.label}</span>
+                            {videoModel === model.id && (
+                              <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded">Selected</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{model.description}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Max {model.maxDuration}s • {model.resolutions.join(', ')}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* SCENE DESCRIPTION - What happens in the video */}
                   <div className="bg-gradient-to-r from-[#2C666E]/10 to-[#90DDF0]/10 rounded-lg p-4 border-2 border-[#2C666E]/30 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
@@ -1198,11 +1270,28 @@ export default function JumpStartModal({
                       <h3 className="font-semibold text-gray-900">Video Duration</h3>
                     </div>
                     <select value={duration} onChange={(e) => setDuration(parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                      <option value={5}>5 seconds</option>
-                      <option value={8}>8 seconds</option>
+                      {videoModel === 'grok-imagine' ? (
+                        <>
+                          <option value={4}>4 seconds</option>
+                          <option value={6}>6 seconds</option>
+                          <option value={8}>8 seconds</option>
+                          <option value={10}>10 seconds</option>
+                          <option value={12}>12 seconds</option>
+                          <option value={15}>15 seconds</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value={4}>4 seconds</option>
+                          <option value={5}>5 seconds</option>
+                          <option value={6}>6 seconds</option>
+                          <option value={8}>8 seconds</option>
+                        </>
+                      )}
                     </select>
                     <div className="mt-3 pt-3 border-t text-sm text-gray-500">
-                      <strong>Output:</strong> {ASPECT_RATIOS[aspectRatio].label} @ {resolution}
+                      <strong>Output:</strong> {ASPECT_RATIOS[aspectRatio]?.label || aspectRatio} @ {resolution}
+                      <br />
+                      <strong>Model:</strong> {VIDEO_MODELS.find(m => m.id === videoModel)?.label || videoModel}
                     </div>
                   </div>
 
