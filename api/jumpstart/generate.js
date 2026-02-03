@@ -55,6 +55,16 @@ export default async function handler(req, res) {
     
     // Veo Fast specific
     const negativePrompt = fields.negativePrompt?.[0] || '';
+    
+    // Multi-image support for Veo 3.1
+    let additionalImages = [];
+    try {
+      if (fields.additionalImages?.[0]) {
+        additionalImages = JSON.parse(fields.additionalImages[0]);
+      }
+    } catch (e) {
+      console.warn('[JumpStart] Failed to parse additionalImages:', e);
+    }
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
@@ -109,7 +119,7 @@ export default async function handler(req, res) {
     // Route to appropriate provider
     if (model === 'veo3') {
       return await handleVeo3(req, res, {
-        imageUrl, prompt, aspectRatio, resolution, enableAudio
+        imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages
       });
     } else if (model === 'veo3-fast') {
       return await handleVeo3Fast(req, res, {
@@ -379,7 +389,7 @@ async function handleSeedance(req, res, params) {
  * Handle Google Veo 3.1 (FAL.ai)
  */
 async function handleVeo3(req, res, params) {
-  const { imageUrl, prompt, aspectRatio, resolution, enableAudio } = params;
+  const { imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages = [] } = params;
   
   const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
@@ -387,12 +397,14 @@ async function handleVeo3(req, res, params) {
   }
 
   console.log('[JumpStart/Veo3] Submitting to Google Veo 3.1...');
-  console.log('[JumpStart/Veo3] Settings:', { aspectRatio, resolution, enableAudio });
+  console.log('[JumpStart/Veo3] Settings:', { aspectRatio, resolution, enableAudio, additionalImagesCount: additionalImages.length });
   
-  // Veo 3.1 uses image_urls array (can support multiple reference images)
+  // Veo 3.1 uses image_urls array - supports multiple reference images
+  const allImages = [imageUrl, ...additionalImages];
+  
   const requestBody = {
     prompt: prompt,
-    image_urls: [imageUrl], // Single image for now, could be expanded
+    image_urls: allImages,
     aspect_ratio: aspectRatio,
     duration: '8s', // Veo 3.1 only supports 8 seconds
     resolution: resolution,
@@ -402,7 +414,7 @@ async function handleVeo3(req, res, params) {
 
   console.log('[JumpStart/Veo3] Request:', { 
     ...requestBody, 
-    image_urls: ['[image]'],
+    image_urls: `[${allImages.length} images]`,
     prompt: requestBody.prompt.substring(0, 100) + '...'
   });
   

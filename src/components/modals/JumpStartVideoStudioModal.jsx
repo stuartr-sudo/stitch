@@ -101,6 +101,7 @@ export default function JumpStartVideoStudioModal({
       setSelectedVideo(newVideo);
       setVideoLibrary(prev => [newVideo, ...prev]);
       toast.success('Video selected from library!');
+      // No need to save again - already in library
     }
   };
   
@@ -124,6 +125,20 @@ export default function JumpStartVideoStudioModal({
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
   const [lastSavedVideoUrl, setLastSavedVideoUrl] = useState(null);
   const pollIntervalRef = useRef(null);
+
+  // Helper to save media to library
+  const saveToLibrary = async (url, type = 'video', title = '', source = 'video-studio') => {
+    try {
+      await fetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type, title, source }),
+      });
+      console.log(`[VideoStudio] Saved ${type} to library`);
+    } catch (err) {
+      console.warn('[VideoStudio] Failed to save to library:', err);
+    }
+  };
 
   // Reset modal state when opened
   useEffect(() => {
@@ -156,10 +171,11 @@ export default function JumpStartVideoStudioModal({
       return;
     }
 
+    const url = urlInput.trim();
     const newVideo = {
       id: uuidv4(),
       title: 'Imported Video',
-      url: urlInput.trim(),
+      url: url,
       source: 'imported',
       created_at: new Date().toISOString()
     };
@@ -169,6 +185,9 @@ export default function JumpStartVideoStudioModal({
     setShowUrlImport(false);
     setUrlInput('');
     toast.success('Video imported!');
+    
+    // Save imported video to library
+    saveToLibrary(url, 'video', `Imported Video - ${new Date().toLocaleString()}`, 'video-studio-import');
   };
 
   const filteredLibrary = useMemo(() => {
@@ -198,6 +217,9 @@ export default function JumpStartVideoStudioModal({
         setIsGenerating(false);
         setCurrentStep(3);
         toast.success(`Video ${mode === 'extend' ? 'extended' : 'edited'} successfully!`);
+        
+        // Save generated video to library
+        saveToLibrary(data.videoUrl, 'video', `${mode === 'extend' ? 'Extended' : 'Edited'} Video - ${new Date().toLocaleString()}`, `video-studio-${mode}`);
       } else if (data.status === 'failed') {
         clearInterval(pollIntervalRef.current);
         setIsGenerating(false);
@@ -249,10 +271,13 @@ export default function JumpStartVideoStudioModal({
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
         setCurrentStep(3);
+        
+        // Save generated video to library
+        saveToLibrary(data.videoUrl, 'video', `${mode === 'extend' ? 'Extended' : 'Edited'} Video - ${new Date().toLocaleString()}`, `video-studio-${mode}`);
       } else {
         setRequestId(data.requestId);
         setGenerationStatus(`Processing your video (may take 1-3 minutes)...`);
-        pollIntervalRef.current = setInterval(() => pollForResult(data.requestId), 5000);
+        pollIntervalRef.current = setInterval(() => pollForResult(data.requestId, extendModel), 5000);
       }
     } catch (error) {
       console.error('Process error:', error);

@@ -257,13 +257,14 @@ export default function JumpStartModal({
   
   // Image upload
   const [uploadedImage, setUploadedImage] = useState(null);
+  const [additionalImages, setAdditionalImages] = useState([]); // For multi-image models like Veo 3.1
   const [endFrameImage, setEndFrameImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [showEndFrameUrlImport, setShowEndFrameUrlImport] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [libraryTarget, setLibraryTarget] = useState('start'); // 'start' or 'end'
+  const [libraryTarget, setLibraryTarget] = useState('start'); // 'start', 'end', or 'additional'
   const [urlInput, setUrlInput] = useState('');
   
   // Video settings
@@ -322,6 +323,7 @@ export default function JumpStartModal({
     if (isOpen) {
       setCurrentStep(1);
       setUploadedImage(null);
+      setAdditionalImages([]);
       setEndFrameImage(null);
       setIsLoading(false);
       setLoadingMessage('');
@@ -407,6 +409,9 @@ export default function JumpStartModal({
         setUploadedImage(dataUrl);
         // Save uploaded image to library
         saveToLibrary(dataUrl, 'image', `JumpStart Upload - ${new Date().toLocaleString()}`, 'jumpstart-upload');
+      } else if (target === 'additional') {
+        setAdditionalImages(prev => [...prev, dataUrl]);
+        saveToLibrary(dataUrl, 'image', `JumpStart Reference - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else {
         setEndFrameImage(dataUrl);
         saveToLibrary(dataUrl, 'image', `JumpStart End Frame - ${new Date().toLocaleString()}`, 'jumpstart-upload');
@@ -424,6 +429,10 @@ export default function JumpStartModal({
       setShowUrlImport(false);
       // Save imported URL to library
       saveToLibrary(url, 'image', `JumpStart Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
+    } else if (target === 'additional') {
+      setAdditionalImages(prev => [...prev, url]);
+      setShowUrlImport(false);
+      saveToLibrary(url, 'image', `JumpStart Reference Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
     } else {
       setEndFrameImage(url);
       setShowEndFrameUrlImport(false);
@@ -436,11 +445,17 @@ export default function JumpStartModal({
     const url = item.image_url || item.url;
     if (libraryTarget === 'start') {
       setUploadedImage(url);
+    } else if (libraryTarget === 'additional') {
+      setAdditionalImages(prev => [...prev, url]);
     } else {
       setEndFrameImage(url);
     }
     setShowLibrary(false);
     // No need to save - already in library
+  };
+  
+  const removeAdditionalImage = (index) => {
+    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const stopPolling = () => {
@@ -592,6 +607,11 @@ export default function JumpStartModal({
       
       if (currentModel.supportsNegativePrompt && negativePrompt.trim()) {
         formData.append('negativePrompt', negativePrompt.trim());
+      }
+      
+      // Multi-image support for Veo 3.1
+      if (currentModel.supportsMultipleImages && additionalImages.length > 0) {
+        formData.append('additionalImages', JSON.stringify(additionalImages));
       }
 
       console.log('[JumpStart] Generating with:', { model: videoModel, aspectRatio, resolution, duration, enableAudio });
@@ -889,6 +909,75 @@ export default function JumpStartModal({
                       className="hidden"
                       onChange={(e) => handleFileUpload(e, 'end')}
                     />
+                  </div>
+                )}
+
+                {/* Additional Reference Images (Veo 3.1 only) */}
+                {currentModel.supportsMultipleImages && uploadedImage && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="w-5 h-5 text-green-600" />
+                      <h3 className="font-semibold text-gray-900">Additional Reference Images</h3>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Optional - Veo 3.1 Feature</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Add up to 4 more reference images to guide the video generation style and composition.
+                    </p>
+                    
+                    {/* Show existing additional images */}
+                    {additionalImages.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {additionalImages.map((img, index) => (
+                          <div key={index} className="relative w-20 h-20">
+                            <img 
+                              src={img} 
+                              alt={`Reference ${index + 1}`} 
+                              className="w-full h-full object-cover rounded-lg border" 
+                            />
+                            <button 
+                              onClick={() => removeAdditionalImage(index)}
+                              className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Add more buttons - only if under 4 images */}
+                    {additionalImages.length < 4 && (
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleFileUpload(e, 'additional');
+                            input.click();
+                          }}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Add Reference
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => { setLibraryTarget('additional'); setShowLibrary(true); }}
+                        >
+                          <FolderOpen className="w-4 h-4 mr-2" />
+                          From Library
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-400 mt-2">
+                      {additionalImages.length}/4 reference images added
+                    </p>
                   </div>
                 )}
 
