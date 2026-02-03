@@ -302,21 +302,23 @@ export default function ImagineerModal({
   };
 
   const content = (
-    <>
+    <div className="flex flex-col h-full">
       {!isEmbedded && (
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#2C666E]" />
-            Imagineer - AI Image Generation
-          </DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Build your perfect image by selecting options below. All selections combine into a detailed prompt.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="p-6 pb-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Imagineer</h2>
+              <p className="text-slate-500 text-sm">Build your perfect image by selecting options below</p>
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-4 pl-1 pt-1 pb-1">
-        <div className="space-y-6 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
+        <div className="space-y-6 max-w-3xl mx-auto">
           
           {/* SECTION: Subject */}
           <div className="space-y-3">
@@ -456,7 +458,7 @@ export default function ImagineerModal({
           </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 
   if (isEmbedded) {
