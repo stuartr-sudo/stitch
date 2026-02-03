@@ -469,7 +469,7 @@ export default function ImagineerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl bg-white max-h-[90vh] flex flex-col min-h-0 overflow-hidden">
+      <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
         {content}
       </DialogContent>
     </Dialog>

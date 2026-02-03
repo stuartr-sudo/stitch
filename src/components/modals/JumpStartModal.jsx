@@ -996,7 +996,7 @@ export default function JumpStartModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-h-[95vh] p-0 flex flex-col overflow-hidden" style={{ height: 'auto', maxHeight: '95vh', width: 'auto', maxWidth: '90vw', minWidth: '1100px' }}>
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>JumpStart - Image to Video</DialogTitle>
             <DialogDescription>Compose images and generate animated videos with AI</DialogDescription>

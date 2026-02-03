@@ -560,7 +560,7 @@ export default function JumpStartVideoStudioModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-h-[95vh] p-0 overflow-hidden flex flex-col" style={{ height: 'auto', maxHeight: '95vh', width: 'auto', maxWidth: '95vw', minWidth: '1100px' }}>
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Video Studio</DialogTitle>
             <DialogDescription>Extend or edit existing videos using AI.</DialogDescription>

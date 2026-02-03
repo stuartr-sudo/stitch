@@ -450,7 +450,7 @@ export default function EditImageModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Edit Image</DialogTitle>
             <DialogDescription>AI-powered image editing</DialogDescription>
