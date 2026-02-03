@@ -51,6 +51,11 @@ const ASPECT_RATIOS = {
 // Camera Movement Presets
 const CAMERA_MOVEMENTS = [
   { value: '', label: 'No Movement' },
+  // ⭐ REALISTIC / NATURAL (Best for UGC/Selfie)
+  { value: 'static-stable', label: '📱 Static/Stable (Selfie)' },
+  { value: 'subtle-handheld', label: '🤳 Subtle Handheld Shake' },
+  { value: 'natural-breathing', label: '😮‍💨 Natural Breathing Motion' },
+  { value: 'gentle-sway', label: '🌊 Gentle Natural Sway' },
   // Zoom
   { value: 'slow zoom in', label: 'Slow Zoom In' },
   { value: 'slow zoom out', label: 'Slow Zoom Out' },
@@ -84,6 +89,12 @@ const CAMERA_MOVEMENTS = [
 // Camera Angle Presets
 const CAMERA_ANGLES = [
   { value: '', label: 'Default Angle' },
+  // ⭐ SELFIE / UGC FRAMING (Best for realistic)
+  { value: 'selfie-closeup', label: '🤳 Selfie Close-Up (Head/Shoulders)' },
+  { value: 'selfie-medium', label: '📱 Selfie Medium (Chest Up)' },
+  { value: 'selfie-slight-high', label: '⬆️ Selfie Slight High Angle' },
+  { value: 'talking-head', label: '🗣️ Talking Head (Vlog)' },
+  // Standard
   { value: 'eye level', label: 'Eye Level' },
   { value: 'low angle', label: 'Low Angle (Hero Shot)' },
   { value: 'high angle', label: 'High Angle (Looking Down)' },
@@ -103,6 +114,14 @@ const CAMERA_ANGLES = [
 // Video Style Presets
 const VIDEO_STYLES = [
   { value: '', label: 'No Style' },
+  // ⭐ REALISTIC / UGC / SELFIE STYLES (Most Important)
+  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone selfie video, front-facing camera, handheld smartphone footage, natural ambient lighting, authentic candid moment, slight natural hand movement, realistic skin texture, unfiltered unedited look, genuine facial expression, casual close-up framing, real person, UGC style' },
+  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'authentic user-generated content style, real person talking to camera, natural window lighting, casual home setting, genuine emotion and expression, smartphone quality, raw unpolished footage, relatable everyday person, slight camera shake, natural speech' },
+  { value: 'tiktok-native', label: '📲 TikTok/Reels Native', prompt: 'TikTok native style, vertical smartphone video, front-facing selfie camera, natural lighting, authentic genuine expression, casual vlog style, real person, unscripted natural moment, slight movement, raw footage feel' },
+  { value: 'influencer-casual', label: '✨ Influencer Casual', prompt: 'casual influencer style video, soft natural daylight, relaxed authentic vibe, smartphone selfie footage, genuine smile and emotion, lifestyle content, approachable real person, subtle natural movement' },
+  { value: 'pov-realistic', label: '👁️ POV Realistic', prompt: 'POV first-person perspective, realistic handheld camera, natural lighting, immersive authentic footage, slight natural camera movement, raw unprocessed look, realistic environment' },
+  { value: 'documentary-real', label: '🎬 Documentary Real', prompt: 'documentary style, raw authentic footage, natural available lighting, candid unposed moment, real genuine emotion, observational camera, unscripted natural behavior' },
+  { value: 'vlog-style', label: '📹 Vlog Style', prompt: 'vlog style video, talking to camera, natural daylight, casual setting, genuine personality, handheld smartphone footage, authentic real person, conversational tone' },
   // Cinematic
   { value: 'cinematic', label: 'Cinematic' },
   { value: 'cinematic epic', label: 'Cinematic Epic' },
@@ -140,6 +159,12 @@ const VIDEO_STYLES = [
 // Special Effects Presets
 const SPECIAL_EFFECTS = [
   { value: '', label: 'No Effects' },
+  // ⭐ REALISTIC / NATURAL (Best for UGC/Selfie)
+  { value: 'natural-blink', label: '👁️ Natural Eye Blinks' },
+  { value: 'subtle-expression', label: '😊 Subtle Expression Change' },
+  { value: 'natural-breathing', label: '😮‍💨 Natural Breathing' },
+  { value: 'hair-movement', label: '💇 Subtle Hair Movement' },
+  { value: 'lip-movement', label: '👄 Subtle Lip Movement' },
   // Particles
   { value: 'particles floating', label: 'Floating Particles' },
   { value: 'dust motes', label: 'Dust Motes' },
@@ -527,11 +552,36 @@ export default function JumpStartModal({
 
   const buildFullPrompt = () => {
     const parts = [];
-    if (cameraMovement) parts.push(cameraMovement);
-    if (cameraAngle) parts.push(`${cameraAngle} shot`);
-    if (videoStyle) parts.push(`${videoStyle} style`);
-    if (specialEffects) parts.push(specialEffects);
+    
+    // Check if video style has a detailed prompt (for realistic styles)
+    const selectedStyle = VIDEO_STYLES.find(s => s.value === videoStyle);
+    if (selectedStyle?.prompt) {
+      // Use the detailed prompt for realistic styles
+      parts.push(selectedStyle.prompt);
+    } else if (videoStyle) {
+      parts.push(`${videoStyle} style`);
+    }
+    
+    // Add camera settings (but skip for realistic styles to preserve authenticity)
+    const isRealisticStyle = selectedStyle?.prompt;
+    if (!isRealisticStyle) {
+      if (cameraMovement) parts.push(cameraMovement);
+      if (cameraAngle) parts.push(`${cameraAngle} shot`);
+    } else {
+      // For realistic styles, only add subtle camera hints
+      if (cameraMovement && cameraMovement.includes('slow')) {
+        parts.push('subtle natural movement');
+      }
+    }
+    
+    if (specialEffects && !isRealisticStyle) parts.push(specialEffects);
     if (description.trim()) parts.push(description.trim());
+    
+    // Add quality boosters
+    if (isRealisticStyle) {
+      parts.push('photorealistic, authentic, believable, natural motion');
+    }
+    
     return parts.join(', ') || 'smooth camera motion, high quality video';
   };
 
