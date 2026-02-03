@@ -29,6 +29,28 @@ import {
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
 
+// Extend Model Options
+const EXTEND_MODELS = [
+  {
+    id: 'seedance',
+    label: '🎬 Bytedance Seedance 1.5',
+    description: 'Original extend, 4-12s increments',
+    durationOptions: [4, 5, 6, 8, 10, 12],
+    resolution: '720p',
+    supportsAudio: true,
+    supportsCameraFixed: true,
+  },
+  {
+    id: 'veo3-fast-extend',
+    label: '⚡ Google Veo 3.1 Fast Extend',
+    description: 'Extend up to 30s total, 7s increments',
+    durationOptions: [7], // Fixed 7s extension
+    resolution: '720p',
+    supportsAudio: true,
+    supportsCameraFixed: false,
+  },
+];
+
 /**
  * JumpStartVideoStudioModal - Video Edit and Extend functionality
  */
@@ -87,9 +109,13 @@ export default function JumpStartVideoStudioModal({
   const [resolution, setResolution] = useState('720p');
   
   // Extend Specific Settings
+  const [extendModel, setExtendModel] = useState('seedance');
   const [duration, setDuration] = useState(5);
   const [generateAudio, setGenerateAudio] = useState(true);
   const [cameraFixed, setCameraFixed] = useState(false);
+  
+  // Get current extend model config
+  const currentExtendModel = EXTEND_MODELS.find(m => m.id === extendModel) || EXTEND_MODELS[0];
   
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -111,6 +137,7 @@ export default function JumpStartVideoStudioModal({
       setShowUrlImport(false);
       setPrompt('');
       setResolution('720p');
+      setExtendModel('seedance');
       setDuration(5);
       setGenerateAudio(true);
       setCameraFixed(false);
@@ -154,12 +181,12 @@ export default function JumpStartVideoStudioModal({
   }, [videoLibrary, searchQuery]);
 
   // Polling logic
-  const pollForResult = useCallback(async (id) => {
+  const pollForResult = useCallback(async (id, model = extendModel) => {
     try {
       const response = await fetch('/api/jumpstart/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: id }),
+        body: JSON.stringify({ requestId: id, model }),
       });
 
       if (!response.ok) return;
@@ -201,7 +228,12 @@ export default function JumpStartVideoStudioModal({
         videoUrl: selectedVideo.url,
         prompt,
         resolution,
-        ...(mode === 'extend' ? { duration, generate_audio: generateAudio, camera_fixed: cameraFixed } : {})
+        ...(mode === 'extend' ? { 
+          model: extendModel,
+          duration, 
+          generate_audio: generateAudio, 
+          camera_fixed: cameraFixed 
+        } : {})
       };
 
       const response = await fetch(endpoint, {
@@ -444,12 +476,36 @@ export default function JumpStartVideoStudioModal({
                 />
               </div>
 
+              {/* Extend Model Selector */}
+              {mode === 'extend' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold">Extend Model</Label>
+                  <select 
+                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" 
+                    value={extendModel} 
+                    onChange={(e) => {
+                      const newModel = e.target.value;
+                      setExtendModel(newModel);
+                      const config = EXTEND_MODELS.find(m => m.id === newModel);
+                      if (config && !config.durationOptions.includes(parseInt(duration))) {
+                        setDuration(config.durationOptions[0]);
+                      }
+                    }}
+                  >
+                    {EXTEND_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500">{currentExtendModel.description}</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-6">
                 {mode === 'extend' && (
                   <div className="space-y-3">
                     <Label className="text-sm font-bold">Duration</Label>
-                    <select className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" value={duration} onChange={(e) => setDuration(e.target.value)}>
-                      {[4, 5, 6, 8, 10, 12].map(d => <option key={d} value={d}>{d} seconds</option>)}
+                    <select className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
+                      {currentExtendModel.durationOptions.map(d => <option key={d} value={d}>{d} seconds</option>)}
                     </select>
                   </div>
                 )}
@@ -467,7 +523,7 @@ export default function JumpStartVideoStudioModal({
                 </div>
               </div>
 
-              {mode === 'extend' && (
+              {mode === 'extend' && currentExtendModel.supportsCameraFixed && (
                 <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setCameraFixed(!cameraFixed)}>
                   <div className="flex items-center gap-3">
                     <Settings className={`w-4 h-4 ${cameraFixed ? 'text-[#2C666E]' : 'text-slate-400'}`} />

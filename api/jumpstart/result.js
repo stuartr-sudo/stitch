@@ -20,6 +20,8 @@ export default async function handler(req, res) {
       return await checkVeo3Result(req, res, requestId);
     } else if (model === 'veo3-fast') {
       return await checkVeo3FastResult(req, res, requestId);
+    } else if (model === 'veo3-fast-extend') {
+      return await checkVeo3FastExtendResult(req, res, requestId);
     } else if (model === 'seedance-pro') {
       return await checkSeedanceResult(req, res, requestId);
     } else if (model === 'grok-imagine') {
@@ -460,5 +462,96 @@ async function getVeo3FastResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'veo3-fast',
+  });
+}
+
+/**
+ * Check Veo 3.1 Fast Extend/FAL result
+ */
+async function checkVeo3FastExtendResult(req, res, requestId) {
+  const FAL_KEY = process.env.FAL_KEY;
+  
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/fast/extend-video/requests/${requestId}/status`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Veo3 Extend] Poll error:', errorText);
+    
+    if (pollResponse.status === 404) {
+      return await getVeo3FastExtendResult(req, res, requestId, FAL_KEY);
+    }
+    
+    return res.status(pollResponse.status).json({ 
+      error: 'Failed to check status',
+      details: errorText 
+    });
+  }
+
+  const data = await pollResponse.json();
+  console.log('[JumpStart/Veo3 Extend] Status response:', JSON.stringify(data).substring(0, 300));
+
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getVeo3FastExtendResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'veo3-fast-extend',
+    queuePosition: data.queue_position,
+  });
+}
+
+/**
+ * Get completed Veo 3.1 Fast Extend result
+ */
+async function getVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/fast/extend-video/requests/${requestId}`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Veo3 Extend] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log('[JumpStart/Veo3 Extend] Result:', JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'veo3-fast-extend',
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'veo3-fast-extend',
   });
 }
