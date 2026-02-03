@@ -100,6 +100,21 @@ const VIDEO_MODELS = [
     supportsEndFrame: false,
     supportsNegativePrompt: true,
   },
+  { 
+    id: 'kling-video', 
+    label: '🎬 Kling 2.5 Turbo Pro', 
+    shortLabel: 'Kling',
+    description: 'Cinematic, fluid motion, precise',
+    provider: 'fal',
+    durationOptions: [5, 10],
+    resolutions: ['720p'],
+    aspectRatios: ['auto'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    supportsEndFrame: true,
+    supportsNegativePrompt: true,
+    supportsCfgScale: true,
+  },
 ];
 
 // Aspect ratio labels
@@ -284,6 +299,7 @@ export default function JumpStartModal({
   const [audioTranscript, setAudioTranscript] = useState('');
   const [cameraFixed, setCameraFixed] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState('');
+  const [cfgScale, setCfgScale] = useState(0.5);
   
   // Generated video
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
@@ -344,6 +360,7 @@ export default function JumpStartModal({
       setAudioTranscript('');
       setCameraFixed(false);
       setNegativePrompt('');
+      setCfgScale(0.5);
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
     }
@@ -607,6 +624,10 @@ export default function JumpStartModal({
       
       if (currentModel.supportsNegativePrompt && negativePrompt.trim()) {
         formData.append('negativePrompt', negativePrompt.trim());
+      }
+      
+      if (currentModel.supportsCfgScale) {
+        formData.append('cfgScale', cfgScale.toString());
       }
       
       // Multi-image support for Veo 3.1
@@ -1128,7 +1149,7 @@ export default function JumpStartModal({
                   </div>
                 )}
 
-                {/* Negative Prompt (Veo Fast) */}
+                {/* Negative Prompt (Veo Fast, Kling) */}
                 {currentModel.supportsNegativePrompt && (
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -1143,6 +1164,32 @@ export default function JumpStartModal({
                       placeholder="e.g., 'blurry, low quality, distorted faces, unnatural movement, glitches'"
                       className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
                     />
+                  </div>
+                )}
+
+                {/* CFG Scale (Kling) */}
+                {currentModel.supportsCfgScale && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-5 h-5 text-amber-500" />
+                      <h3 className="font-semibold text-gray-900">Prompt Adherence (CFG)</h3>
+                      <span className="text-sm font-medium text-amber-600">{cfgScale.toFixed(2)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">How closely the video follows your prompt. Lower = more creative, Higher = more precise.</p>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={cfgScale}
+                      onChange={(e) => setCfgScale(parseFloat(e.target.value))}
+                      className="w-full accent-amber-500"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>Creative (0)</span>
+                      <span>Balanced (0.5)</span>
+                      <span>Precise (1)</span>
+                    </div>
                   </div>
                 )}
 

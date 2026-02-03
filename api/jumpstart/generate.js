@@ -53,8 +53,9 @@ export default async function handler(req, res) {
     const cameraFixed = fields.cameraFixed?.[0] === 'true';
     const endImageUrl = fields.endImageUrl?.[0] || null;
     
-    // Veo Fast specific
+    // Veo Fast / Kling specific
     const negativePrompt = fields.negativePrompt?.[0] || '';
+    const cfgScale = parseFloat(fields.cfgScale?.[0] || '0.5');
     
     // Multi-image support for Veo 3.1
     let additionalImages = [];
@@ -124,6 +125,10 @@ export default async function handler(req, res) {
     } else if (model === 'veo3-fast') {
       return await handleVeo3Fast(req, res, {
         imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt
+      });
+    } else if (model === 'kling-video') {
+      return await handleKlingVideo(req, res, {
+        imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl
       });
     } else if (model === 'seedance-pro') {
       return await handleSeedance(req, res, {
@@ -534,6 +539,79 @@ async function handleVeo3Fast(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Fast API' });
+}
+
+/**
+ * Handle Kling Video 2.5 Turbo Pro (FAL.ai)
+ */
+async function handleKlingVideo(req, res, params) {
+  const { imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  console.log('[JumpStart/Kling] Submitting to Kling 2.5 Turbo Pro...');
+  console.log('[JumpStart/Kling] Settings:', { duration, cfgScale, hasEndFrame: !!endImageUrl });
+  
+  const requestBody = {
+    prompt: prompt,
+    image_url: imageUrl,
+    duration: String(duration), // Kling uses string: "5" or "10"
+    cfg_scale: cfgScale,
+    negative_prompt: negativePrompt || 'blur, distort, and low quality',
+  };
+  
+  // Add tail image (end frame) if provided
+  if (endImageUrl) {
+    requestBody.tail_image_url = endImageUrl;
+  }
+
+  console.log('[JumpStart/Kling] Request:', { 
+    ...requestBody, 
+    image_url: '[image]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/fal-ai/kling-video/v2.5-turbo/pro/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Kling] Error:', errorText);
+    return res.status(500).json({ error: 'Kling API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Kling] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/Kling] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'kling-video',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Kling API' });
 }
 
 export const config = {
