@@ -43,6 +43,10 @@ export default async function handler(req, res) {
     const aspectRatio = fields.aspectRatio?.[0] || '16:9';
     const width = parseInt(fields.width?.[0] || '854', 10);
     const height = parseInt(fields.height?.[0] || '480', 10);
+    
+    // Audio settings (Grok only)
+    const enableAudio = fields.enableAudio?.[0] === 'true';
+    const audioTranscript = fields.audioTranscript?.[0] || '';
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
@@ -97,7 +101,7 @@ export default async function handler(req, res) {
     // Route to appropriate provider
     if (model === 'grok-imagine') {
       return await handleGrokImagine(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, supabase, tempFileName
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, supabase, tempFileName
       });
     } else {
       return await handleWavespeed(req, res, {
@@ -180,7 +184,7 @@ async function handleWavespeed(req, res, params) {
  * Handle Grok Imagine Video (FAL.ai / xAI)
  */
 async function handleGrokImagine(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript } = params;
   
   const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
@@ -188,10 +192,20 @@ async function handleGrokImagine(req, res, params) {
   }
 
   console.log('[JumpStart/Grok] Submitting to xAI Grok Imagine Video...');
-  console.log('[JumpStart/Grok] Settings:', { duration, aspectRatio, resolution });
+  console.log('[JumpStart/Grok] Settings:', { duration, aspectRatio, resolution, enableAudio });
+  
+  // Build enhanced prompt with audio instructions if enabled
+  let enhancedPrompt = prompt;
+  if (enableAudio && audioTranscript) {
+    // Add transcript/dialogue instruction to the prompt
+    enhancedPrompt = `${prompt}. Audio/Speech: "${audioTranscript}"`;
+  } else if (enableAudio) {
+    // Request ambient/contextual audio
+    enhancedPrompt = `${prompt}. Generate natural ambient sounds and audio appropriate for the scene.`;
+  }
   
   const requestBody = {
-    prompt: prompt,
+    prompt: enhancedPrompt,
     image_url: imageUrl,
     duration: Math.min(duration, 15), // Max 15 seconds for Grok
     aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
@@ -201,7 +215,9 @@ async function handleGrokImagine(req, res, params) {
   console.log('[JumpStart/Grok] Request:', { 
     ...requestBody, 
     image_url: requestBody.image_url.substring(0, 50) + '...',
-    prompt: requestBody.prompt.substring(0, 100) + '...'
+    prompt: requestBody.prompt.substring(0, 100) + '...',
+    enableAudio,
+    audioTranscript: audioTranscript?.substring(0, 50)
   });
   
   const submitResponse = await fetch('https://fal.run/xai/grok-imagine-video/image-to-video', {

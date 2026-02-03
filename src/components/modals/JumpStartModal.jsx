@@ -45,19 +45,26 @@ const VIDEO_MODELS = [
   { 
     id: 'wavespeed-wan', 
     label: '🚀 Wavespeed WAN 2.2 Spicy', 
-    description: 'Fast, good quality',
+    description: 'Fast generation, good quality',
     provider: 'wavespeed',
     maxDuration: 8,
+    minDuration: 4,
+    durationOptions: [4, 5, 6, 8],
     resolutions: ['480p', '720p'],
+    aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
+    supportsAudio: false,
   },
   { 
     id: 'grok-imagine', 
     label: '🤖 Grok Imagine Video (xAI)', 
-    description: 'High quality, supports audio',
+    description: 'High quality with audio generation',
     provider: 'fal',
     maxDuration: 15,
+    minDuration: 1,
+    durationOptions: [4, 6, 8, 10, 12, 15],
     resolutions: ['480p', '720p'],
     aspectRatios: ['auto', '16:9', '9:16', '1:1', '4:3', '3:2', '2:3', '3:4'],
+    supportsAudio: true,
   },
 ];
 
@@ -372,6 +379,10 @@ export default function JumpStartModal({
   const [sceneDescription, setSceneDescription] = useState('');
   const [description, setDescription] = useState('');
   
+  // Audio settings (Grok only)
+  const [enableAudio, setEnableAudio] = useState(false);
+  const [audioTranscript, setAudioTranscript] = useState('');
+  
   // Generated video
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
   const [hasAddedToEditor, setHasAddedToEditor] = useState(false);
@@ -408,6 +419,8 @@ export default function JumpStartModal({
       setSpecialEffects([]);
       setSceneDescription('');
       setDescription('');
+      setEnableAudio(false);
+      setAudioTranscript('');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
       setLastPromptUsed('');
@@ -416,7 +429,20 @@ export default function JumpStartModal({
 
   // Calculate canvas dimensions
   const getCanvasDimensions = () => {
-    const config = ASPECT_RATIOS[aspectRatio];
+    // Handle 'auto' aspect ratio by defaulting to 16:9
+    const config = aspectRatio === 'auto' ? ASPECT_RATIOS['16:9'] : ASPECT_RATIOS[aspectRatio];
+    if (!config) {
+      // Fallback to 16:9 if aspect ratio not found
+      const fallback = ASPECT_RATIOS['16:9'];
+      return {
+        displayWidth: fallback.width480,
+        displayHeight: fallback.height480,
+        outputWidth: fallback.width480,
+        outputHeight: fallback.height480,
+        viewportWidth: 600,
+        viewportHeight: 400
+      };
+    }
     const targetWidth = resolution === '720p' ? config.width720 : config.width480;
     const targetHeight = resolution === '720p' ? config.height720 : config.height480;
     
@@ -808,14 +834,22 @@ export default function JumpStartModal({
       formData.append('duration', duration.toString());
       formData.append('aspectRatio', aspectRatio);
       
+      // Audio settings (Grok only)
+      if (videoModel === 'grok-imagine') {
+        formData.append('enableAudio', enableAudio.toString());
+        if (enableAudio && audioTranscript.trim()) {
+          formData.append('audioTranscript', audioTranscript.trim());
+        }
+      }
+      
       // Also send explicit dimensions
-      const config = ASPECT_RATIOS[aspectRatio] || ASPECT_RATIOS['16:9'];
+      const config = aspectRatio === 'auto' ? ASPECT_RATIOS['16:9'] : (ASPECT_RATIOS[aspectRatio] || ASPECT_RATIOS['16:9']);
       const outputWidth = resolution === '720p' ? config.width720 : config.width480;
       const outputHeight = resolution === '720p' ? config.height720 : config.height480;
       formData.append('width', outputWidth.toString());
       formData.append('height', outputHeight.toString());
       
-      console.log('[JumpStart] Sending:', { model: videoModel, aspectRatio, outputWidth, outputHeight, resolution });
+      console.log('[JumpStart] Sending:', { model: videoModel, aspectRatio, outputWidth, outputHeight, resolution, enableAudio });
 
       const result = await fetch('/api/jumpstart/generate', {
         method: 'POST',
@@ -899,6 +933,8 @@ export default function JumpStartModal({
     setCameraAngle('');
     setVideoStyle('');
     setSpecialEffects([]);
+    setEnableAudio(false);
+    setAudioTranscript('');
     setSceneDescription('');
     setDescription('');
     setDuration(5);
@@ -1005,24 +1041,77 @@ export default function JumpStartModal({
           {/* Step 1: Canvas */}
           {currentStep === 1 && (
             <>
-              <div className="p-3 bg-white border-b flex items-center gap-4 shrink-0">
+              <div className="p-3 bg-white border-b flex flex-wrap items-center gap-3 shrink-0">
+                {/* Model Selector - First! */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Aspect Ratio:</label>
-                  <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-                    {Object.entries(ASPECT_RATIOS).map(([key, config]) => (
-                      <option key={key} value={key}>{config.label}</option>
+                  <label className="text-sm font-medium text-gray-700">AI Model:</label>
+                  <select 
+                    value={videoModel} 
+                    onChange={(e) => {
+                      const newModel = e.target.value;
+                      setVideoModel(newModel);
+                      const modelConfig = VIDEO_MODELS.find(m => m.id === newModel);
+                      // Reset aspect ratio if not supported by new model
+                      if (modelConfig && !modelConfig.aspectRatios.includes(aspectRatio)) {
+                        setAspectRatio(modelConfig.aspectRatios[0] === 'auto' ? '16:9' : modelConfig.aspectRatios[0]);
+                      }
+                      // Reset duration if exceeds new model's max
+                      if (modelConfig && duration > modelConfig.maxDuration) {
+                        setDuration(modelConfig.durationOptions[0]);
+                      }
+                      // Disable audio if model doesn't support it
+                      if (modelConfig && !modelConfig.supportsAudio) {
+                        setEnableAudio(false);
+                        setAudioTranscript('');
+                      }
+                    }} 
+                    className="px-3 py-1.5 border border-[#2C666E] rounded-lg text-sm bg-[#2C666E]/5 font-medium"
+                  >
+                    {VIDEO_MODELS.map(model => (
+                      <option key={model.id} value={model.id}>{model.label}</option>
                     ))}
                   </select>
                 </div>
+                
+                <div className="w-px h-6 bg-gray-300" />
+                
+                {/* Aspect Ratio - Filtered by model */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Aspect Ratio:</label>
+                  <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    {(() => {
+                      const modelConfig = VIDEO_MODELS.find(m => m.id === videoModel);
+                      const availableRatios = modelConfig?.aspectRatios || ['16:9', '9:16', '1:1', '4:3'];
+                      return availableRatios.map(key => {
+                        if (key === 'auto') {
+                          return <option key="auto" value="auto">Auto (Best Fit)</option>;
+                        }
+                        const config = ASPECT_RATIOS[key];
+                        return config ? <option key={key} value={key}>{config.label}</option> : null;
+                      });
+                    })()}
+                  </select>
+                </div>
+                
+                {/* Quality - Filtered by model */}
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Quality:</label>
                   <select value={resolution} onChange={(e) => setResolution(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-                    <option value="480p">480p (Fast)</option>
-                    <option value="720p">720p (HD)</option>
+                    {(() => {
+                      const modelConfig = VIDEO_MODELS.find(m => m.id === videoModel);
+                      const availableRes = modelConfig?.resolutions || ['480p', '720p'];
+                      return availableRes.map(res => (
+                        <option key={res} value={res}>{res === '480p' ? '480p (Fast)' : '720p (HD)'}</option>
+                      ));
+                    })()}
                   </select>
                 </div>
-                <div className="text-xs text-gray-500 ml-auto">
-                  Output: {canvasDimensions.outputWidth} × {canvasDimensions.outputHeight}px
+                
+                <div className="text-xs text-gray-500 ml-auto flex items-center gap-2">
+                  <span>Output: {canvasDimensions.outputWidth} × {canvasDimensions.outputHeight}px</span>
+                  {VIDEO_MODELS.find(m => m.id === videoModel)?.supportsAudio && (
+                    <span className="bg-[#90DDF0]/30 text-[#07393C] px-2 py-0.5 rounded text-xs font-medium">🔊 Audio Supported</span>
+                  )}
                 </div>
               </div>
 
@@ -1086,6 +1175,7 @@ export default function JumpStartModal({
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="w-5 h-5 text-[#07393C]" />
                       <h3 className="font-semibold text-gray-900">AI Model</h3>
+                      <span className="text-xs text-gray-400">(selected in Step 1)</span>
                     </div>
                     <div className="grid grid-cols-1 gap-2">
                       {VIDEO_MODELS.map(model => (
@@ -1093,9 +1183,15 @@ export default function JumpStartModal({
                           key={model.id}
                           onClick={() => {
                             setVideoModel(model.id);
-                            // Adjust duration if exceeds max
                             if (duration > model.maxDuration) {
-                              setDuration(model.maxDuration);
+                              setDuration(model.durationOptions[0]);
+                            }
+                            if (!model.aspectRatios.includes(aspectRatio)) {
+                              setAspectRatio(model.aspectRatios[0] === 'auto' ? '16:9' : model.aspectRatios[0]);
+                            }
+                            if (!model.supportsAudio) {
+                              setEnableAudio(false);
+                              setAudioTranscript('');
                             }
                           }}
                           className={`p-3 rounded-lg border-2 text-left transition-all ${
@@ -1111,13 +1207,82 @@ export default function JumpStartModal({
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mt-1">{model.description}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Max {model.maxDuration}s • {model.resolutions.join(', ')}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">Max {model.maxDuration}s • {model.resolutions.join(', ')}</span>
+                            {model.supportsAudio && (
+                              <span className="text-xs bg-[#90DDF0]/30 text-[#07393C] px-1.5 py-0.5 rounded">🔊 Audio</span>
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* AUDIO SETTINGS - Grok Only */}
+                  {VIDEO_MODELS.find(m => m.id === videoModel)?.supportsAudio && (
+                    <div className="bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 rounded-lg p-4 border-2 border-[#90DDF0]/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🔊</span>
+                          <h3 className="font-semibold text-gray-900">Audio Generation</h3>
+                          <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded">Grok Feature</span>
+                        </div>
+                        <button
+                          onClick={() => setEnableAudio(!enableAudio)}
+                          className={`relative w-12 h-6 rounded-full transition-colors ${
+                            enableAudio ? 'bg-[#2C666E]' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                            enableAudio ? 'left-7' : 'left-1'
+                          }`} />
+                        </button>
+                      </div>
+                      
+                      {enableAudio ? (
+                        <div className="space-y-3">
+                          <p className="text-xs text-gray-600">
+                            Grok will generate audio/speech based on your scene. Provide a transcript for dialogue or leave empty for ambient sounds.
+                          </p>
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">
+                              Audio Transcript / Dialogue (Optional)
+                            </label>
+                            <textarea 
+                              value={audioTranscript} 
+                              onChange={(e) => setAudioTranscript(e.target.value)} 
+                              placeholder="e.g., 'Hi everyone! I just wanted to share this amazing product with you. It's completely changed my morning routine...'"
+                              className="w-full px-3 py-2 border border-[#90DDF0]/50 rounded-lg text-sm bg-white resize-none h-24 focus:ring-2 focus:ring-[#2C666E]/50 focus:border-[#2C666E]" 
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              💡 If left empty, Grok will generate contextual audio based on the scene description.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="text-xs text-gray-500">Quick examples:</span>
+                            {[
+                              'Hi, check this out!',
+                              'Let me show you something amazing',
+                              'This is my honest review',
+                              '[ambient sounds]',
+                            ].map(example => (
+                              <button
+                                key={example}
+                                onClick={() => setAudioTranscript(example === '[ambient sounds]' ? '' : example)}
+                                className="px-2 py-0.5 text-xs rounded bg-white border text-gray-600 hover:bg-[#90DDF0]/20 hover:border-[#2C666E]/50 transition-colors"
+                              >
+                                + {example}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          Toggle on to generate video with audio. Grok can create speech, dialogue, or ambient sounds.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* SCENE DESCRIPTION - What happens in the video */}
                   <div className="bg-gradient-to-r from-[#2C666E]/10 to-[#90DDF0]/10 rounded-lg p-4 border-2 border-[#2C666E]/30 shadow-sm">
@@ -1270,28 +1435,19 @@ export default function JumpStartModal({
                       <h3 className="font-semibold text-gray-900">Video Duration</h3>
                     </div>
                     <select value={duration} onChange={(e) => setDuration(parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                      {videoModel === 'grok-imagine' ? (
-                        <>
-                          <option value={4}>4 seconds</option>
-                          <option value={6}>6 seconds</option>
-                          <option value={8}>8 seconds</option>
-                          <option value={10}>10 seconds</option>
-                          <option value={12}>12 seconds</option>
-                          <option value={15}>15 seconds</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value={4}>4 seconds</option>
-                          <option value={5}>5 seconds</option>
-                          <option value={6}>6 seconds</option>
-                          <option value={8}>8 seconds</option>
-                        </>
-                      )}
+                      {(() => {
+                        const modelConfig = VIDEO_MODELS.find(m => m.id === videoModel);
+                        const options = modelConfig?.durationOptions || [4, 5, 6, 8];
+                        return options.map(d => (
+                          <option key={d} value={d}>{d} seconds</option>
+                        ));
+                      })()}
                     </select>
                     <div className="mt-3 pt-3 border-t text-sm text-gray-500">
-                      <strong>Output:</strong> {ASPECT_RATIOS[aspectRatio]?.label || aspectRatio} @ {resolution}
+                      <strong>Output:</strong> {aspectRatio === 'auto' ? 'Auto (Best Fit)' : (ASPECT_RATIOS[aspectRatio]?.label || aspectRatio)} @ {resolution}
                       <br />
                       <strong>Model:</strong> {VIDEO_MODELS.find(m => m.id === videoModel)?.label || videoModel}
+                      {enableAudio && <><br /><strong>Audio:</strong> ✅ Enabled</>}
                     </div>
                   </div>
 
