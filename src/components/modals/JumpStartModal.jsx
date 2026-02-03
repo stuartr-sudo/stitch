@@ -36,6 +36,7 @@ const VIDEO_MODELS = [
   { 
     id: 'wavespeed-wan', 
     label: '🚀 Wavespeed WAN 2.2 Spicy', 
+    shortLabel: 'Wavespeed',
     description: 'Fast generation, good quality',
     provider: 'wavespeed',
     durationOptions: [4, 5, 6, 8],
@@ -48,6 +49,7 @@ const VIDEO_MODELS = [
   { 
     id: 'grok-imagine', 
     label: '🤖 Grok Imagine Video (xAI)', 
+    shortLabel: 'Grok xAI',
     description: 'High quality with audio generation',
     provider: 'fal',
     durationOptions: [4, 6, 8, 10, 12, 15],
@@ -60,7 +62,8 @@ const VIDEO_MODELS = [
   { 
     id: 'seedance-pro', 
     label: '🎬 Bytedance Seedance 1.5 Pro', 
-    description: 'High quality, 1080p, audio & end frame',
+    shortLabel: 'Seedance',
+    description: '1080p, audio & end frame support',
     provider: 'fal',
     durationOptions: [4, 5, 6, 7, 8, 9, 10, 11, 12],
     resolutions: ['480p', '720p', '1080p'],
@@ -68,6 +71,20 @@ const VIDEO_MODELS = [
     supportsAudio: true,
     supportsCameraFixed: true,
     supportsEndFrame: true,
+  },
+  { 
+    id: 'veo3', 
+    label: '🌟 Google Veo 3.1', 
+    shortLabel: 'Veo 3.1',
+    description: 'Google\'s best, 4K, audio generation',
+    provider: 'fal',
+    durationOptions: [8], // Fixed 8 seconds only
+    resolutions: ['720p', '1080p', '4k'],
+    aspectRatios: ['16:9', '9:16'],
+    supportsAudio: true,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    supportsMultipleImages: true, // Can use multiple reference images
   },
 ];
 
@@ -677,48 +694,46 @@ export default function JumpStartModal({
             {/* Step 1: Upload Image */}
             {currentStep === 1 && (
               <div className="max-w-2xl mx-auto space-y-6">
-                {/* Model Selector */}
+                {/* Model Selector - Compact Dropdown */}
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Select AI Model</h3>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">AI Model</h3>
+                    </div>
+                    <select
+                      value={videoModel}
+                      onChange={(e) => handleModelChange(e.target.value)}
+                      className="flex-1 max-w-xs px-3 py-2 border border-[#2C666E] rounded-lg text-sm bg-white font-medium"
+                    >
+                      {VIDEO_MODELS.map(model => (
+                        <option key={model.id} value={model.id}>{model.label}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {VIDEO_MODELS.map(model => (
-                      <button
-                        key={model.id}
-                        onClick={() => handleModelChange(model.id)}
-                        className={`p-3 rounded-lg border-2 text-left transition-all ${
-                          videoModel === model.id
-                            ? 'border-[#2C666E] bg-[#2C666E]/10'
-                            : 'border-gray-200 bg-white hover:border-[#2C666E]/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{model.label}</span>
-                          {videoModel === model.id && (
-                            <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded">Selected</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{model.description}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-400">
-                            {model.durationOptions[0]}-{model.durationOptions[model.durationOptions.length - 1]}s
-                          </span>
-                          <span className="text-xs text-gray-400">•</span>
-                          <span className="text-xs text-gray-400">{model.resolutions.join(', ')}</span>
-                          {model.supportsAudio && (
-                            <span className="text-xs bg-[#90DDF0]/30 text-[#07393C] px-1.5 py-0.5 rounded">🔊 Audio</span>
-                          )}
-                          {model.supportsEndFrame && (
-                            <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">🎯 End Frame</span>
-                          )}
-                          {model.supportsCameraFixed && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">📍 Lock Camera</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                  {/* Model details summary */}
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-gray-500">{currentModel.description}</span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-gray-500">
+                      {currentModel.durationOptions.length === 1 
+                        ? `${currentModel.durationOptions[0]}s` 
+                        : `${currentModel.durationOptions[0]}-${currentModel.durationOptions[currentModel.durationOptions.length - 1]}s`}
+                    </span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-gray-500">{currentModel.resolutions.join(', ')}</span>
+                    {currentModel.supportsAudio && (
+                      <span className="bg-[#90DDF0]/30 text-[#07393C] px-1.5 py-0.5 rounded">🔊 Audio</span>
+                    )}
+                    {currentModel.supportsEndFrame && (
+                      <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">🎯 End Frame</span>
+                    )}
+                    {currentModel.supportsCameraFixed && (
+                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">📍 Lock Camera</span>
+                    )}
+                    {currentModel.supportsMultipleImages && (
+                      <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">📸 Multi-Image</span>
+                    )}
                   </div>
                 </div>
 

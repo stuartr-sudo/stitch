@@ -16,7 +16,9 @@ export default async function handler(req, res) {
 
     console.log('[JumpStart/Result] Checking:', { requestId, model });
 
-    if (model === 'seedance-pro') {
+    if (model === 'veo3') {
+      return await checkVeo3Result(req, res, requestId);
+    } else if (model === 'seedance-pro') {
       return await checkSeedanceResult(req, res, requestId);
     } else if (model === 'grok-imagine') {
       return await checkGrokResult(req, res, requestId);
@@ -272,5 +274,98 @@ async function getSeedanceResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'seedance-pro',
+  });
+}
+
+/**
+ * Check Veo 3.1/FAL result
+ */
+async function checkVeo3Result(req, res, requestId) {
+  const FAL_KEY = process.env.FAL_KEY;
+  
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  // FAL uses a status endpoint for queued requests
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/reference-to-video/requests/${requestId}/status`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Veo3] Poll error:', errorText);
+    
+    // FAL returns 404 when request is complete, try getting result directly
+    if (pollResponse.status === 404) {
+      return await getVeo3Result(req, res, requestId, FAL_KEY);
+    }
+    
+    return res.status(pollResponse.status).json({ 
+      error: 'Failed to check status',
+      details: errorText 
+    });
+  }
+
+  const data = await pollResponse.json();
+  console.log('[JumpStart/Veo3] Status response:', JSON.stringify(data).substring(0, 300));
+
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getVeo3Result(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'veo3',
+    queuePosition: data.queue_position,
+  });
+}
+
+/**
+ * Get completed Veo 3.1 result
+ */
+async function getVeo3Result(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/reference-to-video/requests/${requestId}`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Veo3] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log('[JumpStart/Veo3] Result:', JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'veo3',
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'veo3',
   });
 }

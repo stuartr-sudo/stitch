@@ -104,7 +104,11 @@ export default async function handler(req, res) {
     }
 
     // Route to appropriate provider
-    if (model === 'seedance-pro') {
+    if (model === 'veo3') {
+      return await handleVeo3(req, res, {
+        imageUrl, prompt, aspectRatio, resolution, enableAudio
+      });
+    } else if (model === 'seedance-pro') {
       return await handleSeedance(req, res, {
         imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl
       });
@@ -362,6 +366,79 @@ async function handleSeedance(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Seedance API' });
+}
+
+/**
+ * Handle Google Veo 3.1 (FAL.ai)
+ */
+async function handleVeo3(req, res, params) {
+  const { imageUrl, prompt, aspectRatio, resolution, enableAudio } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  console.log('[JumpStart/Veo3] Submitting to Google Veo 3.1...');
+  console.log('[JumpStart/Veo3] Settings:', { aspectRatio, resolution, enableAudio });
+  
+  // Veo 3.1 uses image_urls array (can support multiple reference images)
+  const requestBody = {
+    prompt: prompt,
+    image_urls: [imageUrl], // Single image for now, could be expanded
+    aspect_ratio: aspectRatio,
+    duration: '8s', // Veo 3.1 only supports 8 seconds
+    resolution: resolution,
+    generate_audio: enableAudio !== false, // Default true
+    auto_fix: false,
+  };
+
+  console.log('[JumpStart/Veo3] Request:', { 
+    ...requestBody, 
+    image_urls: ['[image]'],
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/reference-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Veo3] Error:', errorText);
+    return res.status(500).json({ error: 'Veo 3.1 API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Veo3] Response:', JSON.stringify(data).substring(0, 500));
+
+  // FAL returns video directly or a request_id for queuing
+  if (data.video?.url) {
+    console.log('[JumpStart/Veo3] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  // If queued, return request ID for polling
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'veo3',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 API' });
 }
 
 export const config = {
