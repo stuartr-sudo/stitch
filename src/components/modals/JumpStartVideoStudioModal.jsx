@@ -501,8 +501,15 @@ export default function JumpStartVideoStudioModal({
               <Button variant="outline" onClick={() => setCurrentStep(2)} disabled={isGenerating} className="rounded-xl h-12">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Adjust Settings
               </Button>
+              <a
+                href={generatedVideoUrl}
+                download="stitch-video.mp4"
+                className="inline-flex items-center justify-center gap-2 px-4 h-12 text-sm font-medium text-white bg-[#2C666E] rounded-xl hover:bg-[#07393C]"
+              >
+                <Download className="w-4 h-4" /> Download to Device
+              </a>
               <Button variant="outline" onClick={handleSaveToLibrary} disabled={isGenerating || lastSavedVideoUrl} className="rounded-xl h-12 border-green-200 text-green-700 hover:bg-green-50">
-                <Download className="w-4 h-4 mr-2" /> {lastSavedVideoUrl ? 'Saved!' : 'Save to Library'}
+                {lastSavedVideoUrl ? 'Saved!' : 'Save to Library'}
               </Button>
             </div>
             <div className="flex gap-2">

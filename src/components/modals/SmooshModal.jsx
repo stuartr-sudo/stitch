@@ -25,7 +25,9 @@ import {
   ZoomIn,
   ZoomOut,
   Move,
-  Frame
+  Frame,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 const DIMENSION_PRESETS = [
@@ -448,6 +450,13 @@ export default function SmooshModal({
               <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
                 Back to Canvas
               </Button>
+              <a
+                href={resultImage}
+                download="smoosh-composition.png"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                <Download className="w-4 h-4" /> Download to Device
+              </a>
               <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
                 <Plus className="w-4 h-4 mr-2" /> Use This Image
               </Button>

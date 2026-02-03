@@ -116,6 +116,19 @@ app.post('/api/smoosh/generate', async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Try Style routes (Virtual Try-On)
+app.post('/api/trystyle/generate', async (req, res) => {
+  const handler = await loadApiRoute('trystyle/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/trystyle/result', async (req, res) => {
+  const handler = await loadApiRoute('trystyle/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
 });

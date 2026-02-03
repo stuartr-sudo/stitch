@@ -20,7 +20,9 @@ import {
   X,
   Sparkles,
   Image as ImageIcon,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 const MODELS = [
@@ -366,10 +368,25 @@ export default function EditImageModal({
               <img src={resultImage} alt="Edited" className="w-full h-full object-contain" />
             </div>
 
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <Button variant="outline" onClick={handleReset}>
                 Edit Again
               </Button>
+              <a
+                href={resultImage}
+                download="edited-image.png"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                <Download className="w-4 h-4" /> Download to Device
+              </a>
+              <a
+                href={resultImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                <ExternalLink className="w-4 h-4" /> Open
+              </a>
               <Button onClick={handleUseResult} className="bg-[#2C666E] hover:bg-[#07393C]">
                 <Plus className="w-4 h-4 mr-2" /> Use This Image
               </Button>

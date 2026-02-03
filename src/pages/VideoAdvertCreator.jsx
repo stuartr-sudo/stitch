@@ -17,7 +17,8 @@ import {
   Eraser,
   Focus,
   FolderOpen,
-  Palette
+  Palette,
+  Shirt
 } from 'lucide-react';
 
 import JumpStartModal from '@/components/modals/JumpStartModal';
@@ -29,6 +30,7 @@ import InpaintModal from '@/components/modals/InpaintModal';
 import LensModal from '@/components/modals/LensModal';
 import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
+import TryStyleModal from '@/components/modals/TryStyleModal';
 
 /**
  * VideoAdvertCreator - Main page for creating video adverts
@@ -225,6 +227,18 @@ export default function VideoAdvertCreator() {
                   <h4 className="font-semibold text-slate-900 mb-1">Lens</h4>
                   <p className="text-xs text-slate-500">Adjust viewing angles</p>
                 </div>
+
+                {/* Try Style */}
+                <div 
+                  onClick={() => setActiveModal('trystyle')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Shirt className="w-5 h-5 text-[#2C666E]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Try Style</h4>
+                  <p className="text-xs text-slate-500">Virtual clothing try-on</p>
+                </div>
               </div>
             </div>
 
@@ -344,8 +358,8 @@ export default function VideoAdvertCreator() {
                         Created {new Date(video.createdAt).toLocaleDateString()}
                       </p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => handleDownloadVideo(video)}>
-                          <Download className="w-4 h-4 mr-1" /> Download
+                        <Button size="sm" className="flex-1 bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={() => handleDownloadVideo(video)}>
+                          <Download className="w-4 h-4 mr-1" /> Download to Device
                         </Button>
                         <Button size="sm" variant="outline" asChild>
                           <a href={video.url} target="_blank" rel="noopener noreferrer">
@@ -385,15 +399,23 @@ export default function VideoAdvertCreator() {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <Button size="sm" variant="secondary" asChild>
+                        <a 
+                          href={image.url} 
+                          download={`stitch-image-${image.id}.png`}
+                          className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-slate-900 bg-white rounded-lg hover:bg-slate-100"
+                          title="Download to Device"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                        <Button size="sm" variant="secondary" asChild title="Open in new tab">
                           <a href={image.url} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         </Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setSelectedTab('create'); setActiveModal('jumpstart'); }}>
+                        <Button size="sm" variant="secondary" onClick={() => { setSelectedTab('create'); setActiveModal('jumpstart'); }} title="Create video">
                           <Video className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteImage(image.id)}>
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteImage(image.id)} title="Delete">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -509,6 +531,21 @@ export default function VideoAdvertCreator() {
             };
             setCreatedImages(prev => [newImage, ...prev]);
           }
+        }}
+      />
+
+      <TryStyleModal 
+        isOpen={activeModal === 'trystyle'} 
+        onClose={() => setActiveModal(null)}
+        onImageGenerated={(url) => {
+          const newImage = {
+            id: Date.now().toString(),
+            url,
+            prompt: 'Virtual try-on result',
+            createdAt: new Date().toISOString(),
+          };
+          setCreatedImages(prev => [newImage, ...prev]);
+          toast.success('Try-on image added!');
         }}
       />
     </div>

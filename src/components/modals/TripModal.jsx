@@ -31,14 +31,36 @@ import {
 
 // Style presets for quick inspiration
 const STYLE_PRESETS = [
+  // Animation
   { id: 'anime', label: 'Anime', prompt: 'Transform into anime style with vibrant colors and cel-shaded look' },
-  { id: 'cyberpunk', label: 'Cyberpunk', prompt: 'Cyberpunk neon city aesthetic with glowing lights and futuristic elements' },
-  { id: 'watercolor', label: 'Watercolor', prompt: 'Soft watercolor painting style with flowing colors and artistic brushstrokes' },
-  { id: 'noir', label: 'Film Noir', prompt: 'Black and white film noir style with dramatic shadows and high contrast' },
+  { id: 'ghibli', label: 'Studio Ghibli', prompt: 'Studio Ghibli animation style with soft colors, detailed backgrounds, and whimsical atmosphere' },
   { id: 'pixar', label: 'Pixar 3D', prompt: 'Pixar-style 3D animation with smooth textures and expressive characters' },
-  { id: 'vintage', label: 'Vintage Film', prompt: 'Vintage 1970s film look with warm tones, grain, and soft focus' },
-  { id: 'fantasy', label: 'Fantasy', prompt: 'Epic fantasy world with magical lighting and ethereal atmosphere' },
+  { id: 'disney', label: 'Disney Classic', prompt: 'Classic Disney animation style with fluid movement and expressive characters' },
+  { id: 'cartoon', label: 'Cartoon', prompt: 'Bold cartoon style with exaggerated expressions and vibrant colors' },
+  // Artistic
+  { id: 'watercolor', label: 'Watercolor', prompt: 'Soft watercolor painting style with flowing colors and artistic brushstrokes' },
+  { id: 'oil-painting', label: 'Oil Painting', prompt: 'Classical oil painting style with rich textures and dramatic lighting' },
   { id: 'sketch', label: 'Pencil Sketch', prompt: 'Hand-drawn pencil sketch style with detailed line work' },
+  { id: 'charcoal', label: 'Charcoal Drawing', prompt: 'Dramatic charcoal drawing with deep blacks and expressive strokes' },
+  { id: 'ink-wash', label: 'Ink Wash', prompt: 'Traditional Asian ink wash painting with flowing brushwork' },
+  // Cinematic
+  { id: 'noir', label: 'Film Noir', prompt: 'Black and white film noir style with dramatic shadows and high contrast' },
+  { id: 'vintage', label: 'Vintage Film', prompt: 'Vintage 1970s film look with warm tones, grain, and soft focus' },
+  { id: '80s-vhs', label: '80s VHS', prompt: '1980s VHS aesthetic with scan lines, color bleeding, and retro feel' },
+  { id: 'silent-film', label: 'Silent Film', prompt: 'Early 1900s silent film era with sepia tones and film scratches' },
+  // Futuristic
+  { id: 'cyberpunk', label: 'Cyberpunk', prompt: 'Cyberpunk neon city aesthetic with glowing lights and futuristic elements' },
+  { id: 'synthwave', label: 'Synthwave', prompt: 'Retro-futuristic synthwave aesthetic with neon grids and sunset gradients' },
+  { id: 'sci-fi', label: 'Sci-Fi', prompt: 'Science fiction visual style with advanced technology and space themes' },
+  // Fantasy/Genre
+  { id: 'fantasy', label: 'Fantasy', prompt: 'Epic fantasy world with magical lighting and ethereal atmosphere' },
+  { id: 'horror', label: 'Horror', prompt: 'Dark horror aesthetic with unsettling atmosphere and muted colors' },
+  { id: 'steampunk', label: 'Steampunk', prompt: 'Victorian steampunk style with brass, gears, and steam-powered machinery' },
+  // Modern
+  { id: 'comic-book', label: 'Comic Book', prompt: 'Bold comic book style with halftone dots and dynamic action lines' },
+  { id: 'pop-art', label: 'Pop Art', prompt: 'Andy Warhol pop art style with bold colors and repeated patterns' },
+  { id: 'glitch', label: 'Glitch Art', prompt: 'Digital glitch aesthetic with data corruption and chromatic aberration' },
+  { id: 'vaporwave', label: 'Vaporwave', prompt: 'Vaporwave aesthetic with pink/purple hues, Greek statues, and 90s nostalgia' },
 ];
 
 /**
@@ -566,6 +588,14 @@ export default function TripModal({
                   )}
                   {lastSavedVideoUrl ? 'Saved!' : 'Save to Library'}
                 </Button>
+
+                <a
+                  href={generatedVideoUrl}
+                  download="trip-restyled-video.mp4"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#2C666E] rounded-lg hover:bg-[#07393C]"
+                >
+                  <Download className="w-4 h-4" /> Download to Device
+                </a>
 
                 <a
                   href={generatedVideoUrl}

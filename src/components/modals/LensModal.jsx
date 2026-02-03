@@ -19,7 +19,9 @@ import {
   Sparkles,
   CheckCircle2,
   Plus,
-  ZoomIn
+  ZoomIn,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 /**
@@ -318,9 +320,18 @@ export default function LensModal({
               </Button>
 
               {resultImage && (
-                <Button onClick={handleUseResult} variant="outline" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" /> Use This Image
-                </Button>
+                <>
+                  <a
+                    href={resultImage}
+                    download="lens-adjusted.png"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                  >
+                    <Download className="w-4 h-4" /> Download to Device
+                  </a>
+                  <Button onClick={handleUseResult} variant="outline" className="w-full">
+                    <Plus className="w-4 h-4 mr-2" /> Use This Image
+                  </Button>
+                </>
               )}
             </>
           )}

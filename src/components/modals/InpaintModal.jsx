@@ -21,7 +21,9 @@ import {
   Sparkles,
   CheckCircle2,
   Plus,
-  Minus
+  Minus,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 /**
@@ -445,6 +447,13 @@ export default function InpaintModal({
               <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
                 Edit Again
               </Button>
+              <a
+                href={resultImage}
+                download="inpainted-image.png"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                <Download className="w-4 h-4" /> Download to Device
+              </a>
               <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
                 Use This Image
               </Button>

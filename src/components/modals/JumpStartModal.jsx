@@ -49,53 +49,130 @@ const ASPECT_RATIOS = {
 // Camera Movement Presets
 const CAMERA_MOVEMENTS = [
   { value: '', label: 'No Movement' },
+  // Zoom
   { value: 'slow zoom in', label: 'Slow Zoom In' },
   { value: 'slow zoom out', label: 'Slow Zoom Out' },
+  { value: 'fast zoom in', label: 'Fast Zoom (Punch In)' },
+  { value: 'dolly zoom', label: 'Dolly Zoom (Vertigo)' },
+  // Pan
   { value: 'pan left to right', label: 'Pan Left to Right' },
   { value: 'pan right to left', label: 'Pan Right to Left' },
+  { value: 'slow pan', label: 'Slow Pan' },
+  // Tilt
   { value: 'tilt up', label: 'Tilt Up' },
   { value: 'tilt down', label: 'Tilt Down' },
+  { value: 'tilt up reveal', label: 'Tilt Up Reveal' },
+  // Dolly/Track
   { value: 'dolly forward', label: 'Dolly Forward' },
+  { value: 'dolly backward', label: 'Dolly Backward' },
+  { value: 'tracking shot', label: 'Tracking Shot (Follow)' },
+  { value: 'lateral track', label: 'Lateral Tracking' },
+  // Orbit/Rotation
   { value: 'orbit clockwise', label: 'Orbit Clockwise' },
-  { value: 'tracking shot', label: 'Tracking Shot' },
+  { value: 'orbit counter-clockwise', label: 'Orbit Counter-Clockwise' },
+  { value: '360 rotation', label: '360° Rotation' },
+  // Combined/Complex
+  { value: 'crane up', label: 'Crane Up' },
+  { value: 'crane down', label: 'Crane Down' },
+  { value: 'aerial flyover', label: 'Aerial Flyover' },
+  { value: 'push in with pan', label: 'Push In + Pan' },
+  { value: 'handheld shake', label: 'Handheld/Shake' },
 ];
 
 // Camera Angle Presets
 const CAMERA_ANGLES = [
   { value: '', label: 'Default Angle' },
   { value: 'eye level', label: 'Eye Level' },
-  { value: 'low angle', label: 'Low Angle (Looking Up)' },
+  { value: 'low angle', label: 'Low Angle (Hero Shot)' },
   { value: 'high angle', label: 'High Angle (Looking Down)' },
-  { value: 'birds eye view', label: "Bird's Eye View" },
+  { value: 'birds eye view', label: "Bird's Eye View (Top Down)" },
+  { value: 'worms eye view', label: "Worm's Eye View (Ground Up)" },
   { value: 'dutch angle', label: 'Dutch Angle (Tilted)' },
-  { value: 'close up', label: 'Close Up' },
+  { value: 'over the shoulder', label: 'Over the Shoulder' },
+  { value: 'pov', label: 'POV (First Person)' },
+  { value: 'extreme close up', label: 'Extreme Close-Up' },
+  { value: 'close up', label: 'Close-Up' },
+  { value: 'medium shot', label: 'Medium Shot' },
   { value: 'wide shot', label: 'Wide Shot' },
+  { value: 'extreme wide', label: 'Extreme Wide/Establishing' },
+  { value: 'aerial drone', label: 'Aerial/Drone View' },
 ];
 
 // Video Style Presets
 const VIDEO_STYLES = [
   { value: '', label: 'No Style' },
+  // Cinematic
   { value: 'cinematic', label: 'Cinematic' },
+  { value: 'cinematic epic', label: 'Cinematic Epic' },
+  { value: 'blockbuster', label: 'Hollywood Blockbuster' },
+  { value: 'indie film', label: 'Indie Film' },
+  // Documentary
   { value: 'documentary', label: 'Documentary' },
+  { value: 'nature doc', label: 'Nature Documentary' },
+  // Artistic
   { value: 'dreamy', label: 'Dreamy / Ethereal' },
-  { value: 'vintage film', label: 'Vintage Film' },
+  { value: 'surreal', label: 'Surreal' },
+  { value: 'abstract', label: 'Abstract Motion' },
+  // Retro/Vintage
+  { value: 'vintage film', label: 'Vintage Film (70s)' },
+  { value: 'vhs retro', label: '80s VHS' },
   { value: 'noir', label: 'Film Noir' },
+  { value: 'silent film', label: 'Silent Film Era' },
+  { value: 'old hollywood', label: 'Old Hollywood' },
+  // Animation
   { value: 'anime', label: 'Anime Style' },
+  { value: 'cartoon', label: 'Cartoon Animation' },
+  { value: 'stop motion', label: 'Stop Motion' },
+  { value: 'pixar 3d', label: 'Pixar 3D Style' },
+  // Speed
   { value: 'slow motion', label: 'Slow Motion' },
-  { value: 'vhs retro', label: 'VHS Retro' },
+  { value: 'hyper slo-mo', label: 'Hyper Slow Motion' },
+  { value: 'timelapse', label: 'Time-lapse' },
+  { value: 'hyperlapse', label: 'Hyperlapse' },
+  // Modern
+  { value: 'music video', label: 'Music Video' },
+  { value: 'commercial', label: 'Commercial/Ad' },
+  { value: 'social media', label: 'Social Media' },
 ];
 
 // Special Effects Presets
 const SPECIAL_EFFECTS = [
   { value: '', label: 'No Effects' },
+  // Particles
   { value: 'particles floating', label: 'Floating Particles' },
+  { value: 'dust motes', label: 'Dust Motes' },
+  { value: 'sparkles', label: 'Sparkles/Glitter' },
+  { value: 'embers', label: 'Floating Embers' },
+  { value: 'fireflies', label: 'Fireflies' },
+  // Light effects
   { value: 'light rays', label: 'Light Rays / God Rays' },
   { value: 'lens flare', label: 'Lens Flare' },
   { value: 'bokeh', label: 'Bokeh Blur' },
+  { value: 'anamorphic flare', label: 'Anamorphic Flare' },
+  { value: 'light leak', label: 'Light Leak' },
+  { value: 'neon glow', label: 'Neon Glow' },
+  // Motion
+  { value: 'motion blur', label: 'Motion Blur' },
+  { value: 'speed lines', label: 'Speed Lines' },
+  // Weather
   { value: 'rain', label: 'Rain' },
+  { value: 'heavy storm', label: 'Heavy Rain/Storm' },
   { value: 'snow', label: 'Snow' },
   { value: 'fog', label: 'Fog / Mist' },
+  { value: 'clouds', label: 'Moving Clouds' },
+  // Fire/Energy
+  { value: 'fire sparks', label: 'Fire Sparks' },
+  { value: 'flames', label: 'Flames' },
+  { value: 'smoke', label: 'Smoke' },
+  { value: 'electricity', label: 'Electricity' },
+  // Nature
+  { value: 'falling leaves', label: 'Falling Leaves' },
+  { value: 'petals', label: 'Flower Petals' },
+  { value: 'butterflies', label: 'Butterflies' },
+  // Film
   { value: 'film grain', label: 'Film Grain' },
+  { value: 'vignette', label: 'Vignette' },
+  { value: 'chromatic aberration', label: 'Chromatic Aberration' },
 ];
 
 /**
@@ -839,8 +916,8 @@ export default function JumpStartModal({
                       {hasAddedToEditor ? 'Added' : 'Add to Editor'}
                     </Button>
                   )}
-                  <Button onClick={handleDownloadVideo} variant="outline" disabled={!generatedVideoUrl}>
-                    <Download className="w-4 h-4 mr-2" /> Download
+                  <Button onClick={handleDownloadVideo} className="bg-[#2C666E] hover:bg-[#07393C] text-white" disabled={!generatedVideoUrl}>
+                    <Download className="w-4 h-4 mr-2" /> Download to Device
                   </Button>
                   <Button variant="outline" onClick={handleClose}>Close</Button>
                 </div>
