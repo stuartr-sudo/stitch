@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Stage, Layer } from 'react-konva';
+import { Stage, Layer, Rect } from 'react-konva';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -69,14 +69,18 @@ export default function SmooshModal({
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
+          // Scale down large images
+          const maxSize = 400;
+          const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
           const newImage = {
             id: Date.now() + Math.random(),
             url: event.target.result,
-            x: dimensions.width / 2 - img.width / 4,
-            y: dimensions.height / 2 - img.height / 4,
-            width: img.width / 2,
-            height: img.height / 2,
+            x: dimensions.width / 2 - (img.width * scale) / 2,
+            y: dimensions.height / 2 - (img.height * scale) / 2,
+            scaleX: scale,
+            scaleY: scale,
             rotation: 0,
+            masks: [],
           };
           setImages(prev => [...prev, newImage]);
         };
@@ -95,9 +99,10 @@ export default function SmooshModal({
         url: urlInput.trim(),
         x: dimensions.width / 2 - 150,
         y: dimensions.height / 2 - 100,
-        width: 300,
-        height: 200,
+        scaleX: 0.5,
+        scaleY: 0.5,
         rotation: 0,
+        masks: [],
       };
       setImages(prev => [...prev, newImage]);
       setUrlInput('');
@@ -125,16 +130,26 @@ export default function SmooshModal({
   };
 
   const handleFrameContent = () => {
-    if (images.length === 0) return;
+    if (images.length === 0) {
+      // Frame the canvas dimensions if no images
+      const container = containerRef.current;
+      if (!container) return;
+      
+      const padding = 50;
+      const scaleX = container.clientWidth / (dimensions.width + padding * 2);
+      const scaleY = container.clientHeight / (dimensions.height + padding * 2);
+      const newScale = Math.min(scaleX, scaleY, 1);
+      
+      setStageScale(newScale);
+      setStagePos({
+        x: (container.clientWidth - dimensions.width * newScale) / 2,
+        y: (container.clientHeight - dimensions.height * newScale) / 2,
+      });
+      return;
+    }
     
-    // Calculate bounds
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    images.forEach(img => {
-      minX = Math.min(minX, img.x);
-      minY = Math.min(minY, img.y);
-      maxX = Math.max(maxX, img.x + img.width);
-      maxY = Math.max(maxY, img.y + img.height);
-    });
+    // Calculate bounds using canvas dimensions as base
+    let minX = 0, minY = 0, maxX = dimensions.width, maxY = dimensions.height;
 
     const container = containerRef.current;
     if (!container) return;
@@ -174,10 +189,15 @@ export default function SmooshModal({
         const imgEl = new Image();
         imgEl.crossOrigin = 'anonymous';
         imgEl.onload = () => {
+          const scaleX = img.scaleX || 1;
+          const scaleY = img.scaleY || 1;
+          const width = imgEl.width * scaleX;
+          const height = imgEl.height * scaleY;
+          
           ctx.save();
-          ctx.translate(img.x + img.width / 2, img.y + img.height / 2);
-          ctx.rotate((img.rotation * Math.PI) / 180);
-          ctx.drawImage(imgEl, -img.width / 2, -img.height / 2, img.width, img.height);
+          ctx.translate(img.x, img.y);
+          ctx.rotate(((img.rotation || 0) * Math.PI) / 180);
+          ctx.drawImage(imgEl, 0, 0, width, height);
           ctx.restore();
           resolve();
         };
@@ -313,16 +333,11 @@ export default function SmooshModal({
             >
               <Layer>
                 {/* Canvas background */}
-                <URLImage
-                  id="bg"
-                  url=""
+                <Rect
                   x={0}
                   y={0}
                   width={dimensions.width}
                   height={dimensions.height}
-                  isSelected={false}
-                  onSelect={() => {}}
-                  onChange={() => {}}
                   fill="white"
                   stroke="#ccc"
                   strokeWidth={2}
@@ -331,16 +346,19 @@ export default function SmooshModal({
                 {images.map((img) => (
                   <URLImage
                     key={img.id}
-                    id={img.id}
-                    url={img.url}
-                    x={img.x}
-                    y={img.y}
-                    width={img.width}
-                    height={img.height}
-                    rotation={img.rotation}
+                    image={{
+                      id: img.id,
+                      src: img.url,
+                      x: img.x,
+                      y: img.y,
+                      rotation: img.rotation || 0,
+                      scaleX: img.scaleX || 1,
+                      scaleY: img.scaleY || 1,
+                      masks: img.masks || [],
+                    }}
                     isSelected={selectedId === img.id}
                     onSelect={() => setSelectedId(img.id)}
-                    onChange={(newAttrs) => handleImageUpdate(img.id, newAttrs)}
+                    onChange={(newAttrs) => handleImageUpdate(img.id, { ...newAttrs, url: newAttrs.src })}
                   />
                 ))}
               </Layer>
