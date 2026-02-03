@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -75,6 +75,20 @@ export default function EditImageModal({
   const [urlInput, setUrlInput] = useState('');
   const [showLibrary, setShowLibrary] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setImages([]);
+      setPrompt('');
+      setModel('wavespeed-nano-ultra');
+      setOutputSize('1920x1080');
+      setIsLoading(false);
+      setResultImage(null);
+      setShowUrlInput(false);
+      setUrlInput('');
+    }
+  }, [isOpen]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;

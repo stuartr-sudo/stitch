@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -77,6 +77,26 @@ export default function TryStyleModal({
   const garmentFileRef = useRef(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryTarget, setLibraryTarget] = useState('model'); // 'model' or 'garment'
+
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setModelImage(null);
+      setGarmentImage(null);
+      setCategory('auto');
+      setMode('balanced');
+      setGarmentPhotoType('auto');
+      setNumSamples(1);
+      setIsLoading(false);
+      setLoadingStatus('');
+      setResultImages([]);
+      setSelectedResult(0);
+      setShowModelUrlInput(false);
+      setShowGarmentUrlInput(false);
+      setModelUrlInput('');
+      setGarmentUrlInput('');
+    }
+  }, [isOpen]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;

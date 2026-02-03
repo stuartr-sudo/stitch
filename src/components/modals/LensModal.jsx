@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -45,6 +45,20 @@ export default function LensModal({
   const [urlInput, setUrlInput] = useState('');
   const [showLibrary, setShowLibrary] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setImage(null);
+      setHorizontalAngle(0);
+      setVerticalAngle(0);
+      setZoom(0);
+      setIsLoading(false);
+      setResultImage(null);
+      setShowUrlInput(false);
+      setUrlInput('');
+    }
+  }, [isOpen]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;

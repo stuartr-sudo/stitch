@@ -117,6 +117,26 @@ export default function TripModal({
   const [lastSavedVideoUrl, setLastSavedVideoUrl] = useState(null);
   const pollIntervalRef = useRef(null);
 
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(1);
+      setSelectedVideo(null);
+      setVideoLibrary([]);
+      setSearchQuery('');
+      setShowUrlImport(false);
+      setImportUrl('');
+      setIsImportingUrl(false);
+      setPrompt('');
+      setSelectedPreset(null);
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setRequestId(null);
+      setGeneratedVideoUrl(null);
+      setLastSavedVideoUrl(null);
+    }
+  }, [isOpen]);
+
   const filteredLibrary = useMemo(() => {
     if (!searchQuery) return videoLibrary;
     const q = searchQuery.toLowerCase();

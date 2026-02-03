@@ -99,6 +99,29 @@ export default function JumpStartVideoStudioModal({
   const [lastSavedVideoUrl, setLastSavedVideoUrl] = useState(null);
   const pollIntervalRef = useRef(null);
 
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setCurrentStep(1);
+      setSelectedVideo(null);
+      setVideoLibrary([]);
+      setSearchQuery('');
+      setUrlInput('');
+      setShowUrlImport(false);
+      setPrompt('');
+      setResolution('720p');
+      setDuration(5);
+      setGenerateAudio(true);
+      setCameraFixed(false);
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setRequestId(null);
+      setGeneratedVideoUrl(null);
+      setLastSavedVideoUrl(null);
+    }
+  }, [isOpen, initialMode]);
+
   // Import from URL
   const handleImportFromUrl = () => {
     if (!urlInput.trim()) {

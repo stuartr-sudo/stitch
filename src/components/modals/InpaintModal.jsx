@@ -53,6 +53,19 @@ export default function InpaintModal({
   const fileInputRef = useRef(null);
   const [showLibrary, setShowLibrary] = useState(false);
 
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setImage(null);
+      setPrompt('');
+      setBrushSize(30);
+      setMode('paint');
+      setIsLoading(false);
+      setResultImage(null);
+      setUseProUltra(false);
+    }
+  }, [isOpen]);
+
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
     if (url) {

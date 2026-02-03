@@ -243,6 +243,37 @@ export default function JumpStartModal({
   const fileInputRef = useRef(null);
   const pollIntervalRef = useRef(null);
 
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(1);
+      setCapturedCanvasData(null);
+      setImages([]);
+      setSelectedId(null);
+      setIsLoading(false);
+      setTool('move');
+      setBrushSize(30);
+      setShowBrushPanel(false);
+      setLoadingMessage('');
+      setShowUrlImport(false);
+      setRightPanel(null);
+      setUrlInput('');
+      setSearchQuery('');
+      setSearchResults([]);
+      setAspectRatio('16:9');
+      setResolution('480p');
+      setDuration(5);
+      setCameraMovement('');
+      setCameraAngle('');
+      setVideoStyle('');
+      setSpecialEffects('');
+      setDescription('');
+      setGeneratedVideoUrl(null);
+      setHasAddedToEditor(false);
+      setLastPromptUsed('');
+    }
+  }, [isOpen]);
+
   // Calculate canvas dimensions
   const getCanvasDimensions = () => {
     const config = ASPECT_RATIOS[aspectRatio];

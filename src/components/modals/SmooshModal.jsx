@@ -91,6 +91,22 @@ export default function SmooshModal({
   const fileInputRef = useRef(null);
   const [showLibrary, setShowLibrary] = useState(false);
 
+  // Reset modal state when opened (but preserve canvas centering logic in separate useEffect)
+  useEffect(() => {
+    if (isOpen) {
+      setImages([]);
+      setSelectedId(null);
+      setPrompt('');
+      setSelectedPreset(ENHANCEMENT_PRESETS[0]);
+      setDimensions(DIMENSION_PRESETS[0]);
+      setStageScale(0.5);
+      setIsLoading(false);
+      setResultImage(null);
+      setShowUrlInput(false);
+      setUrlInput('');
+    }
+  }, [isOpen]);
+
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
     if (url) {

@@ -212,9 +212,9 @@ export default function ImagineerModal({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Reset when modal closes
+  // Reset when modal opens
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       setSubjectDescription("");
       setSubjectType("");
       setArtisticStyle("");
