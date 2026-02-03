@@ -129,6 +129,13 @@ app.post('/api/trystyle/result', async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Library routes
+app.post('/api/library/save', async (req, res) => {
+  const handler = await loadApiRoute('library/save.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
 });

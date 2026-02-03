@@ -7,7 +7,7 @@ function getSupabaseClient() {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase credentials');
+    return null; // Return null instead of throwing
   }
   
   return createClient(supabaseUrl, supabaseKey);
@@ -16,6 +16,7 @@ function getSupabaseClient() {
 /**
  * JumpStart - Image to Video Generation API
  * Uses Wavespeed WAN 2.2 Spicy to convert images to videos
+ * Supports both Supabase upload (preferred) and direct base64 (fallback)
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,15 +27,13 @@ export default async function handler(req, res) {
   
   if (!WAVESPEED_API_KEY) {
     console.error('[JumpStart] Missing WAVESPEED_API_KEY');
-    return res.status(500).json({ error: 'Missing API key configuration' });
+    return res.status(500).json({ error: 'Missing Wavespeed API key. Please configure WAVESPEED_API_KEY.' });
   }
 
-  let supabase;
-  try {
-    supabase = getSupabaseClient();
-  } catch (error) {
-    console.error('[JumpStart] Supabase init error:', error);
-    return res.status(500).json({ error: 'Server configuration error' });
+  // Supabase is optional - we can use base64 directly if not configured
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    console.log('[JumpStart] Supabase not configured, will use base64 fallback');
   }
 
   try {
@@ -49,12 +48,12 @@ export default async function handler(req, res) {
 
     const imageFile = files.image?.[0];
     const prompt = fields.prompt?.[0];
-    const username = fields.username?.[0];
+    const username = fields.username?.[0] || 'default';
     const resolution = fields.resolution?.[0] || '480p';
     const duration = parseInt(fields.duration?.[0] || '5', 10);
 
-    if (!imageFile || !prompt || !username) {
-      return res.status(400).json({ error: 'Missing required fields (image, prompt, username)' });
+    if (!imageFile || !prompt) {
+      return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
     }
 
     const imageBuffer = fs.readFileSync(imageFile.filepath);
@@ -64,31 +63,51 @@ export default async function handler(req, res) {
       mimeType = 'image/jpeg';
     }
     
-    const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-    const fileName = `jumpstart-temp-${Date.now()}.${extension}`;
+    let imageUrl;
+    let tempFileName = null;
 
-    console.log('[JumpStart] Uploading image:', fileName, 'Size:', imageBuffer.length);
+    // Try Supabase upload first, fall back to base64
+    if (supabase) {
+      try {
+        const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+        tempFileName = `jumpstart-temp-${Date.now()}.${extension}`;
+        
+        console.log('[JumpStart] Uploading to Supabase:', tempFileName);
 
-    const bucketName = 'videos';
-    const uploadResult = await supabase.storage
-      .from(bucketName)
-      .upload(`temp/${fileName}`, imageBuffer, {
-        contentType: mimeType,
-        upsert: true,
-      });
+        const bucketName = 'videos';
+        const uploadResult = await supabase.storage
+          .from(bucketName)
+          .upload(`temp/${tempFileName}`, imageBuffer, {
+            contentType: mimeType,
+            upsert: true,
+          });
 
-    if (uploadResult.error) {
-      console.error('[JumpStart] Upload error:', uploadResult.error);
-      return res.status(500).json({ error: 'Failed to upload image' });
+        if (uploadResult.error) {
+          console.warn('[JumpStart] Supabase upload failed, using base64:', uploadResult.error.message);
+          // Fall through to base64
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(`temp/${tempFileName}`);
+          
+          imageUrl = publicUrl;
+          console.log('[JumpStart] Using Supabase URL:', imageUrl);
+        }
+      } catch (uploadError) {
+        console.warn('[JumpStart] Supabase error, using base64:', uploadError.message);
+      }
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(`temp/${fileName}`);
-
-    console.log('[JumpStart] Uploaded to Supabase:', publicUrl);
+    // Use base64 data URL if Supabase didn't work
+    if (!imageUrl) {
+      const base64Image = imageBuffer.toString('base64');
+      imageUrl = `data:${mimeType};base64,${base64Image}`;
+      console.log('[JumpStart] Using base64 data URL (length:', imageUrl.length, ')');
+    }
 
     console.log('[JumpStart] Submitting to Wavespeed WAN 2.2 Spicy...');
+    console.log('[JumpStart] Prompt:', prompt.substring(0, 100) + '...');
+    console.log('[JumpStart] Duration:', duration, 'Resolution:', resolution);
     
     const submitResponse = await fetch('https://api.wavespeed.ai/api/v3/wavespeed-ai/wan-2.2-spicy/image-to-video', {
       method: 'POST',
@@ -97,7 +116,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        image: publicUrl,
+        image: imageUrl,
         prompt: prompt,
         resolution: resolution,
         duration: duration,
@@ -108,18 +127,22 @@ export default async function handler(req, res) {
     if (!submitResponse.ok) {
       const errorText = await submitResponse.text();
       console.error('[JumpStart] Wavespeed submit error:', errorText);
-      return res.status(500).json({ error: 'Failed to submit to video generation API' });
+      return res.status(500).json({ error: 'Failed to submit to video generation API: ' + errorText.substring(0, 200) });
     }
 
     const submitData = await submitResponse.json();
-    console.log('[JumpStart] Submit response:', submitData);
+    console.log('[JumpStart] Submit response:', JSON.stringify(submitData).substring(0, 500));
 
     const status = submitData.status || submitData.data?.status;
     const resultUrl = submitData.outputs?.[0] || submitData.data?.outputs?.[0];
     
     if (status === 'completed' && resultUrl) {
       console.log('[JumpStart] Video ready immediately:', resultUrl);
-      await supabase.storage.from(bucketName).remove([`temp/${fileName}`]);
+      
+      // Clean up temp file if we used Supabase
+      if (supabase && tempFileName) {
+        await supabase.storage.from('videos').remove([`temp/${tempFileName}`]).catch(() => {});
+      }
       
       return res.status(200).json({
         success: true,
