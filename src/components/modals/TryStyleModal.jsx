@@ -529,7 +529,7 @@ export default function TryStyleModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh] overflow-hidden flex flex-col p-0 relative">
+      <DialogContent className="max-w-4xl max-h-[90vh] top-[5vh] translate-y-0 overflow-hidden flex flex-col p-0 relative">
         <DialogHeader className="sr-only">
           <DialogTitle>Try Style - Virtual Try-On</DialogTitle>
           <DialogDescription>Virtual clothing try-on powered by FASHN AI</DialogDescription>
