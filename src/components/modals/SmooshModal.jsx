@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import { toast } from 'sonner';
 import {
@@ -195,6 +195,17 @@ export default function SmooshModal({
       y: (container.clientHeight - contentHeight * newScale) / 2 - minY * newScale + padding * newScale,
     });
   };
+
+  // Auto-center canvas when modal opens
+  useEffect(() => {
+    if (isOpen || isEmbedded) {
+      // Small delay to ensure container is rendered
+      const timer = setTimeout(() => {
+        handleFrameContent();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isEmbedded, dimensions]);
 
   const flattenCanvas = () => {
     const stage = stageRef.current;
