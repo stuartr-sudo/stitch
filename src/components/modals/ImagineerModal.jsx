@@ -26,6 +26,17 @@ const SUBJECT_TYPE = [
 
 const ARTISTIC_STYLE = [
   { value: "", label: "Select style..." },
+  // UGC & Social Media (Authentic/Raw)
+  { value: "iphone-selfie", label: "📱 iPhone Selfie (Raw)" },
+  { value: "ugc-testimonial", label: "🎤 UGC Testimonial" },
+  { value: "tiktok-style", label: "📲 TikTok/Reels Photo" },
+  { value: "instagram-candid", label: "📸 Instagram Candid" },
+  { value: "facetime-screenshot", label: "📞 FaceTime Screenshot" },
+  { value: "mirror-selfie", label: "🪞 Mirror Selfie" },
+  { value: "car-selfie", label: "🚗 Car Selfie" },
+  { value: "gym-selfie", label: "💪 Gym Selfie" },
+  { value: "golden-hour-selfie", label: "🌅 Golden Hour Selfie" },
+  { value: "casual-snapshot", label: "📷 Casual Snapshot" },
   // Photography styles
   { value: "photorealistic", label: "Photorealistic" },
   { value: "hyperrealistic", label: "Hyperrealistic" },
