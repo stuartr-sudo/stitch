@@ -18,6 +18,7 @@ function getSupabaseClient() {
  * Supports multiple AI providers:
  * - Wavespeed WAN 2.2 Spicy
  * - Grok Imagine Video (FAL.ai / xAI)
+ * - Bytedance Seedance 1.5 Pro (FAL.ai)
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -38,22 +39,26 @@ export default async function handler(req, res) {
     const prompt = fields.prompt?.[0];
     const model = fields.model?.[0] || 'wavespeed-wan';
     const username = fields.username?.[0] || 'default';
-    const resolution = fields.resolution?.[0] || '480p';
+    const resolution = fields.resolution?.[0] || '720p';
     const duration = parseInt(fields.duration?.[0] || '5', 10);
     const aspectRatio = fields.aspectRatio?.[0] || '16:9';
     const width = parseInt(fields.width?.[0] || '854', 10);
     const height = parseInt(fields.height?.[0] || '480', 10);
     
-    // Audio settings (Grok only)
+    // Audio settings
     const enableAudio = fields.enableAudio?.[0] === 'true';
     const audioTranscript = fields.audioTranscript?.[0] || '';
+    
+    // Seedance-specific settings
+    const cameraFixed = fields.cameraFixed?.[0] === 'true';
+    const endImageUrl = fields.endImageUrl?.[0] || null;
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
     }
 
     console.log('[JumpStart] Model:', model);
-    console.log('[JumpStart] Dimensions:', { aspectRatio, width, height, resolution, duration });
+    console.log('[JumpStart] Settings:', { aspectRatio, resolution, duration, enableAudio, cameraFixed });
 
     // Read and prepare image
     const imageBuffer = fs.readFileSync(imageFile.filepath);
@@ -99,13 +104,17 @@ export default async function handler(req, res) {
     }
 
     // Route to appropriate provider
-    if (model === 'grok-imagine') {
+    if (model === 'seedance-pro') {
+      return await handleSeedance(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl
+      });
+    } else if (model === 'grok-imagine') {
       return await handleGrokImagine(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, supabase, tempFileName
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript
       });
     } else {
       return await handleWavespeed(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, width, height, supabase, tempFileName
+        imageUrl, prompt, duration, aspectRatio, resolution, width, height
       });
     }
 
@@ -266,6 +275,93 @@ async function handleGrokImagine(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Grok API' });
+}
+
+/**
+ * Handle Bytedance Seedance 1.5 Pro (FAL.ai)
+ */
+async function handleSeedance(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  console.log('[JumpStart/Seedance] Submitting to Bytedance Seedance 1.5 Pro...');
+  console.log('[JumpStart/Seedance] Settings:', { duration, aspectRatio, resolution, enableAudio, cameraFixed, hasEndFrame: !!endImageUrl });
+  
+  // Build enhanced prompt with audio/speech if provided
+  let enhancedPrompt = prompt;
+  if (enableAudio && audioTranscript) {
+    // Seedance supports dialogue in prompt - format it properly
+    enhancedPrompt = `${prompt}. The person says: "${audioTranscript}"`;
+  }
+  
+  const requestBody = {
+    prompt: enhancedPrompt,
+    image_url: imageUrl,
+    duration: String(Math.min(Math.max(duration, 4), 12)), // Seedance uses string duration, 4-12 seconds
+    aspect_ratio: aspectRatio,
+    resolution: resolution,
+    generate_audio: enableAudio,
+    camera_fixed: cameraFixed,
+    enable_safety_checker: true,
+    seed: -1,
+  };
+  
+  // Add end frame if provided
+  if (endImageUrl) {
+    requestBody.end_image_url = endImageUrl;
+  }
+
+  console.log('[JumpStart/Seedance] Request:', { 
+    ...requestBody, 
+    image_url: requestBody.image_url.substring(0, 50) + '...',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Seedance] Error:', errorText);
+    return res.status(500).json({ error: 'Seedance API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Seedance] Response:', JSON.stringify(data).substring(0, 500));
+
+  // FAL returns video directly or a request_id for queuing
+  if (data.video?.url) {
+    console.log('[JumpStart/Seedance] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+      seed: data.seed,
+    });
+  }
+
+  // If queued, return request ID for polling
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'seedance-pro',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Seedance API' });
 }
 
 export const config = {
