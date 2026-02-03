@@ -192,7 +192,7 @@ export default function VideoAdvertCreator() {
               <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Image className="w-5 h-5 text-[#2C666E]" /> Image Tools
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Generate Image */}
                 <div 
                   onClick={() => setActiveModal('imagineer')}
