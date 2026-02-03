@@ -40,6 +40,31 @@ const DIMENSION_PRESETS = [
   { id: '1080x1350', label: '1080×1350 (Instagram)', width: 1080, height: 1350 },
 ];
 
+const ENHANCEMENT_PRESETS = [
+  { id: 'none', label: 'No Enhancement', prompt: '' },
+  // Blending
+  { id: 'seamless', label: 'Seamless Blend', prompt: 'Seamlessly blend all elements together with smooth transitions and consistent lighting' },
+  { id: 'natural', label: 'Natural Composite', prompt: 'Create a natural, realistic composite with proper shadows, reflections, and perspective' },
+  { id: 'harmonize', label: 'Color Harmonize', prompt: 'Harmonize colors across all elements for a cohesive, unified color palette' },
+  // Advertising
+  { id: 'product-shot', label: 'Product Shot', prompt: 'Professional product photography style with clean background and studio lighting' },
+  { id: 'lifestyle', label: 'Lifestyle Ad', prompt: 'Lifestyle advertising aesthetic with warm, inviting atmosphere and aspirational feel' },
+  { id: 'minimalist', label: 'Minimalist Ad', prompt: 'Clean minimalist advertising style with generous white space and elegant simplicity' },
+  { id: 'bold-ad', label: 'Bold & Vibrant', prompt: 'Bold, vibrant advertising style with high contrast and eye-catching colors' },
+  // Cinematic
+  { id: 'cinematic', label: 'Cinematic', prompt: 'Cinematic look with dramatic lighting, film grain, and movie-like color grading' },
+  { id: 'golden-hour', label: 'Golden Hour', prompt: 'Warm golden hour lighting with soft shadows and sun flares' },
+  { id: 'moody', label: 'Moody & Dark', prompt: 'Moody atmosphere with deep shadows, muted colors, and dramatic contrast' },
+  // Artistic
+  { id: 'dreamy', label: 'Dreamy Soft', prompt: 'Soft, dreamy aesthetic with gentle blur, pastel tones, and ethereal glow' },
+  { id: 'vintage', label: 'Vintage Film', prompt: 'Vintage film photography look with warm tones, faded colors, and subtle grain' },
+  { id: 'neon', label: 'Neon Glow', prompt: 'Vibrant neon glow effect with bold colors and futuristic lighting' },
+  { id: 'watercolor', label: 'Watercolor Blend', prompt: 'Artistic watercolor painting style with soft edges and flowing colors' },
+  // Technical
+  { id: 'sharpen', label: 'Enhance & Sharpen', prompt: 'Enhance image quality, sharpen details, and improve clarity' },
+  { id: 'upscale', label: 'HD Upscale', prompt: 'Upscale and enhance to high definition with crisp, clear details' },
+];
+
 /**
  * SmooshModal - Infinite Canvas Image Compositor
  */
@@ -52,6 +77,7 @@ export default function SmooshModal({
   const [images, setImages] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [prompt, setPrompt] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState(ENHANCEMENT_PRESETS[0]);
   const [dimensions, setDimensions] = useState(DIMENSION_PRESETS[0]);
   const [stageScale, setStageScale] = useState(0.5);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
@@ -258,12 +284,15 @@ export default function SmooshModal({
       const flatImage = await flattenCanvas();
       if (!flatImage) throw new Error('Failed to flatten canvas');
 
+      // Use custom prompt, or preset prompt, or default
+      const finalPrompt = prompt.trim() || selectedPreset.prompt || 'A seamless, professional composition';
+
       const response = await fetch('/api/smoosh/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: flatImage,
-          prompt: prompt.trim() || 'A seamless composition',
+          prompt: finalPrompt,
           width: dimensions.width,
           height: dimensions.height,
         }),
@@ -478,13 +507,35 @@ export default function SmooshModal({
 
           {/* AI Enhancement */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">AI Enhancement (Optional)</Label>
+            <Label className="text-sm font-medium mb-2 block">AI Enhancement Style</Label>
+            <select
+              value={selectedPreset.id}
+              onChange={(e) => {
+                const preset = ENHANCEMENT_PRESETS.find(p => p.id === e.target.value);
+                setSelectedPreset(preset);
+                if (preset.prompt) {
+                  setPrompt(preset.prompt);
+                }
+              }}
+              className="w-full p-2 border rounded-lg text-sm mb-3"
+            >
+              {ENHANCEMENT_PRESETS.map(preset => (
+                <option key={preset.id} value={preset.id}>{preset.label}</option>
+              ))}
+            </select>
+            
+            <Label className="text-sm font-medium mb-2 block text-slate-500">Custom Prompt (Optional)</Label>
             <Textarea
-              placeholder="Describe how to enhance the composition..."
+              placeholder="Add custom instructions or modify the preset..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[80px]"
+              className="min-h-[60px] text-sm"
             />
+            <p className="text-xs text-slate-400 mt-1">
+              {selectedPreset.id !== 'none' 
+                ? 'Preset applied. Add custom instructions to refine further.'
+                : 'Describe how the AI should enhance your composition.'}
+            </p>
           </div>
 
           {!resultImage ? (
