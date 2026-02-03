@@ -313,14 +313,20 @@ export default function JumpStartModal({
   // Helper to save media to library
   const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
     try {
-      await fetch('/api/library/save', {
+      console.log(`[JumpStart] Saving ${type} to library:`, url.substring(0, 50) + '...');
+      const response = await fetch('/api/library/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, type, title, source }),
       });
-      console.log(`[JumpStart] Saved ${type} to library`);
+      const data = await response.json();
+      if (data.saved) {
+        console.log(`[JumpStart] Successfully saved ${type} to library:`, data.id);
+      } else {
+        console.warn(`[JumpStart] ${type} not saved:`, data.message || 'Unknown reason');
+      }
     } catch (err) {
-      console.warn('[JumpStart] Failed to save to library:', err);
+      console.error('[JumpStart] Failed to save to library:', err);
     }
   };
 
@@ -1365,14 +1371,17 @@ export default function JumpStartModal({
                   <div className="flex items-center gap-2 mb-3">
                     <Play className="w-5 h-5 text-[#2C666E]" />
                     <h3 className="font-semibold text-gray-900">Generated Video</h3>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-auto">✓ Complete</span>
                   </div>
-                  <video 
-                    src={generatedVideoUrl} 
-                    controls 
-                    autoPlay 
-                    loop 
-                    className="w-full rounded-lg border bg-black"
-                  />
+                  <div className="relative flex items-center justify-center bg-black rounded-lg overflow-hidden" style={{ maxHeight: '50vh' }}>
+                    <video 
+                      src={generatedVideoUrl} 
+                      controls 
+                      autoPlay 
+                      loop 
+                      className="max-w-full max-h-[50vh] rounded-lg"
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex gap-3">
@@ -1440,9 +1449,7 @@ export default function JumpStartModal({
       </Dialog>
 
       {/* Loading Modal */}
-      {isLoading && (
-        <LoadingModal message={loadingMessage || 'Generating video...'} />
-      )}
+      <LoadingModal isOpen={isLoading} message={loadingMessage || 'Generating video...'} />
 
       {/* Library Modal */}
       <LibraryModal
