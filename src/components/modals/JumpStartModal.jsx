@@ -156,6 +156,61 @@ const VIDEO_STYLES = [
   { value: 'social media', label: 'Social Media' },
 ];
 
+// Description Presets (Prefilled prompts)
+const DESCRIPTION_PRESETS = [
+  // ⭐ REALISTIC / UGC ESSENTIALS
+  { 
+    id: 'realistic-basic',
+    label: '📱 Realistic Basic',
+    prompt: 'real person, genuine emotion, natural lighting, unfiltered, authentic moment'
+  },
+  { 
+    id: 'selfie-talking',
+    label: '🗣️ Selfie Talking',
+    prompt: 'person talking naturally to camera, genuine facial expressions, subtle head movements, natural eye contact, authentic speech movements, real person in natural setting'
+  },
+  { 
+    id: 'ugc-testimonial',
+    label: '🎤 UGC Testimonial',
+    prompt: 'authentic testimonial style, person speaking genuinely, natural pauses, real emotions, relatable everyday person, casual home or office background, soft ambient lighting'
+  },
+  { 
+    id: 'iphone-raw',
+    label: '📲 iPhone Raw Footage',
+    prompt: 'raw iPhone video quality, front-facing camera perspective, slight natural hand movement, realistic skin texture and pores, natural ambient indoor lighting, unedited unfiltered look'
+  },
+  { 
+    id: 'natural-portrait',
+    label: '👤 Natural Portrait',
+    prompt: 'natural portrait, person with genuine subtle smile, soft window lighting on face, natural skin texture, authentic relaxed expression, gentle natural movement'
+  },
+  { 
+    id: 'candid-moment',
+    label: '✨ Candid Moment',
+    prompt: 'candid unposed moment, genuine spontaneous reaction, natural authentic behavior, real unscripted emotion, everyday life setting'
+  },
+  { 
+    id: 'influencer-style',
+    label: '💫 Influencer Natural',
+    prompt: 'influencer style but authentic, natural charisma, genuine smile, soft flattering daylight, relaxed confident energy, approachable real person vibe'
+  },
+  { 
+    id: 'product-review',
+    label: '📦 Product Review UGC',
+    prompt: 'authentic product review style, person naturally interacting with product, genuine reactions, casual home setting, real person demonstration, unscripted natural presentation'
+  },
+  { 
+    id: 'emotional-genuine',
+    label: '😊 Emotional & Genuine',
+    prompt: 'genuine emotional expression, real heartfelt moment, natural tears or laughter, authentic vulnerability, unfiltered raw emotion, real human connection'
+  },
+  { 
+    id: 'day-in-life',
+    label: '🌅 Day in Life',
+    prompt: 'day in the life style, casual everyday moment, natural activities, authentic lifestyle content, real person in their environment, documentary feel'
+  },
+];
+
 // Special Effects Presets
 const SPECIAL_EFFECTS = [
   { value: '', label: 'No Effects' },
@@ -972,10 +1027,45 @@ export default function JumpStartModal({
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <Video className="w-5 h-5 text-[#2C666E]" />
-                      <h3 className="font-semibold text-gray-900">Additional Description</h3>
-                      <span className="text-xs text-gray-400">(optional)</span>
+                      <h3 className="font-semibold text-gray-900">Description & Motion</h3>
+                      <span className="text-xs text-gray-400">(click preset or type custom)</span>
                     </div>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe any additional motion or effects..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white resize-none h-24" />
+                    
+                    {/* Prefilled Preset Buttons */}
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">🎯 Quick Presets for Realistic Videos:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DESCRIPTION_PRESETS.map(preset => (
+                          <button
+                            key={preset.id}
+                            onClick={() => setDescription(preset.prompt)}
+                            className={`px-2 py-1 text-xs rounded-full border transition-all ${
+                              description === preset.prompt
+                                ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/30 hover:border-[#2C666E]/50'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <textarea 
+                      value={description} 
+                      onChange={(e) => setDescription(e.target.value)} 
+                      placeholder="Describe the motion and style... (e.g., 'real person, genuine emotion, natural lighting, unfiltered')" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white resize-none h-20" 
+                    />
+                    
+                    {description && (
+                      <button 
+                        onClick={() => setDescription('')}
+                        className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        ✕ Clear description
+                      </button>
+                    )}
                   </div>
 
                   {(cameraMovement || cameraAngle || videoStyle || specialEffects || description) && (
