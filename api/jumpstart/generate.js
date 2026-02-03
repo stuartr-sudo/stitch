@@ -229,7 +229,7 @@ async function handleGrokImagine(req, res, params) {
   console.log('[JumpStart/Grok] Submitting to xAI Grok Imagine Video...');
   console.log('[JumpStart/Grok] Settings:', { duration, aspectRatio, resolution, enableAudio });
   
-  // Build enhanced prompt with audio instructions if enabled
+  // Build enhanced prompt with audio instructions
   let enhancedPrompt = prompt;
   if (enableAudio && audioTranscript) {
     // Add transcript/dialogue instruction to the prompt
@@ -237,6 +237,9 @@ async function handleGrokImagine(req, res, params) {
   } else if (enableAudio) {
     // Request ambient/contextual audio
     enhancedPrompt = `${prompt}. Generate natural ambient sounds and audio appropriate for the scene.`;
+  } else {
+    // Explicitly request NO audio when disabled
+    enhancedPrompt = `${prompt}. Silent video, no audio, no sound, muted.`;
   }
   
   const requestBody = {
