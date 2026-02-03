@@ -167,6 +167,20 @@ export default function TryStyleModal({
         setResultImages(data.images);
         setSelectedResult(0);
         toast.success('Try-on complete!');
+        
+        // Save to library
+        data.images.forEach((imageUrl, idx) => {
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: imageUrl,
+              type: 'image',
+              title: `Try Style Result ${idx + 1}`,
+              source: 'trystyle',
+            }),
+          }).catch(err => console.warn('Failed to save to library:', err));
+        });
       } else if (data.requestId) {
         // Poll for result
         setLoadingStatus('Processing virtual try-on...');
@@ -198,6 +212,20 @@ export default function TryStyleModal({
           setSelectedResult(0);
           setIsLoading(false);
           toast.success('Try-on complete!');
+          
+          // Save to library
+          data.images.forEach((imageUrl, idx) => {
+            fetch('/api/library/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: imageUrl,
+                type: 'image',
+                title: `Try Style Result ${idx + 1}`,
+                source: 'trystyle',
+              }),
+            }).catch(err => console.warn('Failed to save to library:', err));
+          });
         } else if (data.status === 'failed') {
           setIsLoading(false);
           toast.error('Generation failed: ' + (data.error || 'Unknown error'));

@@ -49,16 +49,28 @@ export default function VideoAdvertCreator() {
   const [selectedTab, setSelectedTab] = useState('create');
 
   // Handle new video created
-  const handleVideoCreated = (videoUrl) => {
+  const handleVideoCreated = (videoUrl, title = null, source = null) => {
     const newVideo = {
       id: Date.now().toString(),
       url: videoUrl,
-      title: `Video ${createdVideos.length + 1}`,
+      title: title || `Video ${createdVideos.length + 1}`,
       createdAt: new Date().toISOString(),
-      source: activeModal || 'unknown'
+      source: source || activeModal || 'unknown'
     };
     setCreatedVideos(prev => [newVideo, ...prev]);
     toast.success('Video added to your collection!');
+    
+    // Save to Supabase library
+    fetch('/api/library/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: videoUrl,
+        type: 'video',
+        title: newVideo.title,
+        source: newVideo.source,
+      }),
+    }).catch(err => console.warn('Failed to save video to library:', err));
   };
 
   // Handle new image created
@@ -87,6 +99,19 @@ export default function VideoAdvertCreator() {
         };
         setCreatedImages(prev => [newImage, ...prev]);
         toast.success('Image generated successfully!');
+        
+        // Save to Supabase library
+        fetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: data.imageUrl,
+            type: 'image',
+            title: 'Imagineer Image',
+            prompt: params.prompt,
+            source: 'imagineer',
+          }),
+        }).catch(err => console.warn('Failed to save image to library:', err));
       } else {
         toast.info('Image generation started. Check back in a moment.');
       }
@@ -468,6 +493,13 @@ export default function VideoAdvertCreator() {
           };
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
+          
+          // Save to Supabase library
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
+          }).catch(err => console.warn('Failed to save to library:', err));
         }}
       />
 
@@ -483,6 +515,13 @@ export default function VideoAdvertCreator() {
           };
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
+          
+          // Save to Supabase library
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, type: 'image', title: 'Inpainted Image', source: 'inpaint' }),
+          }).catch(err => console.warn('Failed to save to library:', err));
         }}
       />
 
@@ -498,6 +537,13 @@ export default function VideoAdvertCreator() {
           };
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
+          
+          // Save to Supabase library
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, type: 'image', title: 'Lens Adjusted Image', source: 'lens' }),
+          }).catch(err => console.warn('Failed to save to library:', err));
         }}
       />
 
@@ -513,6 +559,13 @@ export default function VideoAdvertCreator() {
           };
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
+          
+          // Save to Supabase library
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, type: 'image', title: 'Smoosh Composition', source: 'smoosh' }),
+          }).catch(err => console.warn('Failed to save to library:', err));
         }}
       />
 
@@ -546,6 +599,13 @@ export default function VideoAdvertCreator() {
           };
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Try-on image added!');
+          
+          // Save to Supabase library  
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, type: 'image', title: 'Try Style Result', source: 'trystyle' }),
+          }).catch(err => console.warn('Failed to save to library:', err));
         }}
       />
     </div>
