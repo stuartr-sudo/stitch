@@ -76,7 +76,7 @@ const VIDEO_MODELS = [
     id: 'veo3', 
     label: '🌟 Google Veo 3.1', 
     shortLabel: 'Veo 3.1',
-    description: 'Google\'s best, 4K, audio generation',
+    description: 'Google\'s best, 4K, multi-image reference',
     provider: 'fal',
     durationOptions: [8], // Fixed 8 seconds only
     resolutions: ['720p', '1080p', '4k'],
@@ -85,6 +85,20 @@ const VIDEO_MODELS = [
     supportsCameraFixed: false,
     supportsEndFrame: false,
     supportsMultipleImages: true, // Can use multiple reference images
+  },
+  { 
+    id: 'veo3-fast', 
+    label: '⚡ Google Veo 3.1 Fast', 
+    shortLabel: 'Veo Fast',
+    description: 'Faster Veo, 4K, flexible duration',
+    provider: 'fal',
+    durationOptions: [4, 6, 8],
+    resolutions: ['720p', '1080p', '4k'],
+    aspectRatios: ['auto', '16:9', '9:16'],
+    supportsAudio: true,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    supportsNegativePrompt: true,
   },
 ];
 
@@ -268,6 +282,7 @@ export default function JumpStartModal({
   const [enableAudio, setEnableAudio] = useState(true);
   const [audioTranscript, setAudioTranscript] = useState('');
   const [cameraFixed, setCameraFixed] = useState(false);
+  const [negativePrompt, setNegativePrompt] = useState('');
   
   // Generated video
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
@@ -326,6 +341,7 @@ export default function JumpStartModal({
       setEnableAudio(true);
       setAudioTranscript('');
       setCameraFixed(false);
+      setNegativePrompt('');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
     }
@@ -573,6 +589,10 @@ export default function JumpStartModal({
       if (currentModel.supportsEndFrame && endFrameImage) {
         formData.append('endImageUrl', endFrameImage);
       }
+      
+      if (currentModel.supportsNegativePrompt && negativePrompt.trim()) {
+        formData.append('negativePrompt', negativePrompt.trim());
+      }
 
       console.log('[JumpStart] Generating with:', { model: videoModel, aspectRatio, resolution, duration, enableAudio });
 
@@ -733,6 +753,9 @@ export default function JumpStartModal({
                     )}
                     {currentModel.supportsMultipleImages && (
                       <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">📸 Multi-Image</span>
+                    )}
+                    {currentModel.supportsNegativePrompt && (
+                      <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded">🚫 Negative Prompt</span>
                     )}
                   </div>
                 </div>
@@ -1013,6 +1036,24 @@ export default function JumpStartModal({
                         <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${cameraFixed ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Negative Prompt (Veo Fast) */}
+                {currentModel.supportsNegativePrompt && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <X className="w-5 h-5 text-red-500" />
+                      <h3 className="font-semibold text-gray-900">Negative Prompt</h3>
+                      <span className="text-xs text-gray-400">(optional)</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">Describe what you DON'T want in the video.</p>
+                    <textarea 
+                      value={negativePrompt} 
+                      onChange={(e) => setNegativePrompt(e.target.value)} 
+                      placeholder="e.g., 'blurry, low quality, distorted faces, unnatural movement, glitches'"
+                      className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
+                    />
                   </div>
                 )}
 

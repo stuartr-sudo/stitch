@@ -52,6 +52,9 @@ export default async function handler(req, res) {
     // Seedance-specific settings
     const cameraFixed = fields.cameraFixed?.[0] === 'true';
     const endImageUrl = fields.endImageUrl?.[0] || null;
+    
+    // Veo Fast specific
+    const negativePrompt = fields.negativePrompt?.[0] || '';
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
@@ -107,6 +110,10 @@ export default async function handler(req, res) {
     if (model === 'veo3') {
       return await handleVeo3(req, res, {
         imageUrl, prompt, aspectRatio, resolution, enableAudio
+      });
+    } else if (model === 'veo3-fast') {
+      return await handleVeo3Fast(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt
       });
     } else if (model === 'seedance-pro') {
       return await handleSeedance(req, res, {
@@ -439,6 +446,82 @@ async function handleVeo3(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Veo 3.1 API' });
+}
+
+/**
+ * Handle Google Veo 3.1 Fast (FAL.ai)
+ */
+async function handleVeo3Fast(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  console.log('[JumpStart/Veo3Fast] Submitting to Google Veo 3.1 Fast...');
+  console.log('[JumpStart/Veo3Fast] Settings:', { duration, aspectRatio, resolution, enableAudio });
+  
+  // Veo 3.1 Fast uses single image_url and supports duration options
+  const requestBody = {
+    prompt: prompt,
+    image_url: imageUrl,
+    aspect_ratio: aspectRatio,
+    duration: `${duration}s`, // Veo Fast uses string format: "4s", "6s", "8s"
+    resolution: resolution,
+    generate_audio: enableAudio !== false,
+    auto_fix: false,
+  };
+  
+  // Add negative prompt if provided
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
+  }
+
+  console.log('[JumpStart/Veo3Fast] Request:', { 
+    ...requestBody, 
+    image_url: '[image]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/fast/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Veo3Fast] Error:', errorText);
+    return res.status(500).json({ error: 'Veo 3.1 Fast API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Veo3Fast] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/Veo3Fast] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'veo3-fast',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Fast API' });
 }
 
 export const config = {
