@@ -52,12 +52,14 @@ export default async function handler(req, res) {
     const resolution = fields.resolution?.[0] || '480p';
     const duration = parseInt(fields.duration?.[0] || '5', 10);
     const aspectRatio = fields.aspectRatio?.[0] || '16:9';
+    const width = parseInt(fields.width?.[0] || '854', 10);
+    const height = parseInt(fields.height?.[0] || '480', 10);
 
     if (!imageFile || !prompt) {
       return res.status(400).json({ error: 'Missing required fields (image, prompt)' });
     }
 
-    console.log('[JumpStart] Aspect Ratio:', aspectRatio);
+    console.log('[JumpStart] Dimensions:', { aspectRatio, width, height, resolution });
 
     const imageBuffer = fs.readFileSync(imageFile.filepath);
     
@@ -109,8 +111,26 @@ export default async function handler(req, res) {
     }
 
     console.log('[JumpStart] Submitting to Wavespeed WAN 2.2 Spicy...');
-    console.log('[JumpStart] Prompt:', prompt.substring(0, 100) + '...');
-    console.log('[JumpStart] Duration:', duration, 'Resolution:', resolution, 'Aspect:', aspectRatio);
+    console.log('[JumpStart] Prompt:', prompt.substring(0, 150) + '...');
+    console.log('[JumpStart] Settings:', { duration, resolution, aspectRatio, width, height });
+    
+    // Build request body - include all possible dimension parameters
+    const requestBody = {
+      image: imageUrl,
+      prompt: prompt,
+      resolution: resolution,
+      duration: duration,
+      aspect_ratio: aspectRatio,
+      width: width,
+      height: height,
+      seed: -1,
+    };
+    
+    console.log('[JumpStart] Request body (partial):', { 
+      ...requestBody, 
+      image: requestBody.image.substring(0, 50) + '...',
+      prompt: requestBody.prompt.substring(0, 100) + '...'
+    });
     
     const submitResponse = await fetch('https://api.wavespeed.ai/api/v3/wavespeed-ai/wan-2.2-spicy/image-to-video', {
       method: 'POST',
@@ -118,14 +138,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        image: imageUrl,
-        prompt: prompt,
-        resolution: resolution,
-        duration: duration,
-        aspect_ratio: aspectRatio,
-        seed: -1,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!submitResponse.ok) {

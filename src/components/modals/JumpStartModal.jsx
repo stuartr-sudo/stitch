@@ -433,12 +433,27 @@ export default function JumpStartModal({
     transformers.forEach((tr) => tr.hide());
     
     const { outputWidth, outputHeight, displayWidth, displayHeight } = canvasDimensions;
-    const pixelRatio = Math.max(outputWidth / displayWidth, outputHeight / displayHeight);
+    
+    // Calculate pixel ratio to get exact output dimensions
+    // This ensures the captured image matches the selected aspect ratio
+    const scaleX = outputWidth / displayWidth;
+    const scaleY = outputHeight / displayHeight;
+    const pixelRatio = Math.max(scaleX, scaleY);
+    
+    console.log('[JumpStart Canvas] Capturing:', {
+      displayWidth, displayHeight,
+      outputWidth, outputHeight,
+      pixelRatio,
+      aspectRatio,
+      expectedOutputSize: `${Math.round(displayWidth * pixelRatio)}x${Math.round(displayHeight * pixelRatio)}`
+    });
     
     const dataURL = stage.toDataURL({ 
       pixelRatio: pixelRatio,
       mimeType: format,
-      quality: 0.95
+      quality: 0.95,
+      width: displayWidth,
+      height: displayHeight,
     });
     
     transformers.forEach((tr) => tr.show());
@@ -748,11 +763,27 @@ export default function JumpStartModal({
 
       const formData = new FormData();
       formData.append('image', blob, 'canvas.jpg');
-      formData.append('prompt', fullPrompt);
+      // Add aspect ratio hint to prompt for better results
+      const aspectHint = aspectRatio === '9:16' ? 'vertical portrait video, 9:16 aspect ratio' :
+                         aspectRatio === '1:1' ? 'square video, 1:1 aspect ratio' :
+                         aspectRatio === '4:3' ? 'standard 4:3 aspect ratio' :
+                         'horizontal landscape video, 16:9 aspect ratio';
+      const promptWithAspect = `${fullPrompt}, ${aspectHint}`;
+      
+      formData.append('prompt', promptWithAspect);
       formData.append('username', username);
       formData.append('resolution', resolution);
       formData.append('duration', duration.toString());
       formData.append('aspectRatio', aspectRatio);
+      
+      // Also send explicit dimensions
+      const config = ASPECT_RATIOS[aspectRatio];
+      const outputWidth = resolution === '720p' ? config.width720 : config.width480;
+      const outputHeight = resolution === '720p' ? config.height720 : config.height480;
+      formData.append('width', outputWidth.toString());
+      formData.append('height', outputHeight.toString());
+      
+      console.log('[JumpStart] Sending:', { aspectRatio, outputWidth, outputHeight, resolution });
 
       const result = await fetch('/api/jumpstart/generate', {
         method: 'POST',
