@@ -96,18 +96,22 @@ export default async function handler(req, res) {
       ? 'https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit-ultra'
       : 'https://api.wavespeed.ai/api/v3/google/nano-banana/edit';
 
+    const requestBody = {
+      images: [processedImageUrl],
+      mask: processedMaskUrl,
+      prompt: prompt,
+      resolution: useProUltra ? '4k' : '2k',
+    };
+    
+    console.log('[Inpaint] Request body:', JSON.stringify(requestBody, null, 2));
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        image: processedImageUrl,
-        mask: processedMaskUrl,
-        prompt: prompt,
-        resolution: useProUltra ? '4k' : '2k',
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
