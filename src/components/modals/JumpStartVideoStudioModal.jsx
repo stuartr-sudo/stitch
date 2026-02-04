@@ -51,6 +51,22 @@ const EXTEND_MODELS = [
   },
 ];
 
+// Edit Model Options
+const EDIT_MODELS = [
+  {
+    id: 'wavespeed',
+    label: '🎬 Wavespeed WAN 2.2',
+    description: 'Standard video editing with text prompts',
+    resolutions: ['480p', '720p'],
+  },
+  {
+    id: 'grok-edit',
+    label: '✨ xAI Grok Imagine',
+    description: 'Advanced editing, max 854x480 input, 8s limit',
+    resolutions: ['auto', '480p', '720p'],
+  },
+];
+
 /**
  * JumpStartVideoStudioModal - Video Edit and Extend functionality
  */
@@ -115,8 +131,12 @@ export default function JumpStartVideoStudioModal({
   const [generateAudio, setGenerateAudio] = useState(true);
   const [cameraFixed, setCameraFixed] = useState(false);
   
-  // Get current extend model config
+  // Edit Specific Settings
+  const [editModel, setEditModel] = useState('wavespeed');
+  
+  // Get current model configs
   const currentExtendModel = EXTEND_MODELS.find(m => m.id === extendModel) || EXTEND_MODELS[0];
+  const currentEditModel = EDIT_MODELS.find(m => m.id === editModel) || EDIT_MODELS[0];
   
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -153,6 +173,7 @@ export default function JumpStartVideoStudioModal({
       setPrompt('');
       setResolution('720p');
       setExtendModel('seedance');
+      setEditModel('wavespeed');
       setDuration(5);
       setGenerateAudio(true);
       setCameraFixed(false);
@@ -255,7 +276,9 @@ export default function JumpStartVideoStudioModal({
           duration, 
           generate_audio: generateAudio, 
           camera_fixed: cameraFixed 
-        } : {})
+        } : {
+          model: editModel,
+        })
       };
 
       const response = await fetch(endpoint, {
@@ -277,7 +300,8 @@ export default function JumpStartVideoStudioModal({
       } else {
         setRequestId(data.requestId);
         setGenerationStatus(`Processing your video (may take 1-3 minutes)...`);
-        pollIntervalRef.current = setInterval(() => pollForResult(data.requestId, extendModel), 5000);
+        const pollModel = mode === 'extend' ? extendModel : editModel;
+        pollIntervalRef.current = setInterval(() => pollForResult(data.requestId, pollModel), 5000);
       }
     } catch (error) {
       console.error('Process error:', error);
@@ -525,6 +549,31 @@ export default function JumpStartVideoStudioModal({
                 </div>
               )}
 
+              {/* Edit Model Selector */}
+              {mode === 'edit' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold">Edit Model</Label>
+                  <select 
+                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" 
+                    value={editModel} 
+                    onChange={(e) => {
+                      const newModel = e.target.value;
+                      setEditModel(newModel);
+                      const config = EDIT_MODELS.find(m => m.id === newModel);
+                      // Reset resolution to a valid option for the new model
+                      if (config && !config.resolutions.includes(resolution)) {
+                        setResolution(config.resolutions[0]);
+                      }
+                    }}
+                  >
+                    {EDIT_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500">{currentEditModel.description}</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-6">
                 {mode === 'extend' && (
                   <div className="space-y-3">
@@ -537,8 +586,8 @@ export default function JumpStartVideoStudioModal({
 
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Resolution</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['480p', '720p'].map(res => (
+                  <div className={`grid gap-2 ${mode === 'edit' && currentEditModel.resolutions.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {(mode === 'edit' ? currentEditModel.resolutions : ['480p', '720p']).map(res => (
                       <button key={res} onClick={() => setResolution(res)}
                         className={`py-2 text-xs font-bold rounded-lg border transition-all ${resolution === res ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                         {res}

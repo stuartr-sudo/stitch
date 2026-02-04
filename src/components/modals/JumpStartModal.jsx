@@ -101,6 +101,21 @@ const VIDEO_MODELS = [
     supportsNegativePrompt: true,
   },
   { 
+    id: 'veo3-first-last', 
+    label: '🎬 Veo 3.1 First & Last Frame', 
+    shortLabel: 'Veo Morph',
+    description: 'Generate video transitioning between two keyframes',
+    provider: 'fal',
+    durationOptions: [4, 6, 8],
+    resolutions: ['720p', '1080p', '4k'],
+    aspectRatios: ['auto', '16:9', '9:16'],
+    supportsAudio: true,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    supportsNegativePrompt: true,
+    requiresFirstLastFrame: true, // Special mode: requires both first AND last frame
+  },
+  { 
     id: 'kling-video', 
     label: '🎬 Kling 2.5 Turbo Pro', 
     shortLabel: 'Kling',
@@ -585,6 +600,12 @@ export default function JumpStartModal({
       toast.error('Please upload an image first');
       return;
     }
+    
+    // Validate first-last frame mode
+    if (currentModel.requiresFirstLastFrame && !endFrameImage) {
+      toast.error('Please upload both first and last frame images');
+      return;
+    }
 
     setIsLoading(true);
     const prompt = buildPrompt();
@@ -815,7 +836,12 @@ export default function JumpStartModal({
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <ImageIcon className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Upload Start Image</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {currentModel.requiresFirstLastFrame ? 'Upload First Frame' : 'Upload Start Image'}
+                    </h3>
+                    {currentModel.requiresFirstLastFrame && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>
+                    )}
                   </div>
                   
                   {uploadedImage ? (
@@ -888,15 +914,25 @@ export default function JumpStartModal({
                   />
                 </div>
 
-                {/* End Frame (Seedance only) */}
-                {currentModel.supportsEndFrame && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                {/* End Frame / Last Frame */}
+                {(currentModel.supportsEndFrame || currentModel.requiresFirstLastFrame) && (
+                  <div className={`bg-white rounded-lg p-4 border shadow-sm ${currentModel.requiresFirstLastFrame ? 'border-blue-200 bg-blue-50/30' : ''}`}>
                     <div className="flex items-center gap-2 mb-3">
-                      <ImageIcon className="w-5 h-5 text-purple-600" />
-                      <h3 className="font-semibold text-gray-900">End Frame Image</h3>
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Optional - Seedance Feature</span>
+                      <ImageIcon className={`w-5 h-5 ${currentModel.requiresFirstLastFrame ? 'text-blue-600' : 'text-purple-600'}`} />
+                      <h3 className="font-semibold text-gray-900">
+                        {currentModel.requiresFirstLastFrame ? 'Upload Last Frame' : 'End Frame Image'}
+                      </h3>
+                      {currentModel.requiresFirstLastFrame ? (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>
+                      ) : (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Optional - Seedance Feature</span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">The video will transition to this final frame. Leave empty for AI-generated ending.</p>
+                    <p className="text-xs text-gray-500 mb-3">
+                      {currentModel.requiresFirstLastFrame 
+                        ? 'The AI will generate a smooth video transition from the first frame to this last frame.'
+                        : 'The video will transition to this final frame. Leave empty for AI-generated ending.'}
+                    </p>
                     
                     {endFrameImage ? (
                       <div className="relative">
@@ -1431,7 +1467,7 @@ export default function JumpStartModal({
               {currentStep === 1 && (
                 <Button 
                   onClick={() => setCurrentStep(2)} 
-                  disabled={!uploadedImage}
+                  disabled={!uploadedImage || (currentModel.requiresFirstLastFrame && !endFrameImage)}
                   className="bg-[#2C666E] hover:bg-[#07393C] text-white"
                 >
                   Next: Video Settings

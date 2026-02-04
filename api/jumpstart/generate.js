@@ -126,6 +126,17 @@ export default async function handler(req, res) {
       return await handleVeo3Fast(req, res, {
         imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt
       });
+    } else if (model === 'veo3-first-last') {
+      return await handleVeo3FirstLast(req, res, {
+        firstFrameUrl: imageUrl, 
+        lastFrameUrl: endImageUrl, 
+        prompt, 
+        duration, 
+        aspectRatio, 
+        resolution, 
+        enableAudio, 
+        negativePrompt
+      });
     } else if (model === 'kling-video') {
       return await handleKlingVideo(req, res, {
         imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl
@@ -542,6 +553,88 @@ async function handleVeo3Fast(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Fast API' });
+}
+
+/**
+ * Handle Google Veo 3.1 Fast First-Last-Frame-to-Video (FAL.ai)
+ * Generates video transition between first and last frame
+ */
+async function handleVeo3FirstLast(req, res, params) {
+  const { firstFrameUrl, lastFrameUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt } = params;
+  
+  const FAL_KEY = process.env.FAL_KEY;
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  if (!firstFrameUrl || !lastFrameUrl) {
+    return res.status(400).json({ error: 'Both first and last frame images are required' });
+  }
+
+  console.log('[JumpStart/Veo3FirstLast] Submitting to Veo 3.1 First-Last-Frame...');
+  console.log('[JumpStart/Veo3FirstLast] Settings:', { duration, aspectRatio, resolution, enableAudio });
+  
+  const requestBody = {
+    prompt: prompt,
+    first_frame_url: firstFrameUrl,
+    last_frame_url: lastFrameUrl,
+    aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
+    duration: `${duration}s`, // "4s", "6s", "8s"
+    resolution: resolution,
+    generate_audio: enableAudio !== false,
+    auto_fix: false,
+  };
+  
+  // Add negative prompt if provided
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
+  }
+
+  console.log('[JumpStart/Veo3FirstLast] Request:', { 
+    ...requestBody, 
+    first_frame_url: '[first frame]',
+    last_frame_url: '[last frame]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+  
+  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Veo3FirstLast] Error:', errorText);
+    return res.status(500).json({ error: 'Veo 3.1 First-Last API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Veo3FirstLast] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/Veo3FirstLast] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'veo3-first-last',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 First-Last API' });
 }
 
 /**

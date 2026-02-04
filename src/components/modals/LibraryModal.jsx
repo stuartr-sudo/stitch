@@ -30,15 +30,38 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * MediaCard - Individual media item with video playback support
+ * Displays media in their natural aspect ratios
  */
 function MediaCard({ item, isSelected, onSelect, onDelete }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0, aspectRatio: 'landscape' });
 
   const mediaUrl = item.url || item.image_url || item.video_url;
   const isVideo = item.type === 'video';
+
+  // Detect media dimensions
+  const handleMediaLoad = (e) => {
+    let width, height;
+    if (isVideo) {
+      width = e.target.videoWidth;
+      height = e.target.videoHeight;
+    } else {
+      width = e.target.naturalWidth;
+      height = e.target.naturalHeight;
+    }
+    
+    if (width && height) {
+      const ratio = width / height;
+      let aspectRatio = 'landscape';
+      if (ratio < 0.9) aspectRatio = 'portrait';
+      else if (ratio >= 0.9 && ratio <= 1.1) aspectRatio = 'square';
+      
+      setDimensions({ width, height, aspectRatio });
+    }
+  };
 
   const handlePlayPause = (e) => {
     e.stopPropagation();
@@ -69,6 +92,19 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
     onSelect(item);
   };
 
+  // Determine aspect ratio class based on detected dimensions
+  const getAspectClass = () => {
+    switch (dimensions.aspectRatio) {
+      case 'portrait':
+        return 'aspect-[9/16]'; // Vertical video/image
+      case 'square':
+        return 'aspect-square';
+      case 'landscape':
+      default:
+        return 'aspect-video'; // 16:9 default for landscape
+    }
+  };
+
   return (
     <div 
       className={`group relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
@@ -80,16 +116,17 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
-      <div className="aspect-square bg-slate-100 relative">
+      <div className={`${getAspectClass()} bg-slate-900 relative flex items-center justify-center`}>
         {isVideo ? (
           <>
             <video 
               ref={videoRef}
               src={mediaUrl} 
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
               muted={isMuted}
               loop
               playsInline
+              onLoadedMetadata={handleMediaLoad}
               onEnded={handleVideoEnd}
               onClick={(e) => e.stopPropagation()}
             />
@@ -135,7 +172,8 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
             <img 
               src={mediaUrl} 
               alt={item.title || 'Media'} 
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
+              onLoad={handleMediaLoad}
             />
             
             {/* Hover Overlay for Images */}
@@ -156,6 +194,15 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
             {isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
           </div>
         </div>
+
+        {/* Dimensions Badge */}
+        {dimensions.width > 0 && (
+          <div className="absolute bottom-2 left-2">
+            <div className="px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-medium">
+              {dimensions.width}×{dimensions.height}
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons (top right) */}
         <div className={`absolute top-2 right-2 flex gap-1 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -369,7 +416,7 @@ export default function LibraryModal({
             <p className="text-sm">Your generated images and videos will appear here</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-max">
             {filteredItems.map(item => (
               <MediaCard 
                 key={`${item.type}-${item.id}`}

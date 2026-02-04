@@ -20,6 +20,8 @@ export default async function handler(req, res) {
       return await checkVeo3Result(req, res, requestId);
     } else if (model === 'veo3-fast') {
       return await checkVeo3FastResult(req, res, requestId);
+    } else if (model === 'veo3-first-last') {
+      return await checkVeo3FirstLastResult(req, res, requestId);
     } else if (model === 'veo3-fast-extend') {
       return await checkVeo3FastExtendResult(req, res, requestId);
     } else if (model === 'kling-video') {
@@ -28,6 +30,8 @@ export default async function handler(req, res) {
       return await checkSeedanceResult(req, res, requestId);
     } else if (model === 'grok-imagine') {
       return await checkGrokResult(req, res, requestId);
+    } else if (model === 'grok-edit') {
+      return await checkGrokEditResult(req, res, requestId);
     } else {
       return await checkWavespeedResult(req, res, requestId);
     }
@@ -468,6 +472,97 @@ async function getVeo3FastResult(req, res, requestId, FAL_KEY) {
 }
 
 /**
+ * Check Veo 3.1 First-Last-Frame/FAL result
+ */
+async function checkVeo3FirstLastResult(req, res, requestId) {
+  const FAL_KEY = process.env.FAL_KEY;
+  
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video/requests/${requestId}/status`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Veo3FirstLast] Poll error:', errorText);
+    
+    if (pollResponse.status === 404) {
+      return await getVeo3FirstLastResult(req, res, requestId, FAL_KEY);
+    }
+    
+    return res.status(pollResponse.status).json({ 
+      error: 'Failed to check status',
+      details: errorText 
+    });
+  }
+
+  const data = await pollResponse.json();
+  console.log('[JumpStart/Veo3FirstLast] Status response:', JSON.stringify(data).substring(0, 300));
+
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getVeo3FirstLastResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'veo3-first-last',
+    queuePosition: data.queue_position,
+  });
+}
+
+/**
+ * Get completed Veo 3.1 First-Last-Frame result
+ */
+async function getVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video/requests/${requestId}`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Veo3FirstLast] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log('[JumpStart/Veo3FirstLast] Result:', JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'veo3-first-last',
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'veo3-first-last',
+  });
+}
+
+/**
  * Check Veo 3.1 Fast Extend/FAL result
  */
 async function checkVeo3FastExtendResult(req, res, requestId) {
@@ -646,5 +741,104 @@ async function getKlingResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'kling-video',
+  });
+}
+
+/**
+ * Check Grok Edit/FAL result
+ */
+async function checkGrokEditResult(req, res, requestId) {
+  const FAL_KEY = process.env.FAL_KEY;
+  
+  if (!FAL_KEY) {
+    return res.status(500).json({ error: 'Missing FAL API key' });
+  }
+
+  // FAL uses a status endpoint for queued requests
+  const pollResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/edit-video/requests/${requestId}/status`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Grok Edit] Poll error:', errorText);
+    
+    // FAL returns 404 when request is complete, try getting result directly
+    if (pollResponse.status === 404) {
+      return await getGrokEditResult(req, res, requestId, FAL_KEY);
+    }
+    
+    return res.status(pollResponse.status).json({ 
+      error: 'Failed to check status',
+      details: errorText 
+    });
+  }
+
+  const data = await pollResponse.json();
+  console.log('[JumpStart/Grok Edit] Status response:', JSON.stringify(data).substring(0, 300));
+
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getGrokEditResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'grok-edit',
+    queuePosition: data.queue_position,
+  });
+}
+
+/**
+ * Get completed Grok Edit result
+ */
+async function getGrokEditResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/edit-video/requests/${requestId}`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Grok Edit] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log('[JumpStart/Grok Edit] Result:', JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'grok-edit',
+      videoInfo: {
+        width: data.video.width,
+        height: data.video.height,
+        duration: data.video.duration,
+        fps: data.video.fps,
+      }
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'grok-edit',
   });
 }
