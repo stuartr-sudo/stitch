@@ -364,8 +364,16 @@ export default function VideoAdvertCreator() {
                 isEmbedded={true}
                 onSelect={(item) => {
                   if (item.type === 'video') {
-                    handleVideoCreated(item.url || item.video_url, item.title);
-                    toast.success('Video added to your collection!');
+                    const newVideo = {
+                      id: Date.now().toString(),
+                      url: item.url || item.video_url,
+                      title: item.title || `Video from Library`,
+                      createdAt: new Date().toISOString(),
+                      source: 'library'
+                    };
+                    setCreatedVideos(prev => [newVideo, ...prev]);
+                    toast.success('Video added to Videos tab!');
+                    setSelectedTab('videos');
                   } else {
                     const newImage = {
                       id: Date.now().toString(),
@@ -374,7 +382,8 @@ export default function VideoAdvertCreator() {
                       createdAt: new Date().toISOString(),
                     };
                     setCreatedImages(prev => [newImage, ...prev]);
-                    toast.success('Image added to your collection!');
+                    toast.success('Image added to Images tab!');
+                    setSelectedTab('images');
                   }
                 }}
               />
@@ -603,7 +612,15 @@ export default function VideoAdvertCreator() {
         onClose={() => setActiveModal(null)}
         onSelect={(item) => {
           if (item.type === 'video') {
-            handleVideoCreated(item.url || item.video_url);
+            const newVideo = {
+              id: Date.now().toString(),
+              url: item.url || item.video_url,
+              title: item.title || `Video from Library`,
+              createdAt: new Date().toISOString(),
+              source: 'library'
+            };
+            setCreatedVideos(prev => [newVideo, ...prev]);
+            toast.success('Video added to your collection!');
           } else {
             const newImage = {
               id: Date.now().toString(),
@@ -612,7 +629,9 @@ export default function VideoAdvertCreator() {
               createdAt: new Date().toISOString(),
             };
             setCreatedImages(prev => [newImage, ...prev]);
+            toast.success('Image added to your collection!');
           }
+          setActiveModal(null);
         }}
       />
 

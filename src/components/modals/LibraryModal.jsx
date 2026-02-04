@@ -64,14 +64,19 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
     setIsPlaying(false);
   };
 
+  const handleItemSelect = (e) => {
+    e.stopPropagation();
+    onSelect(item);
+  };
+
   return (
     <div 
       className={`group relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
         isSelected 
           ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30' 
-          : 'border-transparent hover:border-slate-200'
+          : 'border-transparent hover:border-[#2C666E]/50 hover:shadow-md'
       }`}
-      onClick={() => !isVideo && onSelect(item)}
+      onClick={handleItemSelect}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -118,19 +123,31 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
             {/* Select Button for Videos */}
             {showControls && (
               <button
-                onClick={(e) => { e.stopPropagation(); onSelect(item); }}
-                className="absolute bottom-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium rounded-full shadow-lg"
+                onClick={handleItemSelect}
+                className="absolute bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[#2C666E] hover:bg-[#07393C] text-white text-sm font-medium rounded-full shadow-lg transition-all"
               >
-                Select Video
+                Add to Editor
               </button>
             )}
           </>
         ) : (
-          <img 
-            src={mediaUrl} 
-            alt={item.title || 'Media'} 
-            className="w-full h-full object-cover"
-          />
+          <>
+            <img 
+              src={mediaUrl} 
+              alt={item.title || 'Media'} 
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Hover Overlay for Images */}
+            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+              <button
+                onClick={handleItemSelect}
+                className="px-4 py-2 bg-[#2C666E] hover:bg-[#07393C] text-white text-sm font-medium rounded-full shadow-lg transition-all"
+              >
+                Add to Editor
+              </button>
+            </div>
+          </>
         )}
         
         {/* Type Badge */}
