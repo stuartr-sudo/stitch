@@ -135,14 +135,17 @@ export default async function handler(req, res) {
     const table = type === 'video' ? 'generated_videos' : 'image_library_items';
     const urlField = type === 'video' ? 'video_url' : 'image_url';
 
+    // Build insert data - only include fields that exist in the tables
     const insertData = {
       [urlField]: finalUrl,
-      url: finalUrl,
       title: title || `${source || 'Generated'} - ${new Date().toLocaleString()}`,
-      prompt: prompt || '',
-      source: source || 'unknown',
       created_at: new Date().toISOString(),
     };
+    
+    // Add optional fields if they might exist
+    if (prompt) {
+      insertData.prompt = prompt;
+    }
 
     console.log(`[Library Save] Inserting into ${table}...`);
 
