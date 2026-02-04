@@ -26,7 +26,10 @@ import {
   FolderOpen,
   Lock,
   Volume2,
-  VolumeX
+  VolumeX,
+  Search,
+  Globe,
+  Loader2
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
@@ -264,13 +267,45 @@ const SPECIAL_EFFECTS = [
   { value: 'fog mist', label: 'Fog/Mist', category: 'nature' },
 ];
 
+// Scene Description Quick Ideas (human-focused natural movements)
+const SCENE_IDEAS = [
+  // Facial expressions & micro-movements
+  { label: 'Talking to camera', value: 'person talking naturally to camera, mouth moving, natural speech rhythm' },
+  { label: 'Slow genuine smile', value: 'slow genuine smile forming, eyes crinkling naturally, warm expression' },
+  { label: 'Nodding thoughtfully', value: 'nodding head thoughtfully, engaged listening expression' },
+  { label: 'Raised eyebrows', value: 'eyebrows raising slightly in surprise or interest' },
+  { label: 'Soft blink', value: 'natural soft blinking, relaxed eyes' },
+  { label: 'Slight head tilt', value: 'slight curious head tilt, attentive expression' },
+  // Body language
+  { label: 'Hand gestures', value: 'natural hand gestures while speaking, expressive movement' },
+  { label: 'Leaning in', value: 'leaning slightly forward, engaged and interested body language' },
+  { label: 'Relaxed shoulders', value: 'shoulders relaxing, comfortable natural posture' },
+  { label: 'Hair touch', value: 'casually touching or adjusting hair, natural fidget' },
+  { label: 'Looking down then up', value: 'looking down briefly then back up to camera, thoughtful moment' },
+  // Natural actions
+  { label: 'Deep breath', value: 'taking a natural deep breath, chest rising gently' },
+  { label: 'Subtle laugh', value: 'subtle genuine laugh, slight shoulder shake, authentic amusement' },
+  { label: 'Glancing aside', value: 'glancing briefly to the side, natural eye movement' },
+  { label: 'Adjusting posture', value: 'subtly adjusting posture, shifting weight naturally' },
+];
+
 // Description Presets (for realistic videos)
 const DESCRIPTION_PRESETS = [
-  { id: 'authentic', label: '🤳 Authentic/Raw', prompt: 'real person, genuine emotion, natural lighting, unfiltered, believable, authentic' },
-  { id: 'talking', label: '🗣️ Talking Natural', prompt: 'person talking naturally, conversational, casual, relaxed body language, genuine expression' },
-  { id: 'testimonial', label: '⭐ Testimonial', prompt: 'honest testimonial, sharing experience, enthusiastic but authentic, relatable' },
-  { id: 'product', label: '📦 Product Showcase', prompt: 'showing product naturally, demonstrating features, genuine reaction, hands visible' },
-  { id: 'lifestyle', label: '🌟 Lifestyle', prompt: 'lifestyle content, aspirational yet achievable, natural setting, warm atmosphere' },
+  // Authentic & Raw
+  { id: 'authentic', label: '🤳 Authentic/Raw', prompt: 'real person, genuine emotion, natural lighting, unfiltered look, believable authentic moment, imperfect and human' },
+  { id: 'talking', label: '🗣️ Talking Natural', prompt: 'person talking naturally, conversational tone, casual relaxed body language, genuine facial expressions, natural pauses in speech' },
+  { id: 'testimonial', label: '⭐ Testimonial', prompt: 'honest heartfelt testimonial, sharing genuine experience, enthusiastic but believable, relatable everyday person' },
+  // Human Elements
+  { id: 'thinking', label: '🤔 Thinking Moment', prompt: 'person pausing to think, natural contemplation, eyes moving as if processing thoughts, genuine reflection' },
+  { id: 'excited', label: '😊 Genuine Excitement', prompt: 'authentic excitement building, eyes widening, smile growing naturally, slight forward lean, enthusiastic energy' },
+  { id: 'calm', label: '😌 Calm & Centered', prompt: 'calm peaceful demeanor, soft natural breathing, relaxed facial muscles, serene gentle expression' },
+  { id: 'surprised', label: '😮 Pleasant Surprise', prompt: 'pleasant surprised reaction, eyebrows lifting, mouth opening slightly, genuine delighted response' },
+  { id: 'confident', label: '💪 Quiet Confidence', prompt: 'quiet confident presence, steady gaze, assured subtle smile, grounded posture, self-assured energy' },
+  // Actions
+  { id: 'product', label: '📦 Product Showcase', prompt: 'showing product naturally, demonstrating features with hands, genuine curious reaction, examining closely' },
+  { id: 'lifestyle', label: '🌟 Lifestyle', prompt: 'lifestyle content, aspirational yet achievable, natural setting, warm inviting atmosphere, candid moment' },
+  { id: 'unboxing', label: '📦 Unboxing Reaction', prompt: 'unboxing moment, anticipation building, hands opening package, genuine first reaction, authentic discovery' },
+  { id: 'morning', label: '☀️ Morning Routine', prompt: 'morning routine moment, natural waking energy, soft morning light, relaxed unhurried movement, cozy atmosphere' },
 ];
 
 /**
@@ -296,6 +331,13 @@ export default function JumpStartModal({
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryTarget, setLibraryTarget] = useState('start'); // 'start', 'end', or 'additional'
   const [urlInput, setUrlInput] = useState('');
+  
+  // Web search state
+  const [showWebSearch, setShowWebSearch] = useState(false);
+  const [webSearchTarget, setWebSearchTarget] = useState('start'); // 'start', 'end', or 'additional'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   // Video settings
   const [videoModel, setVideoModel] = useState('wavespeed-wan');
@@ -367,6 +409,10 @@ export default function JumpStartModal({
       setShowUrlImport(false);
       setShowEndFrameUrlImport(false);
       setUrlInput('');
+      setShowWebSearch(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      setIsSearching(false);
       setVideoModel('wavespeed-wan');
       setAspectRatio('16:9');
       setResolution('720p');
@@ -494,6 +540,87 @@ export default function JumpStartModal({
   
   const removeAdditionalImage = (index) => {
     setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Web image search
+  const handleWebSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast.error('Please enter a search query');
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchResults([]);
+
+    try {
+      const response = await fetch('/api/images/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Search failed');
+      }
+
+      if (data.images && data.images.length > 0) {
+        setSearchResults(data.images);
+      } else {
+        toast.info('No images found. Try a different search term.');
+      }
+    } catch (error) {
+      console.error('Web search error:', error);
+      toast.error(error.message || 'Failed to search images');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSearchResult = async (imageResult) => {
+    const url = imageResult.url;
+    
+    // Import the image to avoid CORS issues
+    try {
+      const response = await fetch('/api/images/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url, username }),
+      });
+      
+      const data = await response.json();
+      const finalUrl = data.url || url;
+      
+      if (webSearchTarget === 'start') {
+        setUploadedImage(finalUrl);
+      } else if (webSearchTarget === 'additional') {
+        setAdditionalImages(prev => [...prev, finalUrl]);
+      } else {
+        setEndFrameImage(finalUrl);
+      }
+      
+      // Save to library
+      saveToLibrary(finalUrl, 'image', imageResult.title || `Web Search - ${searchQuery}`, 'jumpstart-websearch');
+      
+      setShowWebSearch(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      toast.success('Image imported!');
+    } catch (error) {
+      console.error('Import error:', error);
+      // Fallback to direct URL
+      if (webSearchTarget === 'start') {
+        setUploadedImage(url);
+      } else if (webSearchTarget === 'additional') {
+        setAdditionalImages(prev => [...prev, url]);
+      } else {
+        setEndFrameImage(url);
+      }
+      setShowWebSearch(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    }
   };
 
   const stopPolling = () => {
@@ -873,10 +1000,18 @@ export default function JumpStartModal({
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={() => setShowUrlImport(true)}
+                          onClick={() => { setWebSearchTarget('start'); setShowWebSearch(true); setShowUrlImport(false); }}
+                        >
+                          <Globe className="w-4 h-4 mr-2" />
+                          Search Web
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => { setShowUrlImport(true); setShowWebSearch(false); }}
                         >
                           <Link className="w-4 h-4 mr-2" />
-                          Import from URL
+                          Import URL
                         </Button>
                         <Button 
                           variant="outline" 
@@ -884,9 +1019,67 @@ export default function JumpStartModal({
                           onClick={() => { setLibraryTarget('start'); setShowLibrary(true); }}
                         >
                           <FolderOpen className="w-4 h-4 mr-2" />
-                          From Library
+                          Library
                         </Button>
                       </div>
+                      
+                      {/* Web Search Panel */}
+                      {showWebSearch && webSearchTarget === 'start' && (
+                        <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                          <div className="flex gap-2 mb-3">
+                            <div className="relative flex-1">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <Input
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleWebSearch()}
+                                placeholder="Search for images... (e.g., 'woman selfie natural light')"
+                                className="pl-9"
+                              />
+                            </div>
+                            <Button onClick={handleWebSearch} disabled={isSearching}>
+                              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                            </Button>
+                            <Button variant="ghost" onClick={() => { setShowWebSearch(false); setSearchResults([]); setSearchQuery(''); }}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          
+                          {isSearching && (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                              <span className="ml-2 text-sm text-gray-600">Searching...</span>
+                            </div>
+                          )}
+                          
+                          {searchResults.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto">
+                              {searchResults.map((img, idx) => (
+                                <div 
+                                  key={idx}
+                                  onClick={() => handleSelectSearchResult(img)}
+                                  className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-500 transition-all group"
+                                >
+                                  <img 
+                                    src={img.thumbnail || img.url} 
+                                    alt={img.title || 'Search result'} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-white text-xs font-medium">Select</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {!isSearching && searchResults.length === 0 && searchQuery && (
+                            <p className="text-xs text-gray-500 text-center py-4">
+                              Press Enter or click Search to find images
+                            </p>
+                          )}
+                        </div>
+                      )}
                       
                       {showUrlImport && (
                         <div className="flex gap-2 mt-2">
@@ -949,23 +1142,84 @@ export default function JumpStartModal({
                         </button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => endFrameInputRef.current?.click()}
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload End Frame
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => { setLibraryTarget('end'); setShowLibrary(true); }}
-                        >
-                          <FolderOpen className="w-4 h-4 mr-2" />
-                          From Library
-                        </Button>
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => { setWebSearchTarget('end'); setShowWebSearch(true); }}
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Search Web
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => endFrameInputRef.current?.click()}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => { setLibraryTarget('end'); setShowLibrary(true); }}
+                          >
+                            <FolderOpen className="w-4 h-4 mr-2" />
+                            Library
+                          </Button>
+                        </div>
+                        
+                        {/* Web Search Panel for End Frame */}
+                        {showWebSearch && webSearchTarget === 'end' && (
+                          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                            <div className="flex gap-2 mb-3">
+                              <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleWebSearch()}
+                                  placeholder="Search for end frame image..."
+                                  className="pl-9"
+                                />
+                              </div>
+                              <Button onClick={handleWebSearch} disabled={isSearching} size="sm">
+                                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => { setShowWebSearch(false); setSearchResults([]); setSearchQuery(''); }}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            {isSearching && (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                              </div>
+                            )}
+                            
+                            {searchResults.length > 0 && (
+                              <div className="grid grid-cols-4 gap-2 max-h-[150px] overflow-y-auto">
+                                {searchResults.map((img, idx) => (
+                                  <div 
+                                    key={idx}
+                                    onClick={() => handleSelectSearchResult(img)}
+                                    className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-500 transition-all group"
+                                  >
+                                    <img 
+                                      src={img.thumbnail || img.url} 
+                                      alt={img.title || 'Search result'} 
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-white text-xs font-medium">Select</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -1123,24 +1377,38 @@ export default function JumpStartModal({
                     <h3 className="font-semibold text-gray-900">Scene Description</h3>
                     <span className="text-xs text-[#2C666E] font-medium bg-[#2C666E]/10 px-2 py-0.5 rounded">Important!</span>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2">Describe the action, movement, and what happens in the video.</p>
+                  <p className="text-xs text-gray-600 mb-2">Describe the action, movement, and what happens in the video. Add human elements for natural feel.</p>
                   <textarea 
                     value={sceneDescription} 
                     onChange={(e) => setSceneDescription(e.target.value)} 
-                    placeholder="e.g., 'A person smiles and talks naturally to the camera, gesturing with hands...'"
-                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-20" 
+                    placeholder="e.g., 'A person smiles warmly and talks naturally to the camera, making gentle hand gestures, with occasional soft blinks and natural head movements...'"
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-24" 
                   />
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {['Person talking to camera', 'Slow smile', 'Nodding', 'Looking around', 'Walking forward'].map(idea => (
-                      <button
-                        key={idea}
-                        onClick={() => setSceneDescription(prev => prev ? `${prev}, ${idea.toLowerCase()}` : idea)}
-                        className="px-2 py-0.5 text-xs rounded bg-white border hover:bg-[#90DDF0]/20"
-                      >
-                        + {idea}
-                      </button>
-                    ))}
+                  
+                  {/* Quick Human Movement Ideas */}
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-gray-500 font-medium">🎭 Quick Add - Natural Human Movements:</p>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+                      {SCENE_IDEAS.map(idea => (
+                        <button
+                          key={idea.label}
+                          onClick={() => setSceneDescription(prev => prev ? `${prev}, ${idea.value}` : idea.value)}
+                          className="px-2 py-1 text-xs rounded-full bg-white border border-[#2C666E]/30 hover:bg-[#90DDF0]/30 hover:border-[#2C666E] transition-all"
+                        >
+                          + {idea.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  
+                  {sceneDescription && (
+                    <button 
+                      onClick={() => setSceneDescription('')}
+                      className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      ✕ Clear description
+                    </button>
+                  )}
                 </div>
 
                 {/* Audio Settings */}
