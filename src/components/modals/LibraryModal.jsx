@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -20,9 +20,161 @@ import {
   ExternalLink,
   Trash2,
   CheckCircle2,
-  Filter
+  Filter,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+
+/**
+ * MediaCard - Individual media item with video playback support
+ */
+function MediaCard({ item, isSelected, onSelect, onDelete }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+
+  const mediaUrl = item.url || item.image_url || item.video_url;
+  const isVideo = item.type === 'video';
+
+  const handlePlayPause = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleMuteToggle = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const handleVideoEnd = () => {
+    setIsPlaying(false);
+  };
+
+  return (
+    <div 
+      className={`group relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+        isSelected 
+          ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30' 
+          : 'border-transparent hover:border-slate-200'
+      }`}
+      onClick={() => !isVideo && onSelect(item)}
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+    >
+      <div className="aspect-square bg-slate-100 relative">
+        {isVideo ? (
+          <>
+            <video 
+              ref={videoRef}
+              src={mediaUrl} 
+              className="w-full h-full object-cover"
+              muted={isMuted}
+              loop
+              playsInline
+              onEnded={handleVideoEnd}
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* Video Controls Overlay */}
+            <div className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePlayPause}
+                  className="p-3 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-6 h-6 text-slate-800" />
+                  ) : (
+                    <Play className="w-6 h-6 text-slate-800 ml-0.5" />
+                  )}
+                </button>
+                <button
+                  onClick={handleMuteToggle}
+                  className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all"
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-4 h-4 text-slate-800" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 text-slate-800" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Select Button for Videos */}
+            {showControls && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onSelect(item); }}
+                className="absolute bottom-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium rounded-full shadow-lg"
+              >
+                Select Video
+              </button>
+            )}
+          </>
+        ) : (
+          <img 
+            src={mediaUrl} 
+            alt={item.title || 'Media'} 
+            className="w-full h-full object-cover"
+          />
+        )}
+        
+        {/* Type Badge */}
+        <div className="absolute top-2 left-2">
+          <div className={`p-1.5 rounded-lg ${isVideo ? 'bg-blue-500' : 'bg-green-500'} text-white shadow-lg`}>
+            {isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+          </div>
+        </div>
+
+        {/* Action Buttons (top right) */}
+        <div className={`absolute top-2 right-2 flex gap-1 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <Button size="sm" variant="secondary" className="h-7 w-7 p-0" asChild>
+            <a href={mediaUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </Button>
+          <Button 
+            size="sm" 
+            variant="destructive" 
+            className="h-7 w-7 p-0"
+            onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
+        {isSelected && (
+          <div className="absolute top-2 right-2 bg-[#2C666E] text-white rounded-full p-1 shadow-lg">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+      
+      <div className="p-2 bg-white">
+        <p className="text-xs font-medium text-slate-700 truncate">
+          {item.title || item.prompt?.slice(0, 30) || 'Untitled'}
+        </p>
+        <p className="text-[10px] text-slate-400">
+          {new Date(item.created_at).toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /**
  * LibraryModal - Browse and manage saved media
@@ -202,65 +354,13 @@ export default function LibraryModal({
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredItems.map(item => (
-              <div 
+              <MediaCard 
                 key={`${item.type}-${item.id}`}
-                className={`group relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                  selectedItem?.id === item.id 
-                    ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30' 
-                    : 'border-transparent hover:border-slate-200'
-                }`}
-                onClick={() => handleSelect(item)}
-              >
-                <div className="aspect-square bg-slate-100">
-                  {item.type === 'video' ? (
-                    <video 
-                      src={item.url || item.video_url} 
-                      className="w-full h-full object-cover"
-                      muted
-                    />
-                  ) : (
-                    <img 
-                      src={item.url || item.image_url} 
-                      alt={item.title || 'Media'} 
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  
-                  {/* Type Badge */}
-                  <div className="absolute top-2 left-2">
-                    <div className={`p-1 rounded ${item.type === 'video' ? 'bg-blue-500' : 'bg-green-500'} text-white`}>
-                      {item.type === 'video' ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                    </div>
-                  </div>
-
-                  {/* Hover Actions */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button size="sm" variant="secondary" asChild>
-                      <a href={item.url || item.image_url || item.video_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); handleDelete(item); }}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {selectedItem?.id === item.id && (
-                    <div className="absolute top-2 right-2 bg-[#2C666E] text-white rounded-full p-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-2 bg-white">
-                  <p className="text-xs font-medium text-slate-700 truncate">
-                    {item.title || item.prompt?.slice(0, 30) || 'Untitled'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
+                item={item}
+                isSelected={selectedItem?.id === item.id}
+                onSelect={handleSelect}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}

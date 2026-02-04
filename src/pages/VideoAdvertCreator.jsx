@@ -177,6 +177,9 @@ export default function VideoAdvertCreator() {
             <TabsTrigger value="create" className="gap-2">
               <Sparkles className="w-4 h-4" /> Create
             </TabsTrigger>
+            <TabsTrigger value="library" className="gap-2">
+              <FolderOpen className="w-4 h-4" /> Library
+            </TabsTrigger>
             <TabsTrigger value="videos" className="gap-2">
               <Video className="w-4 h-4" /> Videos ({createdVideos.length})
             </TabsTrigger>
@@ -349,6 +352,32 @@ export default function VideoAdvertCreator() {
                   </div>
                 </div>
               </div>
+            </div>
+          </TabsContent>
+
+          {/* Library Tab */}
+          <TabsContent value="library" className="h-[calc(100vh-200px)]">
+            <div className="bg-white rounded-2xl border shadow-sm h-full overflow-hidden">
+              <LibraryModal 
+                isOpen={false}
+                onClose={() => {}}
+                isEmbedded={true}
+                onSelect={(item) => {
+                  if (item.type === 'video') {
+                    handleVideoCreated(item.url || item.video_url, item.title);
+                    toast.success('Video added to your collection!');
+                  } else {
+                    const newImage = {
+                      id: Date.now().toString(),
+                      url: item.url || item.image_url,
+                      prompt: item.title || 'Library image',
+                      createdAt: new Date().toISOString(),
+                    };
+                    setCreatedImages(prev => [newImage, ...prev]);
+                    toast.success('Image added to your collection!');
+                  }
+                }}
+              />
             </div>
           </TabsContent>
 
