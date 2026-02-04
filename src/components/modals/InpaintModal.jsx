@@ -74,6 +74,30 @@ export default function InpaintModal({
     }
   };
 
+  // Save result to library
+  const saveToLibrary = async (imageUrl) => {
+    try {
+      const response = await fetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: imageUrl,
+          type: 'image',
+          title: `Inpaint - ${prompt.slice(0, 30) || 'edited'}`,
+          prompt: prompt,
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('[Inpaint] Saved to library');
+      } else {
+        console.warn('[Inpaint] Failed to save to library');
+      }
+    } catch (err) {
+      console.warn('[Inpaint] Library save error:', err);
+    }
+  };
+
   // Initialize canvases when image loads
   useEffect(() => {
     if (!image || !canvasRef.current || !maskCanvasRef.current) return;
@@ -268,6 +292,7 @@ export default function InpaintModal({
       if (data.imageUrl) {
         setResultImage(data.imageUrl);
         toast.success('Inpaint complete!');
+        saveToLibrary(data.imageUrl);
       } else if (data.requestId) {
         toast.info('Processing...');
         pollForResult(data.requestId);
@@ -291,9 +316,11 @@ export default function InpaintModal({
         const data = await response.json();
         
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
-          setResultImage(data.imageUrl || data.videoUrl);
+          const resultUrl = data.imageUrl || data.videoUrl;
+          setResultImage(resultUrl);
           setIsLoading(false);
           toast.success('Inpaint complete!');
+          saveToLibrary(resultUrl);
         } else if (data.status === 'failed') {
           setIsLoading(false);
           toast.error('Failed: ' + (data.error || 'Unknown error'));
