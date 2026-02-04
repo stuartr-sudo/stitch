@@ -5,8 +5,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
+  VisuallyHidden,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -665,10 +665,10 @@ export default function JumpStartVideoStudioModal({
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="sr-only">
+          <VisuallyHidden>
             <DialogTitle>Video Studio</DialogTitle>
             <DialogDescription>Extend or edit existing videos using AI.</DialogDescription>
-          </DialogHeader>
+          </VisuallyHidden>
           {renderContent()}
         </DialogContent>
       </Dialog>

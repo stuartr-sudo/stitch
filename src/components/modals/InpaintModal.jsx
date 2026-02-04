@@ -4,8 +4,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
+  VisuallyHidden,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -507,10 +507,10 @@ export default function InpaintModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="sr-only">
+          <VisuallyHidden>
             <DialogTitle>Inpaint</DialogTitle>
             <DialogDescription>Paint to remove or replace objects</DialogDescription>
-          </DialogHeader>
+          </VisuallyHidden>
           {content}
         </DialogContent>
       </Dialog>

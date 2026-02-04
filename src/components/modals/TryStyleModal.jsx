@@ -4,8 +4,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
+  VisuallyHidden,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -748,10 +748,10 @@ export default function TryStyleModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0 relative">
-          <DialogHeader className="sr-only">
+          <VisuallyHidden>
             <DialogTitle>Try Style - Virtual Try-On</DialogTitle>
             <DialogDescription>Virtual clothing try-on powered by FASHN AI</DialogDescription>
-          </DialogHeader>
+          </VisuallyHidden>
           {content}
         </DialogContent>
       </Dialog>

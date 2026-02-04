@@ -4,8 +4,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
+  VisuallyHidden,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -716,6 +716,10 @@ export default function JumpStartModal({
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
+          <VisuallyHidden>
+            <DialogTitle>JumpStart - Image to Video</DialogTitle>
+            <DialogDescription>Transform your image into an animated video</DialogDescription>
+          </VisuallyHidden>
           {/* Header */}
           <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 flex-shrink-0">
             <div className="flex items-center justify-between">

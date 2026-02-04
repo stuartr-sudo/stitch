@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, VisuallyHidden } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -483,6 +483,10 @@ export default function ImagineerModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
+        <VisuallyHidden>
+          <DialogTitle>Imagineer - AI Image Generation</DialogTitle>
+          <DialogDescription>Generate images from text prompts</DialogDescription>
+        </VisuallyHidden>
         {content}
       </DialogContent>
     </Dialog>
