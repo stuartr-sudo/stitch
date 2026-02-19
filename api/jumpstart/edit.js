@@ -1,3 +1,5 @@
+import { getUserKeys } from '../lib/getUserKeys.js';
+
 /**
  * JumpStart Edit - Video Editing API
  * Supports:
@@ -10,6 +12,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+
     const { 
       videoUrl, 
       prompt, 
@@ -30,9 +34,9 @@ export default async function handler(req, res) {
 
     // Route to appropriate handler
     if (model === 'grok-edit') {
-      return await handleGrokEdit(req, res, { videoUrl, prompt, resolution });
+      return await handleGrokEdit(req, res, { videoUrl, prompt, resolution, FAL_KEY });
     } else {
-      return await handleWavespeedEdit(req, res, { videoUrl, prompt, resolution, seed });
+      return await handleWavespeedEdit(req, res, { videoUrl, prompt, resolution, seed, WAVESPEED_API_KEY });
     }
 
   } catch (error) {
@@ -45,11 +49,10 @@ export default async function handler(req, res) {
  * Handle Wavespeed WAN 2.2 Video Edit
  */
 async function handleWavespeedEdit(req, res, params) {
-  const { videoUrl, prompt, resolution, seed } = params;
+  const { videoUrl, prompt, resolution, seed, WAVESPEED_API_KEY } = params;
   
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
   if (!WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing Wavespeed API key' });
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Wavespeed Edit] Submitting...');
@@ -103,11 +106,10 @@ async function handleWavespeedEdit(req, res, params) {
  * Max resolution: 854x480, max duration: 8 seconds
  */
 async function handleGrokEdit(req, res, params) {
-  const { videoUrl, prompt, resolution } = params;
+  const { videoUrl, prompt, resolution, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Grok Edit] Submitting to xAI Grok Imagine Video Edit...');

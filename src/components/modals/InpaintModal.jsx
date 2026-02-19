@@ -27,6 +27,7 @@ import {
   ExternalLink,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 /**
  * InpaintModal - AI Object Removal/Replacement with mask painting
@@ -77,7 +78,7 @@ export default function InpaintModal({
   // Save result to library
   const saveToLibrary = async (imageUrl) => {
     try {
-      const response = await fetch('/api/library/save', {
+      const response = await apiFetch('/api/library/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -275,7 +276,7 @@ export default function InpaintModal({
     try {
       const maskDataUrl = maskCanvas.toDataURL('image/png');
 
-      const response = await fetch('/api/images/inpaint', {
+      const response = await apiFetch('/api/images/inpaint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -308,7 +309,7 @@ export default function InpaintModal({
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
-        const response = await fetch('/api/jumpstart/result', {
+        const response = await apiFetch('/api/jumpstart/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId }),

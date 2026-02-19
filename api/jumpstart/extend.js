@@ -1,3 +1,5 @@
+import { getUserKeys } from '../lib/getUserKeys.js';
+
 /**
  * JumpStart Extend - Video Extension API
  * Supports:
@@ -10,6 +12,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+
     const { 
       videoUrl, 
       prompt, 
@@ -30,9 +34,9 @@ export default async function handler(req, res) {
 
     // Route to appropriate handler
     if (model === 'veo3-fast-extend') {
-      return await handleVeo3FastExtend(req, res, { videoUrl, prompt, resolution, generate_audio });
+      return await handleVeo3FastExtend(req, res, { videoUrl, prompt, resolution, generate_audio, FAL_KEY });
     } else {
-      return await handleSeedanceExtend(req, res, { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed });
+      return await handleSeedanceExtend(req, res, { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed, WAVESPEED_API_KEY });
     }
 
   } catch (error) {
@@ -45,11 +49,10 @@ export default async function handler(req, res) {
  * Handle Seedance 1.5 Pro extend (Wavespeed)
  */
 async function handleSeedanceExtend(req, res, params) {
-  const { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed } = params;
+  const { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed, WAVESPEED_API_KEY } = params;
   
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
   if (!WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing Wavespeed API key' });
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Seedance Extend] Requesting extension...');
@@ -102,11 +105,10 @@ async function handleSeedanceExtend(req, res, params) {
  * Handle Veo 3.1 Fast Extend (FAL.ai)
  */
 async function handleVeo3FastExtend(req, res, params) {
-  const { videoUrl, prompt, resolution, generate_audio } = params;
+  const { videoUrl, prompt, resolution, generate_audio, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Veo3 Extend] Requesting extension...');

@@ -46,6 +46,33 @@ export default async function handler(req, res) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Early duplicate check for external URLs (before downloading)
+    const table = type === 'video' ? 'generated_videos' : 'image_library_items';
+    const urlField = type === 'video' ? 'video_url' : 'image_url';
+    
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Check if this exact external URL already exists for this user
+      let dupQuery = supabase
+        .from(table)
+        .select('id, ' + urlField)
+        .eq(urlField, url);
+      if (req.user?.id) dupQuery = dupQuery.eq('user_id', req.user.id);
+      const { data: existingByOriginal } = await dupQuery.maybeSingle();
+      
+      if (existingByOriginal) {
+        console.log(`[Library Save] Duplicate found (original URL) - ID: ${existingByOriginal.id}`);
+        return res.status(200).json({
+          success: true,
+          saved: false,
+          duplicate: true,
+          message: 'Media already exists in library',
+          id: existingByOriginal.id,
+          url: existingByOriginal[urlField],
+          type,
+        });
+      }
+    }
+
     let finalUrl = url;
     let uploadedToStorage = false;
     const bucket = type === 'video' ? 'videos' : 'media';
@@ -135,12 +162,38 @@ export default async function handler(req, res) {
     const table = type === 'video' ? 'generated_videos' : 'image_library_items';
     const urlField = type === 'video' ? 'video_url' : 'image_url';
 
+    // Check for duplicates - look for existing entry with same URL for this user
+    console.log(`[Library Save] Checking for duplicates in ${table}...`);
+    let dupQuery2 = supabase
+      .from(table)
+      .select('id')
+      .eq(urlField, finalUrl);
+    if (req.user?.id) dupQuery2 = dupQuery2.eq('user_id', req.user.id);
+    const { data: existing } = await dupQuery2.maybeSingle();
+    
+    if (existing) {
+      console.log(`[Library Save] Duplicate found - URL already exists with ID: ${existing.id}`);
+      return res.status(200).json({
+        success: true,
+        saved: false,
+        duplicate: true,
+        message: 'Media already exists in library',
+        id: existing.id,
+        url: finalUrl,
+        type,
+      });
+    }
+
     // Build insert data - only include fields that exist in the tables
     const insertData = {
       [urlField]: finalUrl,
       title: title || `${source || 'Generated'} - ${new Date().toLocaleString()}`,
       created_at: new Date().toISOString(),
     };
+
+    if (req.user?.id) {
+      insertData.user_id = req.user.id;
+    }
     
     // Add optional fields if they might exist
     if (prompt) {

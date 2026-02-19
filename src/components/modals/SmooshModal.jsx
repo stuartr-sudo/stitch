@@ -31,6 +31,7 @@ import {
   ExternalLink,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const DIMENSION_PRESETS = [
   { id: '1080x1080', label: '1080×1080 (Square)', width: 1080, height: 1080 },
@@ -303,7 +304,7 @@ export default function SmooshModal({
       // Use custom prompt, or preset prompt, or default
       const finalPrompt = prompt.trim() || selectedPreset.prompt || 'A seamless, professional composition';
 
-      const response = await fetch('/api/smoosh/generate', {
+      const response = await apiFetch('/api/smoosh/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -335,7 +336,7 @@ export default function SmooshModal({
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
-        const response = await fetch('/api/jumpstart/result', {
+        const response = await apiFetch('/api/jumpstart/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId }),

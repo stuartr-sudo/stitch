@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
+import { getUserKeys } from '../lib/getUserKeys.js';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -26,6 +27,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+
     const form = formidable({ maxFileSize: 10 * 1024 * 1024 });
 
     const [fields, files] = await new Promise((resolve, reject) => {
@@ -120,11 +123,11 @@ export default async function handler(req, res) {
     // Route to appropriate provider
     if (model === 'veo3') {
       return await handleVeo3(req, res, {
-        imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages
+        imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages, FAL_KEY
       });
     } else if (model === 'veo3-fast') {
       return await handleVeo3Fast(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt, FAL_KEY
       });
     } else if (model === 'veo3-first-last') {
       return await handleVeo3FirstLast(req, res, {
@@ -135,23 +138,24 @@ export default async function handler(req, res) {
         aspectRatio, 
         resolution, 
         enableAudio, 
-        negativePrompt
+        negativePrompt,
+        FAL_KEY
       });
     } else if (model === 'kling-video') {
       return await handleKlingVideo(req, res, {
-        imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl
+        imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl, FAL_KEY
       });
     } else if (model === 'seedance-pro') {
       return await handleSeedance(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl, FAL_KEY
       });
     } else if (model === 'grok-imagine') {
       return await handleGrokImagine(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, FAL_KEY
       });
     } else {
       return await handleWavespeed(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, width, height
+        imageUrl, prompt, duration, aspectRatio, resolution, width, height, WAVESPEED_API_KEY
       });
     }
 
@@ -165,11 +169,10 @@ export default async function handler(req, res) {
  * Handle Wavespeed WAN 2.2 Spicy
  */
 async function handleWavespeed(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution, width, height, supabase, tempFileName } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, width, height, supabase, tempFileName, WAVESPEED_API_KEY } = params;
   
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
   if (!WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing Wavespeed API key' });
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Wavespeed] Submitting...');
@@ -230,11 +233,10 @@ async function handleWavespeed(req, res, params) {
  * Handle Grok Imagine Video (FAL.ai / xAI)
  */
 async function handleGrokImagine(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Grok] Submitting to xAI Grok Imagine Video...');
@@ -321,11 +323,10 @@ async function handleGrokImagine(req, res, params) {
  * Handle Bytedance Seedance 1.5 Pro (FAL.ai)
  */
 async function handleSeedance(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, cameraFixed, endImageUrl, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Seedance] Submitting to Bytedance Seedance 1.5 Pro...');
@@ -408,11 +409,10 @@ async function handleSeedance(req, res, params) {
  * Handle Google Veo 3.1 (FAL.ai)
  */
 async function handleVeo3(req, res, params) {
-  const { imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages = [] } = params;
+  const { imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages = [], FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Veo3] Submitting to Google Veo 3.1...');
@@ -483,11 +483,10 @@ async function handleVeo3(req, res, params) {
  * Handle Google Veo 3.1 Fast (FAL.ai)
  */
 async function handleVeo3Fast(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Veo3Fast] Submitting to Google Veo 3.1 Fast...');
@@ -560,11 +559,10 @@ async function handleVeo3Fast(req, res, params) {
  * Generates video transition between first and last frame
  */
 async function handleVeo3FirstLast(req, res, params) {
-  const { firstFrameUrl, lastFrameUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt } = params;
+  const { firstFrameUrl, lastFrameUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   if (!firstFrameUrl || !lastFrameUrl) {
@@ -641,11 +639,10 @@ async function handleVeo3FirstLast(req, res, params) {
  * Handle Kling Video 2.5 Turbo Pro (FAL.ai)
  */
 async function handleKlingVideo(req, res, params) {
-  const { imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl } = params;
+  const { imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl, FAL_KEY } = params;
   
-  const FAL_KEY = process.env.FAL_KEY;
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   console.log('[JumpStart/Kling] Submitting to Kling 2.5 Turbo Pro...');

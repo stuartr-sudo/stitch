@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,8 +19,12 @@ import {
   Focus,
   FolderOpen,
   Palette,
-  Shirt
+  Shirt,
+  Key,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiFetch } from '@/lib/api';
 
 import JumpStartModal from '@/components/modals/JumpStartModal';
 import JumpStartVideoStudioModal from '@/components/modals/JumpStartVideoStudioModal';
@@ -31,6 +36,7 @@ import LensModal from '@/components/modals/LensModal';
 import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
+import ApiKeysModal from '@/components/modals/ApiKeysModal';
 
 /**
  * VideoAdvertCreator - Main page for creating video adverts
@@ -43,10 +49,22 @@ import TryStyleModal from '@/components/modals/TryStyleModal';
  * - Manage created videos
  */
 export default function VideoAdvertCreator() {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [activeModal, setActiveModal] = useState(null);
   const [createdVideos, setCreatedVideos] = useState([]);
   const [createdImages, setCreatedImages] = useState([]);
   const [selectedTab, setSelectedTab] = useState('create');
+  const [showApiKeys, setShowApiKeys] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/setup');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
+  };
 
   // Handle new video created
   const handleVideoCreated = (videoUrl, title = null, source = null) => {
@@ -61,7 +79,7 @@ export default function VideoAdvertCreator() {
     toast.success('Video added to your collection!');
     
     // Save to Supabase library
-    fetch('/api/library/save', {
+    apiFetch('/api/library/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -78,7 +96,7 @@ export default function VideoAdvertCreator() {
     try {
       toast.info('Generating image...');
       
-      const response = await fetch('/api/imagineer/generate', {
+      const response = await apiFetch('/api/imagineer/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -91,34 +109,63 @@ export default function VideoAdvertCreator() {
       }
 
       if (data.imageUrl) {
-        const newImage = {
-          id: Date.now().toString(),
-          url: data.imageUrl,
-          prompt: params.prompt,
-          createdAt: new Date().toISOString(),
-        };
-        setCreatedImages(prev => [newImage, ...prev]);
-        toast.success('Image generated successfully!');
-        
-        // Save to Supabase library
-        fetch('/api/library/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: data.imageUrl,
-            type: 'image',
-            title: 'Imagineer Image',
-            prompt: params.prompt,
-            source: 'imagineer',
-          }),
-        }).catch(err => console.warn('Failed to save image to library:', err));
-      } else {
-        toast.info('Image generation started. Check back in a moment.');
+        addGeneratedImage(data.imageUrl, params.prompt);
+        return;
+      }
+
+      if (data.requestId) {
+        toast.info('Image is being generated, please wait...');
+        const model = data.model || params.model || 'wavespeed';
+        const imageUrl = await pollForImageResult(data.requestId, model);
+        if (imageUrl) {
+          addGeneratedImage(imageUrl, params.prompt);
+        } else {
+          toast.error('Image generation timed out. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Image generation error:', error);
       toast.error(error.message || 'Failed to generate image');
     }
+  };
+
+  const addGeneratedImage = (url, prompt) => {
+    const newImage = {
+      id: Date.now().toString(),
+      url,
+      prompt,
+      createdAt: new Date().toISOString(),
+    };
+    setCreatedImages(prev => [newImage, ...prev]);
+    toast.success('Image generated successfully!');
+
+    apiFetch('/api/library/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, type: 'image', title: 'Imagineer Image', prompt, source: 'imagineer' }),
+    }).catch(err => console.warn('Failed to save image to library:', err));
+  };
+
+  const pollForImageResult = async (requestId, model, maxAttempts = 60) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await apiFetch('/api/imagineer/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId, model }),
+        });
+        const result = await res.json();
+        if (result.imageUrl) return result.imageUrl;
+        if (result.status === 'failed' || result.error) {
+          toast.error(result.error || 'Image generation failed');
+          return null;
+        }
+      } catch (err) {
+        console.warn('Poll attempt failed:', err);
+      }
+    }
+    return null;
   };
 
   // Delete video
@@ -162,9 +209,26 @@ export default function VideoAdvertCreator() {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500 mr-4">
+              <span className="text-sm text-slate-500 mr-2">
                 {createdVideos.length} videos • {createdImages.length} images
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowApiKeys(true)}
+                className="gap-1.5"
+              >
+                <Key className="w-3.5 h-3.5" /> API Keys
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="gap-1.5 text-slate-500 hover:text-red-600"
+                title={user?.email}
+              >
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -533,7 +597,7 @@ export default function VideoAdvertCreator() {
           toast.success('Image added!');
           
           // Save to Supabase library
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
@@ -555,7 +619,7 @@ export default function VideoAdvertCreator() {
           toast.success('Image added!');
           
           // Save to Supabase library
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, type: 'image', title: 'Inpainted Image', source: 'inpaint' }),
@@ -577,7 +641,7 @@ export default function VideoAdvertCreator() {
           toast.success('Image added!');
           
           // Save to Supabase library
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, type: 'image', title: 'Lens Adjusted Image', source: 'lens' }),
@@ -599,7 +663,7 @@ export default function VideoAdvertCreator() {
           toast.success('Image added!');
           
           // Save to Supabase library
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, type: 'image', title: 'Smoosh Composition', source: 'smoosh' }),
@@ -649,12 +713,17 @@ export default function VideoAdvertCreator() {
           toast.success('Try-on image added!');
           
           // Save to Supabase library  
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, type: 'image', title: 'Try Style Result', source: 'trystyle' }),
           }).catch(err => console.warn('Failed to save to library:', err));
         }}
+      />
+
+      <ApiKeysModal
+        isOpen={showApiKeys}
+        onClose={() => setShowApiKeys(false)}
       />
     </div>
   );

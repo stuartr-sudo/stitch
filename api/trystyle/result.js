@@ -1,3 +1,5 @@
+import { getUserKeys } from '../lib/getUserKeys.js';
+
 /**
  * Try Style Result API - Check async job status
  * 
@@ -10,9 +12,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const FAL_KEY = process.env.FAL_KEY;
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   try {

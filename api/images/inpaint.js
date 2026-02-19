@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getUserKeys } from '../lib/getUserKeys.js';
 
 /**
  * Inpaint API - AI Object Removal/Replacement
@@ -58,9 +59,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
+  const { wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing API key configuration' });
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
   }
 
   try {

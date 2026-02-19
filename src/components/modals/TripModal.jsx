@@ -30,6 +30,7 @@ import {
   RefreshCw,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 // Style presets for quick inspiration
 const STYLE_PRESETS = [
@@ -185,7 +186,7 @@ export default function TripModal({
   // Polling logic
   const pollForResult = useCallback(async (id) => {
     try {
-      const response = await fetch('/api/jumpstart/result', {
+      const response = await apiFetch('/api/jumpstart/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: id }),
@@ -225,7 +226,7 @@ export default function TripModal({
     setGenerationStatus('Submitting restyle request...');
     
     try {
-      const response = await fetch('/api/trip/restyle', {
+      const response = await apiFetch('/api/trip/restyle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -261,7 +262,7 @@ export default function TripModal({
     setGenerationStatus('Saving to your library...');
 
     try {
-      const saveResponse = await fetch('/api/jumpstart/save-video', {
+      const saveResponse = await apiFetch('/api/jumpstart/save-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

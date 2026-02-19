@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
+import { apiFetch } from '@/lib/api';
 
 // Extend Model Options
 const EXTEND_MODELS = [
@@ -149,7 +150,7 @@ export default function JumpStartVideoStudioModal({
   // Helper to save media to library
   const saveToLibrary = async (url, type = 'video', title = '', source = 'video-studio') => {
     try {
-      await fetch('/api/library/save', {
+      await apiFetch('/api/library/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, type, title, source }),
@@ -223,7 +224,7 @@ export default function JumpStartVideoStudioModal({
   // Polling logic
   const pollForResult = useCallback(async (id, model = extendModel) => {
     try {
-      const response = await fetch('/api/jumpstart/result', {
+      const response = await apiFetch('/api/jumpstart/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: id, model }),
@@ -281,7 +282,7 @@ export default function JumpStartVideoStudioModal({
         })
       };
 
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -318,7 +319,7 @@ export default function JumpStartVideoStudioModal({
     setGenerationStatus('Saving to your library...');
 
     try {
-      const saveResponse = await fetch('/api/jumpstart/save-video', {
+      const saveResponse = await apiFetch('/api/jumpstart/save-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

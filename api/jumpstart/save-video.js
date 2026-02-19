@@ -49,9 +49,10 @@ export default async function handler(req, res) {
       console.warn('[JumpStart] Downloaded video is unexpectedly small:', buffer.length);
     }
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage, namespace by user
+    const userId = req.user?.id || username;
     const fileName = `stitch-video-${Date.now()}.mp4`;
-    const objectPath = `videos/${username}/${fileName}`;
+    const objectPath = `videos/${userId}/${fileName}`;
 
     const uploadResult = await supabase.storage
       .from('videos')

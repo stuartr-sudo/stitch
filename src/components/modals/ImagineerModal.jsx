@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye, Cpu } from "lucide-react";
 import { toast } from "sonner";
+
+const IMAGE_MODELS = [
+  { value: "wavespeed", label: "Nano Banana Pro", description: "Fast, high-quality image generation" },
+  { value: "seeddream", label: "SeedDream 4.5", description: "ByteDance stylized generation" },
+];
 
 // Dropdown options
 const SUBJECT_TYPE = [
@@ -201,6 +206,9 @@ export default function ImagineerModal({
   onGenerate,
   isEmbedded = false 
 }) {
+  // Model selection
+  const [selectedModel, setSelectedModel] = useState("wavespeed");
+
   // Core subject
   const [subjectDescription, setSubjectDescription] = useState("");
   const [subjectType, setSubjectType] = useState("");
@@ -226,6 +234,7 @@ export default function ImagineerModal({
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
+      setSelectedModel("wavespeed");
       setSubjectDescription("");
       setSubjectType("");
       setArtisticStyle("");
@@ -302,6 +311,7 @@ export default function ImagineerModal({
         prompt: generatedPrompt, 
         style: artisticStyle, 
         dimensions,
+        model: selectedModel,
       });
       onClose();
     } catch (error) {
@@ -330,6 +340,30 @@ export default function ImagineerModal({
 
       <div className="flex-1 min-h-0 overflow-y-auto p-6">
         <div className="space-y-6 max-w-3xl mx-auto">
+
+          {/* SECTION: Model */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-800 border-b pb-1 flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5" /> Model
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {IMAGE_MODELS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setSelectedModel(m.value)}
+                  className={`text-left rounded-lg border-2 p-3 transition-all ${
+                    selectedModel === m.value
+                      ? 'border-[#2C666E] bg-[#2C666E]/5'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="font-medium text-sm text-slate-900">{m.label}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
           
           {/* SECTION: Subject */}
           <div className="space-y-3">

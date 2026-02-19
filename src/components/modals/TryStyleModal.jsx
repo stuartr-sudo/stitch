@@ -27,6 +27,7 @@ import {
   Info,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 // Try-On Model Options
 const TRYON_MODELS = [
@@ -227,7 +228,7 @@ export default function TryStyleModal({
         });
       }
       
-      const response = await fetch('/api/trystyle/generate', {
+      const response = await apiFetch('/api/trystyle/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -246,7 +247,7 @@ export default function TryStyleModal({
         
         // Save to library
         data.images.forEach((imageUrl, idx) => {
-          fetch('/api/library/save', {
+          apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -276,7 +277,7 @@ export default function TryStyleModal({
   const pollForResult = async (requestId, model = 'fashn') => {
     const poll = async () => {
       try {
-        const response = await fetch('/api/trystyle/result', {
+        const response = await apiFetch('/api/trystyle/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId, model }),
@@ -291,7 +292,7 @@ export default function TryStyleModal({
           
           // Save to library
           data.images.forEach((imageUrl, idx) => {
-            fetch('/api/library/save', {
+            apiFetch('/api/library/save', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

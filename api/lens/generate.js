@@ -1,16 +1,16 @@
 /**
  * Lens API - Image Angle Adjustment using FAL.ai
  */
+import { getUserKeys } from '../lib/getUserKeys.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const FAL_KEY = process.env.FAL_KEY;
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
-
+  const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY && !WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing API key configuration' });
+    return res.status(400).json({ error: 'API keys not configured. Please add them in API Keys settings.' });
   }
 
   try {

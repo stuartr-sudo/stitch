@@ -2,6 +2,8 @@
  * JumpStart - Check Video Generation Result
  * Supports polling for both Wavespeed and Grok (FAL.ai) models
  */
+import { getUserKeys } from '../lib/getUserKeys.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -16,24 +18,26 @@ export default async function handler(req, res) {
 
     console.log('[JumpStart/Result] Checking:', { requestId, model });
 
+    const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+
     if (model === 'veo3') {
-      return await checkVeo3Result(req, res, requestId);
+      return await checkVeo3Result(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-fast') {
-      return await checkVeo3FastResult(req, res, requestId);
+      return await checkVeo3FastResult(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-first-last') {
-      return await checkVeo3FirstLastResult(req, res, requestId);
+      return await checkVeo3FirstLastResult(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-fast-extend') {
-      return await checkVeo3FastExtendResult(req, res, requestId);
+      return await checkVeo3FastExtendResult(req, res, requestId, FAL_KEY);
     } else if (model === 'kling-video') {
-      return await checkKlingResult(req, res, requestId);
+      return await checkKlingResult(req, res, requestId, FAL_KEY);
     } else if (model === 'seedance-pro') {
-      return await checkSeedanceResult(req, res, requestId);
+      return await checkSeedanceResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-imagine') {
-      return await checkGrokResult(req, res, requestId);
+      return await checkGrokResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-edit') {
-      return await checkGrokEditResult(req, res, requestId);
+      return await checkGrokEditResult(req, res, requestId, FAL_KEY);
     } else {
-      return await checkWavespeedResult(req, res, requestId);
+      return await checkWavespeedResult(req, res, requestId, WAVESPEED_API_KEY);
     }
 
   } catch (error) {
@@ -45,11 +49,9 @@ export default async function handler(req, res) {
 /**
  * Check Wavespeed result
  */
-async function checkWavespeedResult(req, res, requestId) {
-  const WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
-  
+async function checkWavespeedResult(req, res, requestId, WAVESPEED_API_KEY) {
   if (!WAVESPEED_API_KEY) {
-    return res.status(500).json({ error: 'Missing Wavespeed API key' });
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
   }
 
   const pollResponse = await fetch(
@@ -97,11 +99,9 @@ async function checkWavespeedResult(req, res, requestId) {
 /**
  * Check Grok/FAL result
  */
-async function checkGrokResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkGrokResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   // FAL uses a status endpoint for queued requests
@@ -196,11 +196,9 @@ async function getGrokResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Seedance/FAL result
  */
-async function checkSeedanceResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkSeedanceResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   // FAL uses a status endpoint for queued requests
@@ -290,11 +288,9 @@ async function getSeedanceResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Veo 3.1/FAL result
  */
-async function checkVeo3Result(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkVeo3Result(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   // FAL uses a status endpoint for queued requests
@@ -383,11 +379,9 @@ async function getVeo3Result(req, res, requestId, FAL_KEY) {
 /**
  * Check Veo 3.1 Fast/FAL result
  */
-async function checkVeo3FastResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkVeo3FastResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   const pollResponse = await fetch(
@@ -474,11 +468,9 @@ async function getVeo3FastResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Veo 3.1 First-Last-Frame/FAL result
  */
-async function checkVeo3FirstLastResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   const pollResponse = await fetch(
@@ -565,11 +557,9 @@ async function getVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Veo 3.1 Fast Extend/FAL result
  */
-async function checkVeo3FastExtendResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   const pollResponse = await fetch(
@@ -656,11 +646,9 @@ async function getVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Kling Video/FAL result
  */
-async function checkKlingResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkKlingResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   const pollResponse = await fetch(
@@ -747,11 +735,9 @@ async function getKlingResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Grok Edit/FAL result
  */
-async function checkGrokEditResult(req, res, requestId) {
-  const FAL_KEY = process.env.FAL_KEY;
-  
+async function checkGrokEditResult(req, res, requestId, FAL_KEY) {
   if (!FAL_KEY) {
-    return res.status(500).json({ error: 'Missing FAL API key' });
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
   // FAL uses a status endpoint for queued requests

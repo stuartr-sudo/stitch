@@ -25,6 +25,7 @@ import {
   ExternalLink,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 /**
  * LensModal - Adjust viewing angles of images using AI
@@ -101,7 +102,7 @@ export default function LensModal({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/lens/generate', {
+      const response = await apiFetch('/api/lens/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,7 +134,7 @@ export default function LensModal({
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
-        const response = await fetch('/api/jumpstart/result', {
+        const response = await apiFetch('/api/jumpstart/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId }),

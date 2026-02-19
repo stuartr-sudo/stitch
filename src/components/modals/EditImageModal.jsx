@@ -26,6 +26,7 @@ import {
   ExternalLink,
   FolderOpen
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const MODELS = [
   { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', endpoint: 'nano-banana-pro/edit-ultra' },
@@ -161,7 +162,7 @@ export default function EditImageModal({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/images/edit', {
+      const response = await apiFetch('/api/images/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,7 +195,7 @@ export default function EditImageModal({
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
-        const response = await fetch('/api/jumpstart/result', {
+        const response = await apiFetch('/api/jumpstart/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId }),

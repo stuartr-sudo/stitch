@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
+import { apiFetch } from '@/lib/api';
 
 // Video Generation Models
 const VIDEO_MODELS = [
@@ -371,7 +372,7 @@ export default function JumpStartModal({
   const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
     try {
       console.log(`[JumpStart] Saving ${type} to library:`, url.substring(0, 50) + '...');
-      const response = await fetch('/api/library/save', {
+      const response = await apiFetch('/api/library/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, type, title, source }),
@@ -553,7 +554,7 @@ export default function JumpStartModal({
     setSearchResults([]);
 
     try {
-      const response = await fetch('/api/images/search', {
+      const response = await apiFetch('/api/images/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: searchQuery.trim() }),
@@ -583,7 +584,7 @@ export default function JumpStartModal({
     
     // Import the image to avoid CORS issues
     try {
-      const response = await fetch('/api/images/import-url', {
+      const response = await apiFetch('/api/images/import-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: url, username }),
@@ -683,7 +684,7 @@ export default function JumpStartModal({
 
   const pollForResult = async (requestId, model) => {
     try {
-      const response = await fetch('/api/jumpstart/result', {
+      const response = await apiFetch('/api/jumpstart/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, model }),
@@ -705,12 +706,9 @@ export default function JumpStartModal({
         setHasAddedToEditor(false);
         toast.success('Video generated successfully!');
         
-        // Save generated video to library
-        saveToLibrary(data.videoUrl, 'video', `JumpStart Video - ${videoStyle || 'Generated'}`, 'jumpstart');
-        
-        // Notify parent if callback provided
+        // Notify parent if callback provided (parent handles library save)
         if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Video'}`, 'jumpstart');
+          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart');
         }
       } else if (data.status === 'failed') {
         stopPolling();
@@ -791,7 +789,7 @@ export default function JumpStartModal({
 
       console.log('[JumpStart] Generating with:', { model: videoModel, aspectRatio, resolution, duration, enableAudio });
 
-      const result = await fetch('/api/jumpstart/generate', {
+      const result = await apiFetch('/api/jumpstart/generate', {
         method: 'POST',
         body: formData,
       });
@@ -810,11 +808,9 @@ export default function JumpStartModal({
         setHasAddedToEditor(false);
         toast.success('Video generated!');
         
-        // Save generated video to library
-        saveToLibrary(data.videoUrl, 'video', `JumpStart Video - ${videoStyle || 'Generated'}`, 'jumpstart');
-        
+        // Notify parent if callback provided (parent handles library save)
         if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Video'}`, 'jumpstart');
+          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart');
         }
       } else if (data.requestId) {
         // Start polling
@@ -1763,7 +1759,8 @@ export default function JumpStartModal({
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}
-        onSelectItem={handleLibrarySelect}
+        onSelect={handleLibrarySelect}
+        mediaType="images"
       />
     </>
   );
