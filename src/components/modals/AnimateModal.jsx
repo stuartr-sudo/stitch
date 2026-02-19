@@ -29,9 +29,22 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
+const EXAMPLE_VIDEO_URL = 'https://v3b.fal.media/files/b/panda/a6SvJg96V8eoglMlYFShU_5385885-hd_1080_1920_25fps.mp4';
+const EXAMPLE_IMAGE_URL = 'https://v3b.fal.media/files/b/panda/-oMlZo9Yyj_Nzoza_tgds_GmLF86r5bOt50eMMKCszy_eacc949b3933443c9915a83c98fbe85e.png';
+
 const MODES = [
-  { value: 'move', label: 'Move', description: 'Animate a character with the video\'s motion' },
-  { value: 'replace', label: 'Replace', description: 'Swap character in video, keep scene' },
+  {
+    value: 'move',
+    label: 'Move',
+    description: 'Animate a character with the motion from a reference video',
+    detail: 'You provide: a video of a person moving + a character photo. You get: your character performing those exact same movements.',
+  },
+  {
+    value: 'replace',
+    label: 'Replace',
+    description: 'Swap the character in a video while keeping the scene',
+    detail: 'You provide: a video with a person in it + a character photo. You get: the same video but with your character in place of the original person.',
+  },
 ];
 
 const RESOLUTIONS = [
@@ -286,8 +299,9 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
-                      <div className="font-medium text-sm text-slate-900">{m.label}</div>
-                      <div className="text-xs text-slate-500 mt-1">{m.description}</div>
+                      <div className="font-medium text-sm text-slate-900 mb-0.5">{m.label}</div>
+                      <div className="text-xs text-slate-600 font-medium">{m.description}</div>
+                      <div className="text-xs text-slate-400 mt-1.5 leading-relaxed">{m.detail}</div>
                     </button>
                   ))}
                 </div>
@@ -300,10 +314,10 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                 </Label>
                 <p className="text-xs text-slate-500 mb-3">
                   {mode === 'move'
-                    ? 'The video whose motion will be replicated by the character image.'
-                    : 'The video where the character will be replaced.'}
+                    ? 'The video whose motion will be replicated by your character. The model copies all movements, expressions, and timing exactly.'
+                    : 'The video containing the person you want to replace. The model keeps the background, lighting, and scene intact.'}
                 </p>
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-2 mb-2">
                   <Input
                     value={videoInput}
                     onChange={(e) => setVideoInput(e.target.value)}
@@ -318,6 +332,13 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                     <FolderOpen className="w-4 h-4 mr-1" /> Library
                   </Button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => { setVideoUrl(EXAMPLE_VIDEO_URL); setVideoInput(EXAMPLE_VIDEO_URL); }}
+                  className="text-xs text-[#2C666E] hover:text-[#07393C] underline underline-offset-2 mb-3 block"
+                >
+                  Try an example video
+                </button>
                 {videoUrl && (
                   <div className="rounded-xl overflow-hidden bg-slate-900 border border-green-200">
                     <div className="aspect-video">
@@ -329,6 +350,14 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                     </div>
                   </div>
                 )}
+                <div className="bg-slate-50 rounded-lg p-3 mt-3">
+                  <p className="text-xs font-medium text-slate-600 mb-1.5">Tips for best results:</p>
+                  <ul className="space-y-1 text-xs text-slate-500 list-disc list-inside">
+                    <li>One person clearly visible, with room to move in frame</li>
+                    <li>3–15 seconds is ideal — longer clips may be trimmed</li>
+                    <li>Clear lighting and minimal camera shake</li>
+                  </ul>
+                </div>
               </div>
 
               {/* Character Image */}
@@ -338,10 +367,10 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                 </Label>
                 <p className="text-xs text-slate-500 mb-3">
                   {mode === 'move'
-                    ? 'The character who will perform the motions from the reference video.'
-                    : 'The character who will replace the person in the video.'}
+                    ? 'The character that will perform the movements from your reference video. Can be a photo, illustration, or AI-generated image.'
+                    : 'The character that will be placed into the scene. The model adapts their appearance to the lighting and perspective of the video.'}
                 </p>
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-2 mb-2">
                   <Input
                     value={imageInput}
                     onChange={(e) => setImageInput(e.target.value)}
@@ -356,6 +385,13 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                     <FolderOpen className="w-4 h-4 mr-1" /> Library
                   </Button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => { setImageUrl(EXAMPLE_IMAGE_URL); setImageInput(EXAMPLE_IMAGE_URL); }}
+                  className="text-xs text-[#2C666E] hover:text-[#07393C] underline underline-offset-2 mb-3 block"
+                >
+                  Try an example character
+                </button>
                 {imageUrl && (
                   <div className="rounded-xl overflow-hidden border border-green-200 bg-slate-50">
                     <div className="flex items-center justify-center bg-slate-100 h-40">
@@ -367,6 +403,14 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
                     </div>
                   </div>
                 )}
+                <div className="bg-slate-50 rounded-lg p-3 mt-3">
+                  <p className="text-xs font-medium text-slate-600 mb-1.5">Tips for best results:</p>
+                  <ul className="space-y-1 text-xs text-slate-500 list-disc list-inside">
+                    <li>Front-facing photo or illustration works best</li>
+                    <li>Full body preferred for Move mode; portrait works for Replace</li>
+                    <li>Plain or simple background produces the cleanest result</li>
+                  </ul>
+                </div>
               </div>
 
               {/* Continue */}
@@ -425,14 +469,31 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
               <div className="bg-[#90DDF0]/20 border border-[#2C666E]/30 rounded-xl p-4">
                 <div className="flex gap-3">
                   <Sparkles className="w-5 h-5 text-[#2C666E] shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-[#07393C] mb-1">Wan2.2-Animate Technology</p>
-                    <p className="text-sm text-[#2C666E]">
+                  <div className="flex-1">
+                    <p className="font-medium text-[#07393C] mb-2">What the model does</p>
+                    <p className="text-sm text-[#2C666E] mb-3">
                       {mode === 'move'
                         ? 'Generates a high-fidelity video of your character replicating the exact expressions and movements from the reference video.'
                         : 'Seamlessly replaces the character in your video while preserving the original scene\'s lighting, color tone, and environment.'}
                     </p>
-                    <p className="text-xs text-[#2C666E]/70 mt-2">Generation typically takes 2–5 minutes.</p>
+                    <div className="grid grid-cols-2 gap-3 border-t border-[#2C666E]/20 pt-3">
+                      <div>
+                        <p className="text-xs font-semibold text-[#07393C] mb-1">What you will receive</p>
+                        <ul className="space-y-1 text-xs text-[#2C666E]">
+                          <li>• An .mp4 video at the resolution you selected</li>
+                          <li>• Matching the length and frame rate of your reference video</li>
+                          <li>• {mode === 'move' ? 'Your character performing the recorded movements' : 'Your character seamlessly placed into the original scene'}</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#07393C] mb-1">Expected generation time</p>
+                        <ul className="space-y-1 text-xs text-[#2C666E]">
+                          <li>• <span className="font-medium">480p</span> — approx. 2–5 minutes</li>
+                          <li>• <span className="font-medium">720p</span> — approx. 8–10 minutes</li>
+                          <li>• <span className="font-medium">1080p</span> — approx. 12–15 minutes</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -471,6 +532,11 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
 
               {/* Generated Video */}
               <div className="mb-6">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#2C666E]/10 text-[#07393C] border border-[#2C666E]/20">
+                    {mode === 'move' ? '🎬 Move mode' : '🔄 Replace mode'}
+                  </span>
+                </div>
                 <Label className="text-sm font-medium mb-2 block text-center">Generated Video</Label>
                 <div className="aspect-video bg-slate-900 rounded-xl overflow-hidden shadow-lg ring-2 ring-[#2C666E]">
                   <video src={generatedVideoUrl} controls autoPlay loop className="w-full h-full object-contain" />
