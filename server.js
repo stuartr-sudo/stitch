@@ -103,6 +103,19 @@ app.post('/api/trip/restyle', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Animate routes (with auth)
+app.post('/api/animate/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('animate/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/animate/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('animate/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Imagineer routes (with auth)
 app.post('/api/imagineer/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('imagineer/generate.js');

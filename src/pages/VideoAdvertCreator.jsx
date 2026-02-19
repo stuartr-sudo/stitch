@@ -22,6 +22,7 @@ import {
   Shirt,
   Key,
   LogOut,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -29,6 +30,7 @@ import { apiFetch } from '@/lib/api';
 import JumpStartModal from '@/components/modals/JumpStartModal';
 import JumpStartVideoStudioModal from '@/components/modals/JumpStartVideoStudioModal';
 import TripModal from '@/components/modals/TripModal';
+import AnimateModal from '@/components/modals/AnimateModal';
 import ImagineerModal from '@/components/modals/ImagineerModal';
 import EditImageModal from '@/components/modals/EditImageModal';
 import InpaintModal from '@/components/modals/InpaintModal';
@@ -376,6 +378,18 @@ export default function VideoAdvertCreator() {
                   <p className="text-xs text-slate-500">Restyle videos with AI</p>
                 </div>
 
+                {/* Animate */}
+                <div 
+                  onClick={() => setActiveModal('animate')}
+                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/40"
+                >
+                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
+                    <Users className="w-5 h-5 text-[#07393C]" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Animate</h4>
+                  <p className="text-xs text-slate-500">Character animation & replace</p>
+                </div>
+
                 {/* Library */}
                 <div 
                   onClick={() => setActiveModal('library')}
@@ -579,6 +593,12 @@ export default function VideoAdvertCreator() {
       
       <TripModal 
         isOpen={activeModal === 'trip'} 
+        onClose={() => setActiveModal(null)}
+        onInsert={handleVideoCreated}
+      />
+
+      <AnimateModal 
+        isOpen={activeModal === 'animate'} 
         onClose={() => setActiveModal(null)}
         onInsert={handleVideoCreated}
       />
