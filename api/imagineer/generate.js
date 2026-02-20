@@ -218,6 +218,8 @@ async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
       requestId,
       model: 'seeddream',
       status: data.status || 'IN_QUEUE',
+      statusUrl: data.status_url || null,
+      responseUrl: data.response_url || null,
       pollEndpoint: '/api/imagineer/result',
     });
   }

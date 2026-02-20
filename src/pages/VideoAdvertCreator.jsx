@@ -124,7 +124,7 @@ export default function VideoAdvertCreator() {
       if (data.requestId) {
         toast.info('Image is being generated, please wait...');
         const model = data.model || params.model || 'wavespeed';
-        const imageUrl = await pollForImageResult(data.requestId, model);
+        const imageUrl = await pollForImageResult(data.requestId, model, 60, data.statusUrl, data.responseUrl);
         if (imageUrl) {
           addGeneratedImage(imageUrl, params.prompt);
         } else {
@@ -154,14 +154,14 @@ export default function VideoAdvertCreator() {
     }).catch(err => console.warn('Failed to save image to library:', err));
   };
 
-  const pollForImageResult = async (requestId, model, maxAttempts = 60) => {
+  const pollForImageResult = async (requestId, model, maxAttempts = 60, statusUrl = null, responseUrl = null) => {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, 3000));
       try {
         const res = await apiFetch('/api/imagineer/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId, model }),
+          body: JSON.stringify({ requestId, model, statusUrl, responseUrl }),
         });
         const result = await res.json();
         if (result.imageUrl) return result.imageUrl;

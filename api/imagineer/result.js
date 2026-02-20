@@ -74,14 +74,20 @@ async function pollSeedDream(req, res, requestId) {
 
   const headers = { 'Authorization': `Key ${FAL_KEY}` };
 
-  const statusResponse = await fetch(
-    `https://queue.fal.run/${SEEDDREAM_ENDPOINT}/requests/${requestId}/status?logs=1`,
-    { headers }
-  );
+  const statusUrlFromClient = req.body.statusUrl;
+  const responseUrlFromClient = req.body.responseUrl;
+
+  const checkUrl = statusUrlFromClient
+    ? `${statusUrlFromClient}?logs=1`
+    : `https://queue.fal.run/${SEEDDREAM_ENDPOINT}/requests/${requestId}/status?logs=1`;
+
+  console.log('[Imagineer/Result] SeedDream polling:', checkUrl);
+
+  const statusResponse = await fetch(checkUrl, { headers });
 
   if (!statusResponse.ok) {
     const errorText = await statusResponse.text();
-    console.error('[Imagineer/Result] SeedDream status error:', errorText);
+    console.error('[Imagineer/Result] SeedDream status error:', statusResponse.status, errorText);
     return res.status(statusResponse.status).json({ error: 'Failed to check SeedDream status', details: errorText });
   }
 
@@ -90,10 +96,10 @@ async function pollSeedDream(req, res, requestId) {
   console.log('[Imagineer/Result] SeedDream queue status:', queueStatus);
 
   if (queueStatus === 'COMPLETED') {
-    const resultResponse = await fetch(
-      `https://queue.fal.run/${SEEDDREAM_ENDPOINT}/requests/${requestId}`,
-      { headers }
-    );
+    const resultUrl = responseUrlFromClient
+      || `https://queue.fal.run/${SEEDDREAM_ENDPOINT}/requests/${requestId}`;
+
+    const resultResponse = await fetch(resultUrl, { headers });
 
     if (!resultResponse.ok) {
       return res.status(resultResponse.status).json({ error: 'Failed to fetch SeedDream result' });
@@ -112,11 +118,9 @@ async function pollSeedDream(req, res, requestId) {
     });
   }
 
-  const normalizedStatus = queueStatus === 'IN_QUEUE' ? 'processing' : queueStatus === 'IN_PROGRESS' ? 'processing' : 'processing';
-
   return res.status(200).json({
     success: true,
-    status: normalizedStatus,
+    status: 'processing',
     requestId,
     imageUrl: null,
     queuePosition: statusData.queue_position ?? null,
