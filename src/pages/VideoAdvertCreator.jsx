@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Video,
   Image,
@@ -23,10 +29,14 @@ import {
   Key,
   LogOut,
   Users,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 
+import BrandKitModal from '@/components/modals/BrandKitModal';
+import BrandAssetsModal from '@/components/modals/BrandAssetsModal';
+import StudioTimeline from '@/components/studio/StudioTimeline';
 import JumpStartModal from '@/components/modals/JumpStartModal';
 import JumpStartVideoStudioModal from '@/components/modals/JumpStartVideoStudioModal';
 import TripModal from '@/components/modals/TripModal';
@@ -40,24 +50,24 @@ import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 
-/**
- * VideoAdvertCreator - Main page for creating video adverts
- * 
- * Features:
- * - Generate images with AI (Imagineer)
- * - Create videos from images (JumpStart)
- * - Edit existing videos (Video Studio)
- * - Restyle videos with AI (Trip)
- * - Manage created videos
- */
+import { PLATFORMS, getPlatformList } from '@/lib/platforms';
+
 export default function VideoAdvertCreator() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [activeModal, setActiveModal] = useState(null);
   const [createdVideos, setCreatedVideos] = useState([]);
   const [createdImages, setCreatedImages] = useState([]);
-  const [selectedTab, setSelectedTab] = useState('create');
   const [showApiKeys, setShowApiKeys] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState('tiktok');
+  const [currentPreviewVideo, setCurrentPreviewVideo] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({
+    imageTools: true,
+    videoTools: true,
+    yourAssets: false,
+  });
+  const [showBrandKit, setShowBrandKit] = useState(false);
+  const [showBrandAssets, setShowBrandAssets] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -68,6 +78,13 @@ export default function VideoAdvertCreator() {
     }
   };
 
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   // Handle new video created
   const handleVideoCreated = (videoUrl, title = null, source = null) => {
     const newVideo = {
@@ -75,12 +92,13 @@ export default function VideoAdvertCreator() {
       url: videoUrl,
       title: title || `Video ${createdVideos.length + 1}`,
       createdAt: new Date().toISOString(),
-      source: source || activeModal || 'unknown'
+      source: source || activeModal || 'unknown',
+      durationInFrames: 300,
     };
     setCreatedVideos(prev => [newVideo, ...prev]);
+    setCurrentPreviewVideo(newVideo);
     toast.success('Video added to your collection!');
     
-    // Save to Supabase library
     apiFetch('/api/library/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -145,7 +163,6 @@ export default function VideoAdvertCreator() {
       createdAt: new Date().toISOString(),
     };
     setCreatedImages(prev => [newImage, ...prev]);
-    setSelectedTab('images');
     toast.success('Image generated successfully!');
 
     apiFetch('/api/library/save', {
@@ -180,6 +197,9 @@ export default function VideoAdvertCreator() {
   // Delete video
   const handleDeleteVideo = (id) => {
     setCreatedVideos(prev => prev.filter(v => v.id !== id));
+    if (currentPreviewVideo?.id === id) {
+      setCurrentPreviewVideo(null);
+    }
     toast.success('Video removed');
   };
 
@@ -201,31 +221,59 @@ export default function VideoAdvertCreator() {
     toast.success('Download started');
   };
 
+  const platformConfig = PLATFORMS[selectedPlatform];
+  const platformList = getPlatformList();
+
+  // Calculate preview dimensions based on platform
+  const getPreviewDimensions = () => {
+    if (!platformConfig) return { width: 400, height: 400 };
+    const [w, h] = platformConfig.defaultRatio.split(':').map(Number);
+    const maxHeight = 400;
+    const maxWidth = 300;
+    
+    let width = maxWidth;
+    let height = (maxWidth * h) / w;
+    
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = (maxHeight * w) / h;
+    }
+    
+    return { width, height };
+  };
+
+  const previewDimensions = getPreviewDimensions();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <header className="bg-slate-950 border-b border-slate-800 sticky top-0 z-40">
+        <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-[#2C666E] to-[#07393C] rounded-xl shadow-lg">
                 <Video className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Stitch Video Advert Creator</h1>
-                <p className="text-sm text-slate-500">Create stunning video ads with AI</p>
+                <h1 className="text-xl font-bold text-white">Stitch Studio</h1>
+                <p className="text-xs text-slate-400">Non-Linear Editor</p>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500 mr-2">
-                {createdVideos.length} videos • {createdImages.length} images
-              </span>
               <Button
-                variant="outline"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/campaigns')}
+                className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
+              >
+                Campaigns
+              </Button>
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowApiKeys(true)}
-                className="gap-1.5"
+                className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
               >
                 <Key className="w-3.5 h-3.5" /> API Keys
               </Button>
@@ -233,7 +281,7 @@ export default function VideoAdvertCreator() {
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="gap-1.5 text-slate-500 hover:text-red-600"
+                className="text-slate-400 hover:text-red-400 hover:bg-slate-800 gap-1.5"
                 title={user?.email}
               >
                 <LogOut className="w-3.5 h-3.5" /> Sign Out
@@ -243,343 +291,316 @@ export default function VideoAdvertCreator() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="bg-white p-1 shadow-sm border">
-            <TabsTrigger value="create" className="gap-2">
-              <Sparkles className="w-4 h-4" /> Create
-            </TabsTrigger>
-            <TabsTrigger value="library" className="gap-2">
-              <FolderOpen className="w-4 h-4" /> Library
-            </TabsTrigger>
-            <TabsTrigger value="videos" className="gap-2">
-              <Video className="w-4 h-4" /> Videos ({createdVideos.length})
-            </TabsTrigger>
-            <TabsTrigger value="images" className="gap-2">
-              <Image className="w-4 h-4" /> Images ({createdImages.length})
-            </TabsTrigger>
-          </TabsList>
+      {/* Main Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* LEFT PANEL - Asset & Generation Hub */}
+        <div className="w-56 bg-slate-800 border-r border-slate-700 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {/* Brand Kit and Brand Assets Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => setShowBrandKit(true)}
+                className="h-10 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium gap-1"
+              >
+                <Palette className="w-4 h-4" /> Brand Kit
+              </Button>
+              <Button
+                onClick={() => setShowBrandAssets(true)}
+                className="h-10 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium gap-1"
+              >
+                <Plus className="w-4 h-4" /> Assets
+              </Button>
+            </div>
 
-          {/* Create Tab */}
-          <TabsContent value="create" className="space-y-6">
-            {/* Image Tools */}
+            {/* Image Tools Section */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Image className="w-5 h-5 text-[#2C666E]" /> Image Tools
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {/* Generate Image */}
-                <div 
-                  onClick={() => setActiveModal('imagineer')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/30 to-[#2C666E]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
+              <button
+                onClick={() => toggleSection('imageTools')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <Image className="w-4 h-4 text-[#90DDF0]" /> Image Tools
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSections.imageTools ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.imageTools && (
+                <div className="mt-2 space-y-2">
+                  <div 
+                    onClick={() => setActiveModal('imagineer')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#90DDF0]" />
+                      <span className="text-xs font-medium text-slate-200">Imagineer</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Generate images</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Imagineer</h4>
-                  <p className="text-xs text-slate-500">Generate images from text</p>
-                </div>
 
-                {/* Edit Image */}
-                <div 
-                  onClick={() => setActiveModal('editimage')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Palette className="w-5 h-5 text-[#2C666E]" />
+                  <div 
+                    onClick={() => setActiveModal('editimage')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Palette className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-slate-200">Edit Image</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">AI image editing</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Edit Image</h4>
-                  <p className="text-xs text-slate-500">AI-powered image editing</p>
-                </div>
 
-                {/* Inpaint */}
-                <div 
-                  onClick={() => setActiveModal('inpaint')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/40 to-[#2C666E]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Eraser className="w-5 h-5 text-[#07393C]" />
+                  <div 
+                    onClick={() => setActiveModal('inpaint')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Eraser className="w-4 h-4 text-[#90DDF0]" />
+                      <span className="text-xs font-medium text-slate-200">Inpaint</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Remove/replace</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Inpaint</h4>
-                  <p className="text-xs text-slate-500">Remove or replace objects</p>
-                </div>
 
-                {/* Smoosh */}
-                <div 
-                  onClick={() => setActiveModal('smoosh')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Layers className="w-5 h-5 text-[#2C666E]" />
+                  <div 
+                    onClick={() => setActiveModal('smoosh')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-slate-200">Smoosh</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Compositor</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Smoosh</h4>
-                  <p className="text-xs text-slate-500">Infinite canvas compositor</p>
-                </div>
 
-                {/* Lens */}
-                <div 
-                  onClick={() => setActiveModal('lens')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/50 to-[#90DDF0]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Focus className="w-5 h-5 text-[#07393C]" />
+                  <div 
+                    onClick={() => setActiveModal('lens')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Focus className="w-4 h-4 text-[#90DDF0]" />
+                      <span className="text-xs font-medium text-slate-200">Lens</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Adjust angles</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Lens</h4>
-                  <p className="text-xs text-slate-500">Adjust viewing angles</p>
-                </div>
 
-                {/* Try Style */}
-                <div 
-                  onClick={() => setActiveModal('trystyle')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Shirt className="w-5 h-5 text-[#2C666E]" />
+                  <div 
+                    onClick={() => setActiveModal('trystyle')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shirt className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-slate-200">Try Style</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Virtual try-on</p>
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Try Style</h4>
-                  <p className="text-xs text-slate-500">Virtual clothing try-on</p>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Video Tools */}
+            {/* Video Tools Section */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Video className="w-5 h-5 text-[#07393C]" /> Video Tools
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {/* JumpStart */}
-                <div 
-                  onClick={() => setActiveModal('jumpstart')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#07393C]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/40 to-[#2C666E]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Play className="w-5 h-5 text-[#07393C]" />
-                  </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">JumpStart</h4>
-                  <p className="text-xs text-slate-500">Image to video</p>
-                </div>
-
-                {/* Video Edit */}
-                <div 
-                  onClick={() => setActiveModal('videostudio')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#90DDF0]/50"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/50 to-[#90DDF0]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Edit3 className="w-5 h-5 text-[#2C666E]" />
-                  </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Video Studio</h4>
-                  <p className="text-xs text-slate-500">Edit & extend videos</p>
-                </div>
-
-                {/* Trip */}
-                <div 
-                  onClick={() => setActiveModal('trip')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/40"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/30 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Wand2 className="w-5 h-5 text-[#07393C]" />
-                  </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Trip</h4>
-                  <p className="text-xs text-slate-500">Restyle videos with AI</p>
-                </div>
-
-                {/* Animate */}
-                <div 
-                  onClick={() => setActiveModal('animate')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/40"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#90DDF0]/30 to-[#07393C]/20 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <Users className="w-5 h-5 text-[#07393C]" />
-                  </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Animate</h4>
-                  <p className="text-xs text-slate-500">Character animation & replace</p>
-                </div>
-
-                {/* Library */}
-                <div 
-                  onClick={() => setActiveModal('library')}
-                  className="group bg-white rounded-xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-[#2C666E]/30"
-                >
-                  <div className="p-2 bg-gradient-to-br from-[#2C666E]/10 to-[#07393C]/10 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
-                    <FolderOpen className="w-5 h-5 text-[#2C666E]" />
-                  </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Library</h4>
-                  <p className="text-xs text-slate-500">Browse saved media</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Start Guide */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white">
-              <h3 className="text-2xl font-bold mb-4">Quick Start Guide</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-[#2C666E] rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
-                  <div>
-                    <h4 className="font-semibold mb-1">Generate Images</h4>
-                    <p className="text-slate-300 text-sm">Create AI images using the Imagineer tool with detailed prompts</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-[#07393C] rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
-                  <div>
-                    <h4 className="font-semibold mb-1">Create Videos</h4>
-                    <p className="text-slate-300 text-sm">Use JumpStart to turn your images into animated video ads</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-[#90DDF0] text-[#07393C] rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
-                  <div>
-                    <h4 className="font-semibold mb-1">Refine & Export</h4>
-                    <p className="text-slate-300 text-sm">Edit, extend, or restyle your videos for the perfect result</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Library Tab */}
-          <TabsContent value="library" className="h-[calc(100vh-200px)]">
-            <div className="bg-white rounded-2xl border shadow-sm h-full overflow-hidden">
-              <LibraryModal 
-                isOpen={false}
-                onClose={() => {}}
-                isEmbedded={true}
-                onSelect={(item) => {
-                  if (item.type === 'video') {
-                    const newVideo = {
-                      id: Date.now().toString(),
-                      url: item.url || item.video_url,
-                      title: item.title || `Video from Library`,
-                      createdAt: new Date().toISOString(),
-                      source: 'library'
-                    };
-                    setCreatedVideos(prev => [newVideo, ...prev]);
-                    toast.success('Video added to Videos tab!');
-                    setSelectedTab('videos');
-                  } else {
-                    const newImage = {
-                      id: Date.now().toString(),
-                      url: item.url || item.image_url,
-                      prompt: item.title || 'Library image',
-                      createdAt: new Date().toISOString(),
-                    };
-                    setCreatedImages(prev => [newImage, ...prev]);
-                    toast.success('Image added to Images tab!');
-                    setSelectedTab('images');
-                  }
-                }}
-              />
-            </div>
-          </TabsContent>
-
-          {/* Videos Tab */}
-          <TabsContent value="videos" className="space-y-6">
-            {createdVideos.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border">
-                <Video className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">No videos yet</h3>
-                <p className="text-slate-500 mb-6">Create your first video using the tools above</p>
-                <Button onClick={() => { setSelectedTab('create'); setActiveModal('jumpstart'); }}>
-                  <Plus className="w-4 h-4 mr-2" /> Create Your First Video
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {createdVideos.map(video => (
-                  <div key={video.id} className="bg-white rounded-2xl overflow-hidden border shadow-sm group">
-                    <div className="aspect-video bg-slate-900 relative">
-                      <video 
-                        src={video.url} 
-                        className="w-full h-full object-contain"
-                        controls
-                      />
-                      <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded text-xs text-white">
-                        {video.source}
-                      </div>
+              <button
+                onClick={() => toggleSection('videoTools')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <Video className="w-4 h-4 text-[#2C666E]" /> Video Tools
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSections.videoTools ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.videoTools && (
+                <div className="mt-2 space-y-2">
+                  <div 
+                    onClick={() => setActiveModal('jumpstart')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Play className="w-4 h-4 text-[#07393C]" />
+                      <span className="text-xs font-medium text-slate-200">JumpStart</span>
                     </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold text-slate-900 mb-1">{video.title}</h4>
-                      <p className="text-xs text-slate-500 mb-3">
-                        Created {new Date(video.createdAt).toLocaleDateString()}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button size="sm" className="flex-1 bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={() => handleDownloadVideo(video)}>
-                          <Download className="w-4 h-4 mr-1" /> Download to Device
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={video.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteVideo(video.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Image to video</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
-          {/* Images Tab */}
-          <TabsContent value="images" className="space-y-6">
-            {createdImages.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border">
-                <Image className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">No images yet</h3>
-                <p className="text-slate-500 mb-6">Generate your first image using Imagineer</p>
-                <Button onClick={() => { setSelectedTab('create'); setActiveModal('imagineer'); }}>
-                  <Plus className="w-4 h-4 mr-2" /> Generate Your First Image
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {createdImages.map(image => (
-                  <div key={image.id} className="bg-white rounded-2xl overflow-hidden border shadow-sm group">
-                    <div className="aspect-square bg-slate-100 relative overflow-hidden">
-                      <img 
-                        src={image.url} 
-                        alt={image.prompt}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <a 
-                          href={image.url} 
-                          download={`stitch-image-${image.id}.png`}
-                          className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-slate-900 bg-white rounded-lg hover:bg-slate-100"
-                          title="Download to Device"
+                  <div 
+                    onClick={() => setActiveModal('videostudio')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Edit3 className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-slate-200">Video Studio</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Edit & extend</p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveModal('trip')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-[#07393C]" />
+                      <span className="text-xs font-medium text-slate-200">Trip</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Restyle with AI</p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveModal('animate')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#07393C]" />
+                      <span className="text-xs font-medium text-slate-200">Animate</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Character anim</p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveModal('library')}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-slate-200">Library</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Browse media</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Your Assets Section */}
+            <div>
+              <button
+                onClick={() => toggleSection('yourAssets')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4 text-[#90DDF0]" /> Your Assets
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSections.yourAssets ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.yourAssets && (
+                <div className="mt-2 space-y-2">
+                  <div className="text-xs text-slate-400 px-3 py-2">
+                    <p>{createdVideos.length} videos</p>
+                    <p>{createdImages.length} images</p>
+                  </div>
+                  {createdVideos.length > 0 && (
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {createdVideos.slice(0, 5).map(video => (
+                        <div
+                          key={video.id}
+                          onClick={() => setCurrentPreviewVideo(video)}
+                          className={`text-xs p-2 rounded cursor-pointer transition-colors truncate ${
+                            currentPreviewVideo?.id === video.id
+                              ? 'bg-[#2C666E] text-white'
+                              : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                          }`}
+                          title={video.title}
                         >
-                          <Download className="w-4 h-4" />
-                        </a>
-                        <Button size="sm" variant="secondary" asChild title="Open in new tab">
-                          <a href={image.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setSelectedTab('create'); setActiveModal('jumpstart'); }} title="Create video">
-                          <Video className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteImage(image.id)} title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                          {video.title}
+                        </div>
+                      ))}
                     </div>
-                    <div className="p-3">
-                      <p className="text-xs text-slate-600 line-clamp-2">{image.prompt}</p>
-                    </div>
-                  </div>
-                ))}
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* CENTER PANEL - Canvas */}
+        <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden">
+          {/* Platform Selector */}
+          <div className="border-b border-slate-700 px-6 py-4 bg-slate-850">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-slate-100">Canvas</h2>
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  {platformList.map(platform => (
+                    <SelectItem key={platform.value} value={platform.value} className="text-slate-100">
+                      {platform.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Video Preview Area */}
+          <div className="flex-1 flex items-center justify-center bg-slate-900 p-6 overflow-auto">
+            {currentPreviewVideo ? (
+              <div className="flex flex-col items-center gap-4">
+                <div
+                  className="relative bg-black rounded-lg overflow-hidden border-4 border-yellow-400 shadow-2xl"
+                  style={{
+                    width: `${previewDimensions.width}px`,
+                    height: `${previewDimensions.height}px`,
+                  }}
+                >
+                  <video
+                    src={currentPreviewVideo.url}
+                    className="w-full h-full object-contain"
+                    controls
+                    autoPlay
+                    loop
+                  />
+                  {platformConfig?.safeZones && Object.keys(platformConfig.safeZones).length > 0 && (
+                    <div
+                      className="absolute border-2 border-yellow-400 opacity-50"
+                      style={{
+                        top: `${platformConfig.safeZones.top || 0}%`,
+                        bottom: `${platformConfig.safeZones.bottom || 0}%`,
+                        left: `${platformConfig.safeZones.left || 0}%`,
+                        right: `${platformConfig.safeZones.right || 0}%`,
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="text-center">
+                  <h3 className="text-slate-200 font-semibold">{currentPreviewVideo.title}</h3>
+                  <p className="text-sm text-slate-400">{platformConfig?.name}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {platformConfig?.defaultRatio} • {platformConfig?.maxDuration}s max
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <Video className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-300 mb-2">No video selected</h3>
+                <p className="text-slate-500 mb-4">Create or select a video from the left panel to preview</p>
+                <Button
+                  onClick={() => setActiveModal('jumpstart')}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-2"
+                >
+                  <Play className="w-4 h-4" /> Create Video
+                </Button>
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </main>
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM PANEL - Timeline */}
+      <StudioTimeline
+        clips={currentPreviewVideo ? [currentPreviewVideo] : createdVideos}
+        textOverlays={[]}
+        width={PLATFORMS[selectedPlatform]?.dimensions?.width || 1080}
+        height={PLATFORMS[selectedPlatform]?.dimensions?.height || 1920}
+      />
 
       {/* Modals */}
+      <BrandKitModal
+        isOpen={showBrandKit}
+        onClose={() => setShowBrandKit(false)}
+      />
+
+      <BrandAssetsModal
+        isOpen={showBrandAssets}
+        onClose={() => setShowBrandAssets(false)}
+      />
+
       <ImagineerModal 
         isOpen={activeModal === 'imagineer'} 
         onClose={() => setActiveModal(null)}
@@ -623,7 +644,6 @@ export default function VideoAdvertCreator() {
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
           
-          // Save to Supabase library
           apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -645,7 +665,6 @@ export default function VideoAdvertCreator() {
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
           
-          // Save to Supabase library
           apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -667,7 +686,6 @@ export default function VideoAdvertCreator() {
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
           
-          // Save to Supabase library
           apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -689,7 +707,6 @@ export default function VideoAdvertCreator() {
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Image added!');
           
-          // Save to Supabase library
           apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -708,9 +725,11 @@ export default function VideoAdvertCreator() {
               url: item.url || item.video_url,
               title: item.title || `Video from Library`,
               createdAt: new Date().toISOString(),
-              source: 'library'
+              source: 'library',
+              durationInFrames: 300,
             };
             setCreatedVideos(prev => [newVideo, ...prev]);
+            setCurrentPreviewVideo(newVideo);
             toast.success('Video added to your collection!');
           } else {
             const newImage = {
@@ -739,7 +758,6 @@ export default function VideoAdvertCreator() {
           setCreatedImages(prev => [newImage, ...prev]);
           toast.success('Try-on image added!');
           
-          // Save to Supabase library  
           apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

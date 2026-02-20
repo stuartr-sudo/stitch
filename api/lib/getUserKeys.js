@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
  *
  * @param {string} userId - The authenticated user's UUID
  * @param {string} [userEmail] - The authenticated user's email (for owner check)
- * @returns {{ falKey: string|null, wavespeedKey: string|null }}
+ * @returns {{ falKey: string|null, wavespeedKey: string|null, openaiKey: string|null, elevenlabsKey: string|null, huggingfaceKey: string|null }}
  */
 export async function getUserKeys(userId, userEmail) {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -20,7 +20,7 @@ export async function getUserKeys(userId, userEmail) {
 
   const { data, error } = await supabase
     .from('user_api_keys')
-    .select('fal_key, wavespeed_key')
+    .select('fal_key, wavespeed_key, openai_key, elevenlabs_key, huggingface_key')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -31,10 +31,13 @@ export async function getUserKeys(userId, userEmail) {
 
   const falKey = data?.fal_key || null;
   const wavespeedKey = data?.wavespeed_key || null;
+  const openaiKey = data?.openai_key || null;
+  const elevenlabsKey = data?.elevenlabs_key || null;
+  const huggingfaceKey = data?.huggingface_key || null;
 
   // If user has their own keys, use them
-  if (falKey || wavespeedKey) {
-    return { falKey, wavespeedKey };
+  if (falKey || wavespeedKey || openaiKey || elevenlabsKey || huggingfaceKey) {
+    return { falKey, wavespeedKey, openaiKey, elevenlabsKey, huggingfaceKey };
   }
 
   // Fall back to server env vars for the owner account
@@ -43,8 +46,11 @@ export async function getUserKeys(userId, userEmail) {
     return {
       falKey: process.env.FAL_KEY || null,
       wavespeedKey: process.env.WAVESPEED_API_KEY || null,
+      openaiKey: process.env.OPENAI_API_KEY || null,
+      elevenlabsKey: process.env.ELEVENLABS_API_KEY || null,
+      huggingfaceKey: process.env.HUGGINGFACE_API_KEY || null,
     };
   }
 
-  return { falKey, wavespeedKey };
+  return { falKey, wavespeedKey, openaiKey, elevenlabsKey, huggingfaceKey };
 }

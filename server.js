@@ -202,6 +202,79 @@ app.post('/api/library/save', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Brand Kit routes (with auth)
+app.post('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Background removal (with auth)
+app.post('/api/brand/remove-bg', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/remove-bg.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// LoRA training routes (with auth)
+app.post('/api/lora/train', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/train.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/lora/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Webhook - Blog to Ad (NO auth - uses webhook secret)
+app.post('/api/webhooks/content', async (req, res) => {
+  const handler = await loadApiRoute('webhooks/content.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Jobs status (with auth)
+app.post('/api/jobs/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Audio routes (with auth)
+app.post('/api/audio/voiceover', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/voiceover.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/music', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/music.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/captions', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/captions.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Campaigns list (with auth)
+app.get('/api/campaigns/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Serve Vite build output
 app.use(express.static(join(__dirname, 'dist')));
 

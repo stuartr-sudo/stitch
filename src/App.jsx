@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import VideoAdvertCreator from './pages/VideoAdvertCreator';
 import SetupKeys from './pages/SetupKeys';
+import CampaignsPage from './pages/CampaignsPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -61,6 +62,14 @@ function App() {
               <PublicRoute>
                 <SetupKeys />
               </PublicRoute>
+            }
+          />
+          <Route
+            path="/campaigns"
+            element={
+              <ProtectedRoute>
+                <CampaignsPage />
+              </ProtectedRoute>
             }
           />
         </Routes>
