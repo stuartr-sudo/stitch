@@ -145,6 +145,7 @@ export default function VideoAdvertCreator() {
       createdAt: new Date().toISOString(),
     };
     setCreatedImages(prev => [newImage, ...prev]);
+    setSelectedTab('images');
     toast.success('Image generated successfully!');
 
     apiFetch('/api/library/save', {
