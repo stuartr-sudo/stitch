@@ -104,10 +104,16 @@ export default function VideoAdvertCreator() {
         body: JSON.stringify(params),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`Server returned ${response.status}: ${text.substring(0, 200) || 'empty response'}`);
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate image');
+        throw new Error(data.error || data.details || 'Failed to generate image');
       }
 
       if (data.imageUrl) {

@@ -118,14 +118,29 @@ app.post('/api/animate/result', authenticateToken, async (req, res) => {
 
 // Imagineer routes (with auth)
 app.post('/api/imagineer/generate', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('imagineer/generate.js');
-  if (handler) return handler(req, res);
+  try {
+    const handler = await loadApiRoute('imagineer/generate.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/generate] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
 });
 
 app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('imagineer/result.js');
-  if (handler) return handler(req, res);
-  res.status(500).json({ error: 'Handler not found' });
+  try {
+    const handler = await loadApiRoute('imagineer/result.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/result] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
 });
 
 // Image utilities (with auth)

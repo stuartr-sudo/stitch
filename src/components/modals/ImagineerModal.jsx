@@ -250,48 +250,44 @@ export default function ImagineerModal({
     }
   }, [isOpen]);
 
-  // Build the combined prompt from all selections
   const buildPrompt = () => {
     const parts = [];
-    
-    if (subjectType) {
-      const subjectLabel = SUBJECT_TYPE.find(s => s.value === subjectType)?.label || subjectType;
-      parts.push(subjectLabel);
+
+    const subjectLabel = SUBJECT_TYPE.find(s => s.value === subjectType)?.label;
+    const desc = subjectDescription.trim();
+
+    if (subjectLabel && desc) {
+      parts.push(`A ${subjectLabel.toLowerCase()}: ${desc}`);
+    } else if (desc) {
+      parts.push(desc);
+    } else if (subjectLabel) {
+      parts.push(`A ${subjectLabel.toLowerCase()}`);
     }
-    
-    if (subjectDescription.trim()) {
-      parts.push(subjectDescription.trim());
-    }
-    
+
     if (elementsToInclude.trim()) {
       parts.push(`featuring ${elementsToInclude.trim()}`);
     }
-    
-    if (artisticStyle) {
-      const styleLabel = ARTISTIC_STYLE.find(s => s.value === artisticStyle)?.label || artisticStyle;
-      parts.push(`${styleLabel} style`);
-    }
-    
+
     if (lighting) {
       const lightingLabel = LIGHTING.find(l => l.value === lighting)?.label || lighting;
-      parts.push(`with ${lightingLabel}`);
+      parts.push(`${lightingLabel.toLowerCase()} lighting`);
     }
-    
+
     if (cameraAngle) {
       const angleLabel = CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label || cameraAngle;
-      parts.push(`${angleLabel}`);
+      parts.push(`shot from ${angleLabel.toLowerCase()}`);
     }
-    
+
     if (colorPalette) {
       const colorLabel = COLOR_PALETTE.find(c => c.value === colorPalette)?.label || colorPalette;
-      parts.push(`${colorLabel} color palette`);
+      parts.push(`${colorLabel.toLowerCase()} color palette`);
     }
-    
+
     if (mood) {
       const moodLabel = MOOD.find(m => m.value === mood)?.label || mood;
-      parts.push(`${moodLabel} mood`);
+      parts.push(`${moodLabel.toLowerCase()} atmosphere`);
     }
-    
+
     return parts.join(", ");
   };
 
