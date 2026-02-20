@@ -158,11 +158,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // Save to database
-    const table = type === 'video' ? 'generated_videos' : 'image_library_items';
-    const urlField = type === 'video' ? 'video_url' : 'image_url';
-
-    // Check for duplicates - look for existing entry with same URL for this user
+    // Check for duplicates with the final URL (may differ from original after upload)
     console.log(`[Library Save] Checking for duplicates in ${table}...`);
     let dupQuery2 = supabase
       .from(table)
