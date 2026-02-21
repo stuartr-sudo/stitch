@@ -577,17 +577,6 @@ export default function VideoAdvertCreator() {
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">Animate images with video</p>
                   </div>
-                  
-                  <div 
-                    onClick={() => setShowMotionTransfer(true)}
-                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-orange-400" />
-                      <span className="text-xs font-medium text-slate-200">Motion Transfer</span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">Animate images with video</p>
-                  </div>
 
                   <div 
                     onClick={() => setActiveModal('library')}
@@ -789,18 +778,6 @@ export default function VideoAdvertCreator() {
         onImport={(data) => {
           toast.success(`Imported: ${data.title}`);
           // Here you could automatically create text items or video tasks based on the blog content
-        }}
-      />
-
-      <AudioStudioModal
-        isOpen={showAudioStudio}
-        onClose={() => setShowAudioStudio(false)}
-        onAudioGenerated={(audioItem) => {
-          const nextStartAt = createdVideos.length > 0
-            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
-            : 0;
-          setCreatedVideos(prev => [...prev, { ...audioItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: 300, trackIndex: 1 }]);
-          toast.success('Audio added to timeline!');
         }}
       />
 

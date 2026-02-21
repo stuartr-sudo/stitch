@@ -141,6 +141,10 @@ export default async function handler(req, res) {
         negativePrompt,
         FAL_KEY
       });
+    } else if (model === 'ltx-audio-video') {
+      return await handleLtxAudioVideo(req, res, {
+        imageUrl, prompt, audioUrl: fields.audioUrl?.[0], FAL_KEY
+      });
     } else if (model === 'kling-video') {
       return await handleKlingVideo(req, res, {
         imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl, FAL_KEY
@@ -705,6 +709,50 @@ async function handleKlingVideo(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Kling API' });
+}
+
+async function handleLtxAudioVideo(req, res, params) {
+  const { imageUrl, prompt, audioUrl, FAL_KEY } = params;
+
+  if (!FAL_KEY) return res.status(400).json({ error: 'FAL API key not configured.' });
+  if (!audioUrl) return res.status(400).json({ error: 'Audio URL is required for this model.' });
+
+  const requestBody = {
+    audio_url: audioUrl,
+    image_url: imageUrl,
+    prompt: prompt || "",
+  };
+
+  const submitResponse = await fetch('https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    return res.status(500).json({ error: 'LTX API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+
+  if (data.video?.url) {
+    return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
+  }
+
+  if (data.request_id || data.requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: data.request_id || data.requestId,
+      model: 'ltx-audio-video',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from LTX API' });
 }
 
 export const config = {

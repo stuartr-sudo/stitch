@@ -29,28 +29,17 @@ export async function getUserKeys(userId, userEmail) {
     throw new Error('Failed to retrieve API keys');
   }
 
-  const falKey = data?.fal_key || null;
-  const wavespeedKey = data?.wavespeed_key || null;
-  const openaiKey = data?.openai_key || null;
-  const elevenlabsKey = data?.elevenlabs_key || null;
-  const huggingfaceKey = data?.huggingface_key || null;
+  const isOwner = process.env.OWNER_EMAIL
+    && userEmail
+    && userEmail.toLowerCase() === process.env.OWNER_EMAIL.toLowerCase();
 
-  // If user has their own keys, use them
-  if (falKey || wavespeedKey || openaiKey || elevenlabsKey || huggingfaceKey) {
-    return { falKey, wavespeedKey, openaiKey, elevenlabsKey, huggingfaceKey };
-  }
+  const envFallback = (dbVal, envVar) => dbVal || (isOwner ? (process.env[envVar] || null) : null);
 
-  // Fall back to server env vars for the owner account
-  const ownerEmail = process.env.OWNER_EMAIL;
-  if (ownerEmail && userEmail && userEmail.toLowerCase() === ownerEmail.toLowerCase()) {
-    return {
-      falKey: process.env.FAL_KEY || null,
-      wavespeedKey: process.env.WAVESPEED_API_KEY || null,
-      openaiKey: process.env.OPENAI_API_KEY || null,
-      elevenlabsKey: process.env.ELEVENLABS_API_KEY || null,
-      huggingfaceKey: process.env.HUGGINGFACE_API_KEY || null,
-    };
-  }
-
-  return { falKey, wavespeedKey, openaiKey, elevenlabsKey, huggingfaceKey };
+  return {
+    falKey:         envFallback(data?.fal_key,         'FAL_KEY'),
+    wavespeedKey:   envFallback(data?.wavespeed_key,   'WAVESPEED_API_KEY'),
+    openaiKey:      envFallback(data?.openai_key,      'OPENAI_API_KEY'),
+    elevenlabsKey:  envFallback(data?.elevenlabs_key,  'ELEVENLABS_API_KEY'),
+    huggingfaceKey: envFallback(data?.huggingface_key, 'HUGGINGFACE_API_KEY'),
+  };
 }

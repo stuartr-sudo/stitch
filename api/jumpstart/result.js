@@ -28,6 +28,8 @@ export default async function handler(req, res) {
       return await checkVeo3FirstLastResult(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-fast-extend') {
       return await checkVeo3FastExtendResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'ltx-audio-video') {
+      return await checkLtxResult(req, res, requestId, FAL_KEY);
     } else if (model === 'kling-video') {
       return await checkKlingResult(req, res, requestId, FAL_KEY);
     } else if (model === 'seedance-pro') {
@@ -826,5 +828,49 @@ async function getGrokEditResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'grok-edit',
+  });
+}
+
+/**
+ * Check LTX Audio-to-Video result
+ */
+async function checkLtxResult(req, res, requestId, FAL_KEY) {
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}/status`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    if (pollResponse.status === 404) {
+      const resultResponse = await fetch(
+        `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}`,
+        { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+      );
+      const data = await resultResponse.json();
+      if (data.video?.url) {
+        return res.status(200).json({ success: true, status: 'completed', requestId, videoUrl: data.video.url, model: 'ltx-audio-video' });
+      }
+    }
+    return res.status(pollResponse.status).json({ error: 'Failed to check status' });
+  }
+
+  const data = await pollResponse.json();
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    const resultResponse = await fetch(
+      `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}`,
+      { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+    );
+    const resultData = await resultResponse.json();
+    return res.status(200).json({ success: true, status: 'completed', requestId, videoUrl: resultData.video?.url, model: 'ltx-audio-video' });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'ltx-audio-video',
+    queuePosition: data.queue_position,
   });
 }

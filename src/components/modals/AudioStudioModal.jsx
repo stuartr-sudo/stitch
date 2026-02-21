@@ -14,15 +14,20 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
 const AUDIO_MODELS = [
-  { id: 'elevenlabs-tts', label: 'ElevenLabs Voice (TTS)', type: 'voice', provider: 'elevenlabs' },
-  { id: 'suno-music', label: 'Suno AI Music (v3.5)', type: 'music', provider: 'suno' },
-  { id: 'stable-audio', label: 'Stable Audio Open', type: 'music', provider: 'stability' },
-  { id: 'foley-gen', label: 'Foley Sound Effects (AudioGen)', type: 'sfx', provider: 'meta' }
+  // Hugging Face Models
+  { id: 'hf-parler-tts', label: 'Parler TTS (Hugging Face Voice)', type: 'voice', provider: 'huggingface' },
+  { id: 'hf-musicgen', label: 'MusicGen (Hugging Face Music)', type: 'music', provider: 'huggingface' },
+  // New Fal.ai Models
+  { id: 'fal-ai/elevenlabs/music', label: 'ElevenLabs Music (Fal.ai)', type: 'music', provider: 'fal' },
+  { id: 'fal-ai/minimax-music/v2', label: 'MiniMax Music v2 (Fal.ai)', type: 'music', provider: 'fal', requiresLyrics: true },
+  { id: 'beatoven/music-generation', label: 'Beatoven Music (Fal.ai)', type: 'music', provider: 'fal' },
+  { id: 'beatoven/sound-effect-generation', label: 'Beatoven Sound Effects (Fal.ai)', type: 'sfx', provider: 'fal' }
 ];
 
 export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) {
-  const [model, setModel] = useState('elevenlabs-tts');
+  const [model, setModel] = useState('hf-parler-tts');
   const [prompt, setPrompt] = useState('');
+  const [lyrics, setLyrics] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState(null);
 
@@ -36,64 +41,54 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
 
     setIsGenerating(true);
     setGeneratedUrl(null);
-    
+
     try {
+      // 1. Route to the correct backend endpoint based on the model type
+      const endpoint = selectedModelInfo.type === 'voice' 
+        ? '/api/audio/voiceover' 
+        : '/api/audio/music';
+
       toast.info(`Generating ${selectedModelInfo.type} via ${selectedModelInfo.label}...`);
 
-      const response = await apiFetch('/api/audio/generate', {
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: model,
-          prompt: prompt,
+          text: prompt, // For voice
+          prompt: prompt, // For music
+          provider: selectedModelInfo.provider,
+          model: model, // Pass the specific model ID
+          lyrics: lyrics || undefined,
         }),
       });
 
-      const result = await response.json();
+      // 2. Safely parse the response to prevent "Unexpected end of JSON" crashes
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        throw new Error(`Server returned invalid response: ${text.substring(0, 100)}`);
+      }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate audio');
+        throw new Error(data.error || 'Failed to generate audio');
       }
 
-      if (result.requestId) {
-        toast.info('Audio generation is being processed, please wait...');
-        const audioUrl = await pollForAudioResult(result.requestId);
-        if (audioUrl) {
-          setGeneratedUrl(audioUrl);
-          toast.success('Audio generated successfully!');
-        } else {
-          toast.error('Audio generation timed out or failed. Please try again.');
-        }
-      } else if (result.audioUrl) { // Direct generation for some models
-        setGeneratedUrl(result.audioUrl);
+      // 3. Set the generated URL
+      if (data.audioUrl) {
+        setGeneratedUrl(data.audioUrl);
         toast.success('Audio generated successfully!');
       } else {
-        throw new Error('No audio URL or request ID received.');
+        throw new Error('No audio URL returned from server');
       }
+
     } catch (error) {
       console.error('Audio generation error:', error);
-      toast.error(error.message || 'Failed to generate audio');
+      toast.error(error.message || 'Error generating audio');
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const pollForAudioResult = async (requestId, maxAttempts = 60) => {
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise(r => setTimeout(r, 3000));
-      try {
-        const res = await apiFetch(`/api/audio/result?requestId=${requestId}`);
-        const result = await res.json();
-        if (result.status === 'completed' && result.audioUrl) return result.audioUrl;
-        if (result.status === 'failed' || result.error) {
-          toast.error(result.error || 'Audio generation failed');
-          return null;
-        }
-      } catch (err) {
-        console.warn('Poll attempt failed:', err);
-      }
-    }
-    return null;
   };
 
   const handleInsert = () => {
@@ -147,6 +142,20 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
               className="bg-slate-800 border-slate-700 text-white h-24"
             />
           </div>
+
+          {selectedModelInfo?.requiresLyrics && (
+            <div className="space-y-2">
+              <Label className="text-slate-300">
+                Lyrics (use [Verse], [Chorus], [Bridge] tags)
+              </Label>
+              <Textarea
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                placeholder="[verse]\nYour lyrics here...\n[chorus]\nChorus lyrics..."
+                className="bg-slate-800 border-slate-700 text-white h-24"
+              />
+            </div>
+          )}
 
           {generatedUrl ? (
             <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 space-y-3">

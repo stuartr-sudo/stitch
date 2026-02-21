@@ -174,6 +174,20 @@ const VIDEO_MODELS = [
     requiresFirstLastFrame: true, // Special mode: requires both first AND last frame
   },
   { 
+    id: 'ltx-audio-video', 
+    label: '🎵 LTX 19B Audio-to-Video', 
+    shortLabel: 'LTX A2V',
+    description: 'Generates video driven by an audio track',
+    provider: 'fal',
+    durationOptions: [5], // Adapts to audio length usually
+    resolutions: ['720p'],
+    aspectRatios: ['16:9'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    requiresAudioUrl: true,
+  },
+  { 
     id: 'kling-video', 
     label: '🎬 Kling 2.5 Turbo Pro', 
     shortLabel: 'Kling',
@@ -408,6 +422,7 @@ export default function JumpStartModal({
   
   // Model-specific settings
   const [enableAudio, setEnableAudio] = useState(true);
+  const [drivingAudioUrl, setDrivingAudioUrl] = useState('');
   const [audioTranscript, setAudioTranscript] = useState('');
   const [cameraFixed, setCameraFixed] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -838,6 +853,15 @@ export default function JumpStartModal({
       
       if (currentModel.supportsCfgScale) {
         formData.append('cfgScale', cfgScale.toString());
+      }
+
+      if (currentModel.requiresAudioUrl) {
+        if (!drivingAudioUrl) {
+          setIsLoading(false);
+          toast.error("An Audio URL is required for this model.");
+          return;
+        }
+        formData.append('audioUrl', drivingAudioUrl);
       }
       
       // Multi-image support for Veo 3.1
@@ -1279,6 +1303,26 @@ export default function JumpStartModal({
                       accept="image/*"
                       className="hidden"
                       onChange={(e) => handleFileUpload(e, 'end')}
+                    />
+                  </div>
+                )}
+
+                {/* Driving Audio URL (LTX Audio-to-Video only) */}
+                {currentModel.requiresAudioUrl && (
+                  <div className="bg-white rounded-lg p-4 border border-purple-200 shadow-sm bg-purple-50/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Volume2 className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold text-gray-900">Driving Audio URL</h3>
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Required</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Paste a public URL to an MP3 or WAV file. The video will be generated to match this audio.
+                    </p>
+                    <Input
+                      value={drivingAudioUrl}
+                      onChange={(e) => setDrivingAudioUrl(e.target.value)}
+                      placeholder="https://example.com/my-audio.mp3"
+                      className="bg-white"
                     />
                   </div>
                 )}
