@@ -43,7 +43,9 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return res.status(response.status).json({ error: 'Fal.ai generation failed', details: errorText });
+        return res.status(response.status).json({ 
+          error: `Fal.ai generation failed: ${errorText.substring(0, 200)}` 
+        });
       }
 
       const data = await response.json();
@@ -55,6 +57,10 @@ export default async function handler(req, res) {
 
       // Download from Fal and upload to Supabase
       const audioResponse = await fetch(audioUrl);
+      if (!audioResponse.ok) {
+        console.error('[Music] Failed to download audio from Fal:', audioResponse.status);
+        return res.status(200).json({ success: true, audioUrl });
+      }
       const audioArrayBuffer = await audioResponse.arrayBuffer();
       const audioBuffer = Buffer.from(audioArrayBuffer);
 
@@ -82,7 +88,7 @@ export default async function handler(req, res) {
     const hfKey = keys.huggingfaceKey || process.env.HUGGINGFACE_API_KEY;
     if (!hfKey) return res.status(400).json({ error: 'HuggingFace API key not configured.' });
 
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-small', {
+    const response = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-medium', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${hfKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

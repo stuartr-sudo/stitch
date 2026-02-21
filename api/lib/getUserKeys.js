@@ -35,11 +35,18 @@ export async function getUserKeys(userId, userEmail) {
 
   const envFallback = (dbVal, envVar) => dbVal || (isOwner ? (process.env[envVar] || null) : null);
 
-  return {
+  const result = {
     falKey:         envFallback(data?.fal_key,         'FAL_KEY'),
     wavespeedKey:   envFallback(data?.wavespeed_key,   'WAVESPEED_API_KEY'),
     openaiKey:      envFallback(data?.openai_key,      'OPENAI_API_KEY'),
     elevenlabsKey:  envFallback(data?.elevenlabs_key,  'ELEVENLABS_API_KEY'),
     huggingfaceKey: envFallback(data?.huggingface_key, 'HUGGINGFACE_API_KEY'),
   };
+
+  console.log('[getUserKeys] isOwner:', isOwner, '| email:', userEmail, '| keys found:', {
+    falKey: !!result.falKey,
+    huggingfaceKey: !!result.huggingfaceKey,
+  });
+
+  return result;
 }
