@@ -83,15 +83,35 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
 
     setIsTraining(true);
     try {
-      const imageUrls = uploadedImages.map(img => processedImages[img.id] || img.dataUrl);
+      toast.info('Uploading images to secure storage...');
+      const publicUrls = [];
+      
+      for (const img of uploadedImages) {
+        const base64Data = processedImages[img.id] || img.dataUrl;
+        const uploadRes = await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            url: base64Data, 
+            type: 'image', 
+            title: 'LoRA Training Data', 
+            source: 'lora-trainer' 
+          }),
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) {
+          publicUrls.push(uploadData.url);
+        }
+      }
 
+      toast.info('Starting AI training...');
       const response = await apiFetch('/api/lora/train', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: loraName.trim(),
           trigger_word: triggerWord.trim(),
-          image_urls: imageUrls,
+          image_urls: publicUrls,
         }),
       });
 

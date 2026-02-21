@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye, Cpu } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const IMAGE_MODELS = [
   { value: "wavespeed", label: "Nano Banana Pro", description: "Fast, high-quality image generation" },
   { value: "seeddream", label: "SeedDream 4.5", description: "ByteDance stylized generation" },
+  { value: "fal-flux", label: "Flux Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
 ];
 
 // Dropdown options
@@ -230,6 +232,21 @@ export default function ImagineerModal({
   const [generating, setGenerating] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  
+  const [availableLoras, setAvailableLoras] = useState([]);
+  const [selectedLora, setSelectedLora] = useState("");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (isOpen && user) {
+      import('@/lib/supabase').then(({ supabase }) => {
+        if (supabase) {
+          supabase.from('brand_loras').select('*').eq('user_id', user.id).eq('status', 'ready')
+            .then(({ data }) => setAvailableLoras(data || []));
+        }
+      });
+    }
+  }, [isOpen, user]);
 
   // Reset when modal opens
   useEffect(() => {
@@ -303,11 +320,14 @@ export default function ImagineerModal({
     setGenerating(true);
     
     try {
+      const loraUrl = availableLoras.find(l => l.id === selectedLora)?.fal_model_url;
+
       await onGenerate({ 
         prompt: generatedPrompt, 
         style: artisticStyle, 
         dimensions,
         model: selectedModel,
+        loraUrl: loraUrl,
       });
       onClose();
     } catch (error) {
@@ -414,6 +434,27 @@ export default function ImagineerModal({
               />
             </div>
           </div>
+
+          {/* Custom Brand LoRAs */}
+          {selectedModel === 'fal-flux' && availableLoras.length > 0 && (
+            <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+              <h3 className="text-sm font-semibold text-[#07393C] pb-1">Brand Products (LoRAs)</h3>
+              <Select value={selectedLora} onValueChange={setSelectedLora}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select a trained product..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none_">None</SelectItem>
+                  {availableLoras.map((lora) => (
+                    <SelectItem key={lora.id} value={lora.id}>
+                      {lora.name} (Trigger: {lora.trigger_word})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">Include the trigger word in your description above!</p>
+            </div>
+          )}
 
           {/* Output Settings */}
           <div className="space-y-3">

@@ -438,7 +438,7 @@ export default function JumpStartModal({
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
+        clearTimeout(pollIntervalRef.current);
       }
     };
   }, []);
@@ -626,7 +626,7 @@ export default function JumpStartModal({
 
   const stopPolling = () => {
     if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
+      clearTimeout(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
   };
@@ -708,12 +708,16 @@ export default function JumpStartModal({
         
         // Notify parent if callback provided (parent handles library save)
         if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart');
+          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart', duration);
         }
       } else if (data.status === 'failed') {
         stopPolling();
         setIsLoading(false);
         toast.error(data.error || 'Video generation failed');
+      } else {
+        pollIntervalRef.current = setTimeout(() => {
+          pollForResult(requestId, model);
+        }, 3000);
       }
     } catch (error) {
       console.error('Poll error:', error);
@@ -810,15 +814,11 @@ export default function JumpStartModal({
         
         // Notify parent if callback provided (parent handles library save)
         if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart');
+          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart', duration);
         }
       } else if (data.requestId) {
-        // Start polling
         setLoadingMessage(`${modelName} is processing...`);
         pollForResult(data.requestId, videoModel);
-        pollIntervalRef.current = setInterval(() => {
-          pollForResult(data.requestId, videoModel);
-        }, 3000);
       } else {
         throw new Error('No request ID returned');
       }

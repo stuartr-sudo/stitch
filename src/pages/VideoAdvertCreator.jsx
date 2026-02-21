@@ -86,14 +86,16 @@ export default function VideoAdvertCreator() {
   };
 
   // Handle new video created
-  const handleVideoCreated = (videoUrl, title = null, source = null) => {
+  const handleVideoCreated = (videoUrl, title = null, source = null, durationInSeconds = 5) => {
+    const frames = durationInSeconds * 30;
+
     const newVideo = {
       id: Date.now().toString(),
       url: videoUrl,
       title: title || `Video ${createdVideos.length + 1}`,
       createdAt: new Date().toISOString(),
       source: source || activeModal || 'unknown',
-      durationInFrames: 300,
+      durationInFrames: frames,
     };
     setCreatedVideos(prev => [newVideo, ...prev]);
     setCurrentPreviewVideo(newVideo);

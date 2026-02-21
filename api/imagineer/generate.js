@@ -123,6 +123,9 @@ export default async function handler(req, res) {
     if (model === 'seeddream') {
       return handleSeedDream(req, res, enhancedPrompt, dimensions);
     }
+    if (model === 'fal-flux') {
+      return handleFalFlux(req, res, enhancedPrompt, dimensions, req.body.loraUrl);
+    }
     return handleWavespeed(req, res, enhancedPrompt, dimensions);
   } catch (error) {
     console.error('[Imagineer] Server Error:', error);
@@ -225,4 +228,59 @@ async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
   }
 
   return res.status(500).json({ error: 'Unexpected SeedDream response format' });
+}
+
+async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai key not configured.' });
+
+  const sizeMap = {
+    '16:9': 'landscape_16_9',
+    '9:16': 'portrait_16_9',
+    '1:1': 'square_hd',
+    '4:3': 'landscape_4_3',
+    '3:4': 'portrait_4_3'
+  };
+
+  const payload = {
+    prompt: enhancedPrompt,
+    image_size: sizeMap[dimensions] || 'landscape_16_9',
+    num_images: 1
+  };
+
+  if (loraUrl) {
+    payload.loras = [{ path: loraUrl, scale: 1 }];
+  }
+
+  const response = await fetch('https://queue.fal.run/fal-ai/flux/dev', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return res.status(response.status).json({ error: 'Flux API error', details: errorText });
+  }
+
+  const data = await response.json();
+  
+  if (data.images?.[0]?.url) {
+    return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+  }
+
+  if (data.request_id) {
+    return res.status(200).json({
+      success: true,
+      requestId: data.request_id,
+      model: 'fal-flux',
+      status: 'processing',
+      pollEndpoint: '/api/imagineer/result',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected Flux response' });
 }

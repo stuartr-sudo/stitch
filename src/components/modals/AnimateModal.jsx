@@ -94,12 +94,12 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
 
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
     };
   }, []);
 
   const handleClose = () => {
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
     onClose();
   };
 
@@ -150,17 +150,22 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       const data = await response.json();
 
       if (data.status === 'completed' && data.videoUrl) {
-        clearInterval(pollIntervalRef.current);
+        clearTimeout(pollIntervalRef.current);
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
         setCurrentStep(3);
         toast.success('Video generated successfully!');
       } else if (data.status === 'failed') {
-        clearInterval(pollIntervalRef.current);
+        clearTimeout(pollIntervalRef.current);
         setIsGenerating(false);
         toast.error('Generation failed: ' + (data.error || 'Unknown error'));
-      } else if (data.queuePosition) {
-        setGenerationStatus(`In queue (position ${data.queuePosition})...`);
+      } else {
+        if (data.queuePosition) {
+          setGenerationStatus(`In queue (position ${data.queuePosition})...`);
+        }
+        pollIntervalRef.current = setTimeout(() => {
+          pollForResult(id, currentMode);
+        }, 5000);
       }
     } catch (error) {
       console.error('[Animate] Polling error:', error);
@@ -201,11 +206,7 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       if (data.requestId) {
         setRequestId(data.requestId);
         setGenerationStatus('Animating your video (2-5 minutes)...');
-        const capturedMode = mode;
-        pollIntervalRef.current = setInterval(
-          () => pollForResult(data.requestId, capturedMode),
-          5000
-        );
+        pollForResult(data.requestId, mode);
       }
     } catch (error) {
       console.error('[Animate] Generation error:', error);
