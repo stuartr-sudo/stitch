@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 const AUDIO_MODELS = [
   { id: 'elevenlabs-tts', label: 'ElevenLabs Voice (TTS)', type: 'voice', provider: 'elevenlabs' },
@@ -104,6 +104,7 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
         type: 'audio',
         source: model
       });
+      setPrompt(''); // Clear the prompt after successful generation
       onClose();
     }
   };
