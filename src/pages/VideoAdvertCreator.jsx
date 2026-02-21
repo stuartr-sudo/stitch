@@ -314,19 +314,20 @@ export default function VideoAdvertCreator() {
   // Calculate preview dimensions based on platform
   const getPreviewDimensions = () => {
     if (!platformConfig) return { width: 400, height: 400 };
-    const [w, h] = platformConfig.defaultRatio.split(':').map(Number);
-    const maxHeight = 600; // Increased for better canvas size
-    const maxWidth = 1000; // Increased for better canvas size
-    
-    let width = maxWidth;
-    let height = (maxWidth * h) / w;
-    
-    if (height > maxHeight) {
-      height = maxHeight;
-      width = (maxHeight * w) / h;
-    }
-    
-    return { width, height };
+      const [w, h] = platformConfig.defaultRatio.split(':').map(Number);
+      const aspectRatio = platformConfig.defaultRatio;
+      const maxHeight = 600; // Increased for better canvas size
+      const maxWidth = 1000; // Increased for better canvas size
+
+      let width = maxWidth;
+      let height = (maxWidth * h) / w;
+
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = (maxHeight * w) / h;
+      }
+
+      return { width, height, aspectRatio };
   };
 
   const previewDimensions = getPreviewDimensions();
@@ -686,6 +687,7 @@ export default function VideoAdvertCreator() {
               style={{
                 width: previewDimensions.width,
                 height: previewDimensions.height,
+                aspectRatio: previewDimensions.aspectRatio,
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: 'center center'
               }}
