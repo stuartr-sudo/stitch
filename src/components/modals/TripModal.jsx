@@ -267,14 +267,15 @@ export default function TripModal({
     setGenerationStatus('Saving to your library...');
 
     try {
-      const saveResponse = await apiFetch('/api/jumpstart/save-video', {
+      const saveResponse = await apiFetch('/api/library/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          videoUrl: generatedVideoUrl,
-          prompt: prompt || 'Restyled Video',
-          username,
-          model: 'lucy-restyle'
+          url: generatedVideoUrl,
+          type: 'video',
+          title: prompt || 'Restyled Video',
+          prompt: prompt,
+          source: 'trip-restyle'
         }),
       });
 
@@ -284,7 +285,7 @@ export default function TripModal({
       setLastSavedVideoUrl(saveData.url);
       
       const newVideo = {
-        id: uuidv4(),
+        id: saveData.id,
         title: prompt || 'Restyled Video',
         url: saveData.url,
         source: 'trip-restyle',
