@@ -47,6 +47,14 @@ export const PLATFORMS = {
     dimensions: { width: 1080, height: 1920 },
     safeZones: { bottom: 20 },
   },
+  youtube_video: {
+    name: 'YouTube Video (Landscape)',
+    ratios: ['16:9'],
+    defaultRatio: '16:9',
+    maxDuration: 3600,
+    dimensions: { width: 1920, height: 1080 },
+    safeZones: {},
+  },
   youtube_shorts: {
     name: 'YouTube Shorts',
     ratios: ['9:16'],

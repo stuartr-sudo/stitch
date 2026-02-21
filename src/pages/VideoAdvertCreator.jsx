@@ -43,6 +43,8 @@ import BrandAssetsModal from '@/components/modals/BrandAssetsModal';
 import CampaignSelectModal from '@/components/modals/CampaignSelectModal';
 import PublishModal from '@/components/modals/PublishModal';
 import AudioStudioModal from '@/components/modals/AudioStudioModal';
+import DraggableCanvasItem from '@/components/canvas/DraggableCanvasItem';
+import ImportBlogModal from '@/components/modals/ImportBlogModal';
 import StudioTimeline from '@/components/studio/StudioTimeline';
 import JumpStartModal from '@/components/modals/JumpStartModal';
 import JumpStartVideoStudioModal from '@/components/modals/JumpStartVideoStudioModal';
@@ -59,101 +61,6 @@ import ApiKeysModal from '@/components/modals/ApiKeysModal';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
-
-// Inline component for text dragging and editing
-function DraggableTextItem({ item, selectedId, onSelect, onUpdate }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(item.content);
-  const [dragging, setDragging] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!dragging) return;
-    
-    const handleMouseMove = (e) => {
-      if (!containerRef.current) return;
-      const parent = containerRef.current.parentElement;
-      const rect = parent.getBoundingClientRect();
-      // Calculate % based on mouse pos
-      let x = ((e.clientX - rect.left) / rect.width) * 100;
-      let y = ((e.clientY - rect.top) / rect.height) * 100;
-      
-      // Keep within bounds
-      x = Math.max(0, Math.min(x, 90));
-      y = Math.max(0, Math.min(y, 90));
-
-      onUpdate(item.id, {
-        style: { ...item.style, x, y }
-      });
-    };
-
-    const handleMouseUp = () => setDragging(false);
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [dragging, item, onUpdate]);
-
-  if (isEditing) {
-    return (
-      <input
-        autoFocus
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onBlur={() => {
-          setIsEditing(false);
-          onUpdate(item.id, { content });
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            setIsEditing(false);
-            onUpdate(item.id, { content });
-          }
-        }}
-        className="absolute bg-black/50 border border-blue-400 text-white p-1 rounded z-50 focus:outline-none"
-        style={{
-          left: `${item.style?.x ?? 10}%`,
-          top: `${item.style?.y ?? 80}%`,
-          fontSize: item.style?.fontSize ?? '32px',
-          fontWeight: item.style?.fontWeight ?? 'bold',
-          color: item.style?.color ?? '#ffffff',
-        }}
-      />
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'absolute',
-        left: `${item.style?.x ?? 10}%`,
-        top: `${item.style?.y ?? 80}%`,
-        color: item.style?.color ?? '#ffffff',
-        fontSize: item.style?.fontSize ?? '32px',
-        fontWeight: item.style?.fontWeight ?? 'bold',
-        textShadow: item.style?.textShadow ?? '2px 2px 4px rgba(0,0,0,0.8)',
-        zIndex: 50,
-        cursor: dragging ? 'grabbing' : 'grab'
-      }}
-      onMouseDown={(e) => {
-        e.stopPropagation();
-        onSelect(item.id);
-        setDragging(true);
-      }}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        setIsEditing(true);
-      }}
-      className={`select-none ${selectedId === item.id ? 'ring-2 ring-blue-500 border border-dashed border-blue-400 p-1 bg-blue-500/10' : ''}`}
-    >
-      {item.content}
-    </div>
-  );
-}
 
 export default function VideoAdvertCreator() {
   const navigate = useNavigate();
@@ -174,6 +81,7 @@ export default function VideoAdvertCreator() {
   const [showBrandAssets, setShowBrandAssets] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showImportBlog, setShowImportBlog] = useState(false);
   const [showAudioStudio, setShowAudioStudio] = useState(false);
 
   // Editor & Timeline state
@@ -455,6 +363,9 @@ export default function VideoAdvertCreator() {
                 </SelectContent>
               </Select>
               <div className="h-4 w-px bg-slate-700 hidden md:block mx-1"></div>
+              <Button size="sm" onClick={() => setShowImportBlog(true)} className="h-8 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                <Link className="w-3.5 h-3.5 mr-1.5" /> Import URL
+              </Button>
               <Button size="sm" onClick={() => setShowCampaignModal(true)} className="h-8 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
                 Save to Campaign
               </Button>
@@ -680,14 +591,41 @@ export default function VideoAdvertCreator() {
               )}
             </div>
 
-            {/* Your Assets Section */}
+            {/* Audio Tools Section */}
+            <div>
+              <button
+                onClick={() => toggleSection('audioTools')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <Music className="w-4 h-4 text-green-500" /> Audio Tools
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSections.audioTools ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.audioTools && (
+                <div className="mt-2 space-y-2">
+                  <div
+                    onClick={() => setShowAudioStudio(true)}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-4 h-4 text-green-400" />
+                      <span className="text-xs font-medium text-slate-200">Audio Studio</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Voiceovers & Music</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Current Project Assets Section */}
             <div>
               <button
                 onClick={() => toggleSection('yourAssets')}
                 className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
               >
                 <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <FolderOpen className="w-4 h-4 text-[#90DDF0]" /> Your Assets
+                  <FolderOpen className="w-4 h-4 text-[#90DDF0]" /> Current Project
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSections.yourAssets ? 'rotate-180' : ''}`} />
               </button>
@@ -744,18 +682,6 @@ export default function VideoAdvertCreator() {
                 const isActive = currentTime >= (item.startAt || 0) && currentTime < (item.startAt || 0) + (item.durationInFrames || 150);
                 if (!isActive) return null;
 
-                if (item.type === 'text') {
-                  return (
-                    <DraggableTextItem
-                      key={item.id}
-                      item={item}
-                      selectedId={selectedTimelineId}
-                      onSelect={setSelectedTimelineId}
-                      onUpdate={(id, updates) => setCreatedVideos(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))}
-                    />
-                  );
-                }
-
                 if (item.type === 'audio') {
                   return (
                     <audio
@@ -774,15 +700,14 @@ export default function VideoAdvertCreator() {
                   );
                 }
 
+                // Render both text and video as draggable canvas items
                 return (
-                  <video
+                  <DraggableCanvasItem
                     key={item.id}
-                    src={item.url}
-                    autoPlay
-                    muted
-                    loop
-                    className={`absolute inset-0 w-full h-full object-cover ${selectedTimelineId === item.id ? 'opacity-100' : 'opacity-95'}`}
-                    style={{ zIndex: 10 }}
+                    item={item}
+                    selectedId={selectedTimelineId}
+                    onSelect={setSelectedTimelineId}
+                    onUpdate={(id, updates) => setCreatedVideos(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))}
                   />
                 );
               })}
@@ -855,6 +780,27 @@ export default function VideoAdvertCreator() {
       <PublishModal
         isOpen={showPublishModal}
         onClose={() => setShowPublishModal(false)}
+      />
+
+      <ImportBlogModal
+        isOpen={showImportBlog}
+        onClose={() => setShowImportBlog(false)}
+        onImport={(data) => {
+          toast.success(`Imported: ${data.title}`);
+          // Here you could automatically create text items or video tasks based on the blog content
+        }}
+      />
+
+      <AudioStudioModal
+        isOpen={showAudioStudio}
+        onClose={() => setShowAudioStudio(false)}
+        onAudioGenerated={(audioItem) => {
+          const nextStartAt = createdVideos.length > 0
+            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+            : 0;
+          setCreatedVideos(prev => [...prev, { ...audioItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: 300, trackIndex: 1 }]);
+          toast.success('Audio added to timeline!');
+        }}
       />
 
       <AudioStudioModal
