@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import VideoAdvertCreator from './pages/VideoAdvertCreator';
 import SetupKeys from './pages/SetupKeys';
 import CampaignsPage from './pages/CampaignsPage';
+import CampaignsNewPage from './pages/CampaignsNewPage'; // New import
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -69,6 +70,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CampaignsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/campaigns/new"
+            element={
+              <ProtectedRoute>
+                <CampaignsNewPage />
               </ProtectedRoute>
             }
           />

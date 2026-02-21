@@ -63,7 +63,10 @@ export default function CampaignSelectModal({ isOpen, onClose, onSave }) {
               </div>
             ) : campaigns.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-sm">
-                No campaigns found. Create one from the Campaigns page.
+                No campaigns found.
+                <Button variant="outline" onClick={() => window.location.href = '/campaigns'} className="mt-4 bg-slate-700 hover:bg-slate-600 text-slate-200">
+                  Create New Campaign
+                </Button>
               </div>
             ) : (
               campaigns.map(camp => (

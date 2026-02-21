@@ -313,8 +313,8 @@ export default function VideoAdvertCreator() {
   const getPreviewDimensions = () => {
     if (!platformConfig) return { width: 400, height: 400 };
     const [w, h] = platformConfig.defaultRatio.split(':').map(Number);
-    const maxHeight = 400;
-    const maxWidth = 300;
+    const maxHeight = 600; // Increased for better canvas size
+    const maxWidth = 1000; // Increased for better canvas size
     
     let width = maxWidth;
     let height = (maxWidth * h) / w;
