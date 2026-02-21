@@ -24,6 +24,9 @@ export default async function handler(req, res) {
     if (model === 'seeddream') {
       return pollSeedDream(req, res, requestId);
     }
+    if (model === 'fal-flux') {
+      return pollFalFlux(req, res, requestId);
+    }
     return pollWavespeed(req, res, requestId);
   } catch (error) {
     console.error('[Imagineer/Result] Error:', error);
@@ -124,5 +127,45 @@ async function pollSeedDream(req, res, requestId) {
     requestId,
     imageUrl: null,
     queuePosition: statusData.queue_position ?? null,
+  });
+}
+
+async function pollFalFlux(req, res, requestId) {
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
+
+  const headers = { 'Authorization': `Key ${FAL_KEY}` };
+  const checkUrl = `https://queue.fal.run/fal-ai/flux/dev/requests/${requestId}/status?logs=1`;
+
+  const statusResponse = await fetch(checkUrl, { headers });
+  if (!statusResponse.ok) {
+    const errorText = await statusResponse.text();
+    return res.status(statusResponse.status).json({ error: 'Status check failed', details: errorText });
+  }
+
+  const statusData = await statusResponse.json();
+  
+  if (statusData.status === 'COMPLETED') {
+    const resultUrl = `https://queue.fal.run/fal-ai/flux/dev/requests/${requestId}`;
+    const resultResponse = await fetch(resultUrl, { headers });
+    
+    if (!resultResponse.ok) {
+      return res.status(resultResponse.status).json({ error: 'Failed to fetch Flux result' });
+    }
+
+    const resultData = await resultResponse.json();
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      imageUrl: resultData.images?.[0]?.url || null,
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    imageUrl: null,
   });
 }
