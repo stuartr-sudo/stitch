@@ -32,6 +32,22 @@ import { apiFetch } from '@/lib/api';
 
 // Extend Model Options
 const EXTEND_MODELS = [
+  { 
+    id: 'luma-ray', 
+    label: '✨ Luma Dream Machine (Ray)', 
+    description: 'High fidelity text+image to video',
+    resolutions: ['720p', '1080p'],
+    supportsAudio: false,
+    supportsCameraFixed: true,
+  },
+  { 
+    id: 'runway-gen3', 
+    label: '🏃 Runway Gen-3 Alpha', 
+    description: 'Cinematic quality motion',
+    resolutions: ['720p'],
+    supportsAudio: false,
+    supportsCameraFixed: true,
+  },
   {
     id: 'seedance',
     label: '🎬 Bytedance Seedance 1.5',
