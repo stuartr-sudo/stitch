@@ -58,6 +58,7 @@ import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
+import MotionTransferModal from '@/components/modals/MotionTransferModal';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -1003,6 +1004,17 @@ export default function VideoAdvertCreator() {
       <ApiKeysModal
         isOpen={showApiKeys}
         onClose={() => setShowApiKeys(false)}
+      />
+
+      <MotionTransferModal
+        isOpen={showMotionTransfer}
+        onClose={() => setShowMotionTransfer(false)}
+        onMotionGenerated={(motionItem) => {
+          const nextStartAt = createdVideos.length > 0
+            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
+          setCreatedVideos(prev => [...prev, { ...motionItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: 300, trackIndex: 0 }]);
+          toast.success('Motion transfer added to timeline!');
+        }}
       />
     </div>
   );
