@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, Globe, Video, Instagram, Youtube, Twitter } from 'lucide-react';
+import { Share2, Globe, Video, Instagram, Youtube, Twitter, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -41,14 +41,16 @@ export default function PublishModal({ isOpen, onClose }) {
           <DialogTitle>Publish Video</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-slate-400 mb-6">Select the channels where you want to publish this video. This will render the final high-quality output and automatically upload it.</p>
+          <p className="text-sm text-slate-400 mb-6">Select the channels where you want to publish this video. We will stitch your timeline tracks together via Fal.ai FFMPEG, save the final render to your Library, and publish it.</p>
           
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
               { id: 'TikTok', icon: <Video className="w-5 h-5" /> },
               { id: 'Instagram Reels', icon: <Instagram className="w-5 h-5" /> },
               { id: 'YouTube Shorts', icon: <Youtube className="w-5 h-5" /> },
-              { id: 'X (Twitter)', icon: <Twitter className="w-5 h-5" /> }
+              { id: 'YouTube Landscape', icon: <Youtube className="w-5 h-5" /> },
+              { id: 'X (Twitter)', icon: <Twitter className="w-5 h-5" /> },
+              { id: 'LinkedIn', icon: <Linkedin className="w-5 h-5" /> }
             ].map(channel => (
               <button
                 key={channel.id}

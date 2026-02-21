@@ -235,7 +235,12 @@ export default function TripModal({
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        throw new Error('Server returned an invalid response (500 Error). Please check your API keys or try again.');
+      }
       if (!response.ok) throw new Error(data.error || 'Failed to start processing');
 
       if (data.status === 'completed' && data.videoUrl) {

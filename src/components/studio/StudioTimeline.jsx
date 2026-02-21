@@ -150,7 +150,7 @@ export default function StudioTimeline({ items, onUpdateItem, onDeleteItem, onSe
               {selectedId === item.id && (
                 <button
                   className="absolute right-3 p-0.5 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors z-50"
-                  onClick={(e) => { e.stopPropagation(); onDeleteItem(item.id); }}
+                  onMouseDown={(e) => { e.stopPropagation(); onDeleteItem(item.id); }}
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

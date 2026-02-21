@@ -75,7 +75,7 @@ export default function VideoAdvertCreator() {
     imageTools: true,
     videoTools: true,
     yourAssets: false,
-    audioTools: false,
+    audioTools: true,
   });
   const [showBrandKit, setShowBrandKit] = useState(false);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
@@ -367,19 +367,7 @@ export default function VideoAdvertCreator() {
                 <Link className="w-3.5 h-3.5 mr-1.5" /> Import URL
               </Button>
               <Button size="sm" onClick={() => setShowCampaignModal(true)} className="h-8 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
-                Save to Campaign
-              </Button>
-              <Button size="sm" onClick={() => {
-                toast.promise(
-                  new Promise(resolve => setTimeout(resolve, 4000)),
-                  {
-                    loading: 'Stitching timeline via Fal.ai FFMPEG...',
-                    success: 'Timeline stitched successfully! Video ready for download.',
-                    error: 'Failed to stitch video'
-                  }
-                );
-              }} className="h-8 bg-blue-600 hover:bg-blue-700 text-white">
-                Export (Stitch)
+                Save Project
               </Button>
               <Button size="sm" onClick={() => setShowPublishModal(true)} className="h-8 bg-[#2C666E] hover:bg-[#07393C] text-white">
                 Publish
@@ -934,25 +922,34 @@ export default function VideoAdvertCreator() {
         onClose={() => setActiveModal(null)}
         onSelect={(item) => {
           if (item.type === 'video') {
+            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
             const newVideo = {
               id: Date.now().toString(),
+              type: 'video',
               url: item.url || item.video_url,
               title: item.title || `Video from Library`,
               createdAt: new Date().toISOString(),
               source: 'library',
               durationInFrames: 300,
+              startAt: nextStartAt,
+              trackIndex: 0
             };
             setCreatedVideos(prev => [newVideo, ...prev]);
             setCurrentPreviewVideo(newVideo);
             toast.success('Video added to your collection!');
           } else {
+            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
             const newImage = {
               id: Date.now().toString(),
+              type: 'image',
               url: item.url || item.image_url,
-              prompt: item.title || 'Library image',
+              title: item.title || 'Library image',
               createdAt: new Date().toISOString(),
+              startAt: nextStartAt,
+              durationInFrames: 150,
+              trackIndex: 0
             };
-            setCreatedImages(prev => [newImage, ...prev]);
+            setCreatedVideos(prev => [newImage, ...prev]);
             toast.success('Image added to your collection!');
           }
           setActiveModal(null);
