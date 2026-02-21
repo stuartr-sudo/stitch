@@ -10,9 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const IMAGE_MODELS = [
   { value: "fal-flux", label: "Flux Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
-  { value: "midjourney", label: "Midjourney v6.1", description: "Incredible artistic quality & realism" },
-  { value: "ideogram", label: "Ideogram v2.0", description: "Best for typography and text" },
-  { value: "sd3", label: "Stable Diffusion 3.5 Large", description: "Excellent prompt adherence" },
   { value: "wavespeed", label: "Nano Banana Pro", description: "Fast, high-quality image generation" },
   { value: "seeddream", label: "SeedDream 4.5", description: "ByteDance stylized generation" },
 ];

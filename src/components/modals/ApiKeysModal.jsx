@@ -28,15 +28,13 @@ export default function ApiKeysModal({ isOpen, onClose }) {
   const [falKey, setFalKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
   const [elevenlabsKey, setElevenlabsKey] = useState('');
-  const [huggingfaceKey, setHuggingfaceKey] = useState('');
   const [showWavespeed, setShowWavespeed] = useState(false);
   const [showFal, setShowFal] = useState(false);
   const [showOpenai, setShowOpenai] = useState(false);
   const [showElevenlabs, setShowElevenlabs] = useState(false);
-  const [showHuggingface, setShowHuggingface] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasExistingKeys, setHasExistingKeys] = useState({ fal: false, wavespeed: false, openai: false, elevenlabs: false, huggingface: false });
+  const [hasExistingKeys, setHasExistingKeys] = useState({ fal: false, wavespeed: false, openai: false, elevenlabs: false });
 
   useEffect(() => {
     if (isOpen && user && supabase) {
@@ -49,7 +47,7 @@ export default function ApiKeysModal({ isOpen, onClose }) {
     try {
       const { data, error } = await supabase
         .from('user_api_keys')
-        .select('fal_key, wavespeed_key, openai_key, elevenlabs_key, huggingface_key')
+        .select('fal_key, wavespeed_key, openai_key, elevenlabs_key')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -61,14 +59,11 @@ export default function ApiKeysModal({ isOpen, onClose }) {
           wavespeed: !!data.wavespeed_key,
           openai: !!data.openai_key,
           elevenlabs: !!data.elevenlabs_key,
-          huggingface: !!data.huggingface_key,
         });
-        // Show masked versions if keys exist
         setFalKey(data.fal_key || '');
         setWavespeedKey(data.wavespeed_key || '');
         setOpenaiKey(data.openai_key || '');
         setElevenlabsKey(data.elevenlabs_key || '');
-        setHuggingfaceKey(data.huggingface_key || '');
       }
     } catch (error) {
       console.error('Failed to load API keys:', error);
@@ -88,7 +83,6 @@ export default function ApiKeysModal({ isOpen, onClose }) {
         wavespeed_key: wavespeedKey.trim() || null,
         openai_key: openaiKey.trim() || null,
         elevenlabs_key: elevenlabsKey.trim() || null,
-        huggingface_key: huggingfaceKey.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -103,7 +97,6 @@ export default function ApiKeysModal({ isOpen, onClose }) {
         wavespeed: !!payload.wavespeed_key,
         openai: !!payload.openai_key,
         elevenlabs: !!payload.elevenlabs_key,
-        huggingface: !!payload.huggingface_key,
       });
 
       toast.success('API keys saved!');
@@ -281,41 +274,6 @@ export default function ApiKeysModal({ isOpen, onClose }) {
                 </button>
               </div>
               <p className="text-xs text-slate-500 mt-1">Used for production-quality text-to-speech voiceovers</p>
-            </div>
-
-            {/* HuggingFace Key */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                HuggingFace API Key
-                {hasExistingKeys.huggingface && (
-                  <CheckCircle2 className="w-3.5 h-3.5 inline ml-1.5 text-green-500" />
-                )}
-                <a
-                  href="https://huggingface.co/settings/tokens"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-[#2C666E] hover:underline text-xs inline-flex items-center"
-                >
-                  Get key <ExternalLink className="w-3 h-3 ml-1" />
-                </a>
-              </Label>
-              <div className="relative">
-                <Input
-                  type={showHuggingface ? 'text' : 'password'}
-                  value={huggingfaceKey}
-                  onChange={(e) => setHuggingfaceKey(e.target.value)}
-                  placeholder="Enter your HuggingFace API token"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowHuggingface(!showHuggingface)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showHuggingface ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">Used for Parler-TTS voiceovers and MusicGen background music</p>
             </div>
 
             {/* Save button */}

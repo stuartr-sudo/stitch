@@ -14,18 +14,14 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
 const AUDIO_MODELS = [
-  // Hugging Face Models
-  { id: 'hf-parler-tts', label: 'Parler TTS (Hugging Face Voice)', type: 'voice', provider: 'huggingface' },
-  { id: 'hf-musicgen', label: 'MusicGen (Hugging Face Music)', type: 'music', provider: 'huggingface' },
-  // New Fal.ai Models
-  { id: 'fal-ai/elevenlabs/music', label: 'ElevenLabs Music (Fal.ai)', type: 'music', provider: 'fal' },
-  { id: 'fal-ai/minimax-music/v2', label: 'MiniMax Music v2 (Fal.ai)', type: 'music', provider: 'fal', requiresLyrics: true },
-  { id: 'beatoven/music-generation', label: 'Beatoven Music (Fal.ai)', type: 'music', provider: 'fal' },
-  { id: 'beatoven/sound-effect-generation', label: 'Beatoven Sound Effects (Fal.ai)', type: 'sfx', provider: 'fal' }
+  { id: 'beatoven/music-generation', label: 'Beatoven Music', type: 'music', provider: 'fal' },
+  { id: 'beatoven/sound-effect-generation', label: 'Beatoven Sound Effects', type: 'sfx', provider: 'fal' },
+  { id: 'fal-ai/minimax-music/v2', label: 'MiniMax Music v2 (requires lyrics)', type: 'music', provider: 'fal', requiresLyrics: true },
+  { id: 'fal-ai/elevenlabs/music', label: 'ElevenLabs Music', type: 'music', provider: 'fal' },
 ];
 
 export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) {
-  const [model, setModel] = useState('hf-parler-tts');
+  const [model, setModel] = useState('beatoven/music-generation');
   const [prompt, setPrompt] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -35,7 +31,7 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
 
   const handleGenerate = async () => {
     if (!prompt) {
-      toast.error('Please enter a prompt or script.');
+      toast.error('Please enter a prompt or description.');
       return;
     }
 
@@ -43,21 +39,14 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
     setGeneratedUrl(null);
 
     try {
-      // 1. Route to the correct backend endpoint based on the model type
-      const endpoint = selectedModelInfo.type === 'voice' 
-        ? '/api/audio/voiceover' 
-        : '/api/audio/music';
+      toast.info(`Generating ${selectedModelInfo.type}...`);
 
-      toast.info(`Generating ${selectedModelInfo.type} via ${selectedModelInfo.label}...`);
-
-      const response = await apiFetch(endpoint, {
+      const response = await apiFetch('/api/audio/music', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: prompt, // For voice
-          prompt: prompt, // For music
-          provider: selectedModelInfo.provider,
-          model: model, // Pass the specific model ID
+          prompt: prompt,
+          model: model,
           lyrics: lyrics || undefined,
         }),
       });
