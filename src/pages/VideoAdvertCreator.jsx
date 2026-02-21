@@ -418,7 +418,7 @@ export default function VideoAdvertCreator() {
   const previewDimensions = getPreviewDimensions();
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="h-[100dvh] bg-slate-900 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-slate-950 border-b border-slate-800 sticky top-0 z-40">
         <div className="px-6 py-4">
@@ -481,9 +481,9 @@ export default function VideoAdvertCreator() {
       </header>
 
             {/* Main Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* LEFT PANEL - Asset & Generation Hub */}
-        <div className="w-56 bg-slate-800 border-r border-slate-700 overflow-y-auto">
+        <div className="w-56 bg-slate-800 border-r border-slate-700 overflow-y-auto shrink-0">
           <div className="p-4 space-y-4">
             {/* Brand Kit and Brand Assets Buttons */}
             <div className="grid grid-cols-2 gap-2">
@@ -706,7 +706,7 @@ export default function VideoAdvertCreator() {
         </div>
 
         {/* CENTER PANEL - Canvas & Timeline */}
-        <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden">
+        <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden min-w-0">
           {/* Video Preview Area */}
           <div className="flex-1 flex items-center justify-center bg-slate-900 p-6 overflow-hidden relative">
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 px-4 py-2 rounded-full z-50">
