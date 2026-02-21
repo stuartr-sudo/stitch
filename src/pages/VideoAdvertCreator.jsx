@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   ChevronDown,
   Type,
   Clapperboard,
+  Music,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -53,6 +54,102 @@ import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
+
+
+// Inline component for text dragging and editing
+function DraggableTextItem({ item, selectedId, onSelect, onUpdate }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [content, setContent] = useState(item.content);
+  const [dragging, setDragging] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!dragging) return;
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current) return;
+      const parent = containerRef.current.parentElement;
+      const rect = parent.getBoundingClientRect();
+      // Calculate % based on mouse pos
+      let x = ((e.clientX - rect.left) / rect.width) * 100;
+      let y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      // Keep within bounds
+      x = Math.max(0, Math.min(x, 90));
+      y = Math.max(0, Math.min(y, 90));
+
+      onUpdate(item.id, {
+        style: { ...item.style, x, y }
+      });
+    };
+
+    const handleMouseUp = () => setDragging(false);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragging, item, onUpdate]);
+
+  if (isEditing) {
+    return (
+      <input
+        autoFocus
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onBlur={() => {
+          setIsEditing(false);
+          onUpdate(item.id, { content });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            setIsEditing(false);
+            onUpdate(item.id, { content });
+          }
+        }}
+        className="absolute bg-black/50 border border-blue-400 text-white p-1 rounded z-50 focus:outline-none"
+        style={{
+          left: `${item.style?.x ?? 10}%`,
+          top: `${item.style?.y ?? 80}%`,
+          fontSize: item.style?.fontSize ?? '32px',
+          fontWeight: item.style?.fontWeight ?? 'bold',
+          color: item.style?.color ?? '#ffffff',
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        left: `${item.style?.x ?? 10}%`,
+        top: `${item.style?.y ?? 80}%`,
+        color: item.style?.color ?? '#ffffff',
+        fontSize: item.style?.fontSize ?? '32px',
+        fontWeight: item.style?.fontWeight ?? 'bold',
+        textShadow: item.style?.textShadow ?? '2px 2px 4px rgba(0,0,0,0.8)',
+        zIndex: 50,
+        cursor: dragging ? 'grabbing' : 'grab'
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        onSelect(item.id);
+        setDragging(true);
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+      }}
+      className={`select-none ${selectedId === item.id ? 'ring-2 ring-blue-500 border border-dashed border-blue-400 p-1 bg-blue-500/10' : ''}`}
+    >
+      {item.content}
+    </div>
+  );
+}
 
 export default function VideoAdvertCreator() {
   const navigate = useNavigate();
@@ -138,6 +235,7 @@ export default function VideoAdvertCreator() {
       createdAt: new Date().toISOString(),
       source: source || activeModal || 'unknown',
       durationInFrames: frames,
+      trackIndex: 0,
       startAt: nextStartAt,
     };
     setCreatedVideos(prev => [newVideo, ...prev]);
@@ -168,6 +266,7 @@ export default function VideoAdvertCreator() {
       content: 'New Text Overlay',
       startAt: nextStartAt,
       durationInFrames: 150,
+      trackIndex: 2,
       style: {
         x: 10,
         y: 80,
@@ -331,9 +430,30 @@ export default function VideoAdvertCreator() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5">
+              <Button variant="ghost" size="sm" asChild className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden md:flex">
                 <Link to="/campaigns">View Campaigns</Link>
               </Button>
+              <div className="h-4 w-px bg-slate-700 hidden md:block mx-1"></div>
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                <SelectTrigger className="w-32 h-8 bg-slate-800 border-slate-700 text-slate-100 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700 text-xs">
+                  {platformList.map(platform => (
+                    <SelectItem key={platform.value} value={platform.value} className="text-slate-100 focus:bg-slate-700">
+                      {platform.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="h-4 w-px bg-slate-700 hidden md:block mx-1"></div>
+              <Button size="sm" className="h-8 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                Save to Campaign
+              </Button>
+              <Button size="sm" className="h-8 bg-[#2C666E] hover:bg-[#07393C] text-white">
+                Publish
+              </Button>
+              <div className="h-4 w-px bg-slate-700 hidden md:block mx-1"></div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -583,27 +703,6 @@ export default function VideoAdvertCreator() {
 
         {/* CENTER PANEL - Canvas & Timeline */}
         <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden">
-{/* Platform Selector */}
-          <div className="border-b border-slate-700 px-6 py-4 bg-slate-850">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-100">Canvas</h2>
-              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-slate-100">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  {platformList.map(platform => (
-                    <SelectItem key={platform.value} value={platform.value} className="text-slate-100">
-                      {platform.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          
-
           {/* Video Preview Area */}
           <div className="flex-1 flex items-center justify-center bg-slate-900 p-6 overflow-hidden relative">
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 px-4 py-2 rounded-full z-50">
@@ -627,26 +726,31 @@ export default function VideoAdvertCreator() {
 
                 if (item.type === 'text') {
                   return (
-                    <div
+                    <DraggableTextItem
                       key={item.id}
-                      style={{
-                        position: 'absolute',
-                        left: `${item.style?.x ?? 10}%`,
-                        top: `${item.style?.y ?? 80}%`,
-                        color: item.style?.color ?? '#ffffff',
-                        fontSize: item.style?.fontSize ?? '32px',
-                        fontWeight: item.style?.fontWeight ?? 'bold',
-                        textShadow: item.style?.textShadow ?? '2px 2px 4px rgba(0,0,0,0.8)',
-                        zIndex: 50,
-                        cursor: 'pointer'
+                      item={item}
+                      selectedId={selectedTimelineId}
+                      onSelect={setSelectedTimelineId}
+                      onUpdate={(id, updates) => setCreatedVideos(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))}
+                    />
+                  );
+                }
+
+                if (item.type === 'audio') {
+                  return (
+                    <audio
+                      key={item.id}
+                      src={item.url}
+                      autoPlay={isPlaying}
+                      muted={!isPlaying}
+                      ref={(el) => {
+                        if (el && isPlaying) {
+                          const targetTime = (currentTime - (item.startAt || 0)) / 30;
+                          if (Math.abs(el.currentTime - targetTime) > 0.5) el.currentTime = targetTime;
+                        }
                       }}
-                      onClick={() => setSelectedTimelineId(item.id)}
-                      className={selectedTimelineId === item.id ? 'ring-2 ring-blue-500 border border-dashed border-blue-400 p-1' : ''}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {item.content}
-                    </div>
+                      style={{ display: 'none' }}
+                    />
                   );
                 }
 
@@ -678,12 +782,27 @@ export default function VideoAdvertCreator() {
               <Button variant="outline" size="sm" onClick={handleAddText} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
                 <Type className="w-3 h-3" /> Add Text
               </Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                const newAudioItem = {
+                  id: Date.now().toString(),
+                  type: 'audio',
+                  url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=chill-abstract-intention-110855.mp3', // Placeholder audio
+                  title: 'Background Music',
+                  startAt: 0,
+                  durationInFrames: 300,
+                  trackIndex: 1
+                };
+                setCreatedVideos(prev => [...prev, newAudioItem]);
+              }} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
+                <Music className="w-3 h-3" /> Add Audio
+              </Button>
             </div>
             <div className="flex-1 relative min-h-0">
               <StudioTimeline
                 items={createdVideos}
                 onUpdateItem={(id, updates) => setCreatedVideos(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))}
-                onSelect={(item) => setSelectedTimelineId(item.id)}
+                onDeleteItem={(id) => setCreatedVideos(prev => prev.filter(item => item.id !== id))}
+                onSelect={(item) => setSelectedTimelineId(item ? item.id : null)}
                 selectedId={selectedTimelineId}
                 currentTime={currentTime}
                 duration={createdVideos.length > 0 ? Math.max(900, ...createdVideos.map(i => (i.startAt || 0) + (i.durationInFrames || 150))) : 900}

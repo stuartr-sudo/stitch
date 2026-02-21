@@ -1,4 +1,12 @@
-import React, { useRef, useState, useEffect } from 'react';
+import re
+
+with open('src/components/studio/StudioTimeline.jsx', 'r') as f:
+    text = f.read()
+
+# We need to handle vertical dragging for track assignments and delete functionality.
+# I will just write a whole new StudioTimeline.jsx because it needs significant upgrades for tracks.
+
+new_timeline = """import React, { useRef, useState, useEffect } from 'react';
 import { Type, Video as VideoIcon, Music, Trash2 } from 'lucide-react';
 
 export default function StudioTimeline({ items, onUpdateItem, onDeleteItem, onSelect, selectedId, currentTime, duration = 900, onSeek }) {
@@ -168,3 +176,9 @@ export default function StudioTimeline({ items, onUpdateItem, onDeleteItem, onSe
     </div>
   );
 }
+"""
+
+with open('src/components/studio/StudioTimeline.jsx', 'w') as f:
+    f.write(new_timeline)
+
+print("Timeline rewritten.")
