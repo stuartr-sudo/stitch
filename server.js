@@ -268,6 +268,18 @@ app.post('/api/audio/captions', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/audio/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/audio/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Campaigns list (with auth)
 app.get('/api/campaigns/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/list.js');

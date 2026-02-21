@@ -37,16 +37,63 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
     setIsGenerating(true);
     setGeneratedUrl(null);
     
-    // Mock generation for now since we don't have the backend route wired to Fal for all these yet
-    toast.info(`Generating ${selectedModelInfo.type} via ${selectedModelInfo.label}...`);
-    
-    setTimeout(() => {
+    try {
+      toast.info(`Generating ${selectedModelInfo.type} via ${selectedModelInfo.label}...`);
+
+      const response = await apiFetch('/api/audio/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          prompt: prompt,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate audio');
+      }
+
+      if (result.requestId) {
+        toast.info('Audio generation is being processed, please wait...');
+        const audioUrl = await pollForAudioResult(result.requestId);
+        if (audioUrl) {
+          setGeneratedUrl(audioUrl);
+          toast.success('Audio generated successfully!');
+        } else {
+          toast.error('Audio generation timed out or failed. Please try again.');
+        }
+      } else if (result.audioUrl) { // Direct generation for some models
+        setGeneratedUrl(result.audioUrl);
+        toast.success('Audio generated successfully!');
+      } else {
+        throw new Error('No audio URL or request ID received.');
+      }
+    } catch (error) {
+      console.error('Audio generation error:', error);
+      toast.error(error.message || 'Failed to generate audio');
+    } finally {
       setIsGenerating(false);
-      // Mock audio file URL (a real royalty-free sound)
-      const mockAudio = 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=chill-abstract-intention-110855.mp3';
-      setGeneratedUrl(mockAudio);
-      toast.success('Audio generated successfully!');
-    }, 3000);
+    }
+  };
+
+  const pollForAudioResult = async (requestId, maxAttempts = 60) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await apiFetch(`/api/audio/result?requestId=${requestId}`);
+        const result = await res.json();
+        if (result.status === 'completed' && result.audioUrl) return result.audioUrl;
+        if (result.status === 'failed' || result.error) {
+          toast.error(result.error || 'Audio generation failed');
+          return null;
+        }
+      } catch (err) {
+        console.warn('Poll attempt failed:', err);
+      }
+    }
+    return null;
   };
 
   const handleInsert = () => {

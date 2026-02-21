@@ -739,18 +739,7 @@ export default function VideoAdvertCreator() {
               <Button variant="outline" size="sm" onClick={handleAddText} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
                 <Type className="w-3 h-3" /> Add Text
               </Button>
-              <Button variant="outline" size="sm" onClick={() => {
-                const newAudioItem = {
-                  id: Date.now().toString(),
-                  type: 'audio',
-                  url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=chill-abstract-intention-110855.mp3', // Placeholder audio
-                  title: 'Background Music',
-                  startAt: 0,
-                  durationInFrames: 300,
-                  trackIndex: 1
-                };
-                setCreatedVideos(prev => [...prev, newAudioItem]);
-              }} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setShowAudioStudio(true)} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
                 <Music className="w-3 h-3" /> Add Audio
               </Button>
             </div>
