@@ -26,12 +26,12 @@ import {
   ExternalLink,
   FolderOpen
 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
 
 const MODELS = [
-  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', endpoint: 'nano-banana-pro/edit-ultra' },
-  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', endpoint: 'qwen-image/edit-2511' },
-  { id: 'fal-flux', label: 'Flux 2 Pro', endpoint: 'fal-flux-2-pro' },
+  { id: 'grok-imagine-image-edit', label: '✨ X-AI Grok Imagine Edit', endpoint: 'x-ai/grok-imagine-image/edit', provider: 'wavespeed' },
+  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', endpoint: 'nano-banana-pro/edit-ultra', provider: 'wavespeed' },
+  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', endpoint: 'qwen-image/edit-2511', provider: 'wavespeed' },
+  { id: 'fal-flux', label: 'Flux 2 Pro', endpoint: 'fal-flux-2-pro', provider: 'fal' },
 ];
 
 const OUTPUT_SIZES = [

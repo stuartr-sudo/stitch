@@ -82,6 +82,7 @@ export default function VideoAdvertCreator() {
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showImportBlog, setShowImportBlog] = useState(false);
+  const [showMotionTransfer, setShowMotionTransfer] = useState(false);
   const [showAudioStudio, setShowAudioStudio] = useState(false);
 
   // Editor & Timeline state
@@ -563,6 +564,28 @@ export default function VideoAdvertCreator() {
                       <span className="text-xs font-medium text-slate-200">Animate</span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">Character anim</p>
+                  </div>
+                  
+                  <div 
+                    onClick={() => setShowMotionTransfer(true)}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-orange-400" />
+                      <span className="text-xs font-medium text-slate-200">Motion Transfer</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Animate images with video</p>
+                  </div>
+                  
+                  <div 
+                    onClick={() => setShowMotionTransfer(true)}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-orange-400" />
+                      <span className="text-xs font-medium text-slate-200">Motion Transfer</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Animate images with video</p>
                   </div>
 
                   <div 
