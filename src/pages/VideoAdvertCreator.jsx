@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,8 @@ import {
   LogOut,
   Users,
   ChevronDown,
+  Type,
+  Clapperboard,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -49,6 +51,7 @@ import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -68,6 +71,42 @@ export default function VideoAdvertCreator() {
   });
   const [showBrandKit, setShowBrandKit] = useState(false);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
+
+  // Editor & Timeline state
+  const [activeTab, setActiveTab] = useState('editor');
+  const [currentTime, setCurrentTime] = useState(0);
+  const [zoom, setZoom] = useState(100);
+  const [selectedTimelineId, setSelectedTimelineId] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Playback loop
+  useEffect(() => {
+    let animationFrameId;
+    let lastTime = performance.now();
+    const fps = 30;
+    const frameInterval = 1000 / fps;
+
+    const playLoop = (time) => {
+      if (time - lastTime >= frameInterval) {
+        setCurrentTime(prev => {
+          const maxDuration = createdVideos.length > 0
+            ? Math.max(150, ...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+            : 150;
+          return prev >= maxDuration ? 0 : prev + 1;
+        });
+        lastTime = time;
+      }
+      animationFrameId = requestAnimationFrame(playLoop);
+    };
+
+    if (isPlaying) {
+      animationFrameId = requestAnimationFrame(playLoop);
+    }
+
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, [isPlaying, createdVideos]);
 
   const handleSignOut = async () => {
     try {
@@ -89,13 +128,19 @@ export default function VideoAdvertCreator() {
   const handleVideoCreated = (videoUrl, title = null, source = null, durationInSeconds = 5) => {
     const frames = durationInSeconds * 30;
 
+    const nextStartAt = createdVideos.length > 0
+      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+      : 0;
+
     const newVideo = {
       id: Date.now().toString(),
+      type: 'video',
       url: videoUrl,
       title: title || `Video ${createdVideos.length + 1}`,
       createdAt: new Date().toISOString(),
       source: source || activeModal || 'unknown',
       durationInFrames: frames,
+      startAt: nextStartAt,
     };
     setCreatedVideos(prev => [newVideo, ...prev]);
     setCurrentPreviewVideo(newVideo);
@@ -111,6 +156,32 @@ export default function VideoAdvertCreator() {
         source: newVideo.source,
       }),
     }).catch(err => console.warn('Failed to save video to library:', err));
+  };
+
+  // Handle adding text to timeline
+  const handleAddText = () => {
+    const nextStartAt = createdVideos.length > 0
+      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+      : 0;
+
+    const newTextItem = {
+      id: Date.now().toString(),
+      type: 'text',
+      content: 'New Text Overlay',
+      startAt: nextStartAt,
+      durationInFrames: 150,
+      style: {
+        x: 10,
+        y: 80,
+        color: '#ffffff',
+        fontSize: '32px',
+        fontWeight: 'bold',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+      }
+    };
+    setCreatedVideos(prev => [...prev, newTextItem]);
+    toast.success('Text overlay added!');
+    setActiveTab('editor');
   };
 
   // Handle new image created
@@ -263,13 +334,8 @@ export default function VideoAdvertCreator() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/campaigns')}
-                className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
-              >
-                Campaigns
+              <Button variant="ghost" size="sm" asChild className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5">
+                <Link to="/campaigns">View Campaigns</Link>
               </Button>
               <Button
                 variant="ghost"
@@ -293,7 +359,109 @@ export default function VideoAdvertCreator() {
         </div>
       </header>
 
-      {/* Main Layout */}
+      {/* Tabs: Editor (default) and Create */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <div className="border-b border-slate-700 px-4 py-2 bg-slate-850 flex items-center gap-2">
+          <TabsList className="bg-slate-800 p-1">
+            <TabsTrigger value="editor" className="gap-2 data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">
+              <Clapperboard className="w-4 h-4" /> Editor
+            </TabsTrigger>
+            <TabsTrigger value="create" className="gap-2 data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">
+              <Sparkles className="w-4 h-4" /> Create
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Editor Tab */}
+        <TabsContent value="editor" className="flex-1 flex flex-col gap-4 mt-0 overflow-hidden p-4">
+          <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-700 shadow-sm relative overflow-hidden flex items-center justify-center">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 px-4 py-2 rounded-full z-50">
+              <button type="button" onClick={() => setIsPlaying(!isPlaying)} className="text-white hover:text-[#90DDF0]">
+                {isPlaying ? <span className="font-bold">Pause</span> : <span className="font-bold flex items-center gap-1"><Play className="w-4 h-4" /> Play</span>}
+              </button>
+              <span className="text-white text-xs font-mono">FRAME: {currentTime}</span>
+            </div>
+            <div
+              className="bg-black relative shadow-2xl"
+              style={{
+                aspectRatio: '9/16',
+                height: '90%',
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'center center'
+              }}
+            >
+              {createdVideos.map(item => {
+                const isActive = currentTime >= (item.startAt || 0) && currentTime < (item.startAt || 0) + (item.durationInFrames || 150);
+                if (!isActive) return null;
+
+                if (item.type === 'text') {
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${item.style?.x ?? 10}%`,
+                        top: `${item.style?.y ?? 80}%`,
+                        color: item.style?.color ?? '#ffffff',
+                        fontSize: item.style?.fontSize ?? '32px',
+                        fontWeight: item.style?.fontWeight ?? 'bold',
+                        textShadow: item.style?.textShadow ?? '2px 2px 4px rgba(0,0,0,0.8)',
+                        zIndex: 50,
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => setSelectedTimelineId(item.id)}
+                      className={selectedTimelineId === item.id ? 'ring-2 ring-blue-500 border border-dashed border-blue-400 p-1' : ''}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {item.content}
+                    </div>
+                  );
+                }
+
+                return (
+                  <video
+                    key={item.id}
+                    src={item.url}
+                    autoPlay
+                    muted
+                    loop
+                    className={`absolute inset-0 w-full h-full object-cover ${selectedTimelineId === item.id ? 'opacity-100' : 'opacity-95'}`}
+                    style={{ zIndex: 10 }}
+                  />
+                );
+              })}
+              {createdVideos.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center flex-col text-slate-500">
+                  <Clapperboard className="w-12 h-12 mb-2 opacity-50" />
+                  <p>Generate a video to start editing</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="h-48 bg-slate-800 border border-slate-700 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div className="p-2 border-b border-slate-700 flex items-center justify-between bg-slate-850">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Timeline</span>
+              <Button variant="outline" size="sm" onClick={handleAddText} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
+                <Type className="w-3 h-3" /> Add Text
+              </Button>
+            </div>
+            <div className="flex-1 relative min-h-0">
+              <StudioTimeline
+                items={createdVideos}
+                onUpdateItem={(id, updates) => setCreatedVideos(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))}
+                onSelect={(item) => setSelectedTimelineId(item.id)}
+                selectedId={selectedTimelineId}
+                currentTime={currentTime}
+                duration={createdVideos.length > 0 ? Math.max(900, ...createdVideos.map(i => (i.startAt || 0) + (i.durationInFrames || 150))) : 900}
+                onSeek={(frame) => setCurrentTime(frame)}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Create Tab – existing layout */}
+        <TabsContent value="create" className="flex-1 flex flex-col mt-0 overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
         {/* LEFT PANEL - Asset & Generation Hub */}
         <div className="w-56 bg-slate-800 border-r border-slate-700 overflow-y-auto">
@@ -409,7 +577,17 @@ export default function VideoAdvertCreator() {
               </button>
               {expandedSections.videoTools && (
                 <div className="mt-2 space-y-2">
-                  <div 
+                  <div
+                    onClick={handleAddText}
+                    className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Type className="w-4 h-4 text-[#90DDF0]" />
+                      <span className="text-xs font-medium text-slate-200">Add Text</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Overlay text on video</p>
+                  </div>
+                  <div
                     onClick={() => setActiveModal('jumpstart')}
                     className="group bg-slate-700 hover:bg-slate-600 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -583,14 +761,8 @@ export default function VideoAdvertCreator() {
           </div>
         </div>
       </div>
-
-      {/* BOTTOM PANEL - Timeline */}
-      <StudioTimeline
-        clips={currentPreviewVideo ? [currentPreviewVideo] : createdVideos}
-        textOverlays={[]}
-        width={PLATFORMS[selectedPlatform]?.dimensions?.width || 1080}
-        height={PLATFORMS[selectedPlatform]?.dimensions?.height || 1920}
-      />
+        </TabsContent>
+      </Tabs>
 
       {/* Modals */}
       <BrandKitModal
