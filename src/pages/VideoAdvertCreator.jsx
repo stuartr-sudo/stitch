@@ -684,8 +684,8 @@ export default function VideoAdvertCreator() {
             <div
               className="bg-black relative shadow-2xl"
               style={{
-                aspectRatio: platformConfig.defaultRatio,
-                height: '90%',
+                width: previewDimensions.width,
+                height: previewDimensions.height,
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: 'center center'
               }}
