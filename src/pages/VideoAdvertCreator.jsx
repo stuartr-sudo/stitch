@@ -725,26 +725,33 @@ export default function VideoAdvertCreator() {
           </div>
 
           {/* BOTTOM PANEL - Timeline */}
-          <div className="h-64 bg-slate-800 border-t border-slate-700 flex flex-col shrink-0">
-            <div className="p-2 border-b border-slate-700 flex items-center justify-between bg-slate-850">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Timeline</span>
-              <Button variant="outline" size="sm" onClick={handleAddText} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
-                <Type className="w-3 h-3" /> Add Text
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowAudioStudio(true)} className="h-7 text-xs gap-1 bg-slate-800 border-slate-600 text-slate-200">
-                <Music className="w-3 h-3" /> Add Audio
-              </Button>
+          <div className="h-72 bg-slate-800 border-t border-slate-700 flex flex-col shrink-0">
+            <div className="p-1.5 border-b border-slate-700 flex items-center gap-2 bg-slate-850">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Timeline</span>
+              <div className="ml-auto flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={handleAddText} className="h-6 text-[11px] gap-1 bg-slate-800 border-slate-600 text-slate-200">
+                  <Type className="w-3 h-3" /> Text
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowAudioStudio(true)} className="h-6 text-[11px] gap-1 bg-slate-800 border-slate-600 text-slate-200">
+                  <Music className="w-3 h-3" /> Audio
+                </Button>
+              </div>
             </div>
             <div className="flex-1 relative min-h-0">
               <StudioTimeline
                 items={createdVideos}
-                onUpdateItem={(id, updates) => setCreatedVideos(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))}
+                onUpdateItem={Object.assign(
+                  (id, updates) => setCreatedVideos(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item)),
+                  { __splitCallback: (newItem) => setCreatedVideos(prev => [...prev, newItem]) }
+                )}
                 onDeleteItem={(id) => setCreatedVideos(prev => prev.filter(item => item.id !== id))}
                 onSelect={(item) => setSelectedTimelineId(item ? item.id : null)}
                 selectedId={selectedTimelineId}
                 currentTime={currentTime}
                 duration={createdVideos.length > 0 ? Math.max(900, ...createdVideos.map(i => (i.startAt || 0) + (i.durationInFrames || 150))) : 900}
                 onSeek={(frame) => setCurrentTime(frame)}
+                isPlaying={isPlaying}
+                onTogglePlay={() => setIsPlaying(p => !p)}
               />
             </div>
           </div>

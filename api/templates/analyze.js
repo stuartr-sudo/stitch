@@ -51,9 +51,14 @@ const TemplateSchema = z.object({
 });
 
 const WRITING_STRUCTURES = [
+  // Brand
   'BRAND-TUTORIAL', 'BRAND-LISTICLE', 'BRAND-COMPARISON', 'BRAND-CASESTUDY',
-  'BRAND-PILLAR', 'BRAND-SUBHUB', 'AFF-MULTI-COMPARE', 'AFF-LISTICLE',
-  'PRODUCT-PAGE', 'AFF-SUBHUB',
+  'BRAND-PILLAR', 'BRAND-SUBHUB',
+  // Affiliate
+  'AFF-MULTI-COMPARE', 'AFF-LISTICLE', 'AFF-PILLAR', 'AFF-SUBHUB',
+  'PRODUCT-PAGE',
+  // Money (high commercial intent)
+  'MONEY-ROUNDUP', 'MONEY-SINGLE-REVIEW', 'MONEY-VS', 'MONEY-BEST-OF',
 ];
 
 const SYSTEM_PROMPT = `You are a video production expert and content strategist. Reverse-engineer a short-form video template from the provided visual and audio evidence.

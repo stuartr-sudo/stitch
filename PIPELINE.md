@@ -31,13 +31,24 @@
 ## 1. Architecture Overview
 
 ```
-Doubleclicker (article CMS)
+Blog Cloner (Next.js, provisioning)
         │
-        │  POST /api/article/from-url
-        │  { url, brand_username, writing_structure }
+        │  POST /api/strategy/auto-onboard
+        │  { username, niche, productUrl, ... }
+        ▼
+Doubleclicker (content engine, Express + React)
+        │
+        │  Writes articles → if stitch_enabled=true,
+        │  inserts row into stitch_queue table
+        ▼
+Shared Supabase (Postgres + Storage)
+   uscmvlfleccbctuvhhcj.supabase.co
+        │
+        │  stitch_queue table polled every 15s
         ▼
 Stitch API  (Express, port 3003)
         │
+        ├─ Picks up queue entry → reads article content
         ├─ Looks up brand kit by brand_username
         ├─ Finds ALL templates tagged for that writing_structure
         ├─ Creates one Campaign record
@@ -51,16 +62,22 @@ Stitch API  (Express, port 3003)
         │    → Saves Draft record to Supabase
         │
         ▼
-Supabase (Postgres + Storage)
+Supabase Storage (videos + media buckets)
         │
         ▼
 Stitch UI  (React 18 + Vite, port 4390)
    Campaigns page → preview / publish / schedule
 ```
 
+**Three-app architecture — all apps share one Supabase database:**
+- **Blog Cloner** → calls Doubleclicker via HTTP (PROVISION_SECRET auth)
+- **Doubleclicker** → writes to `stitch_queue` table when `stitch_enabled=true`
+- **Stitch** → polls `stitch_queue` every 15s, processes autonomously
+
 **Authentication:**
 - Stitch UI ↔ Stitch API: Supabase JWT (Bearer token), verified per-request
-- Doubleclicker ↔ Stitch API: `x-webhook-secret` header (no JWT — server-to-server)
+- Doubleclicker → Stitch: No direct HTTP calls — communication via shared `stitch_queue` table
+- Stitch also supports direct `POST /api/article/from-url` with `x-webhook-secret` for manual triggers
 
 ---
 
@@ -164,6 +181,8 @@ Pill toggles for 10 platforms. The pipeline generates a separate asset set for e
 These determine when this template auto-fires. If a Doubleclicker article comes in tagged `BRAND-LISTICLE` and your template has `BRAND-LISTICLE` in its triggers, it runs.
 
 Available triggers:
+
+**Brand** (non-affiliate, brand-voice):
 | Key | What it means |
 |-----|--------------|
 | `BRAND-TUTORIAL` | Step-by-step how-to for your own brand/product |
@@ -172,10 +191,23 @@ Available triggers:
 | `BRAND-CASESTUDY` | Customer story or before/after |
 | `BRAND-PILLAR` | Core topic pillar page |
 | `BRAND-SUBHUB` | Supporting hub content |
-| `AFF-MULTI-COMPARE` | Affiliate product comparison |
+
+**Affiliate** (with promoted products):
+| Key | What it means |
+|-----|--------------|
+| `AFF-MULTI-COMPARE` | Affiliate product comparison (3+ products) |
 | `AFF-LISTICLE` | Affiliate listicle round-up |
+| `AFF-PILLAR` | Affiliate master pillar page |
+| `AFF-SUBHUB` | Affiliate supporting hub content |
 | `PRODUCT-PAGE` | Individual product/review page |
-| `AFF-SUBHUB` | Affiliate supporting content |
+
+**Money** (high commercial intent):
+| Key | What it means |
+|-----|--------------|
+| `MONEY-ROUNDUP` | Top-X best products roundup |
+| `MONEY-SINGLE-REVIEW` | Detailed single product review |
+| `MONEY-VS` | Product A vs Product B comparison |
+| `MONEY-BEST-OF` | Best-in-category guide |
 
 A template with **no triggers** only runs when called manually (by specifying `user_template_id` in the API call).
 
@@ -218,10 +250,57 @@ Each avatar has:
 
 ## 6. How Doubleclicker Triggers a Pipeline Run
 
-Doubleclicker (or any server) makes a single POST call:
+### Primary path: Queue-based (automatic)
+
+Doubleclicker does **not** call Stitch directly. Instead:
+
+1. When Doubleclicker finishes writing an article and `brand_guidelines.stitch_enabled = true`:
+2. It inserts a row into the shared `stitch_queue` table:
+
+```json
+{
+  "username": "myshop",
+  "article_id": "abc-123-uuid",
+  "writing_structure": "AFF-LISTICLE",
+  "metadata": {
+    "title": "Best Air Fryers 2026",
+    "slug": "best-air-fryers-2026",
+    "content_type": "listicle"
+  },
+  "status": "pending"
+}
+```
+
+3. Stitch polls `stitch_queue` every **15 seconds** for `status = 'pending'` entries
+4. When found, Stitch picks up the entry, marks it `processing`, reads the article content from `cluster_articles`, and runs the full pipeline
+5. On completion, marks the queue entry `completed`
+
+**Content type → Stitch writing structure mapping (set by Doubleclicker):**
+
+| Doubleclicker content_type | Stitch writing_structure |
+|---------------------------|-------------------------|
+| brand_tutorial | `BRAND-TUTORIAL` |
+| brand_listicle | `BRAND-LISTICLE` |
+| brand_comparison | `BRAND-COMPARISON` |
+| brand_casestudy | `BRAND-CASESTUDY` |
+| brand_pillar | `BRAND-PILLAR` |
+| brand_subhub | `BRAND-SUBHUB` |
+| comparison | `AFF-MULTI-COMPARE` |
+| listicle | `AFF-LISTICLE` |
+| pillar | `AFF-PILLAR` |
+| sub-hub | `AFF-SUBHUB` |
+| product_page | `PRODUCT-PAGE` |
+| money_roundup | `MONEY-ROUNDUP` |
+| money_single_review | `MONEY-SINGLE-REVIEW` |
+| money_vs | `MONEY-VS` |
+| money_best_of | `MONEY-BEST-OF` |
+
+### Secondary path: Direct HTTP (manual trigger)
+
+For manual/testing use, you can still call Stitch directly:
 
 ```
-POST https://stitch.yourdomain.com/api/article/from-url
+POST https://stitch-app.fly.dev/api/article/from-url
 Headers:
   x-webhook-secret: your_webhook_secret_here
   Content-Type: application/json
@@ -630,6 +709,10 @@ Key fields: `type`, `status`, `current_step`, `total_steps`, `completed_steps`, 
 ### `user_api_keys`
 Per-user API key overrides. If set, takes precedence over server env vars.
 Fields: `fal_key`, `wavespeed_key`, `openai_key`.
+
+### `stitch_queue` (shared with Doubleclicker)
+Queue table for DC → Stitch handoff. Stitch polls every 15s for `status = 'pending'`.
+Key fields: `username`, `article_id`, `writing_structure`, `metadata` (jsonb), `status` (pending/processing/completed/failed), `created_at`, `processed_at`.
 
 ---
 

@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
     // Early duplicate check for external URLs (before downloading)
     const table = type === 'video' ? 'generated_videos' : 'image_library_items';
-    const urlField = type === 'video' ? 'video_url' : 'image_url';
+    const urlField = 'url'; // Both tables use 'url' column
     
     if (url.startsWith('http://') || url.startsWith('https://')) {
       // Check if this exact external URL already exists for this user

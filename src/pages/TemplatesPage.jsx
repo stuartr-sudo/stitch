@@ -49,16 +49,24 @@ const ROLE_COLORS = {
 };
 
 const WRITING_STRUCTURES = [
-  { value: 'BRAND-TUTORIAL', label: 'Brand Tutorial' },
-  { value: 'BRAND-LISTICLE', label: 'Brand Listicle' },
-  { value: 'BRAND-COMPARISON', label: 'Brand Comparison' },
-  { value: 'BRAND-CASESTUDY', label: 'Brand Case Study' },
-  { value: 'BRAND-PILLAR', label: 'Brand Pillar' },
-  { value: 'BRAND-SUBHUB', label: 'Brand Sub-Hub' },
-  { value: 'AFF-MULTI-COMPARE', label: 'Affiliate Multi-Compare' },
-  { value: 'AFF-LISTICLE', label: 'Affiliate Listicle' },
-  { value: 'PRODUCT-PAGE', label: 'Product Page' },
-  { value: 'AFF-SUBHUB', label: 'Affiliate Sub-Hub' },
+  // Brand structures (non-affiliate, brand-voice)
+  { value: 'BRAND-TUTORIAL', label: 'Brand Tutorial', group: 'brand' },
+  { value: 'BRAND-LISTICLE', label: 'Brand Listicle', group: 'brand' },
+  { value: 'BRAND-COMPARISON', label: 'Brand Comparison', group: 'brand' },
+  { value: 'BRAND-CASESTUDY', label: 'Brand Case Study', group: 'brand' },
+  { value: 'BRAND-PILLAR', label: 'Brand Pillar', group: 'brand' },
+  { value: 'BRAND-SUBHUB', label: 'Brand Sub-Hub', group: 'brand' },
+  // Affiliate structures (with promoted products)
+  { value: 'AFF-MULTI-COMPARE', label: 'Affiliate Multi-Compare', group: 'aff' },
+  { value: 'AFF-LISTICLE', label: 'Affiliate Listicle', group: 'aff' },
+  { value: 'AFF-PILLAR', label: 'Affiliate Pillar', group: 'aff' },
+  { value: 'AFF-SUBHUB', label: 'Affiliate Sub-Hub', group: 'aff' },
+  { value: 'PRODUCT-PAGE', label: 'Product Page', group: 'aff' },
+  // Money structures (high commercial intent)
+  { value: 'MONEY-ROUNDUP', label: 'Money Roundup', group: 'money' },
+  { value: 'MONEY-SINGLE-REVIEW', label: 'Money Single Review', group: 'money' },
+  { value: 'MONEY-VS', label: 'Money VS', group: 'money' },
+  { value: 'MONEY-BEST-OF', label: 'Money Best-Of', group: 'money' },
 ];
 
 const PLATFORMS = [
@@ -711,17 +719,53 @@ export default function TemplatesPage() {
                 <SectionHeader icon={Tag}
                   title="Writing Structure Triggers"
                   subtitle="Auto-fires when Doubleclicker publishes an article with any of these structures" />
-                <div className="flex flex-wrap gap-2">
-                  {WRITING_STRUCTURES.map(ws => (
-                    <button key={ws.value} onClick={() => toggleStructure(ws.value)}
-                      className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                        selectedStructures.includes(ws.value)
-                          ? 'bg-purple-500/20 border-purple-500/60 text-purple-300'
-                          : 'border-slate-700 text-slate-400 hover:border-slate-600'
-                      }`}>
-                      {ws.label}
-                    </button>
-                  ))}
+                {/* Brand */}
+                <div className="mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1 block">Brand</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WRITING_STRUCTURES.filter(ws => ws.group === 'brand').map(ws => (
+                      <button key={ws.value} onClick={() => toggleStructure(ws.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                          selectedStructures.includes(ws.value)
+                            ? 'bg-blue-500/20 border-blue-500/60 text-blue-300'
+                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}>
+                        {ws.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Affiliate */}
+                <div className="mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1 block">Affiliate</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WRITING_STRUCTURES.filter(ws => ws.group === 'aff').map(ws => (
+                      <button key={ws.value} onClick={() => toggleStructure(ws.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                          selectedStructures.includes(ws.value)
+                            ? 'bg-purple-500/20 border-purple-500/60 text-purple-300'
+                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}>
+                        {ws.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Money */}
+                <div className="mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1 block">Money</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WRITING_STRUCTURES.filter(ws => ws.group === 'money').map(ws => (
+                      <button key={ws.value} onClick={() => toggleStructure(ws.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                          selectedStructures.includes(ws.value)
+                            ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}>
+                        {ws.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
                   {selectedStructures.length === 0
