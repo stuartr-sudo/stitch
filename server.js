@@ -319,8 +319,21 @@ app.post('/api/templates/save', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/templates/assign', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/assign.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('templates/delete.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Brand usernames route (with auth)
+app.get('/api/brand/usernames', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/usernames.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
