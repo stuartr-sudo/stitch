@@ -71,15 +71,26 @@ const PLATFORMS = [
 ];
 
 const IMAGE_MODELS = [
-  { value: 'wavespeed', label: 'Wavespeed (Fastest)' },
-  { value: 'fal_seedream', label: 'SeedDream (Photorealistic)' },
-  { value: 'fal_flux', label: 'FLUX (Creative)' },
+  { value: 'wavespeed',      label: 'Wavespeed',      strength: 'Fastest',                price: '~$0.01/img',  lora: false },
+  { value: 'fal_seedream',   label: 'SeedDream',      strength: 'Photorealistic',         price: '~$0.02/img',  lora: false },
+  { value: 'fal_flux',       label: 'FLUX Dev',       strength: 'Creative, versatile',    price: '$0.025/MP',   lora: true },
+  { value: 'fal_imagen4',    label: 'Imagen 4',       strength: "Google's best quality",  price: '$0.04/img',   lora: false },
+  { value: 'fal_kling_img',  label: 'Kling Image V3', strength: 'Consistent photorealism', price: '$0.028/img', lora: false },
+  { value: 'fal_grok',       label: 'Grok Imagine',   strength: 'Highly aesthetic',       price: '$0.02/img',   lora: false },
+  { value: 'fal_ideogram',   label: 'Ideogram V2',    strength: 'Best text/typography',   price: '~$0.04/img',  lora: false },
 ];
 
 const VIDEO_MODELS = [
-  { value: 'wavespeed_wan', label: 'Wavespeed WAN (Fastest)' },
-  { value: 'fal_kling', label: 'Kling (Most Realistic)' },
-  { value: 'fal_hailuo', label: 'Hailuo (Cinematic)' },
+  { value: 'wavespeed_wan', label: 'Wavespeed WAN',    strength: 'Fastest, budget-friendly', price: '~$0.10/vid' },
+  { value: 'fal_kling',     label: 'Kling 2.0 Master', strength: 'Realistic motion',         price: '$0.28/sec' },
+  { value: 'fal_hailuo',    label: 'Hailuo (MiniMax)', strength: 'Cinematic',                price: '$0.50/vid' },
+  { value: 'fal_veo3',      label: 'Veo 3 (Google)',   strength: 'Best quality + audio',     price: '$0.15/sec' },
+  { value: 'fal_veo2',      label: 'Veo 2 (Google)',   strength: 'Excellent realism',        price: '$0.50/sec' },
+  { value: 'fal_kling_v3',  label: 'Kling V3 Pro',     strength: 'Latest Kling + audio',     price: '$0.28/sec' },
+  { value: 'fal_kling_o3',  label: 'Kling O3 Pro',     strength: 'Start+end frame control',  price: '$0.28/sec' },
+  { value: 'fal_wan25',     label: 'Wan 2.5 Preview',  strength: 'Good quality, cheap',      price: '$0.05/sec' },
+  { value: 'fal_wan_pro',   label: 'Wan Pro',          strength: 'Premium WAN, 1080p',       price: '$0.80/vid' },
+  { value: 'fal_pixverse',  label: 'PixVerse V4.5',    strength: 'Great value',              price: '$0.05/seg' },
 ];
 
 const MOTION_STYLES = [
@@ -88,8 +99,10 @@ const MOTION_STYLES = [
 ];
 
 const MUSIC_MODELS = [
-  { value: 'beatoven', label: 'Beatoven AI (Custom)' },
-  { value: 'none', label: 'No Music' },
+  { value: 'beatoven',       label: 'Beatoven AI',      strength: 'Royalty-free instrumental', price: '$0.0013/sec' },
+  { value: 'fal_elevenlabs', label: 'ElevenLabs Music', strength: 'High quality, premium',     price: '$0.80/min' },
+  { value: 'fal_lyria2',     label: 'Lyria 2 (Google)', strength: "Google's best music model", price: '$0.10/30sec' },
+  { value: 'none',           label: 'No Music',         strength: '',                          price: '' },
 ];
 
 const VISUAL_STYLE_PRESETS = [
@@ -297,10 +310,12 @@ export default function TemplatesPage() {
     setIsLoading(true);
     try {
       const res = await apiFetch('/api/templates/list', { method: 'GET' });
+      if (!res.ok) { setTemplates([]); return; }
       const data = await res.json();
       if (data.success) setTemplates(data.templates || []);
     } catch {
-      toast.error('Failed to load templates');
+      // Silently default to empty list — API may not be running yet
+      setTemplates([]);
     } finally {
       setIsLoading(false);
     }
@@ -676,17 +691,39 @@ export default function TemplatesPage() {
                 <Label className="text-xs text-slate-400">Image Generation</Label>
                 <Select value={modelPreferences.image_model} onValueChange={v => setModelPreferences(p => ({ ...p, image_model: v }))}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    {IMAGE_MODELS.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                    {IMAGE_MODELS.map(m => (
+                      <SelectItem key={m.value} value={m.value} className="text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-medium">{m.label}</span>
+                          {m.lora && <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-600/40 text-purple-300 rounded">LoRA</span>}
+                          <span className="text-slate-500">-</span>
+                          <span className="text-slate-400">{m.strength}</span>
+                          <span className="text-slate-600 ml-auto">{m.price}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {IMAGE_MODELS.find(m => m.value === modelPreferences.image_model)?.lora && (
+                  <p className="text-[10px] text-purple-400 mt-0.5">Supports Visual Subjects (LoRA)</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-slate-400">Video Animation</Label>
                 <Select value={modelPreferences.video_model} onValueChange={v => setModelPreferences(p => ({ ...p, video_model: v }))}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    {VIDEO_MODELS.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                    {VIDEO_MODELS.map(m => (
+                      <SelectItem key={m.value} value={m.value} className="text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-medium">{m.label}</span>
+                          <span className="text-slate-500">-</span>
+                          <span className="text-slate-400">{m.strength}</span>
+                          <span className="text-slate-600 ml-auto">{m.price}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -703,8 +740,19 @@ export default function TemplatesPage() {
                 <Label className="text-xs text-slate-400">Music</Label>
                 <Select value={modelPreferences.music_model} onValueChange={v => setModelPreferences(p => ({ ...p, music_model: v }))}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    {MUSIC_MODELS.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                    {MUSIC_MODELS.map(m => (
+                      <SelectItem key={m.value} value={m.value} className="text-xs">
+                        {m.strength ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="font-medium">{m.label}</span>
+                            <span className="text-slate-500">-</span>
+                            <span className="text-slate-400">{m.strength}</span>
+                            <span className="text-slate-600 ml-auto">{m.price}</span>
+                          </span>
+                        ) : m.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

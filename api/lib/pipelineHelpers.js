@@ -104,7 +104,7 @@ async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
  * @param {string} aspectRatio - '9:16' | '1:1' | '16:9'
  * @param {object} keys - { wavespeedKey, falKey }
  * @param {object} supabase - Supabase client
- * @param {string} [model] - 'wavespeed' | 'fal_seedream' | 'fal_flux' — override default model selection
+ * @param {string} [model] - 'wavespeed' | 'fal_seedream' | 'fal_flux' | 'fal_imagen4' | 'fal_kling_img' | 'fal_grok' | 'fal_ideogram'
  * @param {object} [loraConfig] - { triggerWord, loraUrl } — injects a trained LoRA (visual subject)
  * @returns {Promise<string>} public image URL
  */
@@ -156,9 +156,73 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
   }
 
+  // --- Imagen 4 (Google) via FAL ---
+  if (model === 'fal_imagen4' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/imagen4/preview/fast`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+    });
+    if (!res.ok) throw new Error(`FAL Imagen 4 image gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/imagen4/preview/fast', keys.falKey);
+    const imageUrl = output?.images?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL from FAL Imagen 4');
+    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
+  }
+
+  // --- Kling Image V3 via FAL ---
+  if (model === 'fal_kling_img' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/kling-image/v3/text-to-image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+    });
+    if (!res.ok) throw new Error(`FAL Kling Image gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-image/v3/text-to-image', keys.falKey);
+    const imageUrl = output?.images?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL from FAL Kling Image');
+    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
+  }
+
+  // --- Grok Imagine (xAI) via FAL ---
+  if (model === 'fal_grok' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/xai/grok-imagine-image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+    });
+    if (!res.ok) throw new Error(`FAL Grok Imagine image gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
+    const output = await pollFalQueue(queueData.request_id, 'xai/grok-imagine-image', keys.falKey);
+    const imageUrl = output?.images?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL from FAL Grok Imagine');
+    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
+  }
+
+  // --- Ideogram V2 via FAL ---
+  if (model === 'fal_ideogram' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/ideogram/v2`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+    });
+    if (!res.ok) throw new Error(`FAL Ideogram image gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/ideogram/v2', keys.falKey);
+    const imageUrl = output?.images?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL from FAL Ideogram');
+    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
+  }
+
   // Default: Wavespeed first (fastest), FAL SeedDream fallback.
   // Wavespeed doesn't support LoRA weights — if a LoRA is configured, skip to FAL FLUX instead.
-  if (keys.wavespeedKey && model !== 'fal_seedream' && model !== 'fal_flux' && !loraConfig?.loraUrl) {
+  if (keys.wavespeedKey && !model?.startsWith('fal_') && !loraConfig?.loraUrl) {
     const res = await fetch(`${WAVESPEED_BASE}/google/nano-banana-pro/text-to-image`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' },
@@ -232,10 +296,115 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
  * @param {number} durationSeconds - 3-5
  * @param {object} keys - { wavespeedKey, falKey }
  * @param {object} supabase
- * @param {string} [model] - 'wavespeed_wan' | 'fal_kling' | 'fal_hailuo'
+ * @param {string} [model] - 'wavespeed_wan' | 'fal_kling' | 'fal_hailuo' | 'fal_veo3' | 'fal_veo2' | 'fal_kling_v3' | 'fal_kling_o3' | 'fal_wan25' | 'fal_wan_pro' | 'fal_pixverse'
  * @returns {Promise<string>} public video URL
  */
 export async function animateImage(imageUrl, motionPrompt, aspectRatio, durationSeconds = 5, keys, supabase, model) {
+  // --- Veo 3 Fast (Google) via FAL ---
+  if (model === 'fal_veo3' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/veo3/fast`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: durationSeconds, aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Veo 3 video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/veo3/fast', keys.falKey, 150, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Veo 3');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- Veo 2 (Google) via FAL ---
+  if (model === 'fal_veo2' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/veo2/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: durationSeconds, aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Veo 2 video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/veo2/image-to-video', keys.falKey, 150, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Veo 2');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- Kling V3 Pro via FAL ---
+  if (model === 'fal_kling_v3' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v3/pro/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Kling V3 video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/v3/pro/image-to-video', keys.falKey, 120, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Kling V3');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- Kling O3 Pro via FAL ---
+  if (model === 'fal_kling_o3' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/o3/pro/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Kling O3 video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/o3/pro/image-to-video', keys.falKey, 120, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Kling O3');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- Wan 2.5 Preview via FAL ---
+  if (model === 'fal_wan25' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/wan-25-preview/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: durationSeconds, aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Wan 2.5 video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/wan-25-preview/image-to-video', keys.falKey, 120, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Wan 2.5');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- Wan Pro via FAL ---
+  if (model === 'fal_wan_pro' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/wan-pro/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: durationSeconds, aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL Wan Pro video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/wan-pro/image-to-video', keys.falKey, 120, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL Wan Pro');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
+  // --- PixVerse V4.5 via FAL ---
+  if (model === 'fal_pixverse' && keys.falKey) {
+    const res = await fetch(`${FAL_BASE}/fal-ai/pixverse/v4.5/image-to-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: durationSeconds, aspect_ratio: aspectRatio }),
+    });
+    if (!res.ok) throw new Error(`FAL PixVerse video gen failed: ${await res.text()}`);
+    const queueData = await res.json();
+    const output = await pollFalQueue(queueData.request_id, 'fal-ai/pixverse/v4.5/image-to-video', keys.falKey, 120, 4000);
+    const videoUrl = output?.video?.url;
+    if (!videoUrl) throw new Error('No video URL from FAL PixVerse');
+    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  }
+
   if (model === 'fal_hailuo' && keys.falKey) {
     const res = await fetch(`${FAL_BASE}/fal-ai/minimax/video-01/image-to-video`, {
       method: 'POST',
@@ -265,7 +434,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
   }
 
   // Default: Wavespeed WAN first, FAL Kling fallback
-  if (keys.wavespeedKey && model !== 'fal_kling' && model !== 'fal_hailuo') {
+  if (keys.wavespeedKey && !model?.startsWith('fal_')) {
     const res = await fetch(`${WAVESPEED_BASE}/wavespeed-ai/wan-2.2-spicy/image-to-video`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' },
@@ -321,33 +490,67 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {number} durationSeconds
  * @param {object} keys - { falKey }
  * @param {object} supabase
+ * @param {string} [model] - 'beatoven' | 'fal_elevenlabs' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
-export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase) {
+export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'beatoven') {
   if (!keys.falKey) return null; // music is optional — don't block pipeline
 
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
 
-  const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
-    method: 'POST',
-    headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt: moodPrompt,
-      duration: clampedDuration,
-      refinement: 80,
-      creativity: 14,
-    }),
-  });
-
-  if (!res.ok) {
-    console.warn('[pipelineHelpers] Music gen failed, skipping:', await res.text());
-    return null;
-  }
-
-  const queueData = await res.json();
-  if (!queueData.request_id) return null;
-
   try {
+    // --- ElevenLabs Music via FAL ---
+    if (model === 'fal_elevenlabs') {
+      const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/music`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: moodPrompt, duration_seconds: clampedDuration }),
+      });
+      if (!res.ok) { console.warn('[pipelineHelpers] ElevenLabs Music gen failed, skipping:', await res.text()); return null; }
+      const queueData = await res.json();
+      if (!queueData.request_id) return null;
+      const output = await pollFalQueue(queueData.request_id, 'fal-ai/elevenlabs/music', keys.falKey, 120, 3000);
+      const audioUrl = output?.audio?.url;
+      if (!audioUrl) return null;
+      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    }
+
+    // --- Lyria 2 (Google) via FAL ---
+    if (model === 'fal_lyria2') {
+      const res = await fetch(`${FAL_BASE}/fal-ai/lyria2`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: moodPrompt, duration: clampedDuration }),
+      });
+      if (!res.ok) { console.warn('[pipelineHelpers] Lyria 2 Music gen failed, skipping:', await res.text()); return null; }
+      const queueData = await res.json();
+      if (!queueData.request_id) return null;
+      const output = await pollFalQueue(queueData.request_id, 'fal-ai/lyria2', keys.falKey, 120, 3000);
+      const audioUrl = output?.audio?.url;
+      if (!audioUrl) return null;
+      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    }
+
+    // --- Default: Beatoven ---
+    const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: moodPrompt,
+        duration: clampedDuration,
+        refinement: 80,
+        creativity: 14,
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn('[pipelineHelpers] Music gen failed, skipping:', await res.text());
+      return null;
+    }
+
+    const queueData = await res.json();
+    if (!queueData.request_id) return null;
+
     const output = await pollFalQueue(queueData.request_id, 'beatoven/music-generation', keys.falKey, 120, 2000);
     const audioUrl = output?.audio?.url;
     if (!audioUrl) return null;

@@ -492,7 +492,7 @@ Rules:
   let musicUrl = null;
   if (modelPrefs.music_model !== 'none') {
     const totalSecs = storyboard.scenes.reduce((s, sc) => s + (sc.duration_seconds || 5), 0);
-    musicUrl = await generateMusic(storyboard.music_mood || template.music_mood || 'upbeat background music', Math.min(120, totalSecs + 5), keys, supabase);
+    musicUrl = await generateMusic(storyboard.music_mood || template.music_mood || 'upbeat background music', Math.min(120, totalSecs + 5), keys, supabase, modelPrefs.music_model);
   }
 
   // Concatenate scene clips into one final video per ratio group.
