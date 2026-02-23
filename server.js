@@ -366,15 +366,83 @@ app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
 });
 
 // ── Stitch Queue Poller ──────────────────────────────────────────────────────
-// Polls stitch_queue for pending items and feeds them into the article pipeline.
+// Polls stitch_queue for pending items and routes them by payload type.
 const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '15000', 10);
 
+// ── brand_setup handler: auto-create brand_kit from provision data ──────────
+async function handleBrandSetup(supabase, item) {
+  const p = item.payload || {};
+  const brandUsername = item.brand_username;
+
+  // Find the user who owns this brand via user_profiles.assigned_usernames
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .contains('assigned_usernames', [brandUsername])
+    .limit(1)
+    .maybeSingle();
+
+  if (!profile?.id) {
+    throw new Error(`No user found with brand "${brandUsername}" in assigned_usernames`);
+  }
+
+  // Upsert brand_kit — idempotent, won't fail if already exists
+  const { error: upsertErr } = await supabase
+    .from('brand_kit')
+    .upsert({
+      user_id: profile.id,
+      brand_name: p.display_name || brandUsername,
+      brand_username: brandUsername,
+      colors: p.primary_color ? [p.primary_color] : [],
+      logo_url: p.logo_url || null,
+      voice_style: p.brand_voice_tone || 'professional',
+    }, { onConflict: 'brand_username' });
+
+  if (upsertErr) throw new Error(`brand_kit upsert failed: ${upsertErr.message}`);
+
+  console.log(`[queue/brand_setup] brand_kit created for "${brandUsername}" (user: ${profile.id})`);
+  return { success: true, brand_username: brandUsername };
+}
+
+// ── article handler: feed into from-url pipeline ────────────────────────────
+async function handleArticle(supabase, item) {
+  const handler = await loadApiRoute('article/from-url.js');
+  if (!handler) throw new Error('article/from-url handler not found');
+
+  const fakeReq = {
+    method: 'POST',
+    headers: { 'x-webhook-secret': process.env.WEBHOOK_SECRET || '' },
+    body: {
+      content: item.article_content,
+      brand_username: item.brand_username,
+      writing_structure: item.writing_structure,
+      article_title: item.article_title,
+      ...(item.payload || {}),
+    },
+  };
+
+  let responseData = null;
+  const fakeRes = {
+    status(code) { this._status = code; return this; },
+    json(data) { responseData = data; return this; },
+  };
+
+  await handler(fakeReq, fakeRes);
+
+  if (fakeRes._status >= 400 || !responseData?.success) {
+    throw new Error(responseData?.error || `HTTP ${fakeRes._status}`);
+  }
+
+  return { success: true, jobId: responseData.jobId, templates_matched: responseData.templates_matched };
+}
+
+// ── Main poll loop ──────────────────────────────────────────────────────────
 async function pollStitchQueue() {
   if (!supabaseUrl || !supabaseServiceKey) return;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Atomically claim one pending item (oldest first)
+    // Claim one pending item (oldest first)
     const { data: items, error: fetchErr } = await supabase
       .from('stitch_queue')
       .select('*')
@@ -385,65 +453,39 @@ async function pollStitchQueue() {
     if (fetchErr || !items?.length) return;
     const item = items[0];
 
-    // Mark as processing
     const { error: claimErr } = await supabase
       .from('stitch_queue')
       .update({ status: 'processing', picked_up_at: new Date().toISOString() })
       .eq('id', item.id)
-      .eq('status', 'pending'); // guard against double-pick
+      .eq('status', 'pending');
 
     if (claimErr) return;
 
-    console.log(`[queue] Processing ${item.id} — ${item.brand_username} / ${item.writing_structure}`);
+    const payloadType = item.payload?.type || 'article';
+    console.log(`[queue] Processing ${item.id} — type: ${payloadType}, brand: ${item.brand_username}`);
 
-    // Load the article pipeline handler
-    const handler = await loadApiRoute('article/from-url.js');
-    if (!handler) {
-      await supabase.from('stitch_queue').update({ status: 'failed', error: 'Handler not found', completed_at: new Date().toISOString() }).eq('id', item.id);
-      return;
-    }
+    try {
+      let result;
+      if (payloadType === 'brand_setup') {
+        result = await handleBrandSetup(supabase, item);
+      } else {
+        result = await handleArticle(supabase, item);
+      }
 
-    // Build a synthetic req/res to reuse the existing handler
-    const fakeReq = {
-      method: 'POST',
-      headers: { 'x-webhook-secret': process.env.WEBHOOK_SECRET || '' },
-      body: {
-        content: item.article_content,
-        brand_username: item.brand_username,
-        writing_structure: item.writing_structure,
-        article_title: item.article_title,
-        ...(item.payload || {}),
-      },
-    };
-
-    let responseData = null;
-    const fakeRes = {
-      status(code) {
-        this._status = code;
-        return this;
-      },
-      json(data) {
-        responseData = data;
-        return this;
-      },
-    };
-
-    await handler(fakeReq, fakeRes);
-
-    if (fakeRes._status >= 400 || !responseData?.success) {
-      await supabase.from('stitch_queue').update({
-        status: 'failed',
-        error: responseData?.error || `HTTP ${fakeRes._status}`,
-        completed_at: new Date().toISOString(),
-      }).eq('id', item.id);
-      console.warn(`[queue] Failed ${item.id}: ${responseData?.error || fakeRes._status}`);
-    } else {
       await supabase.from('stitch_queue').update({
         status: 'completed',
-        payload: { ...item.payload, jobId: responseData.jobId, templates_matched: responseData.templates_matched },
+        payload: { ...item.payload, ...result },
         completed_at: new Date().toISOString(),
       }).eq('id', item.id);
-      console.log(`[queue] Completed ${item.id} — jobId: ${responseData.jobId}`);
+      console.log(`[queue] Completed ${item.id}`);
+
+    } catch (handlerErr) {
+      await supabase.from('stitch_queue').update({
+        status: 'failed',
+        error: handlerErr.message,
+        completed_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      console.warn(`[queue] Failed ${item.id}: ${handlerErr.message}`);
     }
   } catch (err) {
     console.error('[queue] Poll error:', err.message);
