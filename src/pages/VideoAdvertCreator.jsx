@@ -124,7 +124,7 @@ export default function VideoAdvertCreator() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/setup');
+      navigate('/');
     } catch (error) {
       toast.error('Failed to sign out');
     }
@@ -349,7 +349,10 @@ export default function VideoAdvertCreator() {
             
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden md:flex">
-                <Link to="/campaigns">View Campaigns</Link>
+                <Link to="/campaigns">Campaigns</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden md:flex">
+                <Link to="/templates">Templates</Link>
               </Button>
               <div className="h-4 w-px bg-slate-700 hidden md:block mx-1"></div>
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
@@ -715,7 +718,7 @@ export default function VideoAdvertCreator() {
               {createdVideos.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center flex-col text-slate-500">
                   <Clapperboard className="w-12 h-12 mb-2 opacity-50" />
-                  <p>Generate a video to start editing</p>
+                  <p className="mx-2.5 flex flex-wrap text-center">Generate a video to start editing</p>
                 </div>
               )}
             </div>

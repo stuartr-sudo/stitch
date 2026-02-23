@@ -242,6 +242,26 @@ app.post('/api/webhooks/content', async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Article → Video autonomous pipeline (NO auth - webhook secret + brand_username)
+app.post('/api/article/from-url', async (req, res) => {
+  const handler = await loadApiRoute('article/from-url.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Public job status poll (no auth — for Doubleclicker to poll pipeline progress)
+app.get('/api/jobs/public-status', async (req, res) => {
+  const { jobId } = req.query;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const { createClient: sbCreate } = await import('@supabase/supabase-js');
+  const sb = sbCreate(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await sb.from('jobs')
+    .select('id, status, current_step, total_steps, completed_steps, output_json, error')
+    .eq('id', jobId).single();
+  if (error || !data) return res.status(404).json({ error: 'Job not found' });
+  return res.json({ success: true, job: data });
+});
+
 // Jobs status (with auth)
 app.post('/api/jobs/status', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('jobs/status.js');
@@ -280,9 +300,67 @@ app.get('/api/audio/result', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Template routes (with auth)
+app.get('/api/templates/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/templates/analyze', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/analyze.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/templates/save', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/save.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/delete.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Brand avatar routes (with auth)
+app.get('/api/brand/avatars', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/brand/avatars', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/brand/avatars/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Campaigns list (with auth)
 app.get('/api/campaigns/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Campaign detail with full draft assets (with auth)
+app.get('/api/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/detail.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Publish / Schedule a draft (with auth)
+app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/publish.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });

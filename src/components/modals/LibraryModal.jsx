@@ -24,7 +24,8 @@ import {
   Play,
   Pause,
   Volume2,
-  VolumeX
+  VolumeX,
+  Music as MusicIcon
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -34,13 +35,15 @@ import { supabase } from '@/lib/supabase';
  */
 function MediaCard({ item, isSelected, onSelect, onDelete }) {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0, aspectRatio: 'landscape' });
 
-  const mediaUrl = item.url || item.image_url || item.video_url;
+  const mediaUrl = item.url || item.image_url || item.video_url || item.audio_url;
   const isVideo = item.type === 'video';
+  const isAudio = item.type === 'audio';
 
   // Detect media dimensions
   const handleMediaLoad = (e) => {
@@ -65,11 +68,12 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
 
   const handlePlayPause = (e) => {
     e.stopPropagation();
-    if (videoRef.current) {
+    const ref = isAudio ? audioRef : videoRef;
+    if (ref.current) {
       if (isPlaying) {
-        videoRef.current.pause();
+        ref.current.pause();
       } else {
-        videoRef.current.play();
+        ref.current.play();
       }
       setIsPlaying(!isPlaying);
     }
@@ -77,13 +81,14 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
 
   const handleMuteToggle = (e) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
+    const ref = isAudio ? audioRef : videoRef;
+    if (ref.current) {
+      ref.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
 
-  const handleVideoEnd = () => {
+  const handleMediaEnd = () => {
     setIsPlaying(false);
   };
 
@@ -116,8 +121,43 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
-      <div className={`${getAspectClass()} bg-slate-900 relative flex items-center justify-center`}>
-        {isVideo ? (
+      <div className={`${isAudio ? 'h-24' : getAspectClass()} bg-slate-900 relative flex items-center justify-center`}>
+        {isAudio ? (
+          <>
+            <audio 
+              ref={audioRef}
+              src={mediaUrl} 
+              muted={isMuted}
+              onEnded={handleMediaEnd}
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* Audio Controls */}
+            <div className="flex items-center gap-3 w-full px-4">
+              <button
+                onClick={handlePlayPause}
+                className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all flex-shrink-0"
+              >
+                {isPlaying ? (
+                  <Pause className="w-4 h-4 text-slate-800" />
+                ) : (
+                  <Play className="w-4 h-4 text-slate-800 ml-0.5" />
+                )}
+              </button>
+              <button
+                onClick={handleMuteToggle}
+                className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all flex-shrink-0"
+              >
+                {isMuted ? (
+                  <VolumeX className="w-4 h-4 text-slate-800" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-slate-800" />
+                )}
+              </button>
+              <div className="flex-1 h-1 bg-slate-700 rounded-full"></div>
+            </div>
+          </>
+        ) : isVideo ? (
           <>
             <video 
               ref={videoRef}
@@ -127,7 +167,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
               loop
               playsInline
               onLoadedMetadata={handleMediaLoad}
-              onEnded={handleVideoEnd}
+              onEnded={handleMediaEnd}
               onClick={(e) => e.stopPropagation()}
             />
             
@@ -190,8 +230,10 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
         
         {/* Type Badge */}
         <div className="absolute top-2 left-2">
-          <div className={`p-1.5 rounded-lg ${isVideo ? 'bg-blue-500' : 'bg-green-500'} text-white shadow-lg`}>
-            {isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+          <div className={`p-1.5 rounded-lg ${
+            isAudio ? 'bg-purple-500' : isVideo ? 'bg-blue-500' : 'bg-green-500'
+          } text-white shadow-lg`}>
+            {isAudio ? <MusicIcon className="w-3.5 h-3.5" /> : isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
           </div>
         </div>
 
@@ -247,7 +289,7 @@ export default function LibraryModal({
   isOpen, 
   onClose, 
   onSelect,
-  mediaType = 'all', // 'all', 'images', 'videos'
+  mediaType = 'all', // 'all', 'images', 'videos', 'audio'
   isEmbedded = false 
 }) {
   const [items, setItems] = useState([]);
@@ -277,33 +319,38 @@ export default function LibraryModal({
     }
 
     try {
-      // Load from image_library_items
-      let imageQuery = supabase
-        .from('image_library_items')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      // Load from generated_videos
-      let videoQuery = supabase
-        .from('generated_videos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
       const results = [];
 
       if (filter === 'all' || filter === 'images') {
-        const { data: images } = await imageQuery;
+        const { data: images } = await supabase
+          .from('image_library_items')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
         if (images) {
           results.push(...images.map(img => ({ ...img, type: 'image' })));
         }
       }
 
       if (filter === 'all' || filter === 'videos') {
-        const { data: videos } = await videoQuery;
+        const { data: videos } = await supabase
+          .from('generated_videos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
         if (videos) {
           results.push(...videos.map(vid => ({ ...vid, type: 'video' })));
+        }
+      }
+
+      if (filter === 'all' || filter === 'audio') {
+        const { data: audio } = await supabase
+          .from('generated_audio')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (audio) {
+          results.push(...audio.map(aud => ({ ...aud, type: 'audio' })));
         }
       }
 
@@ -343,7 +390,15 @@ export default function LibraryModal({
     }
 
     try {
-      const table = item.type === 'image' ? 'image_library_items' : 'generated_videos';
+      let table;
+      if (item.type === 'image') {
+        table = 'image_library_items';
+      } else if (item.type === 'video') {
+        table = 'generated_videos';
+      } else if (item.type === 'audio') {
+        table = 'generated_audio';
+      }
+      
       const { error } = await supabase.from(table).delete().eq('id', item.id);
       
       if (error) throw error;
@@ -395,6 +450,7 @@ export default function LibraryModal({
             <option value="all">All Media</option>
             <option value="images">Images Only</option>
             <option value="videos">Videos Only</option>
+            <option value="audio">Audio Only</option>
           </select>
         </div>
 
@@ -413,7 +469,7 @@ export default function LibraryModal({
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
             <FolderOpen className="w-16 h-16 mb-4 opacity-30" />
             <p className="font-medium">No media found</p>
-            <p className="text-sm">Your generated images and videos will appear here</p>
+            <p className="text-sm">Your generated images, videos, and audio will appear here</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-max">

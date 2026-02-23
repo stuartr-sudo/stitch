@@ -16,11 +16,12 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { brand_name, colors, logo_url, voice_style, taglines, style_preset } = req.body;
+    const { brand_name, brand_username, colors, logo_url, voice_style, taglines, style_preset } = req.body;
 
     const payload = {
       user_id: userId,
       brand_name: brand_name || null,
+      brand_username: brand_username || null,
       colors: colors || [],
       logo_url: logo_url || null,
       voice_style: voice_style || 'professional',

@@ -5,7 +5,17 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*, ad_drafts(*)')
+    .select(`
+      id, name, article_title, platform, status, writing_structure,
+      brand_username, source_url, total_drafts, completed_drafts,
+      created_at, updated_at,
+      ad_drafts (
+        id, campaign_id, template_id, template_name, output_type,
+        generation_status, publish_status, scheduled_for,
+        platforms, assets_json, static_assets_json, storyboard_json,
+        music_url, captions_json, timelines_json, created_at
+      )
+    `)
     .eq('user_id', req.user.id)
     .order('created_at', { ascending: false });
 

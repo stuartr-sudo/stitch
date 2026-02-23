@@ -3,12 +3,46 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 /**
  * Edit Image API - AI Image Editing with multiple models
  */
+
+// Simplify aspect ratio to one of the allowed values
+function getSimplifiedAspectRatio(width, height) {
+  const allowedRatios = ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+  
+  if (!width || !height) return undefined;
+  
+  const ratio = width / height;
+  
+  let closest = allowedRatios[0];
+  const [fw, fh] = allowedRatios[0].split(':').map(Number);
+  let closestDiff = Math.abs(fw / fh - ratio);
+  
+  for (const allowed of allowedRatios) {
+    const [w, h] = allowed.split(':').map(Number);
+    const diff = Math.abs(w / h - ratio);
+    if (diff < closestDiff) {
+      closest = allowed;
+      closestDiff = diff;
+    }
+  }
+  
+  return closest;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+  let { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+  
+  // Fallback to environment variables if not found in database
+  if (!WAVESPEED_API_KEY) {
+    WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
+  }
+  if (!FAL_KEY) {
+    FAL_KEY = process.env.FAL_KEY;
+  }
+  
   if (!WAVESPEED_API_KEY && !FAL_KEY) {
     return res.status(400).json({ error: 'API keys not configured. Please add them in API Keys settings.' });
   }
@@ -27,11 +61,11 @@ export default async function handler(req, res) {
     const [width, height] = outputSize.split('x').map(Number);
     const maxDim = Math.max(width || 1920, height || 1080);
     
-    // Determine resolution based on dimensions
-    let resolution = '2k';
-    if (maxDim >= 3840) resolution = '4k';
-    else if (maxDim >= 2560) resolution = '2k';
-    else resolution = '1k';
+    // nano-banana-pro/edit-ultra only accepts '4k' or '8k'
+    const resolution = maxDim >= 7680 ? '8k' : '4k';
+    
+    // Get simplified aspect ratio that matches Wavespeed API requirements
+    const aspectRatio = getSimplifiedAspectRatio(width, height);
 
     console.log('[Edit Image] Model:', model, 'Size:', outputSize, 'Resolution:', resolution);
 
@@ -50,7 +84,7 @@ export default async function handler(req, res) {
           images: images,
           prompt: prompt,
           resolution: resolution,
-          aspect_ratio: width && height ? `${width}:${height}` : undefined,
+          aspect_ratio: aspectRatio,
         }),
       });
     } else if (model === 'wavespeed-qwen') {

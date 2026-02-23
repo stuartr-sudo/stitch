@@ -12,6 +12,7 @@ import { Dialog,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 const AUDIO_MODELS = [
   { id: 'beatoven/music-generation', label: 'Beatoven Music', type: 'music', provider: 'fal' },
@@ -23,7 +24,13 @@ const AUDIO_MODELS = [
 export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) {
   const [model, setModel] = useState('beatoven/music-generation');
   const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
   const [lyrics, setLyrics] = useState('');
+  const [duration, setDuration] = useState(90);
+  const [refinement, setRefinement] = useState(100);
+  const [creativity, setCreativity] = useState(16);
+  const [seed, setSeed] = useState('');
+  const [musicLengthSeconds, setMusicLengthSeconds] = useState(30);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState(null);
 
@@ -47,7 +54,13 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
         body: JSON.stringify({
           prompt: prompt,
           model: model,
+          negativePrompt: negativePrompt || undefined,
           lyrics: lyrics || undefined,
+          duration_seconds: duration,
+          refinement: refinement,
+          creativity: creativity,
+          seed: seed ? parseInt(seed) : undefined,
+          musicLengthMs: model === 'fal-ai/elevenlabs/music' ? musicLengthSeconds * 1000 : undefined,
         }),
       });
 
@@ -80,17 +93,45 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
     }
   };
 
-  const handleInsert = () => {
-    if (generatedUrl && onAudioGenerated) {
-      onAudioGenerated({
-        url: generatedUrl,
-        title: `${selectedModelInfo.type === 'voice' ? 'Voiceover' : 'Audio Track'} - ${prompt.substring(0, 20)}`,
-        type: 'audio',
-        source: model
-      });
-      setPrompt(''); // Clear the prompt after successful generation
-      onClose();
+  const handleInsert = async () => {
+    if (!generatedUrl || !onAudioGenerated) return;
+
+    const audioItem = {
+      url: generatedUrl,
+      title: `${selectedModelInfo.type === 'voice' ? 'Voiceover' : 'Audio Track'} - ${prompt.substring(0, 20)}`,
+      type: 'audio',
+      source: model
+    };
+
+    try {
+      // Save to library if Supabase is available
+      if (supabase?.auth?.getUser) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('generated_audio').insert({
+            user_id: user.id,
+            title: audioItem.title,
+            prompt: prompt,
+            negative_prompt: negativePrompt || null,
+            model: model,
+            audio_url: generatedUrl,
+            duration_seconds: model === 'fal-ai/elevenlabs/music' ? musicLengthSeconds : duration,
+            refinement: refinement,
+            creativity: creativity,
+            seed: seed ? parseInt(seed) : null
+          });
+          toast.success('Audio saved to library!');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving audio to library:', error);
+      toast.warning('Audio generated but not saved to library');
     }
+
+    onAudioGenerated(audioItem);
+    setPrompt('');
+    setNegativePrompt('');
+    onClose();
   };
 
   return (
@@ -132,6 +173,18 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
             />
           </div>
 
+          {(model === 'beatoven/music-generation' || model === 'beatoven/sound-effect-generation') && (
+            <div className="space-y-2">
+              <Label className="text-slate-300">Negative Prompt (what to avoid)</Label>
+              <Textarea
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                placeholder={model === 'beatoven/music-generation' ? 'e.g., noise, distortion, heavy drums' : 'e.g., noise, high-pitched screech'}
+                className="bg-slate-800 border-slate-700 text-white h-16"
+              />
+            </div>
+          )}
+
           {selectedModelInfo?.requiresLyrics && (
             <div className="space-y-2">
               <Label className="text-slate-300">
@@ -142,6 +195,108 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
                 onChange={(e) => setLyrics(e.target.value)}
                 placeholder="[verse]\nYour lyrics here...\n[chorus]\nChorus lyrics..."
                 className="bg-slate-800 border-slate-700 text-white h-24"
+              />
+            </div>
+          )}
+
+          {(model === 'beatoven/music-generation' || model === 'beatoven/sound-effect-generation') && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">
+                    Duration (seconds)
+                    <span className="text-xs text-slate-400 ml-1">
+                      {model === 'beatoven/sound-effect-generation' ? '(1-35)' : '(5-150)'}
+                    </span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min={model === 'beatoven/sound-effect-generation' ? 1 : 5}
+                    max={model === 'beatoven/sound-effect-generation' ? 35 : 150}
+                    step="1"
+                    value={duration}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || (model === 'beatoven/sound-effect-generation' ? 5 : 90);
+                      const min = model === 'beatoven/sound-effect-generation' ? 1 : 5;
+                      const max = model === 'beatoven/sound-effect-generation' ? 35 : 150;
+                      setDuration(Math.max(min, Math.min(max, val)));
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300">
+                    Refinement
+                    <span className="text-xs text-slate-400 ml-1">(10-200)</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="10"
+                    max="200"
+                    step="10"
+                    value={refinement}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 100;
+                      setRefinement(Math.max(10, Math.min(200, val)));
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300">
+                    Creativity
+                    <span className="text-xs text-slate-400 ml-1">(1-20)</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    step="0.5"
+                    value={creativity}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 16;
+                      setCreativity(Math.max(1, Math.min(20, val)));
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300">
+                    Seed (optional)
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="Leave empty for random"
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.value)}
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {model === 'fal-ai/elevenlabs/music' && (
+            <div className="space-y-2">
+              <Label className="text-slate-300">
+                Music Length (seconds)
+                <span className="text-xs text-slate-400 ml-2">(3 - 600 seconds)</span>
+              </Label>
+              <Input
+                type="number"
+                min="3"
+                max="600"
+                step="1"
+                value={musicLengthSeconds}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 30;
+                  setMusicLengthSeconds(Math.max(3, Math.min(600, value)));
+                }}
+                className="bg-slate-800 border-slate-700 text-white"
+                placeholder="30"
               />
             </div>
           )}

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import LibraryModal from './LibraryModal';
+import { apiFetch } from '@/lib/api';
 import {
   Edit3,
   Upload,
@@ -28,7 +29,6 @@ import {
 } from 'lucide-react';
 
 const MODELS = [
-  { id: 'grok-imagine-image-edit', label: '✨ X-AI Grok Imagine Edit', endpoint: 'x-ai/grok-imagine-image/edit', provider: 'wavespeed' },
   { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', endpoint: 'nano-banana-pro/edit-ultra', provider: 'wavespeed' },
   { id: 'wavespeed-qwen', label: 'Qwen Image Edit', endpoint: 'qwen-image/edit-2511', provider: 'wavespeed' },
   { id: 'fal-flux', label: 'Flux 2 Pro', endpoint: 'fal-flux-2-pro', provider: 'fal' },
@@ -150,6 +150,19 @@ export default function EditImageModal({
     setImages(prev => prev.map(img => ({ ...img, isBase: img.id === id })));
   };
 
+  const saveToLibrary = (url) => {
+    apiFetch('/api/library/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.saved) toast.success('Saved to library!');
+      })
+      .catch(err => console.warn('[EditImage] Failed to save to library:', err));
+  };
+
   const handleEdit = async () => {
     if (images.length === 0) {
       toast.error('Please add at least one image');
@@ -179,9 +192,9 @@ export default function EditImageModal({
       if (data.imageUrl) {
         setResultImage(data.imageUrl);
         toast.success('Image edited successfully!');
+        saveToLibrary(data.imageUrl);
       } else if (data.requestId) {
         toast.info('Processing... This may take a moment.');
-        // Poll for result
         pollForResult(data.requestId);
       }
     } catch (error) {
@@ -203,8 +216,10 @@ export default function EditImageModal({
         const data = await response.json();
         
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
-          setResultImage(data.imageUrl || data.videoUrl);
+          const resultUrl = data.imageUrl || data.videoUrl;
+          setResultImage(resultUrl);
           toast.success('Image edited successfully!');
+          saveToLibrary(resultUrl);
         } else if (data.status === 'failed') {
           toast.error('Edit failed: ' + (data.error || 'Unknown error'));
         } else {
