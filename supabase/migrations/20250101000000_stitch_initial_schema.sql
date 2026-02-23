@@ -2,7 +2,27 @@
 -- Stitch Initial Schema (consolidated from v1–v6 migrations)
 -- All statements use IF NOT EXISTS / OR REPLACE so this is safe to run against
 -- a Supabase project that may already have some of these objects.
+-- Policies use DO blocks for PG15 compatibility (no CREATE POLICY IF NOT EXISTS).
 -- =============================================================================
+
+-- Helper: idempotent policy creation (PG15-safe)
+-- INSERT only supports WITH CHECK (no USING). For INSERT, pass the check expr as p_qual.
+CREATE OR REPLACE FUNCTION _create_policy_if_not_exists(
+  p_table text, p_name text, p_cmd text, p_qual text, p_check text DEFAULT NULL
+) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = p_table AND policyname = p_name) THEN
+    IF upper(p_cmd) = 'INSERT' THEN
+      -- INSERT: only WITH CHECK allowed, p_qual is the check expression
+      EXECUTE format('CREATE POLICY %I ON %I FOR INSERT WITH CHECK (%s)', p_name, p_table, p_qual);
+    ELSIF p_check IS NOT NULL THEN
+      EXECUTE format('CREATE POLICY %I ON %I FOR %s USING (%s) WITH CHECK (%s)', p_name, p_table, p_cmd, p_qual, p_check);
+    ELSE
+      EXECUTE format('CREATE POLICY %I ON %I FOR %s USING (%s)', p_name, p_table, p_cmd, p_qual);
+    END IF;
+  END IF;
+END;
+$$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Shared trigger function (safe to replace)
@@ -41,16 +61,34 @@ CREATE TABLE IF NOT EXISTS generated_videos (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Ensure columns exist even if tables were pre-existing
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS url text;
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS prompt text;
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS model text;
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE image_library_items ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS url text;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS prompt text;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS model text;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS duration float;
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE generated_videos ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
 ALTER TABLE image_library_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generated_videos    ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own images"  ON image_library_items FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own images" ON image_library_items FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own images" ON image_library_items FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('image_library_items', 'Users can view own images',  'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('image_library_items', 'Users can insert own images', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('image_library_items', 'Users can delete own images', 'DELETE', 'auth.uid() = user_id');
 
-CREATE POLICY IF NOT EXISTS "Users can view own videos"  ON generated_videos FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own videos" ON generated_videos FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own videos" ON generated_videos FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('generated_videos', 'Users can view own videos',  'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('generated_videos', 'Users can insert own videos', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('generated_videos', 'Users can delete own videos', 'DELETE', 'auth.uid() = user_id');
 
 CREATE INDEX IF NOT EXISTS idx_image_library_items_user_id ON image_library_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_generated_videos_user_id    ON generated_videos(user_id);
@@ -70,15 +108,23 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
   updated_at      timestamptz DEFAULT now()
 );
 
+ALTER TABLE user_api_keys ADD COLUMN IF NOT EXISTS fal_key text;
+ALTER TABLE user_api_keys ADD COLUMN IF NOT EXISTS wavespeed_key text;
+ALTER TABLE user_api_keys ADD COLUMN IF NOT EXISTS openai_key text;
+ALTER TABLE user_api_keys ADD COLUMN IF NOT EXISTS elevenlabs_key text;
+ALTER TABLE user_api_keys ADD COLUMN IF NOT EXISTS huggingface_key text;
+
 ALTER TABLE user_api_keys ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own API keys"   ON user_api_keys FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own API keys" ON user_api_keys FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own API keys" ON user_api_keys FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('user_api_keys', 'Users can view own API keys',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('user_api_keys', 'Users can insert own API keys', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('user_api_keys', 'Users can update own API keys', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_user_api_keys_updated_at
-  BEFORE UPDATE ON user_api_keys FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_user_api_keys_updated_at') THEN
+    CREATE TRIGGER update_user_api_keys_updated_at BEFORE UPDATE ON user_api_keys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_user_api_keys_user_id ON user_api_keys(user_id);
 
@@ -101,13 +147,15 @@ CREATE TABLE IF NOT EXISTS brand_kit (
 
 ALTER TABLE brand_kit ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own brand kit"   ON brand_kit FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own brand kit" ON brand_kit FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own brand kit" ON brand_kit FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('brand_kit', 'Users can view own brand kit',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_kit', 'Users can insert own brand kit', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_kit', 'Users can update own brand kit', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_brand_kit_updated_at
-  BEFORE UPDATE ON brand_kit FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_brand_kit_updated_at') THEN
+    CREATE TRIGGER update_brand_kit_updated_at BEFORE UPDATE ON brand_kit FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_brand_kit_brand_username
   ON brand_kit(brand_username) WHERE brand_username IS NOT NULL;
@@ -130,14 +178,16 @@ CREATE TABLE IF NOT EXISTS brand_loras (
 
 ALTER TABLE brand_loras ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own loras"   ON brand_loras FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own loras" ON brand_loras FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own loras" ON brand_loras FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own loras" ON brand_loras FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('brand_loras', 'Users can view own loras',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_loras', 'Users can insert own loras', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_loras', 'Users can update own loras', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_loras', 'Users can delete own loras', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_brand_loras_updated_at
-  BEFORE UPDATE ON brand_loras FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_brand_loras_updated_at') THEN
+    CREATE TRIGGER update_brand_loras_updated_at BEFORE UPDATE ON brand_loras FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_brand_loras_user_id ON brand_loras(user_id);
 
@@ -156,9 +206,9 @@ CREATE TABLE IF NOT EXISTS brand_assets (
 
 ALTER TABLE brand_assets ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own brand assets"   ON brand_assets FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own brand assets" ON brand_assets FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own brand assets" ON brand_assets FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('brand_assets', 'Users can view own brand assets',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_assets', 'Users can insert own brand assets', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('brand_assets', 'Users can delete own brand assets', 'DELETE', 'auth.uid() = user_id');
 
 CREATE INDEX IF NOT EXISTS idx_brand_assets_user_id ON brand_assets(user_id);
 CREATE INDEX IF NOT EXISTS idx_brand_assets_lora_id ON brand_assets(lora_id);
@@ -186,19 +236,21 @@ CREATE TABLE IF NOT EXISTS campaigns (
 
 ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own campaigns"   ON campaigns FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own campaigns" ON campaigns FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own campaigns" ON campaigns FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own campaigns" ON campaigns FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('campaigns', 'Users can view own campaigns',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('campaigns', 'Users can insert own campaigns', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('campaigns', 'Users can update own campaigns', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('campaigns', 'Users can delete own campaigns', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_campaigns_updated_at
-  BEFORE UPDATE ON campaigns FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_campaigns_updated_at') THEN
+    CREATE TRIGGER update_campaigns_updated_at BEFORE UPDATE ON campaigns FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_campaigns_user_id ON campaigns(user_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Ad Drafts (storyboard + generated assets per campaign × ratio)
+-- Ad Drafts (storyboard + generated assets per campaign x ratio)
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS ad_drafts (
   id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -227,14 +279,16 @@ CREATE TABLE IF NOT EXISTS ad_drafts (
 
 ALTER TABLE ad_drafts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own drafts"   ON ad_drafts FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own drafts" ON ad_drafts FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own drafts" ON ad_drafts FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own drafts" ON ad_drafts FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('ad_drafts', 'Users can view own drafts',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('ad_drafts', 'Users can insert own drafts', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('ad_drafts', 'Users can update own drafts', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('ad_drafts', 'Users can delete own drafts', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_ad_drafts_updated_at
-  BEFORE UPDATE ON ad_drafts FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_ad_drafts_updated_at') THEN
+    CREATE TRIGGER update_ad_drafts_updated_at BEFORE UPDATE ON ad_drafts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_ad_drafts_campaign_id ON ad_drafts(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_ad_drafts_user_id     ON ad_drafts(user_id);
@@ -258,14 +312,16 @@ CREATE TABLE IF NOT EXISTS platform_connections (
 
 ALTER TABLE platform_connections ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own connections"   ON platform_connections FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own connections" ON platform_connections FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own connections" ON platform_connections FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own connections" ON platform_connections FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('platform_connections', 'Users can view own connections',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('platform_connections', 'Users can insert own connections', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('platform_connections', 'Users can update own connections', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('platform_connections', 'Users can delete own connections', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_platform_connections_updated_at
-  BEFORE UPDATE ON platform_connections FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_platform_connections_updated_at') THEN
+    CREATE TRIGGER update_platform_connections_updated_at BEFORE UPDATE ON platform_connections FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_platform_connections_user_id ON platform_connections(user_id);
 
@@ -289,9 +345,9 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own jobs"   ON jobs FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own jobs" ON jobs FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own jobs" ON jobs FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('jobs', 'Users can view own jobs',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('jobs', 'Users can insert own jobs', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('jobs', 'Users can update own jobs', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
 
 -- Allow service role to write pipeline results without a user session
 DO $$
@@ -304,9 +360,11 @@ BEGIN
   END IF;
 END $$;
 
-CREATE TRIGGER update_jobs_updated_at
-  BEFORE UPDATE ON jobs FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_jobs_updated_at') THEN
+    CREATE TRIGGER update_jobs_updated_at BEFORE UPDATE ON jobs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status  ON jobs(status);
@@ -332,13 +390,15 @@ CREATE TABLE IF NOT EXISTS generated_audio (
 
 ALTER TABLE generated_audio ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own audio"   ON generated_audio FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own audio" ON generated_audio FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own audio" ON generated_audio FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('generated_audio', 'Users can view own audio',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('generated_audio', 'Users can insert own audio', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('generated_audio', 'Users can delete own audio', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_generated_audio_updated_at
-  BEFORE UPDATE ON generated_audio FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_generated_audio_updated_at') THEN
+    CREATE TRIGGER update_generated_audio_updated_at BEFORE UPDATE ON generated_audio FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_generated_audio_user_id ON generated_audio(user_id);
 CREATE INDEX IF NOT EXISTS idx_generated_audio_model   ON generated_audio(model);
@@ -373,14 +433,16 @@ CREATE TABLE IF NOT EXISTS user_templates (
 
 ALTER TABLE user_templates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own templates"   ON user_templates FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own templates" ON user_templates FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own templates" ON user_templates FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own templates" ON user_templates FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('user_templates', 'Users can view own templates',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('user_templates', 'Users can insert own templates', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('user_templates', 'Users can update own templates', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('user_templates', 'Users can delete own templates', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_user_templates_updated_at
-  BEFORE UPDATE ON user_templates FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_user_templates_updated_at') THEN
+    CREATE TRIGGER update_user_templates_updated_at BEFORE UPDATE ON user_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_user_templates_user_id       ON user_templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_templates_brand_username ON user_templates(brand_username);
@@ -405,14 +467,16 @@ CREATE TABLE IF NOT EXISTS visual_subjects (
 
 ALTER TABLE visual_subjects ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can view own visual subjects"   ON visual_subjects FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own visual subjects" ON visual_subjects FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own visual subjects" ON visual_subjects FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own visual subjects" ON visual_subjects FOR DELETE USING (auth.uid() = user_id);
+SELECT _create_policy_if_not_exists('visual_subjects', 'Users can view own visual subjects',   'SELECT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('visual_subjects', 'Users can insert own visual subjects', 'INSERT', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('visual_subjects', 'Users can update own visual subjects', 'UPDATE', 'auth.uid() = user_id', 'auth.uid() = user_id');
+SELECT _create_policy_if_not_exists('visual_subjects', 'Users can delete own visual subjects', 'DELETE', 'auth.uid() = user_id');
 
-CREATE TRIGGER update_visual_subjects_updated_at
-  BEFORE UPDATE ON visual_subjects FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_visual_subjects_updated_at') THEN
+    CREATE TRIGGER update_visual_subjects_updated_at BEFORE UPDATE ON visual_subjects FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_visual_subjects_user_id       ON visual_subjects(user_id);
 CREATE INDEX IF NOT EXISTS idx_visual_subjects_brand_username ON visual_subjects(brand_username);
@@ -431,3 +495,8 @@ BEGIN
   WHERE id = campaign_id;
 END;
 $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Cleanup: drop the helper function (not needed after migration)
+-- ─────────────────────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS _create_policy_if_not_exists(text, text, text, text, text);

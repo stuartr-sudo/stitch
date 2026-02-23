@@ -365,6 +365,94 @@ app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// ── Stitch Queue Poller ──────────────────────────────────────────────────────
+// Polls stitch_queue for pending items and feeds them into the article pipeline.
+const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '15000', 10);
+
+async function pollStitchQueue() {
+  if (!supabaseUrl || !supabaseServiceKey) return;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  try {
+    // Atomically claim one pending item (oldest first)
+    const { data: items, error: fetchErr } = await supabase
+      .from('stitch_queue')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    if (fetchErr || !items?.length) return;
+    const item = items[0];
+
+    // Mark as processing
+    const { error: claimErr } = await supabase
+      .from('stitch_queue')
+      .update({ status: 'processing', picked_up_at: new Date().toISOString() })
+      .eq('id', item.id)
+      .eq('status', 'pending'); // guard against double-pick
+
+    if (claimErr) return;
+
+    console.log(`[queue] Processing ${item.id} — ${item.brand_username} / ${item.writing_structure}`);
+
+    // Load the article pipeline handler
+    const handler = await loadApiRoute('article/from-url.js');
+    if (!handler) {
+      await supabase.from('stitch_queue').update({ status: 'failed', error: 'Handler not found', completed_at: new Date().toISOString() }).eq('id', item.id);
+      return;
+    }
+
+    // Build a synthetic req/res to reuse the existing handler
+    const fakeReq = {
+      method: 'POST',
+      headers: { 'x-webhook-secret': process.env.WEBHOOK_SECRET || '' },
+      body: {
+        content: item.article_content,
+        brand_username: item.brand_username,
+        writing_structure: item.writing_structure,
+        article_title: item.article_title,
+        ...(item.payload || {}),
+      },
+    };
+
+    let responseData = null;
+    const fakeRes = {
+      status(code) {
+        this._status = code;
+        return this;
+      },
+      json(data) {
+        responseData = data;
+        return this;
+      },
+    };
+
+    await handler(fakeReq, fakeRes);
+
+    if (fakeRes._status >= 400 || !responseData?.success) {
+      await supabase.from('stitch_queue').update({
+        status: 'failed',
+        error: responseData?.error || `HTTP ${fakeRes._status}`,
+        completed_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      console.warn(`[queue] Failed ${item.id}: ${responseData?.error || fakeRes._status}`);
+    } else {
+      await supabase.from('stitch_queue').update({
+        status: 'completed',
+        payload: { ...item.payload, jobId: responseData.jobId, templates_matched: responseData.templates_matched },
+        completed_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      console.log(`[queue] Completed ${item.id} — jobId: ${responseData.jobId}`);
+    }
+  } catch (err) {
+    console.error('[queue] Poll error:', err.message);
+  }
+}
+
+// Start polling after server boots
+let queueInterval;
+
 // Serve Vite build output
 app.use(express.static(join(__dirname, 'dist')));
 
@@ -375,4 +463,11 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
+
+  // Start queue poller
+  if (supabaseUrl && supabaseServiceKey) {
+    queueInterval = setInterval(pollStitchQueue, QUEUE_POLL_INTERVAL_MS);
+    pollStitchQueue(); // run once immediately
+    console.log(`[queue] Polling every ${QUEUE_POLL_INTERVAL_MS / 1000}s`);
+  }
 });
