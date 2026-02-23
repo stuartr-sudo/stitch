@@ -572,8 +572,6 @@ export default function TemplatesPage() {
 
   const togglePlatform = (val) => setSelectedPlatforms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
   const toggleStructure = (val) => setSelectedStructures(prev => prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]);
-  const toggleBrandUsername = (val) => setBrandUsernames(prev => prev.includes(val) ? prev.filter(u => u !== val) : [...prev, val]);
-
   const totalDuration = scenes.reduce((s, sc) => s + (sc.duration_seconds || 0), 0);
 
   return (
@@ -664,33 +662,7 @@ export default function TemplatesPage() {
                     placeholder="Describe what this template is best used for..."
                     className="bg-slate-800 border-slate-700 text-white h-16 resize-none" />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-slate-300">
-                    Brand Scope <span className="text-slate-500 text-xs">(optional)</span>
-                  </Label>
-                  {availableUsernames.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {availableUsernames.map(({ username, brand_name }) => (
-                        <button key={username} onClick={() => toggleBrandUsername(username)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                            brandUsernames.includes(username)
-                              ? 'bg-[#2C666E]/30 border-[#2C666E] text-white'
-                              : 'border-slate-700 text-slate-400 hover:border-slate-600'
-                          }`}>
-                          @{username}
-                          {brand_name !== username && <span className="text-slate-500">{brand_name}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500 py-2">No brand usernames available — set up brands in Doubleclicker first.</p>
-                  )}
-                  <p className="text-xs text-slate-500">
-                    {brandUsernames.length === 0
-                      ? 'No brands selected — template runs for all brands.'
-                      : `Scoped to ${brandUsernames.length} brand${brandUsernames.length > 1 ? 's' : ''}.`}
-                  </p>
-                </div>
+                {/* Brand assignment is handled via Save & Assign button */}
               </div>
 
               {/* Output Type */}
