@@ -1,8 +1,14 @@
 FROM node:20-slim AS builder
+
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .
+RUN echo "VITE_SUPABASE_URL=${VITE_SUPABASE_URL}" > .env.production && \
+    echo "VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}" >> .env.production
 RUN npm run build
 
 FROM node:20-slim AS runner

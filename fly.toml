@@ -2,7 +2,9 @@
 app = "stitch-app"
 primary_region = "syd"
 
-[build]
+[build.args]
+  VITE_SUPABASE_URL = "https://uscmvlfleccbctuvhhcj.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzY212bGZsZWNjYmN0dXZoaGNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTkwMjksImV4cCI6MjA3NjM3NTAyOX0.4pZpe4F6hw4RO5rVSx84DD2NqjU93cTnWCx9P-RXp6w"
 
 [env]
   PORT = "3000"
