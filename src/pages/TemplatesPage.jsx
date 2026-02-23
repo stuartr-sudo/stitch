@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   ArrowLeft,
   Plus,
@@ -25,7 +26,10 @@ import {
   Globe,
   Palette,
   CheckCircle2,
+  Users,
+  Check,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 
@@ -302,9 +306,26 @@ export default function TemplatesPage() {
     music_model: 'beatoven',
   });
   const [visualStylePreset, setVisualStylePreset] = useState(null);
-  const [brandUsername, setBrandUsername] = useState('');
+  const [brandUsernames, setBrandUsernames] = useState([]);
 
-  useEffect(() => { loadTemplates(); }, []);
+  // Assign modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [availableUsernames, setAvailableUsernames] = useState([]);
+  const [selectedUsernames, setSelectedUsernames] = useState([]);
+  const [isLoadingUsernames, setIsLoadingUsernames] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  useEffect(() => { loadTemplates(); fetchAvailableUsernames(); }, []);
+
+  const fetchAvailableUsernames = async () => {
+    try {
+      const res = await apiFetch('/api/brand/usernames', { method: 'GET' });
+      const data = await res.json();
+      if (data.success) setAvailableUsernames(data.usernames || []);
+    } catch {
+      // Silently fail — list stays empty
+    }
+  };
 
   const loadTemplates = async () => {
     setIsLoading(true);
@@ -339,7 +360,11 @@ export default function TemplatesPage() {
       music_model: template.model_preferences?.music_model || 'beatoven',
     });
     setVisualStylePreset(template.visual_style_preset || null);
-    setBrandUsername(template.brand_username || '');
+    setBrandUsernames(
+      template.brand_usernames?.length ? template.brand_usernames
+        : template.brand_username ? [template.brand_username]
+        : []
+    );
   };
 
   const handleNewTemplate = () => {
@@ -355,7 +380,7 @@ export default function TemplatesPage() {
     setSelectedStructures([]);
     setModelPreferences({ image_model: 'wavespeed', video_model: 'wavespeed_wan', motion_style: 'standard', music_model: 'beatoven' });
     setVisualStylePreset(null);
-    setBrandUsername('');
+    setBrandUsernames([]);
   };
 
   const handleAnalyze = async () => {
@@ -413,7 +438,7 @@ export default function TemplatesPage() {
           applicable_writing_structures: selectedStructures,
           platforms: selectedPlatforms,
           visual_style_preset: visualStylePreset || null,
-          brand_username: brandUsername.trim() || null,
+          brand_usernames: brandUsernames,
         }),
       });
       const data = await res.json();
@@ -442,6 +467,93 @@ export default function TemplatesPage() {
     }
   };
 
+  const handleSaveAndAssign = async () => {
+    if (!name.trim()) { toast.error('Give your template a name'); return; }
+    if (!scenes.length) { toast.error('Add at least one scene'); return; }
+    if (!selectedPlatforms.length) { toast.error('Select at least one platform'); return; }
+
+    // Save first
+    setIsSaving(true);
+    let savedId = selectedId;
+    try {
+      const res = await apiFetch('/api/templates/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedId || undefined,
+          name: name.trim(),
+          description,
+          scenes,
+          music_mood: musicMood,
+          voice_pacing: voicePacing,
+          reference_video_url: referenceVideoUrl || null,
+          output_type: outputType,
+          model_preferences: modelPreferences,
+          applicable_writing_structures: selectedStructures,
+          platforms: selectedPlatforms,
+          visual_style_preset: visualStylePreset || null,
+          brand_usernames: brandUsernames,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      savedId = data.template.id;
+      setSelectedId(savedId);
+      loadTemplates();
+      toast.success('Template saved');
+    } catch (err) {
+      toast.error(err.message || 'Save failed');
+      setIsSaving(false);
+      return;
+    } finally {
+      setIsSaving(false);
+    }
+
+    // Now open the assign modal and fetch usernames
+    setIsLoadingUsernames(true);
+    setSelectedUsernames([]);
+    setAssignModalOpen(true);
+    try {
+      const res = await apiFetch('/api/brand/usernames', { method: 'GET' });
+      const data = await res.json();
+      if (data.success) {
+        setAvailableUsernames(data.usernames || []);
+      }
+    } catch {
+      toast.error('Failed to load usernames');
+    } finally {
+      setIsLoadingUsernames(false);
+    }
+  };
+
+  const handleAssignConfirm = async () => {
+    if (!selectedUsernames.length) { toast.error('Select at least one username'); return; }
+    setIsAssigning(true);
+    try {
+      const res = await apiFetch('/api/templates/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_id: selectedId, usernames: selectedUsernames }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      const count = data.assigned?.length || 0;
+      toast.success(`Template assigned to ${count} username${count !== 1 ? 's' : ''}`);
+      setAssignModalOpen(false);
+      loadTemplates();
+    } catch (err) {
+      toast.error(err.message || 'Assignment failed');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const toggleAssignUsername = (username) => {
+    setSelectedUsernames(prev =>
+      prev.includes(username) ? prev.filter(u => u !== username) : [...prev, username]
+    );
+  };
+
   const handleSceneChange = (index, field, value) => {
     setScenes(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
   };
@@ -460,6 +572,7 @@ export default function TemplatesPage() {
 
   const togglePlatform = (val) => setSelectedPlatforms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
   const toggleStructure = (val) => setSelectedStructures(prev => prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]);
+  const toggleBrandUsername = (val) => setBrandUsernames(prev => prev.includes(val) ? prev.filter(u => u !== val) : [...prev, val]);
 
   const totalDuration = scenes.reduce((s, sc) => s + (sc.duration_seconds || 0), 0);
 
@@ -527,292 +640,400 @@ export default function TemplatesPage() {
         </div>
 
         {/* Right: Editor */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-3xl">
+        <div className="flex-1 overflow-y-auto p-6 max-w-3xl flex flex-col">
+          <Tabs defaultValue="template" className="w-full flex-1">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 mb-4">
+              <TabsTrigger value="template" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Template</TabsTrigger>
+              <TabsTrigger value="scenes" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Scenes</TabsTrigger>
+              <TabsTrigger value="style" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Style & Models</TabsTrigger>
+              <TabsTrigger value="extract" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">AI Extract</TabsTrigger>
+            </TabsList>
 
-          {/* Basic info */}
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label className="text-slate-300">Template Name</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Product Launch 30s"
-                className="bg-slate-800 border-slate-700 text-white" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-slate-300">Description <span className="text-slate-500 text-xs">(optional)</span></Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)}
-                placeholder="Describe what this template is best used for..."
-                className="bg-slate-800 border-slate-700 text-white h-16 resize-none" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-slate-300">
-                Brand Scope <span className="text-slate-500 text-xs">(optional)</span>
-              </Label>
-              <Input value={brandUsername} onChange={e => setBrandUsername(e.target.value)}
-                placeholder="Leave blank to use for all brands, or enter a brand username (e.g. stuarta)"
-                className="bg-slate-800 border-slate-700 text-white text-sm" />
-              <p className="text-xs text-slate-500">
-                When set, this template only runs for the matching brand. Blank = available to all brands.
-              </p>
-            </div>
-          </div>
-
-          {/* Output Type */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
-            <SectionHeader icon={Layers} title="Output Type" subtitle="What does this template generate?" />
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: 'video', label: 'Video Only', desc: 'Animated clips per scene', Icon: Video },
-                { value: 'static', label: 'Static Only', desc: 'Still images with text baked in', Icon: Image },
-                { value: 'both', label: 'Both', desc: 'Video + static in one run', Icon: Layers },
-              ].map(({ value, label, desc, Icon }) => (
-                <button key={value} onClick={() => setOutputType(value)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-colors ${
-                    outputType === value
-                      ? 'border-[#2C666E] bg-[#2C666E]/20 text-white'
-                      : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-                  }`}>
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-semibold">{label}</span>
-                  <span className="text-xs text-slate-500 leading-tight">{desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Visual Style Preset */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
-            <SectionHeader
-              icon={Palette}
-              title="Visual Style Preset"
-              subtitle="Locks lighting, camera, and color grade — prevents AI drift across all generated images"
-            />
-            <div className="grid grid-cols-3 gap-2">
-              {VISUAL_STYLE_PRESETS.map((preset) => {
-                const isSelected = visualStylePreset === preset.value;
-                return (
-                  <button
-                    key={String(preset.value)}
-                    onClick={() => setVisualStylePreset(preset.value)}
-                    className={`relative flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors ${
-                      isSelected
-                        ? 'border-[#90DDF0] bg-[#90DDF0]/10 text-white'
-                        : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-                    }`}
-                  >
-                    {isSelected && (
-                      <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-[#90DDF0]" />
-                    )}
-                    <span className={`text-xs font-bold ${isSelected ? 'text-[#90DDF0]' : 'text-slate-300'}`}>
-                      {preset.label}
-                    </span>
-                    <span className="text-xs text-slate-500 leading-tight">{preset.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {visualStylePreset && (() => {
-              const active = VISUAL_STYLE_PRESETS.find(p => p.value === visualStylePreset);
-              return active ? (
-                <div className="mt-3 rounded bg-slate-800/80 border border-slate-700 p-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-                  <div><span className="text-slate-500">Lighting: </span><span className="text-slate-300">{active.lighting}</span></div>
-                  <div><span className="text-slate-500">Camera: </span><span className="text-slate-300">{active.camera}</span></div>
-                  <div><span className="text-slate-500">Color grade: </span><span className="text-slate-300">{active.color_grade}</span></div>
-                  <div><span className="text-slate-500">Mood: </span><span className="text-slate-300">{active.mood}</span></div>
+            {/* ── Tab 1: Template ── */}
+            <TabsContent value="template" className="space-y-6">
+              {/* Basic info */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Template Name</Label>
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Product Launch 30s"
+                    className="bg-slate-800 border-slate-700 text-white" />
                 </div>
-              ) : null;
-            })()}
-          </div>
-
-          {/* AI Analysis */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-[#90DDF0]" />
-              <h3 className="text-sm font-semibold text-white">Extract from Reference</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Paste a video URL and/or describe the style — AI reverse-engineers the structure, suggests models, and tags writing structures.
-            </p>
-            <Input value={referenceVideoUrl} onChange={e => setReferenceVideoUrl(e.target.value)}
-              placeholder="https://... (YouTube, TikTok, or direct video URL)"
-              className="bg-slate-800 border-slate-700 text-white text-sm" />
-            <Textarea value={analyzeDescription} onChange={e => setAnalyzeDescription(e.target.value)}
-              placeholder="Describe the style: '4-scene product review, quick cuts, bold text overlays, 30 seconds total...'"
-              className="bg-slate-800 border-slate-700 text-white text-sm h-16 resize-none" />
-            <Button onClick={handleAnalyze} disabled={isAnalyzing || (!analyzeDescription && !referenceVideoUrl)}
-              size="sm" className="bg-slate-700 hover:bg-slate-600 text-white w-full">
-              {isAnalyzing
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analysing...</>
-                : <><Wand2 className="w-4 h-4 mr-2" /> Extract Template Structure</>}
-            </Button>
-          </div>
-
-          {/* Scenes */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Scenes</h3>
-                <p className="text-xs text-slate-500">{scenes.length} scenes · {totalDuration}s total</p>
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Description <span className="text-slate-500 text-xs">(optional)</span></Label>
+                  <Textarea value={description} onChange={e => setDescription(e.target.value)}
+                    placeholder="Describe what this template is best used for..."
+                    className="bg-slate-800 border-slate-700 text-white h-16 resize-none" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-slate-300">
+                    Brand Scope <span className="text-slate-500 text-xs">(optional)</span>
+                  </Label>
+                  {availableUsernames.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {availableUsernames.map(({ username, brand_name }) => (
+                        <button key={username} onClick={() => toggleBrandUsername(username)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                            brandUsernames.includes(username)
+                              ? 'bg-[#2C666E]/30 border-[#2C666E] text-white'
+                              : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                          }`}>
+                          @{username}
+                          {brand_name !== username && <span className="text-slate-500">{brand_name}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 py-2">No brand usernames available — set up brands in Doubleclicker first.</p>
+                  )}
+                  <p className="text-xs text-slate-500">
+                    {brandUsernames.length === 0
+                      ? 'No brands selected — template runs for all brands.'
+                      : `Scoped to ${brandUsernames.length} brand${brandUsernames.length > 1 ? 's' : ''}.`}
+                  </p>
+                </div>
               </div>
-              <Button onClick={() => setScenes(prev => [...prev, emptyScene(prev.length)])}
-                size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Scene
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {scenes.map((scene, i) => (
-                <SceneCard key={i} scene={scene} index={i} total={scenes.length}
-                  onChange={handleSceneChange}
-                  onDelete={(idx) => setScenes(prev => prev.filter((_, j) => j !== idx))}
-                  onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
-              ))}
-            </div>
-          </div>
 
-          {/* Music & Voice */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-slate-300 text-sm">Music Mood</Label>
-              <Input value={musicMood} onChange={e => setMusicMood(e.target.value)}
-                placeholder="upbeat energetic, calm instructional..."
-                className="bg-slate-800 border-slate-700 text-white text-sm" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-slate-300 text-sm">Voice Pacing</Label>
-              <Input value={voicePacing} onChange={e => setVoicePacing(e.target.value)}
-                placeholder="fast and punchy, warm and conversational..."
-                className="bg-slate-800 border-slate-700 text-white text-sm" />
-            </div>
-          </div>
+              {/* Output Type */}
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+                <SectionHeader icon={Layers} title="Output Type" subtitle="What does this template generate?" />
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'video', label: 'Video Only', desc: 'Animated clips per scene', Icon: Video },
+                    { value: 'static', label: 'Static Only', desc: 'Still images with text baked in', Icon: Image },
+                    { value: 'both', label: 'Both', desc: 'Video + static in one run', Icon: Layers },
+                  ].map(({ value, label, desc, Icon }) => (
+                    <button key={value} onClick={() => setOutputType(value)}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-colors ${
+                        outputType === value
+                          ? 'border-[#2C666E] bg-[#2C666E]/20 text-white'
+                          : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                      }`}>
+                      <Icon className="w-5 h-5" />
+                      <span className="text-xs font-semibold">{label}</span>
+                      <span className="text-xs text-slate-500 leading-tight">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Model Preferences */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-4">
-            <SectionHeader icon={Cpu} title="Model Preferences" subtitle="Which AI models does this template use at each step?" />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-400">Image Generation</Label>
-                <Select value={modelPreferences.image_model} onValueChange={v => setModelPreferences(p => ({ ...p, image_model: v }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
-                    {IMAGE_MODELS.map(m => (
-                      <SelectItem key={m.value} value={m.value} className="text-xs">
-                        <span className="flex items-center gap-1.5">
-                          <span className="font-medium">{m.label}</span>
-                          {m.lora && <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-600/40 text-purple-300 rounded">LoRA</span>}
-                          <span className="text-slate-500">-</span>
-                          <span className="text-slate-400">{m.strength}</span>
-                          <span className="text-slate-600 ml-auto">{m.price}</span>
+              {/* Platforms */}
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+                <SectionHeader icon={Globe} title="Platforms" subtitle="Which platforms does this template generate assets for?" />
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORMS.map(p => (
+                    <button key={p.value} onClick={() => togglePlatform(p.value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                        selectedPlatforms.includes(p.value)
+                          ? 'bg-[#2C666E]/30 border-[#2C666E] text-white'
+                          : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                      }`}>
+                      {p.label} <span className="text-slate-500">{p.ratio}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedPlatforms.length === 0 && <p className="text-xs text-amber-400 mt-2">Select at least one platform</p>}
+              </div>
+
+              {/* Writing Structures */}
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+                <SectionHeader icon={Tag}
+                  title="Writing Structure Triggers"
+                  subtitle="Auto-fires when Doubleclicker publishes an article with any of these structures" />
+                <div className="flex flex-wrap gap-2">
+                  {WRITING_STRUCTURES.map(ws => (
+                    <button key={ws.value} onClick={() => toggleStructure(ws.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                        selectedStructures.includes(ws.value)
+                          ? 'bg-purple-500/20 border-purple-500/60 text-purple-300'
+                          : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                      }`}>
+                      {ws.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  {selectedStructures.length === 0
+                    ? 'No triggers — run this template manually from the campaign builder'
+                    : `${selectedStructures.length} trigger${selectedStructures.length > 1 ? 's' : ''} active`}
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* ── Tab 2: Scenes ── */}
+            <TabsContent value="scenes" className="space-y-6">
+              {/* Scenes */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Scenes</h3>
+                    <p className="text-xs text-slate-500">{scenes.length} scenes · {totalDuration}s total</p>
+                  </div>
+                  <Button onClick={() => setScenes(prev => [...prev, emptyScene(prev.length)])}
+                    size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Scene
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {scenes.map((scene, i) => (
+                    <SceneCard key={i} scene={scene} index={i} total={scenes.length}
+                      onChange={handleSceneChange}
+                      onDelete={(idx) => setScenes(prev => prev.filter((_, j) => j !== idx))}
+                      onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Music & Voice */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-slate-300 text-sm">Music Mood</Label>
+                  <Input value={musicMood} onChange={e => setMusicMood(e.target.value)}
+                    placeholder="upbeat energetic, calm instructional..."
+                    className="bg-slate-800 border-slate-700 text-white text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-slate-300 text-sm">Voice Pacing</Label>
+                  <Input value={voicePacing} onChange={e => setVoicePacing(e.target.value)}
+                    placeholder="fast and punchy, warm and conversational..."
+                    className="bg-slate-800 border-slate-700 text-white text-sm" />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── Tab 3: Style & Models ── */}
+            <TabsContent value="style" className="space-y-6">
+              {/* Visual Style Preset */}
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+                <SectionHeader
+                  icon={Palette}
+                  title="Visual Style Preset"
+                  subtitle="Locks lighting, camera, and color grade — prevents AI drift across all generated images"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  {VISUAL_STYLE_PRESETS.map((preset) => {
+                    const isSelected = visualStylePreset === preset.value;
+                    return (
+                      <button
+                        key={String(preset.value)}
+                        onClick={() => setVisualStylePreset(preset.value)}
+                        className={`relative flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors ${
+                          isSelected
+                            ? 'border-[#90DDF0] bg-[#90DDF0]/10 text-white'
+                            : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                        }`}
+                      >
+                        {isSelected && (
+                          <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-[#90DDF0]" />
+                        )}
+                        <span className={`text-xs font-bold ${isSelected ? 'text-[#90DDF0]' : 'text-slate-300'}`}>
+                          {preset.label}
                         </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {IMAGE_MODELS.find(m => m.value === modelPreferences.image_model)?.lora && (
-                  <p className="text-[10px] text-purple-400 mt-0.5">Supports Visual Subjects (LoRA)</p>
+                        <span className="text-xs text-slate-500 leading-tight">{preset.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {visualStylePreset && (() => {
+                  const active = VISUAL_STYLE_PRESETS.find(p => p.value === visualStylePreset);
+                  return active ? (
+                    <div className="mt-3 rounded bg-slate-800/80 border border-slate-700 p-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      <div><span className="text-slate-500">Lighting: </span><span className="text-slate-300">{active.lighting}</span></div>
+                      <div><span className="text-slate-500">Camera: </span><span className="text-slate-300">{active.camera}</span></div>
+                      <div><span className="text-slate-500">Color grade: </span><span className="text-slate-300">{active.color_grade}</span></div>
+                      <div><span className="text-slate-500">Mood: </span><span className="text-slate-300">{active.mood}</span></div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+
+              {/* Model Preferences */}
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+                <SectionHeader icon={Cpu} title="Model Preferences" subtitle="Which AI models does this template use at each step?" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Image Generation</Label>
+                    <Select value={modelPreferences.image_model} onValueChange={v => setModelPreferences(p => ({ ...p, image_model: v }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                        {IMAGE_MODELS.map(m => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs">
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-medium">{m.label}</span>
+                              {m.lora && <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-600/40 text-purple-300 rounded">LoRA</span>}
+                              <span className="text-slate-500">-</span>
+                              <span className="text-slate-400">{m.strength}</span>
+                              <span className="text-slate-600 ml-auto">{m.price}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {IMAGE_MODELS.find(m => m.value === modelPreferences.image_model)?.lora && (
+                      <p className="text-[10px] text-purple-400 mt-0.5">Supports Visual Subjects (LoRA)</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Video Animation</Label>
+                    <Select value={modelPreferences.video_model} onValueChange={v => setModelPreferences(p => ({ ...p, video_model: v }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                        {VIDEO_MODELS.map(m => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs">
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-medium">{m.label}</span>
+                              <span className="text-slate-500">-</span>
+                              <span className="text-slate-400">{m.strength}</span>
+                              <span className="text-slate-600 ml-auto">{m.price}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Motion Style</Label>
+                    <Select value={modelPreferences.motion_style} onValueChange={v => setModelPreferences(p => ({ ...p, motion_style: v }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                        {MOTION_STYLES.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Music</Label>
+                    <Select value={modelPreferences.music_model} onValueChange={v => setModelPreferences(p => ({ ...p, music_model: v }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                        {MUSIC_MODELS.map(m => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs">
+                            {m.strength ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="font-medium">{m.label}</span>
+                                <span className="text-slate-500">-</span>
+                                <span className="text-slate-400">{m.strength}</span>
+                                <span className="text-slate-600 ml-auto">{m.price}</span>
+                              </span>
+                            ) : m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {modelPreferences.motion_style === 'motion_transfer' && (
+                  <div className="rounded bg-amber-900/20 border border-amber-700/40 p-3 text-xs text-amber-300">
+                    Motion Transfer uses Kling 2.6 Standard Motion Control. The pipeline requires a reference motion video URL set in the brand kit or visual subject.
+                  </div>
                 )}
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-400">Video Animation</Label>
-                <Select value={modelPreferences.video_model} onValueChange={v => setModelPreferences(p => ({ ...p, video_model: v }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
-                    {VIDEO_MODELS.map(m => (
-                      <SelectItem key={m.value} value={m.value} className="text-xs">
-                        <span className="flex items-center gap-1.5">
-                          <span className="font-medium">{m.label}</span>
-                          <span className="text-slate-500">-</span>
-                          <span className="text-slate-400">{m.strength}</span>
-                          <span className="text-slate-600 ml-auto">{m.price}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-400">Motion Style</Label>
-                <Select value={modelPreferences.motion_style} onValueChange={v => setModelPreferences(p => ({ ...p, motion_style: v }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    {MOTION_STYLES.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-400">Music</Label>
-                <Select value={modelPreferences.music_model} onValueChange={v => setModelPreferences(p => ({ ...p, music_model: v }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
-                    {MUSIC_MODELS.map(m => (
-                      <SelectItem key={m.value} value={m.value} className="text-xs">
-                        {m.strength ? (
-                          <span className="flex items-center gap-1.5">
-                            <span className="font-medium">{m.label}</span>
-                            <span className="text-slate-500">-</span>
-                            <span className="text-slate-400">{m.strength}</span>
-                            <span className="text-slate-600 ml-auto">{m.price}</span>
-                          </span>
-                        ) : m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {modelPreferences.motion_style === 'motion_transfer' && (
-              <div className="rounded bg-amber-900/20 border border-amber-700/40 p-3 text-xs text-amber-300">
-                Motion Transfer uses Kling 2.6 Standard Motion Control. The pipeline requires a reference motion video URL set in the brand kit or visual subject.
-              </div>
-            )}
-          </div>
+            </TabsContent>
 
-          {/* Platforms */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
-            <SectionHeader icon={Globe} title="Platforms" subtitle="Which platforms does this template generate assets for?" />
-            <div className="flex flex-wrap gap-2">
-              {PLATFORMS.map(p => (
-                <button key={p.value} onClick={() => togglePlatform(p.value)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                    selectedPlatforms.includes(p.value)
-                      ? 'bg-[#2C666E]/30 border-[#2C666E] text-white'
-                      : 'border-slate-700 text-slate-400 hover:border-slate-600'
-                  }`}>
-                  {p.label} <span className="text-slate-500">{p.ratio}</span>
-                </button>
-              ))}
-            </div>
-            {selectedPlatforms.length === 0 && <p className="text-xs text-amber-400 mt-2">Select at least one platform</p>}
-          </div>
+            {/* ── Tab 4: AI Extract ── */}
+            <TabsContent value="extract" className="space-y-6">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-[#90DDF0]" />
+                  <h3 className="text-sm font-semibold text-white">Extract from Reference</h3>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Paste a video URL and/or describe the style — AI reverse-engineers the structure, suggests models, and tags writing structures.
+                </p>
+                <Input value={referenceVideoUrl} onChange={e => setReferenceVideoUrl(e.target.value)}
+                  placeholder="https://... (YouTube, TikTok, or direct video URL)"
+                  className="bg-slate-800 border-slate-700 text-white text-sm" />
+                <Textarea value={analyzeDescription} onChange={e => setAnalyzeDescription(e.target.value)}
+                  placeholder="Describe the style: '4-scene product review, quick cuts, bold text overlays, 30 seconds total...'"
+                  className="bg-slate-800 border-slate-700 text-white text-sm h-16 resize-none" />
+                <Button onClick={handleAnalyze} disabled={isAnalyzing || (!analyzeDescription && !referenceVideoUrl)}
+                  size="sm" className="bg-slate-700 hover:bg-slate-600 text-white w-full">
+                  {isAnalyzing
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analysing...</>
+                    : <><Wand2 className="w-4 h-4 mr-2" /> Extract Template Structure</>}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
 
-          {/* Writing Structures */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
-            <SectionHeader icon={Tag}
-              title="Writing Structure Triggers"
-              subtitle="Auto-fires when Doubleclicker publishes an article with any of these structures" />
-            <div className="flex flex-wrap gap-2">
-              {WRITING_STRUCTURES.map(ws => (
-                <button key={ws.value} onClick={() => toggleStructure(ws.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                    selectedStructures.includes(ws.value)
-                      ? 'bg-purple-500/20 border-purple-500/60 text-purple-300'
-                      : 'border-slate-700 text-slate-400 hover:border-slate-600'
-                  }`}>
-                  {ws.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              {selectedStructures.length === 0
-                ? 'No triggers — run this template manually from the campaign builder'
-                : `${selectedStructures.length} trigger${selectedStructures.length > 1 ? 's' : ''} active`}
-            </p>
-          </div>
-
-          {/* Save */}
-          <div className="flex justify-end pt-2 pb-8">
+          {/* Save — always visible below tabs */}
+          <div className="flex justify-end gap-3 pt-4 pb-8">
             <Button onClick={handleSave} disabled={isSaving} className="bg-[#2C666E] hover:bg-[#07393C] text-white px-8">
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               {selectedId ? 'Update Template' : 'Save Template'}
             </Button>
+            <Button onClick={handleSaveAndAssign} disabled={isSaving} variant="outline"
+              className="border-[#90DDF0]/40 text-[#90DDF0] hover:bg-[#90DDF0]/10 px-6">
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
+              Save &amp; Assign
+            </Button>
           </div>
+
+          {/* Assign Modal */}
+          <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+            <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-white">Assign Template</DialogTitle>
+                <DialogDescription className="text-slate-400">
+                  Select which brand usernames should receive a copy of <span className="text-white font-medium">"{name}"</span>.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+                {isLoadingUsernames ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                  </div>
+                ) : availableUsernames.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-6">
+                    No brand usernames found. Set up brands in the Brand Kit first.
+                  </p>
+                ) : (
+                  availableUsernames.map(({ username, brand_name }) => {
+                    const checked = selectedUsernames.includes(username);
+                    return (
+                      <button
+                        key={username}
+                        onClick={() => toggleAssignUsername(username)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
+                          checked
+                            ? 'border-[#90DDF0] bg-[#90DDF0]/10'
+                            : 'border-slate-700 hover:border-slate-600'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 ${
+                          checked ? 'bg-[#90DDF0] border-[#90DDF0]' : 'border-slate-600'
+                        }`}>
+                          {checked && <Check className="w-3.5 h-3.5 text-slate-900" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-white truncate">@{username}</div>
+                          {brand_name !== username && (
+                            <div className="text-xs text-slate-500 truncate">{brand_name}</div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {availableUsernames.length > 0 && (
+                <div className="flex justify-between items-center pt-4 border-t border-slate-700 mt-4">
+                  <span className="text-xs text-slate-500">
+                    {selectedUsernames.length} selected
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setAssignModalOpen(false)}
+                      className="text-slate-400 hover:text-white">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAssignConfirm} disabled={isAssigning || !selectedUsernames.length}
+                      size="sm" className="bg-[#2C666E] hover:bg-[#07393C] text-white px-6">
+                      {isAssigning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
+                      Assign to {selectedUsernames.length || '...'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

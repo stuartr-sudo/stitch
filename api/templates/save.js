@@ -5,7 +5,7 @@
  * Body: {
  *   id?, name, description, scenes, music_mood, voice_pacing, reference_video_url?,
  *   template_type, output_type, model_preferences, applicable_writing_structures, platforms, avatar_id?,
- *   visual_style_preset?, brand_username?
+ *   visual_style_preset?, brand_username?, brand_usernames?
  * }
  */
 
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     avatar_id = null,
     visual_style_preset = null,
     brand_username = null,
+    brand_usernames = [],
   } = req.body;
 
   if (!name || !scenes?.length) {
@@ -38,6 +39,11 @@ export default async function handler(req, res) {
   }
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  // Resolve brand_usernames: prefer the array, fall back to single brand_username
+  const resolvedUsernames = Array.isArray(brand_usernames) && brand_usernames.length > 0
+    ? brand_usernames
+    : (brand_username ? [brand_username] : []);
 
   const payload = {
     user_id: req.user.id,
@@ -57,7 +63,9 @@ export default async function handler(req, res) {
     platforms,
     avatar_id,
     visual_style_preset,
-    brand_username: brand_username || null,
+    // Keep brand_username as first entry for backward compat with queue/pipeline
+    brand_username: resolvedUsernames[0] || null,
+    brand_usernames: resolvedUsernames,
     updated_at: new Date().toISOString(),
   };
 
