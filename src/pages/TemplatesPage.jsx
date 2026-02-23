@@ -38,14 +38,14 @@ const OVERLAY_STYLES = ['bold_white', 'minimal_dark', 'gradient_overlay'];
 const POSITIONS = ['top_safe', 'center', 'bottom_safe'];
 
 const ROLE_COLORS = {
-  hook: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
-  problem: 'bg-red-500/20 text-red-300 border-red-500/40',
-  solution: 'bg-green-500/20 text-green-300 border-green-500/40',
-  proof: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-  point: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-  step: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
-  comparison: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
-  cta: 'bg-pink-500/20 text-pink-300 border-pink-500/40',
+  hook: 'bg-yellow-50 text-yellow-700 border-yellow-300',
+  problem: 'bg-red-50 text-red-700 border-red-300',
+  solution: 'bg-green-50 text-green-700 border-green-300',
+  proof: 'bg-blue-50 text-blue-700 border-blue-300',
+  point: 'bg-purple-50 text-purple-700 border-purple-300',
+  step: 'bg-orange-50 text-orange-700 border-orange-300',
+  comparison: 'bg-teal-50 text-teal-700 border-teal-300',
+  cta: 'bg-pink-50 text-pink-700 border-pink-300',
 };
 
 const WRITING_STRUCTURES = [
@@ -213,61 +213,61 @@ function emptyScene(index) {
 function SceneCard({ scene, index, total, onChange, onDelete, onMoveUp, onMoveDown }) {
   const [expanded, setExpanded] = useState(index === 0);
   return (
-    <div className={`rounded-lg border ${ROLE_COLORS[scene.role] || 'border-slate-700'} bg-slate-800/60`}>
+    <div className={`rounded-lg border ${ROLE_COLORS[scene.role] || 'border-gray-200'} bg-white`}>
       <div className="flex items-center gap-3 p-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
-        <GripVertical className="w-4 h-4 text-slate-500 flex-shrink-0" />
+        <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
         <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${ROLE_COLORS[scene.role]}`}>{scene.role}</span>
-        <span className="text-slate-300 text-sm flex-1 truncate">{scene.hint || 'Scene ' + (index + 1)}</span>
-        <span className="text-slate-500 text-xs">{scene.duration_seconds}s</span>
+        <span className="text-gray-700 text-sm flex-1 truncate">{scene.hint || 'Scene ' + (index + 1)}</span>
+        <span className="text-gray-500 text-xs">{scene.duration_seconds}s</span>
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button onClick={() => onMoveUp(index)} disabled={index === 0} className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
-          <button onClick={() => onMoveDown(index)} disabled={index === total - 1} className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
-          <button onClick={() => onDelete(index)} className="p-1 text-slate-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+          <button onClick={() => onMoveUp(index)} disabled={index === 0} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
+          <button onClick={() => onMoveDown(index)} disabled={index === total - 1} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
+          <button onClick={() => onDelete(index)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+        {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </div>
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-slate-700/50 pt-3">
+        <div className="px-4 pb-4 space-y-3 border-t border-gray-200 pt-3">
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs text-slate-400">Role</Label>
+              <Label className="text-xs text-gray-500">Role</Label>
               <Select value={scene.role} onValueChange={v => onChange(index, 'role', v)}>
-                <SelectTrigger className="bg-slate-900 border-slate-600 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 text-gray-900">
                   {SCENE_ROLES.map(r => <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-slate-400">Duration (s)</Label>
+              <Label className="text-xs text-gray-500">Duration (s)</Label>
               <Input type="number" min={1} max={30} value={scene.duration_seconds}
                 onChange={e => onChange(index, 'duration_seconds', parseInt(e.target.value) || 5)}
-                className="bg-slate-900 border-slate-600 text-white h-8 text-sm" />
+                className="bg-white border-gray-300 text-gray-900 h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-slate-400">Text Position</Label>
+              <Label className="text-xs text-gray-500">Text Position</Label>
               <Select value={scene.position} onValueChange={v => onChange(index, 'position', v)}>
-                <SelectTrigger className="bg-slate-900 border-slate-600 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 text-gray-900">
                   {POSITIONS.map(p => <SelectItem key={p} value={p} className="text-xs">{p.replace(/_/g, ' ')}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Overlay Style</Label>
+            <Label className="text-xs text-gray-500">Overlay Style</Label>
             <Select value={scene.overlay_style} onValueChange={v => onChange(index, 'overlay_style', v)}>
-              <SelectTrigger className="bg-slate-900 border-slate-600 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700 text-white">
+              <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-white border-gray-200 text-gray-900">
                 {OVERLAY_STYLES.map(s => <SelectItem key={s} value={s} className="text-xs">{s.replace(/_/g, ' ')}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Scene Hint <span className="text-slate-500">(guides the AI)</span></Label>
+            <Label className="text-xs text-gray-500">Scene Hint <span className="text-gray-400">(guides the AI)</span></Label>
             <Textarea value={scene.hint} onChange={e => onChange(index, 'hint', e.target.value)}
               placeholder="Describe what this scene should show or say..."
-              className="bg-slate-900 border-slate-600 text-white text-sm h-16 resize-none" />
+              className="bg-white border-gray-300 text-gray-900 text-sm h-16 resize-none" />
           </div>
         </div>
       )}
@@ -278,10 +278,10 @@ function SceneCard({ scene, index, total, onChange, onDelete, onMoveUp, onMoveDo
 function SectionHeader({ icon: Icon, title, subtitle }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <Icon className="w-4 h-4 text-[#90DDF0]" />
+      <Icon className="w-4 h-4 text-[#2C666E]" />
       <div>
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
     </div>
   );
@@ -583,15 +583,15 @@ export default function TemplatesPage() {
   const totalDuration = scenes.reduce((s, sc) => s + (sc.duration_seconds || 0), 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       {/* Top bar */}
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/studio')} className="text-slate-400 hover:text-white">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/studio')} className="text-gray-500 hover:text-gray-900">
           <ArrowLeft className="w-4 h-4 mr-2" /> Studio
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-white">Template Builder</h1>
-          <p className="text-xs text-slate-400">Create reusable video structures — the pipeline picks these up automatically</p>
+          <h1 className="text-lg font-bold text-gray-900">Template Builder</h1>
+          <p className="text-xs text-gray-500">Create reusable video structures — the pipeline picks these up automatically</p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
           {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -601,15 +601,15 @@ export default function TemplatesPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Template list */}
-        <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col">
-          <div className="p-3 border-b border-slate-800">
+        <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-3 border-b border-gray-200">
             <Button onClick={handleNewTemplate} size="sm" className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white">
               <Plus className="w-4 h-4 mr-2" /> New Template
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-slate-500" /></div>
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
             ) : templates.map(t => {
               const TIcon = t.output_type === 'static' ? Image : t.output_type === 'both' ? Layers : Video;
               return (
@@ -617,25 +617,25 @@ export default function TemplatesPage() {
                   key={t.id}
                   className={`group flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-colors ${
                     (!t.is_builtin && selectedId === t.id)
-                      ? 'bg-[#2C666E]/40 border border-[#2C666E]'
-                      : 'hover:bg-slate-800 border border-transparent'
+                      ? 'bg-[#2C666E]/10 border border-[#2C666E]'
+                      : 'hover:bg-gray-100 border border-transparent'
                   }`}
                   onClick={() => loadIntoEditor(t)}
                 >
                   {t.is_builtin
-                    ? <Lock className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                    : <TIcon className="w-3.5 h-3.5 text-[#90DDF0] flex-shrink-0" />
+                    ? <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    : <TIcon className="w-3.5 h-3.5 text-[#2C666E] flex-shrink-0" />
                   }
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{t.name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-sm font-medium text-gray-900 truncate">{t.name}</div>
+                    <div className="text-xs text-gray-500">
                       {t.scene_count} scenes · {t.total_duration_seconds}s
                       {t.applicable_writing_structures?.length ? ` · ${t.applicable_writing_structures.length} triggers` : ''}
                     </div>
                   </div>
                   {!t.is_builtin && (
                     <button onClick={e => { e.stopPropagation(); handleDelete(t.id); }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition">
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -648,7 +648,7 @@ export default function TemplatesPage() {
         {/* Right: Editor */}
         <div className="flex-1 overflow-y-auto p-6 max-w-3xl flex flex-col">
           <Tabs defaultValue="template" className="w-full flex-1">
-            <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 mb-4">
+            <TabsList className="grid w-full grid-cols-4 bg-gray-100 mb-4">
               <TabsTrigger value="template" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Template</TabsTrigger>
               <TabsTrigger value="scenes" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Scenes</TabsTrigger>
               <TabsTrigger value="style" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Style & Models</TabsTrigger>
@@ -660,21 +660,21 @@ export default function TemplatesPage() {
               {/* Basic info */}
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <Label className="text-slate-300">Template Name</Label>
+                  <Label className="text-gray-700">Template Name</Label>
                   <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Product Launch 30s"
-                    className="bg-slate-800 border-slate-700 text-white" />
+                    className="bg-white border-gray-300 text-gray-900" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-slate-300">Description <span className="text-slate-500 text-xs">(optional)</span></Label>
+                  <Label className="text-gray-700">Description <span className="text-gray-500 text-xs">(optional)</span></Label>
                   <Textarea value={description} onChange={e => setDescription(e.target.value)}
                     placeholder="Describe what this template is best used for..."
-                    className="bg-slate-800 border-slate-700 text-white h-16 resize-none" />
+                    className="bg-white border-gray-300 text-gray-900 h-16 resize-none" />
                 </div>
                 {/* Brand assignment is handled via Save & Assign button */}
               </div>
 
               {/* Output Type */}
-              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <SectionHeader icon={Layers} title="Output Type" subtitle="What does this template generate?" />
                 <div className="grid grid-cols-3 gap-2">
                   {[
@@ -685,29 +685,29 @@ export default function TemplatesPage() {
                     <button key={value} onClick={() => setOutputType(value)}
                       className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-colors ${
                         outputType === value
-                          ? 'border-[#2C666E] bg-[#2C666E]/20 text-white'
-                          : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                          ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E] font-semibold'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'
                       }`}>
                       <Icon className="w-5 h-5" />
                       <span className="text-xs font-semibold">{label}</span>
-                      <span className="text-xs text-slate-500 leading-tight">{desc}</span>
+                      <span className="text-xs text-gray-500 leading-tight">{desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Platforms */}
-              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <SectionHeader icon={Globe} title="Platforms" subtitle="Which platforms does this template generate assets for?" />
                 <div className="flex flex-wrap gap-2">
                   {PLATFORMS.map(p => (
                     <button key={p.value} onClick={() => togglePlatform(p.value)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
                         selectedPlatforms.includes(p.value)
-                          ? 'bg-[#2C666E]/30 border-[#2C666E] text-white'
-                          : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                          ? 'bg-[#2C666E]/10 border-[#2C666E] text-[#2C666E] font-medium'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-400'
                       }`}>
-                      {p.label} <span className="text-slate-500">{p.ratio}</span>
+                      {p.label} <span className="text-gray-500">{p.ratio}</span>
                     </button>
                   ))}
                 </div>
@@ -715,20 +715,20 @@ export default function TemplatesPage() {
               </div>
 
               {/* Writing Structures */}
-              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <SectionHeader icon={Tag}
                   title="Writing Structure Triggers"
                   subtitle="Auto-fires when Doubleclicker publishes an article with any of these structures" />
                 {/* Brand */}
                 <div className="mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1 block">Brand</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-1 block">Brand</span>
                   <div className="flex flex-wrap gap-1.5">
                     {WRITING_STRUCTURES.filter(ws => ws.group === 'brand').map(ws => (
                       <button key={ws.value} onClick={() => toggleStructure(ws.value)}
                         className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
                           selectedStructures.includes(ws.value)
-                            ? 'bg-blue-500/20 border-blue-500/60 text-blue-300'
-                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                            ? 'bg-blue-50 border-blue-400 text-blue-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-400'
                         }`}>
                         {ws.label}
                       </button>
@@ -737,14 +737,14 @@ export default function TemplatesPage() {
                 </div>
                 {/* Affiliate */}
                 <div className="mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1 block">Affiliate</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 mb-1 block">Affiliate</span>
                   <div className="flex flex-wrap gap-1.5">
                     {WRITING_STRUCTURES.filter(ws => ws.group === 'aff').map(ws => (
                       <button key={ws.value} onClick={() => toggleStructure(ws.value)}
                         className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
                           selectedStructures.includes(ws.value)
-                            ? 'bg-purple-500/20 border-purple-500/60 text-purple-300'
-                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                            ? 'bg-purple-50 border-purple-400 text-purple-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-400'
                         }`}>
                         {ws.label}
                       </button>
@@ -753,21 +753,21 @@ export default function TemplatesPage() {
                 </div>
                 {/* Money */}
                 <div className="mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1 block">Money</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1 block">Money</span>
                   <div className="flex flex-wrap gap-1.5">
                     {WRITING_STRUCTURES.filter(ws => ws.group === 'money').map(ws => (
                       <button key={ws.value} onClick={() => toggleStructure(ws.value)}
                         className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
                           selectedStructures.includes(ws.value)
-                            ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                            : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                            ? 'bg-amber-50 border-amber-400 text-amber-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-400'
                         }`}>
                         {ws.label}
                       </button>
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-gray-500 mt-2">
                   {selectedStructures.length === 0
                     ? 'No triggers — run this template manually from the campaign builder'
                     : `${selectedStructures.length} trigger${selectedStructures.length > 1 ? 's' : ''} active`}
@@ -781,11 +781,11 @@ export default function TemplatesPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Scenes</h3>
-                    <p className="text-xs text-slate-500">{scenes.length} scenes · {totalDuration}s total</p>
+                    <h3 className="text-sm font-semibold text-gray-900">Scenes</h3>
+                    <p className="text-xs text-gray-500">{scenes.length} scenes · {totalDuration}s total</p>
                   </div>
                   <Button onClick={() => setScenes(prev => [...prev, emptyScene(prev.length)])}
-                    size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
+                    size="sm" variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-100">
                     <Plus className="w-3.5 h-3.5 mr-1" /> Add Scene
                   </Button>
                 </div>
@@ -802,16 +802,16 @@ export default function TemplatesPage() {
               {/* Music & Voice */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-slate-300 text-sm">Music Mood</Label>
+                  <Label className="text-gray-700 text-sm">Music Mood</Label>
                   <Input value={musicMood} onChange={e => setMusicMood(e.target.value)}
                     placeholder="upbeat energetic, calm instructional..."
-                    className="bg-slate-800 border-slate-700 text-white text-sm" />
+                    className="bg-white border-gray-300 text-gray-900 text-sm" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-slate-300 text-sm">Voice Pacing</Label>
+                  <Label className="text-gray-700 text-sm">Voice Pacing</Label>
                   <Input value={voicePacing} onChange={e => setVoicePacing(e.target.value)}
                     placeholder="fast and punchy, warm and conversational..."
-                    className="bg-slate-800 border-slate-700 text-white text-sm" />
+                    className="bg-white border-gray-300 text-gray-900 text-sm" />
                 </div>
               </div>
             </TabsContent>
@@ -819,7 +819,7 @@ export default function TemplatesPage() {
             {/* ── Tab 3: Style & Models ── */}
             <TabsContent value="style" className="space-y-6">
               {/* Visual Style Preset */}
-              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <SectionHeader
                   icon={Palette}
                   title="Visual Style Preset"
@@ -834,17 +834,17 @@ export default function TemplatesPage() {
                         onClick={() => setVisualStylePreset(preset.value)}
                         className={`relative flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors ${
                           isSelected
-                            ? 'border-[#90DDF0] bg-[#90DDF0]/10 text-white'
-                            : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                            ? 'border-[#2C666E] bg-[#2C666E]/10 text-gray-900'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'
                         }`}
                       >
                         {isSelected && (
-                          <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-[#90DDF0]" />
+                          <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-[#2C666E]" />
                         )}
-                        <span className={`text-xs font-bold ${isSelected ? 'text-[#90DDF0]' : 'text-slate-300'}`}>
+                        <span className={`text-xs font-bold ${isSelected ? 'text-[#2C666E]' : 'text-gray-700'}`}>
                           {preset.label}
                         </span>
-                        <span className="text-xs text-slate-500 leading-tight">{preset.description}</span>
+                        <span className="text-xs text-gray-500 leading-tight">{preset.description}</span>
                       </button>
                     );
                   })}
@@ -852,33 +852,33 @@ export default function TemplatesPage() {
                 {visualStylePreset && (() => {
                   const active = VISUAL_STYLE_PRESETS.find(p => p.value === visualStylePreset);
                   return active ? (
-                    <div className="mt-3 rounded bg-slate-800/80 border border-slate-700 p-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-                      <div><span className="text-slate-500">Lighting: </span><span className="text-slate-300">{active.lighting}</span></div>
-                      <div><span className="text-slate-500">Camera: </span><span className="text-slate-300">{active.camera}</span></div>
-                      <div><span className="text-slate-500">Color grade: </span><span className="text-slate-300">{active.color_grade}</span></div>
-                      <div><span className="text-slate-500">Mood: </span><span className="text-slate-300">{active.mood}</span></div>
+                    <div className="mt-3 rounded bg-gray-50 border border-gray-200 p-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      <div><span className="text-gray-500">Lighting: </span><span className="text-gray-700">{active.lighting}</span></div>
+                      <div><span className="text-gray-500">Camera: </span><span className="text-gray-700">{active.camera}</span></div>
+                      <div><span className="text-gray-500">Color grade: </span><span className="text-gray-700">{active.color_grade}</span></div>
+                      <div><span className="text-gray-500">Mood: </span><span className="text-gray-700">{active.mood}</span></div>
                     </div>
                   ) : null;
                 })()}
               </div>
 
               {/* Model Preferences */}
-              <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
                 <SectionHeader icon={Cpu} title="Model Preferences" subtitle="Which AI models does this template use at each step?" />
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-400">Image Generation</Label>
+                    <Label className="text-xs text-gray-500">Image Generation</Label>
                     <Select value={modelPreferences.image_model} onValueChange={v => setModelPreferences(p => ({ ...p, image_model: v }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300 text-gray-900 max-h-72">
                         {IMAGE_MODELS.map(m => (
                           <SelectItem key={m.value} value={m.value} className="text-xs">
                             <span className="flex items-center gap-1.5">
                               <span className="font-medium">{m.label}</span>
                               {m.lora && <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-600/40 text-purple-300 rounded">LoRA</span>}
-                              <span className="text-slate-500">-</span>
-                              <span className="text-slate-400">{m.strength}</span>
-                              <span className="text-slate-600 ml-auto">{m.price}</span>
+                              <span className="text-gray-500">-</span>
+                              <span className="text-gray-500">{m.strength}</span>
+                              <span className="text-gray-400 ml-auto">{m.price}</span>
                             </span>
                           </SelectItem>
                         ))}
@@ -889,17 +889,17 @@ export default function TemplatesPage() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-400">Video Animation</Label>
+                    <Label className="text-xs text-gray-500">Video Animation</Label>
                     <Select value={modelPreferences.video_model} onValueChange={v => setModelPreferences(p => ({ ...p, video_model: v }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300 text-gray-900 max-h-72">
                         {VIDEO_MODELS.map(m => (
                           <SelectItem key={m.value} value={m.value} className="text-xs">
                             <span className="flex items-center gap-1.5">
                               <span className="font-medium">{m.label}</span>
-                              <span className="text-slate-500">-</span>
-                              <span className="text-slate-400">{m.strength}</span>
-                              <span className="text-slate-600 ml-auto">{m.price}</span>
+                              <span className="text-gray-500">-</span>
+                              <span className="text-gray-500">{m.strength}</span>
+                              <span className="text-gray-400 ml-auto">{m.price}</span>
                             </span>
                           </SelectItem>
                         ))}
@@ -907,27 +907,27 @@ export default function TemplatesPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-400">Motion Style</Label>
+                    <Label className="text-xs text-gray-500">Motion Style</Label>
                     <Select value={modelPreferences.motion_style} onValueChange={v => setModelPreferences(p => ({ ...p, motion_style: v }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300 text-gray-900">
                         {MOTION_STYLES.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-400">Music</Label>
+                    <Label className="text-xs text-gray-500">Music</Label>
                     <Select value={modelPreferences.music_model} onValueChange={v => setModelPreferences(p => ({ ...p, music_model: v }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white text-xs h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-72">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300 text-gray-900 max-h-72">
                         {MUSIC_MODELS.map(m => (
                           <SelectItem key={m.value} value={m.value} className="text-xs">
                             {m.strength ? (
                               <span className="flex items-center gap-1.5">
                                 <span className="font-medium">{m.label}</span>
-                                <span className="text-slate-500">-</span>
-                                <span className="text-slate-400">{m.strength}</span>
-                                <span className="text-slate-600 ml-auto">{m.price}</span>
+                                <span className="text-gray-500">-</span>
+                                <span className="text-gray-500">{m.strength}</span>
+                                <span className="text-gray-400 ml-auto">{m.price}</span>
                               </span>
                             ) : m.label}
                           </SelectItem>
@@ -937,7 +937,7 @@ export default function TemplatesPage() {
                   </div>
                 </div>
                 {modelPreferences.motion_style === 'motion_transfer' && (
-                  <div className="rounded bg-amber-900/20 border border-amber-700/40 p-3 text-xs text-amber-300">
+                  <div className="rounded bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700">
                     Motion Transfer uses Kling 2.6 Standard Motion Control. The pipeline requires a reference motion video URL set in the brand kit or visual subject.
                   </div>
                 )}
@@ -946,22 +946,22 @@ export default function TemplatesPage() {
 
             {/* ── Tab 4: AI Extract ── */}
             <TabsContent value="extract" className="space-y-6">
-              <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 space-y-3">
+              <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Wand2 className="w-4 h-4 text-[#90DDF0]" />
-                  <h3 className="text-sm font-semibold text-white">Extract from Reference</h3>
+                  <Wand2 className="w-4 h-4 text-[#2C666E]" />
+                  <h3 className="text-sm font-semibold text-gray-900">Extract from Reference</h3>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-gray-500">
                   Paste a video URL and/or describe the style — AI reverse-engineers the structure, suggests models, and tags writing structures.
                 </p>
                 <Input value={referenceVideoUrl} onChange={e => setReferenceVideoUrl(e.target.value)}
                   placeholder="https://... (YouTube, TikTok, or direct video URL)"
-                  className="bg-slate-800 border-slate-700 text-white text-sm" />
+                  className="bg-white border-gray-300 text-gray-900 text-sm" />
                 <Textarea value={analyzeDescription} onChange={e => setAnalyzeDescription(e.target.value)}
                   placeholder="Describe the style: '4-scene product review, quick cuts, bold text overlays, 30 seconds total...'"
-                  className="bg-slate-800 border-slate-700 text-white text-sm h-16 resize-none" />
+                  className="bg-white border-gray-300 text-gray-900 text-sm h-16 resize-none" />
                 <Button onClick={handleAnalyze} disabled={isAnalyzing || (!analyzeDescription && !referenceVideoUrl)}
-                  size="sm" className="bg-slate-700 hover:bg-slate-600 text-white w-full">
+                  size="sm" className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-full">
                   {isAnalyzing
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analysing...</>
                     : <><Wand2 className="w-4 h-4 mr-2" /> Extract Template Structure</>}
@@ -977,7 +977,7 @@ export default function TemplatesPage() {
               {selectedId ? 'Update Template' : 'Save Template'}
             </Button>
             <Button onClick={handleSaveAndAssign} disabled={isSaving} variant="outline"
-              className="border-[#90DDF0]/40 text-[#90DDF0] hover:bg-[#90DDF0]/10 px-6">
+              className="border-[#2C666E]/40 text-[#2C666E] hover:bg-[#2C666E]/10 px-6">
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
               Save &amp; Assign
             </Button>
@@ -985,20 +985,20 @@ export default function TemplatesPage() {
 
           {/* Assign Modal */}
           <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-            <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Assign Template</DialogTitle>
-                <DialogDescription className="text-slate-400">
-                  Select which brand usernames should receive a copy of <span className="text-white font-medium">"{name}"</span>.
+                <DialogTitle className="text-gray-900">Assign Template</DialogTitle>
+                <DialogDescription className="text-gray-500">
+                  Select which brand usernames should receive a copy of <span className="text-gray-900 font-medium">"{name}"</span>.
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
                 {isLoadingUsernames ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                   </div>
                 ) : availableUsernames.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-6">
+                  <p className="text-sm text-gray-500 text-center py-6">
                     No brand usernames found. Set up brands in the Brand Kit first.
                   </p>
                 ) : (
@@ -1010,19 +1010,19 @@ export default function TemplatesPage() {
                         onClick={() => toggleAssignUsername(username)}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
                           checked
-                            ? 'border-[#90DDF0] bg-[#90DDF0]/10'
-                            : 'border-slate-700 hover:border-slate-600'
+                            ? 'border-[#2C666E] bg-[#2C666E]/10'
+                            : 'border-gray-200 hover:border-gray-400'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 ${
-                          checked ? 'bg-[#90DDF0] border-[#90DDF0]' : 'border-slate-600'
+                          checked ? 'bg-[#2C666E] border-[#2C666E]' : 'border-gray-300'
                         }`}>
-                          {checked && <Check className="w-3.5 h-3.5 text-slate-900" />}
+                          {checked && <Check className="w-3.5 h-3.5 text-white" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white truncate">@{username}</div>
+                          <div className="text-sm font-medium text-gray-900 truncate">@{username}</div>
                           {brand_name !== username && (
-                            <div className="text-xs text-slate-500 truncate">{brand_name}</div>
+                            <div className="text-xs text-gray-500 truncate">{brand_name}</div>
                           )}
                         </div>
                       </button>
@@ -1031,13 +1031,13 @@ export default function TemplatesPage() {
                 )}
               </div>
               {availableUsernames.length > 0 && (
-                <div className="flex justify-between items-center pt-4 border-t border-slate-700 mt-4">
-                  <span className="text-xs text-slate-500">
+                <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
+                  <span className="text-xs text-gray-500">
                     {selectedUsernames.length} selected
                   </span>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setAssignModalOpen(false)}
-                      className="text-slate-400 hover:text-white">
+                      className="text-gray-500 hover:text-gray-900">
                       Cancel
                     </Button>
                     <Button onClick={handleAssignConfirm} disabled={isAssigning || !selectedUsernames.length}

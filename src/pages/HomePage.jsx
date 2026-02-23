@@ -83,14 +83,14 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07393C] text-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       {/* Nav */}
       <header className="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#90DDF0] to-[#2C666E] flex items-center justify-center shadow">
             <Video className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Stitch Studios</span>
+          <span className="text-xl font-bold tracking-tight text-gray-900">Stitch Studios</span>
         </div>
       </header>
 
@@ -101,16 +101,16 @@ export default function HomePage() {
           {/* Left – pitch */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2C666E]/60 border border-[#90DDF0]/20 text-[#90DDF0] text-sm font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2C666E]/10 border border-[#2C666E]/20 text-[#2C666E] text-sm font-medium">
                 <Sparkles className="w-3.5 h-3.5" />
                 AI-Powered Creative Studio
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+              <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-gray-900">
                 Create stunning<br />
-                <span className="text-[#90DDF0]">video adverts</span><br />
+                <span className="text-[#2C666E]">video adverts</span><br />
                 in minutes
               </h1>
-              <p className="text-slate-300 text-lg leading-relaxed max-w-md">
+              <p className="text-gray-600 text-lg leading-relaxed max-w-md">
                 Generate, edit, and animate images and videos using the best AI models — all in one studio.
               </p>
             </div>
@@ -119,21 +119,21 @@ export default function HomePage() {
               {FEATURES.map(({ icon: Icon, title, desc, soon }) => (
                 <div
                   key={title}
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-200 hover:border-[#2C666E]/30 hover:shadow-sm transition-colors"
                 >
                   <div className="mt-0.5 w-7 h-7 rounded-lg bg-[#2C666E] flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-3.5 h-3.5 text-[#90DDF0]" />
+                    <Icon className="w-3.5 h-3.5 text-white" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold text-white leading-tight">{title}</p>
+                      <p className="text-sm font-semibold text-gray-900 leading-tight">{title}</p>
                       {soon && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#90DDF0]/20 text-[#90DDF0] leading-none whitespace-nowrap">
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#2C666E]/10 text-[#2C666E] leading-none whitespace-nowrap">
                           Soon
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 leading-snug">{desc}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-snug">{desc}</p>
                   </div>
                 </div>
               ))}
@@ -142,7 +142,7 @@ export default function HomePage() {
 
           {/* Right – login card */}
           <div className="w-full">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 text-slate-900">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-gray-900">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {isSignUp ? 'Create an account' : 'Welcome back'}
@@ -241,7 +241,7 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-4 text-center text-xs text-slate-500 border-t border-white/10">
+      <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200">
         © {new Date().getFullYear()} Stitch Studios. All rights reserved.
       </footer>
     </div>

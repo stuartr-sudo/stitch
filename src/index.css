@@ -12,7 +12,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 270 14% 5%;
     --primary: 185 44% 30%; /* 2C666E - teal */
-    --primary-foreground: 30 5% 94%;
+    --primary-foreground: 0 0% 100%; /* white text on teal buttons */
     --secondary: 191 76% 75%; /* 90DDF0 - light cyan */
     --secondary-foreground: 186 75% 13%;
     --muted: 30 5% 90%;

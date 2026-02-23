@@ -14,8 +14,8 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#07393C]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#90DDF0]" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
       </div>
     );
   }
@@ -32,8 +32,8 @@ function GuestRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#07393C]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#90DDF0]" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
       </div>
     );
   }
