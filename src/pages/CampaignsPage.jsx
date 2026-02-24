@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import {
   ArrowLeft, Plus, Loader2, Calendar, Link, Video, Image, Layers,
   Clock, CheckCircle2, AlertCircle, Play, Send, Eye, Download,
-  ChevronDown, ChevronUp, X, RefreshCw, RotateCcw,
+  ChevronDown, ChevronUp, X, RefreshCw, RotateCcw, Upload, Zap, DollarSign,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 import RegenerateSceneModal from '@/components/RegenerateSceneModal';
+import BulkUploadModal from '@/components/BulkUploadModal';
+import AutonomousConfigModal from '@/components/AutonomousConfigModal';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -608,6 +610,8 @@ export default function CampaignsPage() {
   const [previewMedia, setPreviewMedia] = useState(null);
   const [search, setSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [showAutonomousConfig, setShowAutonomousConfig] = useState(false);
 
   const loadCampaigns = useCallback(async (quiet = false) => {
     if (!quiet) setIsLoading(true);
@@ -770,10 +774,19 @@ export default function CampaignsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate('/costs')} title="Cost Dashboard">
+                <DollarSign className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowAutonomousConfig(true)} title="Autonomous Config">
+                <Zap className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowBulkUpload(true)} title="Bulk Import">
+                <Upload className="w-4 h-4" />
+              </Button>
               <Button size="sm" variant="outline" onClick={() => loadCampaigns(true)} disabled={isRefreshing}>
                 <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
-              <Button onClick={() => navigate('/studio')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+              <Button onClick={() => navigate('/campaigns/new')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
                 <Plus className="w-4 h-4 mr-2" /> New Campaign
               </Button>
             </div>
@@ -818,6 +831,20 @@ export default function CampaignsPage() {
           </div>
         )}
       </main>
+
+      {/* Modals */}
+      {showBulkUpload && (
+        <BulkUploadModal
+          onClose={() => setShowBulkUpload(false)}
+          onBatchCreated={() => { setShowBulkUpload(false); loadCampaigns(true); }}
+        />
+      )}
+      {showAutonomousConfig && (
+        <AutonomousConfigModal
+          brandUsername={campaigns[0]?.brand_username || ''}
+          onClose={() => setShowAutonomousConfig(false)}
+        />
+      )}
     </div>
   );
 }

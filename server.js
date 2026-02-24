@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { pollScheduledPublications } from './api/lib/scheduledPublisher.js';
 
 dotenv.config();
 
@@ -378,6 +379,92 @@ app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Create campaign manually (with auth)
+app.post('/api/campaigns/create', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/create.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Cost dashboard (with auth)
+app.get('/api/costs/summary', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('costs/summary.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Jobs pause/resume/retry (with auth)
+app.post('/api/jobs/pause', authenticateToken, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { WorkflowEngine } = await import('./api/lib/workflowEngine.js');
+  const wf = new WorkflowEngine(jobId, sb);
+  await wf.loadState();
+  await wf.pause();
+  res.json({ success: true, message: 'Job paused' });
+});
+
+app.post('/api/jobs/resume', authenticateToken, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { WorkflowEngine } = await import('./api/lib/workflowEngine.js');
+  const wf = new WorkflowEngine(jobId, sb);
+  await wf.loadState();
+  await wf.resume();
+  res.json({ success: true, message: 'Job resumed' });
+});
+
+app.post('/api/jobs/retry', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/retry.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Bulk article processing (NO auth — webhook secret)
+app.post('/api/article/bulk', async (req, res) => {
+  const handler = await loadApiRoute('article/bulk.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Autonomous pipeline (NO auth — webhook secret)
+app.post('/api/article/autonomous', async (req, res) => {
+  const handler = await loadApiRoute('article/autonomous.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Batch status (no auth — for external polling)
+app.get('/api/jobs/batch-status', async (req, res) => {
+  const { batchId } = req.query;
+  if (!batchId) return res.status(400).json({ error: 'Missing batchId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { data, error } = await sb.from('job_batches').select('*').eq('id', batchId).single();
+  if (error || !data) return res.status(404).json({ error: 'Batch not found' });
+  return res.json({ success: true, batch: data });
+});
+
+// Autonomous config (with auth)
+app.get('/api/autonomous/config', authenticateToken, async (req, res) => {
+  const { brand_username } = req.query;
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { data } = await sb.from('autonomous_configs').select('*').eq('user_id', req.user.id).eq('brand_username', brand_username).maybeSingle();
+  res.json({ success: true, config: data || null });
+});
+
+app.post('/api/autonomous/config', authenticateToken, async (req, res) => {
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { brand_username, ...settings } = req.body;
+  if (!brand_username) return res.status(400).json({ error: 'Missing brand_username' });
+  const { data, error } = await sb.from('autonomous_configs').upsert({
+    user_id: req.user.id, brand_username, ...settings,
+  }, { onConflict: 'user_id,brand_username' }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, config: data });
+});
+
 // ── Stitch Queue Poller ──────────────────────────────────────────────────────
 // Polls stitch_queue for pending items and routes them by payload type.
 const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '15000', 10);
@@ -492,6 +579,11 @@ async function pollStitchQueue() {
       }).eq('id', item.id);
       console.log(`[queue] Completed ${item.id}`);
 
+      // Update batch progress if this item belongs to a batch
+      if (item.payload?.batch_id) {
+        await supabase.rpc('increment_batch_completed_jobs', { p_batch_id: item.payload.batch_id });
+      }
+
     } catch (handlerErr) {
       await supabase.from('stitch_queue').update({
         status: 'failed',
@@ -499,6 +591,11 @@ async function pollStitchQueue() {
         completed_at: new Date().toISOString(),
       }).eq('id', item.id);
       console.warn(`[queue] Failed ${item.id}: ${handlerErr.message}`);
+
+      // Update batch failure count if this item belongs to a batch
+      if (item.payload?.batch_id) {
+        await supabase.rpc('increment_batch_failed_jobs', { p_batch_id: item.payload.batch_id });
+      }
     }
   } catch (err) {
     console.error('[queue] Poll error:', err.message);
@@ -524,5 +621,10 @@ app.listen(PORT, () => {
     queueInterval = setInterval(pollStitchQueue, QUEUE_POLL_INTERVAL_MS);
     pollStitchQueue(); // run once immediately
     console.log(`[queue] Polling every ${QUEUE_POLL_INTERVAL_MS / 1000}s`);
+
+    // Start scheduled post publisher (polls every 30s)
+    setInterval(pollScheduledPublications, 30000);
+    pollScheduledPublications();
+    console.log('[scheduled-publisher] Polling every 30s');
   }
 });

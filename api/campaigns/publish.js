@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { checkAndUpdateCampaignStatus } from '../lib/campaignHelpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -79,20 +80,3 @@ export default async function handler(req, res) {
   }
 }
 
-async function checkAndUpdateCampaignStatus(campaignId, supabase) {
-  const { data: drafts } = await supabase
-    .from('ad_drafts')
-    .select('publish_status')
-    .eq('campaign_id', campaignId);
-
-  if (!drafts?.length) return;
-
-  const allPublished = drafts.every(d => d.publish_status === 'published');
-  const anyPublished = drafts.some(d => d.publish_status === 'published');
-
-  if (allPublished) {
-    await supabase.from('campaigns').update({ status: 'published' }).eq('id', campaignId);
-  } else if (anyPublished) {
-    await supabase.from('campaigns').update({ status: 'partial' }).eq('id', campaignId);
-  }
-}

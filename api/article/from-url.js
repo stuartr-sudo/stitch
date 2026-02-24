@@ -28,6 +28,10 @@ import { matchTemplate, groupPlatformsByRatio, VIDEO_TEMPLATES } from '../lib/vi
 import { generateImage, animateImage, generateMusic, scrapeArticle, extractLastFrame, analyzeFrameContinuity, concatVideos } from '../lib/pipelineHelpers.js';
 import { VISUAL_STYLE_PRESETS, getStyleSuffix } from '../lib/stylePresets.js';
 import { logCost } from '../lib/costLogger.js';
+import { WorkflowEngine } from '../lib/workflowEngine.js';
+import { withRetry } from '../lib/retryHelper.js';
+import { selectVariantPresets } from '../lib/variantGenerator.js';
+import { calculateNextPublishSlot } from '../lib/campaignHelpers.js';
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -82,6 +86,8 @@ export default async function handler(req, res) {
     platforms: platformsOverride,
     output_type: outputTypeOverride,
     user_template_id,
+    ab_variants: enableVariants,
+    _autonomous_config: autonomousConfig,
   } = req.body;
 
   if (!brand_username) return res.status(400).json({ error: 'Missing brand_username' });
@@ -156,6 +162,7 @@ export default async function handler(req, res) {
       total_steps: useAutoMatch ? 4 : 2 + templatesToRun.length,
       completed_steps: 0,
       input_json: { url, brand_username, writing_structure, templates_count: templatesToRun.length },
+      workflow_state: 'running',
     })
     .select()
     .single();
@@ -171,145 +178,243 @@ export default async function handler(req, res) {
   });
 
   // ── Background pipeline ───────────────────────────────────────────────────
-  runPipeline({ job, userId, brandKit, keys, url, rawContent, articleTitleOverride, platformsOverride, outputTypeOverride, templatesToRun, useAutoMatch, writing_structure, supabase })
+  runPipeline({ job, userId, brandKit, keys, url, rawContent, articleTitleOverride, platformsOverride, outputTypeOverride, templatesToRun, useAutoMatch, writing_structure, enableVariants: enableVariants || autonomousConfig?.ab_variants, autonomousConfig, supabase })
     .catch(async (err) => {
       console.error('[article/from-url] Pipeline error:', err);
-      await supabase.from('jobs').update({ status: 'failed', error: err.message }).eq('id', job.id);
+      await supabase.from('jobs').update({ status: 'failed', error: err.message, workflow_state: 'failed' }).eq('id', job.id);
     });
 }
 
 // ── Pipeline ─────────────────────────────────────────────────────────────────
 
-async function runPipeline({ job, userId, brandKit, keys, url, rawContent, articleTitleOverride, platformsOverride, outputTypeOverride, templatesToRun, useAutoMatch, writing_structure, supabase }) {
+async function runPipeline({ job, userId, brandKit, keys, url, rawContent, articleTitleOverride, platformsOverride, outputTypeOverride, templatesToRun, useAutoMatch, writing_structure, enableVariants, autonomousConfig, supabase }) {
   const jobId = job.id;
   const updateJob = (patch) => supabase.from('jobs').update(patch).eq('id', jobId);
+  const brand_username = brandKit.brand_username;
 
-  // Step 1: Scrape article
-  await updateJob({ current_step: 'scraping', completed_steps: 0 });
+  // Initialize workflow engine for step tracking
+  const wf = new WorkflowEngine(jobId, supabase);
+  await wf.loadState();
 
-  let articleMarkdown = rawContent || '';
-  if (!articleMarkdown && url) {
-    articleMarkdown = await scrapeArticle(url, process.env.FIRECRAWL_API_KEY);
+  // Step 1: Scrape article (skip if already completed on resume)
+  let truncated;
+  if (!wf.hasCompleted('scrape')) {
+    await updateJob({ current_step: 'scraping', completed_steps: 0 });
+
+    let articleMarkdown = rawContent || '';
+    if (!articleMarkdown && url) {
+      articleMarkdown = await withRetry(
+        () => scrapeArticle(url, process.env.FIRECRAWL_API_KEY),
+        { maxAttempts: 2, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[pipeline] Scrape retry ${a}: ${e.message}`) }
+      );
+    }
+
+    if (!articleMarkdown || articleMarkdown.length < 100) {
+      await wf.failStep('scrape', new Error('Could not extract usable content from article'));
+      throw new Error('Could not extract usable content from article');
+    }
+
+    const looksLikeHtml = /<(h[1-6]|p|div|section|article|strong|em)\b/i.test(articleMarkdown);
+    const plainText = looksLikeHtml
+      ? articleMarkdown.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      : articleMarkdown;
+    truncated = plainText.slice(0, 20000);
+
+    await wf.transition('scrape', { truncated });
+  } else {
+    truncated = wf.getStepResult('scrape')?.truncated || '';
   }
 
-  if (!articleMarkdown || articleMarkdown.length < 100) {
-    throw new Error('Could not extract usable content from article');
-  }
-
-  // Strip HTML tags when content is raw HTML (e.g. sent directly from Doubleclicker).
-  // HTML markup is noisy for the AI and inflates character count without adding meaning.
-  const looksLikeHtml = /<(h[1-6]|p|div|section|article|strong|em)\b/i.test(articleMarkdown);
-  const plainText = looksLikeHtml
-    ? articleMarkdown.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    : articleMarkdown;
-
-  // Long-form articles commonly run 3,000–8,000 words (~15,000–40,000 chars of HTML).
-  // 20,000 plain-text chars ≈ 4,000 words — enough for the storyboard to cover the
-  // full structure of the article without overwhelming the context window.
-  const truncated = plainText.slice(0, 20000);
+  if (wf.isPaused) return;
 
   // Step 2: Analyse article
-  await updateJob({ current_step: 'analysing_article', completed_steps: 1 });
+  let analysis;
+  if (!wf.hasCompleted('analyze_article')) {
+    await updateJob({ current_step: 'analysing_article', completed_steps: 1 });
 
-  if (!keys.openaiKey) throw new Error('OpenAI API key required');
+    if (!keys.openaiKey) throw new Error('OpenAI API key required');
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
 
-  const openai = new OpenAI({ apiKey: keys.openaiKey });
-
-  const analysisCompletion = await openai.beta.chat.completions.parse({
-    model: 'gpt-5-mini',
-    messages: [
-      { role: 'system', content: 'Analyze this article and return structured metadata about its type, tone, and key content signals.' },
-      { role: 'user', content: `Article content:\n\n${truncated}` },
-    ],
-    response_format: zodResponseFormat(ArticleAnalysisSchema, 'analysis'),
-  });
-
-  const analysis = analysisCompletion.choices[0].message.parsed;
-
-  // Log cost for analysis call
-  if (analysisCompletion.usage) {
-    logCost({ username: brand_username, category: 'openai', operation: 'article_analysis', model: 'gpt-4.1-mini', input_tokens: analysisCompletion.usage.prompt_tokens, output_tokens: analysisCompletion.usage.completion_tokens });
-  }
-
-  // If no templates matched, auto-match one built-in template
-  if (useAutoMatch) {
-    const templateKey = matchTemplate(analysis);
-    const builtIn = VIDEO_TEMPLATES[templateKey];
-    templatesToRun = [{
-      id: `builtin:${templateKey}`,
-      name: builtIn.name,
-      scenes: builtIn.scenes.map(s => ({ ...s, duration_seconds: s.duration })),
-      music_mood: builtIn.music_mood,
-      voice_pacing: builtIn.voice_pacing,
-      output_type: 'both',
-      model_preferences: {},
-      platforms: platformsOverride || ['tiktok', 'instagram_reels', 'youtube_shorts'],
-      is_builtin: true,
-    }];
-  }
-
-  // Step 3: Create the campaign (one per article run, shared across all template drafts)
-  await updateJob({ current_step: 'creating_campaign', completed_steps: 2 });
-
-  const { data: campaign } = await supabase.from('campaigns').insert({
-    user_id: userId,
-    name: articleTitleOverride || analysis.title || `Campaign ${new Date().toLocaleDateString()}`,
-    article_title: articleTitleOverride || analysis.title,
-    platform: (templatesToRun[0]?.platforms?.[0]) || 'tiktok',
-    source_url: url || null,
-    status: 'processing',
-    writing_structure: writing_structure || null,
-    brand_username: brandKit.brand_username || null,
-    total_drafts: templatesToRun.length,
-    completed_drafts: 0,
-  }).select().single();
-
-  if (!campaign) throw new Error('Failed to create campaign');
-
-  // Step 4+: Run each template (in parallel for max throughput, but log each step)
-  const brandContext = buildBrandContext(brandKit);
-
-  const templateResults = await Promise.allSettled(
-    templatesToRun.map((template, idx) =>
-      runTemplateForArticle({
-        template,
-        analysis,
-        truncated,
-        campaign,
-        userId,
-        brandKit,
-        brandContext,
-        keys,
-        openai,
-        platformsOverride,
-        outputTypeOverride,
-        supabase,
-        jobId,
-        templateIndex: idx,
-        totalTemplates: templatesToRun.length,
-      })
-    )
-  );
-
-  const successful = templateResults.filter(r => r.status === 'fulfilled').length;
-  const failed = templateResults.filter(r => r.status === 'rejected').length;
-
-  if (failed > 0) {
-    templateResults.forEach((r, i) => {
-      if (r.status === 'rejected') console.error(`[pipeline] Template ${templatesToRun[i]?.name} failed:`, r.reason?.message);
+    const analysisCompletion = await openai.beta.chat.completions.parse({
+      model: 'gpt-5-mini',
+      messages: [
+        { role: 'system', content: 'Analyze this article and return structured metadata about its type, tone, and key content signals.' },
+        { role: 'user', content: `Article content:\n\n${truncated}` },
+      ],
+      response_format: zodResponseFormat(ArticleAnalysisSchema, 'analysis'),
     });
+
+    analysis = analysisCompletion.choices[0].message.parsed;
+
+    if (analysisCompletion.usage) {
+      logCost({ username: brand_username, category: 'openai', operation: 'article_analysis', model: 'gpt-4.1-mini', input_tokens: analysisCompletion.usage.prompt_tokens, output_tokens: analysisCompletion.usage.completion_tokens });
+    }
+
+    await wf.transition('analyze_article', { analysis });
+  } else {
+    analysis = wf.getStepResult('analyze_article')?.analysis;
   }
 
-  // Update campaign and job as done
+  if (wf.isPaused) return;
+
+  // Step 3: Match templates
+  if (!wf.hasCompleted('match_templates')) {
+    if (useAutoMatch) {
+      const templateKey = matchTemplate(analysis);
+      const builtIn = VIDEO_TEMPLATES[templateKey];
+      templatesToRun = [{
+        id: `builtin:${templateKey}`,
+        name: builtIn.name,
+        scenes: builtIn.scenes.map(s => ({ ...s, duration_seconds: s.duration })),
+        music_mood: builtIn.music_mood,
+        voice_pacing: builtIn.voice_pacing,
+        output_type: 'both',
+        model_preferences: {},
+        platforms: platformsOverride || ['tiktok', 'instagram_reels', 'youtube_shorts'],
+        is_builtin: true,
+      }];
+    }
+    await wf.transition('match_templates', { count: templatesToRun.length });
+  }
+
+  if (wf.isPaused) return;
+
+  // Step 4: Create campaign
+  let campaign;
+  if (!wf.hasCompleted('create_campaign')) {
+    await updateJob({ current_step: 'creating_campaign', completed_steps: 2 });
+
+    const { data: newCampaign } = await supabase.from('campaigns').insert({
+      user_id: userId,
+      name: articleTitleOverride || analysis.title || `Campaign ${new Date().toLocaleDateString()}`,
+      article_title: articleTitleOverride || analysis.title,
+      platform: (templatesToRun[0]?.platforms?.[0]) || 'tiktok',
+      source_url: url || null,
+      status: 'processing',
+      writing_structure: writing_structure || null,
+      brand_username: brandKit.brand_username || null,
+      total_drafts: templatesToRun.length,
+      completed_drafts: 0,
+    }).select().single();
+
+    if (!newCampaign) throw new Error('Failed to create campaign');
+    campaign = newCampaign;
+
+    await wf.transition('create_campaign', { campaign_id: campaign.id });
+  } else {
+    const campId = wf.getStepResult('create_campaign')?.campaign_id;
+    if (campId) {
+      const { data } = await supabase.from('campaigns').select('*').eq('id', campId).single();
+      campaign = data;
+    }
+    if (!campaign) throw new Error('Campaign not found on resume');
+  }
+
+  if (wf.isPaused) return;
+
+  // Step 5: Generate assets — run each template in parallel
+  if (!wf.hasCompleted('generate_assets')) {
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
+    const brandContext = buildBrandContext(brandKit);
+
+    const templateResults = await Promise.allSettled(
+      templatesToRun.map((template, idx) =>
+        runTemplateForArticle({
+          template, analysis, truncated, campaign, userId, brandKit, brandContext,
+          keys, openai, platformsOverride, outputTypeOverride, supabase, jobId,
+          templateIndex: idx, totalTemplates: templatesToRun.length,
+        })
+      )
+    );
+
+    const successful = templateResults.filter(r => r.status === 'fulfilled').length;
+    const failed = templateResults.filter(r => r.status === 'rejected').length;
+    const successfulDraftIds = templateResults
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value);
+
+    if (failed > 0) {
+      templateResults.forEach((r, i) => {
+        if (r.status === 'rejected') console.error(`[pipeline] Template ${templatesToRun[i]?.name} failed:`, r.reason?.message);
+      });
+    }
+
+    await wf.transition('generate_assets', { successful, failed, draftIds: successfulDraftIds });
+
+    // A/B Variant generation — spawn additional drafts with contrasting style presets
+    if (enableVariants && successful > 0) {
+      const originalPreset = templatesToRun[0]?.visual_style_preset || 'cinematic';
+      const variantPresets = selectVariantPresets(originalPreset, 2);
+      const variantGroupId = crypto.randomUUID();
+
+      // Tag original drafts with variant group
+      for (const draftId of successfulDraftIds) {
+        await supabase.from('ad_drafts')
+          .update({ variant_group_id: variantGroupId, variant_label: 'original', style_preset_applied: originalPreset })
+          .eq('id', draftId);
+      }
+
+      // Generate variant drafts
+      for (const variantPreset of variantPresets) {
+        console.log(`[pipeline] Generating A/B variant with preset "${variantPreset}"`);
+        try {
+          const variantResults = await Promise.allSettled(
+            templatesToRun.map((template) =>
+              runTemplateForArticle({
+                template: { ...template, visual_style_preset: variantPreset },
+                analysis, truncated, campaign, userId, brandKit,
+                brandContext: buildBrandContext(brandKit),
+                keys, openai, platformsOverride, outputTypeOverride, supabase, jobId,
+                variantGroupId, variantLabel: `variant_${variantPreset}`,
+              })
+            )
+          );
+          const variantDraftIds = variantResults.filter(r => r.status === 'fulfilled').map(r => r.value);
+          for (const draftId of variantDraftIds) {
+            await supabase.from('ad_drafts')
+              .update({ variant_group_id: variantGroupId, variant_label: `variant_${variantPreset}`, style_preset_applied: variantPreset })
+              .eq('id', draftId);
+          }
+        } catch (varErr) {
+          console.error(`[pipeline] Variant "${variantPreset}" failed:`, varErr.message);
+        }
+      }
+    }
+  }
+
+  if (wf.isPaused) return;
+
+  // Finalize — update campaign and job status
+  const assetResult = wf.getStepResult('generate_assets') || {};
+  const successful = assetResult.successful || 0;
+  const failed = assetResult.failed || 0;
+
   await supabase.from('campaigns').update({
     status: successful > 0 ? 'ready' : 'failed',
     completed_drafts: successful,
   }).eq('id', campaign.id);
 
+  // Autonomous: auto-schedule drafts if config says so
+  if (autonomousConfig?.auto_publish && successful > 0) {
+    const publishAt = calculateNextPublishSlot(autonomousConfig);
+    await supabase.from('ad_drafts')
+      .update({
+        publish_status: 'scheduled',
+        scheduled_for: publishAt.toISOString(),
+      })
+      .eq('campaign_id', campaign.id)
+      .eq('generation_status', 'ready')
+      .eq('publish_status', 'draft');
+    console.log(`[autonomous] Auto-scheduled campaign ${campaign.id} for ${publishAt.toISOString()}`);
+  }
+
+  await wf.transition('finalize', { campaign_id: campaign.id });
+
   await updateJob({
     status: 'completed',
     current_step: 'done',
     completed_steps: 2 + templatesToRun.length,
+    workflow_state: 'completed',
     output_json: {
       campaign_id: campaign.id,
       templates_run: templatesToRun.length,
@@ -322,11 +427,39 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
   console.log(`[pipeline] Job ${jobId} complete — campaign ${campaign.id} — ${successful}/${templatesToRun.length} drafts succeeded`);
 }
 
+/** Re-entry point for retry endpoint — loads job from DB and runs pipeline */
+export async function runPipelineFromJob(job, supabase) {
+  const { data: brandKit } = await supabase.from('brand_kit').select('*').eq('brand_username', job.input_json?.brand_username).single();
+  if (!brandKit) throw new Error('Brand not found');
+
+  const { data: userKeys } = await supabase.from('user_api_keys').select('fal_key, wavespeed_key, openai_key').eq('user_id', job.user_id).maybeSingle();
+  const keys = {
+    falKey: userKeys?.fal_key || process.env.FAL_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+    openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
+  };
+
+  // Re-fetch templates
+  let templatesToRun = [];
+  const { writing_structure, url } = job.input_json || {};
+  if (writing_structure) {
+    const { data: ut } = await supabase.from('user_templates').select('*').eq('user_id', job.user_id).contains('applicable_writing_structures', [writing_structure]);
+    templatesToRun = ut || [];
+  }
+
+  await runPipeline({
+    job, userId: job.user_id, brandKit, keys, url,
+    rawContent: null, articleTitleOverride: null, platformsOverride: null, outputTypeOverride: null,
+    templatesToRun, useAutoMatch: templatesToRun.length === 0, writing_structure, supabase,
+  });
+}
+
 // ── Per-template runner ───────────────────────────────────────────────────────
 
 async function runTemplateForArticle({
   template, analysis, truncated, campaign, userId, brandKit, brandContext, keys, openai,
   platformsOverride, outputTypeOverride, supabase, jobId,
+  variantGroupId, variantLabel,
 }) {
   const modelPrefs = template.model_preferences || {};
   const outputType = outputTypeOverride || template.output_type || 'both';
@@ -409,7 +542,7 @@ Rules:
   }
 
   // Create draft record
-  const { data: draft } = await supabase.from('ad_drafts').insert({
+  const draftInsert = {
     campaign_id: campaign.id,
     user_id: userId,
     template_id: String(template.id),
@@ -419,7 +552,13 @@ Rules:
     storyboard_json: { ...storyboard, template: template.id, analysis, platforms },
     generation_status: 'generating',
     assets_json: [],
-  }).select().single();
+    style_preset_applied: template.visual_style_preset || null,
+  };
+  if (variantGroupId) {
+    draftInsert.variant_group_id = variantGroupId;
+    draftInsert.variant_label = variantLabel || 'original';
+  }
+  const { data: draft } = await supabase.from('ad_drafts').insert(draftInsert).select().single();
 
   if (!draft) throw new Error(`Failed to create draft for template "${template.name}"`);
 
@@ -450,13 +589,15 @@ Rules:
           const basePrompt = wantStatic && !wantVideo
             ? `${scene.visual_prompt}, with bold text overlay reading "${scene.headline}", ${scene.overlay_style.replace(/_/g, ' ')} style`
             : scene.visual_prompt;
-          imageUrl = await generateImage(`${basePrompt}${styleSuffix}`, ratio, keys, supabase, modelPrefs.image_model, loraConfig);
+          imageUrl = await withRetry(
+            () => generateImage(`${basePrompt}${styleSuffix}`, ratio, keys, supabase, modelPrefs.image_model, loraConfig),
+            { maxAttempts: 3, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[pipeline] [${template.name}] Scene ${sceneIdx} image retry ${a}: ${e.message}`) }
+          );
         } else {
-          // Reuse the extracted last frame — no generation cost, perfect visual continuity
           imageUrl = prevFrameUrl;
         }
       } catch (imgErr) {
-        console.error(`[pipeline] [${template.name}] Scene ${sceneIdx} image failed:`, imgErr.message);
+        console.error(`[pipeline] [${template.name}] Scene ${sceneIdx} image failed after retries:`, imgErr.message);
         sceneAssets.push({ scene, imageUrl: null, videoUrl: null });
         continue;
       }
@@ -472,14 +613,9 @@ Rules:
             : '';
           const motionPrompt = `${scene.motion_prompt || scene.visual_prompt}${continuityNote}`;
 
-          videoUrl = await animateImage(
-            imageUrl,
-            motionPrompt,
-            ratio,
-            Math.min(scene.duration_seconds || 5, 5),
-            keys,
-            supabase,
-            modelPrefs.video_model,
+          videoUrl = await withRetry(
+            () => animateImage(imageUrl, motionPrompt, ratio, Math.min(scene.duration_seconds || 5, 5), keys, supabase, modelPrefs.video_model),
+            { maxAttempts: 2, baseDelayMs: 5000, onRetry: (a, e) => console.warn(`[pipeline] [${template.name}] Scene ${sceneIdx} video retry ${a}: ${e.message}`) }
           );
 
           // Extract + analyze last frame for the next scene (skip on final scene).
