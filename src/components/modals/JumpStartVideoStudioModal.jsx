@@ -24,7 +24,9 @@ import {
   Edit3,
   Download,
   Plus,
-  FolderOpen
+  FolderOpen,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
@@ -40,6 +42,8 @@ const EXTEND_MODELS = [
     resolutions: ['720p', '1080p'],
     supportsAudio: false,
     supportsCameraFixed: true,
+    promptPlaceholder: "Describe the continuation — focus on camera movement, subject action, and scene mood. e.g., 'Camera slowly orbits around the subject as golden light shifts across the scene'",
+    promptLabel: 'Continuation Prompt',
   },
   {
     id: 'runway-gen3',
@@ -49,24 +53,30 @@ const EXTEND_MODELS = [
     resolutions: ['720p'],
     supportsAudio: false,
     supportsCameraFixed: true,
+    promptPlaceholder: "Describe the next scene with cinematic detail — motion, lighting, emotion. e.g., 'The person turns to face the camera with a slow smile, warm backlight creating a rim glow'",
+    promptLabel: 'Cinematic Direction Prompt',
   },
   {
     id: 'seedance',
     label: '🎬 Bytedance Seedance 1.5',
-    description: 'Original extend, 4-12s increments',
+    description: 'Original extend, 4-12s increments with audio support',
     durationOptions: [4, 5, 6, 8, 10, 12],
     resolutions: ['720p', '1080p'],
     supportsAudio: true,
     supportsCameraFixed: true,
+    promptPlaceholder: "Describe what happens next — keep the same character, outfit, lighting, framing. e.g., 'The person continues speaking naturally, gesturing with their hands, maintaining the same casual tone'",
+    promptLabel: 'Action Continuation Prompt',
   },
   {
     id: 'veo3-fast-extend',
     label: '⚡ Google Veo 3.1 Fast Extend',
-    description: 'Extend up to 30s total, 7s increments',
+    description: 'Extend up to 30s total, 7s increments with native audio',
     durationOptions: [7], // Fixed 7s extension
     resolutions: ['720p'],
     supportsAudio: true,
     supportsCameraFixed: false,
+    promptPlaceholder: "Describe the continuation with speech/audio cues if needed. e.g., 'The scene continues naturally as the person finishes their sentence and looks off into the distance'",
+    promptLabel: 'Scene Extension Prompt',
   },
 ];
 
@@ -77,12 +87,14 @@ const EDIT_MODELS = [
     label: '🎬 Wavespeed WAN 2.2',
     description: 'Standard video editing with text prompts',
     resolutions: ['480p', '720p'],
+    promptPlaceholder: "Describe the full scene after editing. e.g., 'A person in a red jacket walking through a snowy forest, soft natural lighting'",
   },
   {
     id: 'grok-edit',
     label: '✨ xAI Grok Imagine',
     description: 'Advanced editing, max 854x480 input, 8s limit',
     resolutions: ['auto', '480p', '720p'],
+    promptPlaceholder: "Describe specific changes to make. e.g., 'Change the shirt colour to blue and add rain falling in the background'",
   },
 ];
 
@@ -534,10 +546,12 @@ export default function JumpStartVideoStudioModal({
               <div className="space-y-4">
                 <Label className="text-sm font-bold flex items-center gap-2">
                   <Sparkles className={`w-4 h-4 ${mode === 'extend' ? 'text-[#2C666E]' : 'text-[#07393C]'}`} />
-                  {mode === 'extend' ? 'Action Continuation Prompt' : 'Edit Prompt'}
+                  {mode === 'extend' ? (currentExtendModel.promptLabel || 'Action Continuation Prompt') : 'Edit Prompt'}
                 </Label>
-                <textarea 
-                  placeholder={mode === 'extend' ? "e.g., 'The car continues driving down the sunset road...'" : "e.g., 'Change the man's shirt to red and make the sky rainy'"}
+                <textarea
+                  placeholder={mode === 'extend'
+                    ? (currentExtendModel.promptPlaceholder || "Describe what happens next...")
+                    : (currentEditModel.promptPlaceholder || "e.g., 'Change the man's shirt to red and make the sky rainy'")}
                   className="w-full h-32 p-3 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 bg-slate-50 resize-none"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -619,15 +633,40 @@ export default function JumpStartVideoStudioModal({
                 </div>
               </div>
 
-              {mode === 'extend' && currentExtendModel.supportsCameraFixed && (
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setCameraFixed(!cameraFixed)}>
-                  <div className="flex items-center gap-3">
-                    <Settings className={`w-4 h-4 ${cameraFixed ? 'text-[#2C666E]' : 'text-slate-400'}`} />
-                    <div><p className="text-sm font-bold">Fixed Camera</p><p className="text-[10px] text-slate-500">Keep shot static</p></div>
-                  </div>
-                  <div className={`w-10 h-6 rounded-full relative transition-colors ${cameraFixed ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${cameraFixed ? 'right-1' : 'left-1'}`} />
-                  </div>
+              {/* Model Feature Toggles */}
+              {mode === 'extend' && (currentExtendModel.supportsAudio || currentExtendModel.supportsCameraFixed) && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold">Model Features</Label>
+
+                  {currentExtendModel.supportsAudio && (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setGenerateAudio(!generateAudio)}>
+                      <div className="flex items-center gap-3">
+                        {generateAudio ? <Volume2 className="w-4 h-4 text-[#2C666E]" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+                        <div>
+                          <p className="text-sm font-bold">Generate Audio</p>
+                          <p className="text-[10px] text-slate-500">{generateAudio ? 'Audio will be generated for the extension' : 'Extension will be silent'}</p>
+                        </div>
+                      </div>
+                      <div className={`w-10 h-6 rounded-full relative transition-colors ${generateAudio ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${generateAudio ? 'right-1' : 'left-1'}`} />
+                      </div>
+                    </div>
+                  )}
+
+                  {currentExtendModel.supportsCameraFixed && (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setCameraFixed(!cameraFixed)}>
+                      <div className="flex items-center gap-3">
+                        <Settings className={`w-4 h-4 ${cameraFixed ? 'text-[#2C666E]' : 'text-slate-400'}`} />
+                        <div>
+                          <p className="text-sm font-bold">Fixed Camera</p>
+                          <p className="text-[10px] text-slate-500">{cameraFixed ? 'Camera stays locked in position' : 'Camera can move freely'}</p>
+                        </div>
+                      </div>
+                      <div className={`w-10 h-6 rounded-full relative transition-colors ${cameraFixed ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${cameraFixed ? 'right-1' : 'left-1'}`} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
