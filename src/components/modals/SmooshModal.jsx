@@ -1,13 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,11 +28,11 @@ import {
 import { apiFetch } from '@/lib/api';
 
 const DIMENSION_PRESETS = [
-  { id: '1080x1080', label: '1080×1080 (Square)', width: 1080, height: 1080 },
-  { id: '1920x1080', label: '1920×1080 (16:9)', width: 1920, height: 1080 },
-  { id: '1080x1920', label: '1080×1920 (9:16)', width: 1080, height: 1920 },
-  { id: '1200x628', label: '1200×628 (Facebook)', width: 1200, height: 628 },
-  { id: '1080x1350', label: '1080×1350 (Instagram)', width: 1080, height: 1350 },
+  { id: '1080x1080', label: '1080\u00D71080 (Square)', width: 1080, height: 1080 },
+  { id: '1920x1080', label: '1920\u00D71080 (16:9)', width: 1920, height: 1080 },
+  { id: '1080x1920', label: '1080\u00D71920 (9:16)', width: 1080, height: 1920 },
+  { id: '1200x628', label: '1200\u00D7628 (Facebook)', width: 1200, height: 628 },
+  { id: '1080x1350', label: '1080\u00D71350 (Instagram)', width: 1080, height: 1350 },
 ];
 
 const ENHANCEMENT_PRESETS = [
@@ -69,11 +63,11 @@ const ENHANCEMENT_PRESETS = [
 /**
  * SmooshModal - Infinite Canvas Image Compositor
  */
-export default function SmooshModal({ 
-  isOpen, 
-  onClose, 
+export default function SmooshModal({
+  isOpen,
+  onClose,
   onImageGenerated,
-  isEmbedded = false 
+  isEmbedded = false
 }) {
   const [images, setImages] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -86,7 +80,7 @@ export default function SmooshModal({
   const [resultImage, setResultImage] = useState(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
-  
+
   const stageRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -183,7 +177,7 @@ export default function SmooshModal({
   };
 
   const handleImageUpdate = useCallback((id, newAttrs) => {
-    setImages(prev => prev.map(img => 
+    setImages(prev => prev.map(img =>
       img.id === id ? { ...img, ...newAttrs } : img
     ));
   }, []);
@@ -204,12 +198,12 @@ export default function SmooshModal({
       // Frame the canvas dimensions if no images
       const container = containerRef.current;
       if (!container) return;
-      
+
       const padding = 50;
       const scaleX = container.clientWidth / (dimensions.width + padding * 2);
       const scaleY = container.clientHeight / (dimensions.height + padding * 2);
       const newScale = Math.min(scaleX, scaleY, 1);
-      
+
       setStageScale(newScale);
       setStagePos({
         x: (container.clientWidth - dimensions.width * newScale) / 2,
@@ -217,7 +211,7 @@ export default function SmooshModal({
       });
       return;
     }
-    
+
     // Calculate bounds using canvas dimensions as base
     let minX = 0, minY = 0, maxX = dimensions.width, maxY = dimensions.height;
 
@@ -227,7 +221,7 @@ export default function SmooshModal({
     const padding = 50;
     const contentWidth = maxX - minX + padding * 2;
     const contentHeight = maxY - minY + padding * 2;
-    
+
     const scaleX = container.clientWidth / contentWidth;
     const scaleY = container.clientHeight / contentHeight;
     const newScale = Math.min(scaleX, scaleY, 1);
@@ -274,7 +268,7 @@ export default function SmooshModal({
           const scaleY = img.scaleY || 1;
           const width = imgEl.width * scaleX;
           const height = imgEl.height * scaleY;
-          
+
           ctx.save();
           ctx.translate(img.x, img.y);
           ctx.rotate(((img.rotation || 0) * Math.PI) / 180);
@@ -342,7 +336,7 @@ export default function SmooshModal({
           body: JSON.stringify({ requestId }),
         });
         const data = await response.json();
-        
+
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
           setResultImage(data.imageUrl || data.videoUrl);
           setIsLoading(false);
@@ -369,32 +363,18 @@ export default function SmooshModal({
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Smoosh</h2>
-              <p className="text-slate-500 text-sm">Infinite canvas image compositor</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleZoom(-0.1)}>
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-slate-500 w-16 text-center">{Math.round(stageScale * 100)}%</span>
-            <Button variant="outline" size="sm" onClick={() => handleZoom(0.1)}>
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleFrameContent}>
-              <Frame className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+      {/* Zoom controls toolbar */}
+      <div className="flex-shrink-0 px-4 py-2 border-b bg-white flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => handleZoom(-0.1)}>
+          <ZoomOut className="w-4 h-4" />
+        </Button>
+        <span className="text-sm text-slate-500 w-16 text-center">{Math.round(stageScale * 100)}%</span>
+        <Button variant="outline" size="sm" onClick={() => handleZoom(0.1)}>
+          <ZoomIn className="w-4 h-4" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleFrameContent}>
+          <Frame className="w-4 h-4" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-hidden flex">
@@ -426,7 +406,7 @@ export default function SmooshModal({
                   stroke="#ccc"
                   strokeWidth={2}
                 />
-                
+
                 {images.map((img) => (
                   <URLImage
                     key={img.id}
@@ -482,8 +462,8 @@ export default function SmooshModal({
 
             {showUrlInput && (
               <div className="mt-2 flex gap-2">
-                <Input 
-                  placeholder="https://..." 
+                <Input
+                  placeholder="https://..."
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   className="flex-1"
@@ -540,7 +520,7 @@ export default function SmooshModal({
                 <option key={preset.id} value={preset.id}>{preset.label}</option>
               ))}
             </select>
-            
+
             <Label className="text-sm font-medium mb-2 block text-slate-500">Custom Prompt (Optional)</Label>
             <Textarea
               placeholder="Add custom instructions or modify the preset..."
@@ -549,14 +529,14 @@ export default function SmooshModal({
               className="min-h-[60px] text-sm"
             />
             <p className="text-xs text-slate-400 mt-1">
-              {selectedPreset.id !== 'none' 
+              {selectedPreset.id !== 'none'
                 ? 'Preset applied. Add custom instructions to refine further.'
                 : 'Describe how the AI should enhance your composition.'}
             </p>
           </div>
 
           {!resultImage ? (
-            <Button 
+            <Button
               onClick={handleGenerate}
               disabled={isLoading || images.length === 0}
               className="w-full bg-[#2C666E] hover:bg-[#07393C] h-11"
@@ -596,7 +576,7 @@ export default function SmooshModal({
               <Label className="text-sm font-medium mb-2 block">Layers ({images.length})</Label>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {images.map((img, idx) => (
-                  <div 
+                  <div
                     key={img.id}
                     onClick={() => setSelectedId(img.id)}
                     className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
@@ -623,16 +603,16 @@ export default function SmooshModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <VisuallyHidden>
-            <DialogTitle>Smoosh</DialogTitle>
-            <DialogDescription>Infinite canvas image compositor</DialogDescription>
-          </VisuallyHidden>
-          {content}
-        </DialogContent>
-      </Dialog>
-      
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        title="Smoosh"
+        subtitle="AI image blending"
+        icon={<Layers className="w-5 h-5" />}
+      >
+        {content}
+      </SlideOverPanel>
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}

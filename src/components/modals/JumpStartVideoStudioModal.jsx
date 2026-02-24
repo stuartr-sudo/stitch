@@ -1,13 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,7 +31,7 @@ import { apiFetch } from '@/lib/api';
 const EXTEND_MODELS = [
   {
     id: 'luma-ray',
-    label: '✨ Luma Dream Machine (Ray)',
+    label: 'Luma Dream Machine (Ray)',
     description: 'High fidelity text+image to video',
     durationOptions: [5, 10],
     resolutions: ['720p', '1080p'],
@@ -47,7 +42,7 @@ const EXTEND_MODELS = [
   },
   {
     id: 'runway-gen3',
-    label: '🏃 Runway Gen-3 Alpha',
+    label: 'Runway Gen-3 Alpha',
     description: 'Cinematic quality motion',
     durationOptions: [5, 10],
     resolutions: ['720p'],
@@ -58,7 +53,7 @@ const EXTEND_MODELS = [
   },
   {
     id: 'seedance',
-    label: '🎬 Bytedance Seedance 1.5',
+    label: 'Bytedance Seedance 1.5',
     description: 'Original extend, 4-12s increments with audio support',
     durationOptions: [4, 5, 6, 8, 10, 12],
     resolutions: ['720p', '1080p'],
@@ -69,7 +64,7 @@ const EXTEND_MODELS = [
   },
   {
     id: 'veo3-fast-extend',
-    label: '⚡ Google Veo 3.1 Fast Extend',
+    label: 'Google Veo 3.1 Fast Extend',
     description: 'Extend up to 30s total, 7s increments with native audio',
     durationOptions: [7], // Fixed 7s extension
     resolutions: ['720p'],
@@ -84,14 +79,14 @@ const EXTEND_MODELS = [
 const EDIT_MODELS = [
   {
     id: 'wavespeed',
-    label: '🎬 Wavespeed WAN 2.2',
+    label: 'Wavespeed WAN 2.2',
     description: 'Standard video editing with text prompts',
     resolutions: ['480p', '720p'],
     promptPlaceholder: "Describe the full scene after editing. e.g., 'A person in a red jacket walking through a snowy forest, soft natural lighting'",
   },
   {
     id: 'grok-edit',
-    label: '✨ xAI Grok Imagine',
+    label: 'xAI Grok Imagine',
     description: 'Advanced editing, max 854x480 input, 8s limit',
     resolutions: ['auto', '480p', '720p'],
     promptPlaceholder: "Describe specific changes to make. e.g., 'Change the shirt colour to blue and add rain falling in the background'",
@@ -101,18 +96,18 @@ const EDIT_MODELS = [
 /**
  * JumpStartVideoStudioModal - Video Edit and Extend functionality
  */
-export default function JumpStartVideoStudioModal({ 
-  isOpen, 
-  onClose, 
+export default function JumpStartVideoStudioModal({
+  isOpen,
+  onClose,
   username = 'default',
   onInsert,
   initialMode = 'extend',
   isEmbedded = false
 }) {
   const [mode, setMode] = useState(initialMode);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState('source');
   const [selectedVideo, setSelectedVideo] = useState(null);
-  
+
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
@@ -151,24 +146,24 @@ export default function JumpStartVideoStudioModal({
       // No need to save again - already in library
     }
   };
-  
+
   // Shared Settings
   const [prompt, setPrompt] = useState('');
   const [resolution, setResolution] = useState('720p');
-  
+
   // Extend Specific Settings
   const [extendModel, setExtendModel] = useState('seedance');
   const [duration, setDuration] = useState(5);
   const [generateAudio, setGenerateAudio] = useState(true);
   const [cameraFixed, setCameraFixed] = useState(false);
-  
+
   // Edit Specific Settings
   const [editModel, setEditModel] = useState('wavespeed');
-  
+
   // Get current model configs
   const currentExtendModel = EXTEND_MODELS.find(m => m.id === extendModel) || EXTEND_MODELS[0];
   const currentEditModel = EDIT_MODELS.find(m => m.id === editModel) || EDIT_MODELS[0];
-  
+
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
@@ -195,7 +190,7 @@ export default function JumpStartVideoStudioModal({
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
-      setCurrentStep(1);
+      setActiveTab('source');
       setSelectedVideo(null);
       setVideoLibrary([]);
       setSearchQuery('');
@@ -231,13 +226,13 @@ export default function JumpStartVideoStudioModal({
       source: 'imported',
       created_at: new Date().toISOString()
     };
-    
+
     setSelectedVideo(newVideo);
     setVideoLibrary(prev => [newVideo, ...prev]);
     setShowUrlImport(false);
     setUrlInput('');
     toast.success('Video imported!');
-    
+
     // Save imported video to library
     saveToLibrary(url, 'video', `Imported Video - ${new Date().toLocaleString()}`, 'video-studio-import');
   };
@@ -245,8 +240,8 @@ export default function JumpStartVideoStudioModal({
   const filteredLibrary = useMemo(() => {
     if (!searchQuery) return videoLibrary;
     const q = searchQuery.toLowerCase();
-    return videoLibrary.filter(v => 
-      v.title.toLowerCase().includes(q) || 
+    return videoLibrary.filter(v =>
+      v.title.toLowerCase().includes(q) ||
       v.source.toLowerCase().includes(q)
     );
   }, [videoLibrary, searchQuery]);
@@ -267,9 +262,9 @@ export default function JumpStartVideoStudioModal({
         clearInterval(pollIntervalRef.current);
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
-        setCurrentStep(3);
+        setActiveTab('preview');
         toast.success(`Video ${mode === 'extend' ? 'extended' : 'edited'} successfully!`);
-        
+
         // Save generated video to library
         saveToLibrary(data.videoUrl, 'video', `${mode === 'extend' ? 'Extended' : 'Edited'} Video - ${new Date().toLocaleString()}`, `video-studio-${mode}`);
       } else if (data.status === 'failed') {
@@ -295,18 +290,18 @@ export default function JumpStartVideoStudioModal({
 
     setIsGenerating(true);
     setGenerationStatus(`Submitting ${mode} request...`);
-    
+
     try {
       const endpoint = mode === 'extend' ? '/api/jumpstart/extend' : '/api/jumpstart/edit';
       const body = {
         videoUrl: selectedVideo.url,
         prompt,
         resolution,
-        ...(mode === 'extend' ? { 
+        ...(mode === 'extend' ? {
           model: extendModel,
-          duration, 
-          generate_audio: generateAudio, 
-          camera_fixed: cameraFixed 
+          duration,
+          generate_audio: generateAudio,
+          camera_fixed: cameraFixed
         } : {
           model: editModel,
         })
@@ -324,8 +319,8 @@ export default function JumpStartVideoStudioModal({
       if (data.status === 'completed' && data.videoUrl) {
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
-        setCurrentStep(3);
-        
+        setActiveTab('preview');
+
         // Save generated video to library
         saveToLibrary(data.videoUrl, 'video', `${mode === 'extend' ? 'Extended' : 'Edited'} Video - ${new Date().toLocaleString()}`, `video-studio-${mode}`);
       } else {
@@ -364,7 +359,7 @@ export default function JumpStartVideoStudioModal({
       if (!saveResponse.ok) throw new Error(saveData.error);
 
       setLastSavedVideoUrl(saveData.url);
-      
+
       // Add to local library
       const newVideo = {
         id: uuidv4(),
@@ -374,7 +369,7 @@ export default function JumpStartVideoStudioModal({
         created_at: new Date().toISOString()
       };
       setVideoLibrary(prev => [newVideo, ...prev]);
-      
+
       toast.success('Saved to library!');
     } catch (error) {
       console.error('Save error:', error);
@@ -400,12 +395,12 @@ export default function JumpStartVideoStudioModal({
       source: 'studio-result',
       created_at: new Date().toISOString()
     });
-    
+
     setGeneratedVideoUrl(null);
     setLastSavedVideoUrl(null);
     setPrompt('');
     setMode(newMode);
-    setCurrentStep(2);
+    setActiveTab('settings');
   };
 
   const handleClose = () => {
@@ -416,7 +411,7 @@ export default function JumpStartVideoStudioModal({
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
-      setCurrentStep(1);
+      setActiveTab('source');
       setSelectedVideo(null);
       setGeneratedVideoUrl(null);
       setLastSavedVideoUrl(null);
@@ -426,24 +421,10 @@ export default function JumpStartVideoStudioModal({
   }, [isOpen, initialMode]);
 
   const renderContent = () => (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+      {/* Mode toggle + Tab navigation */}
       <div className="p-4 border-b shrink-0 bg-slate-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${mode === 'extend' ? 'bg-[#90DDF0]/30 text-[#2C666E]' : 'bg-[#2C666E]/20 text-[#07393C]'}`}>
-              {mode === 'extend' ? <Sparkles className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Video {mode === 'extend' ? 'Extend' : 'Edit'}
-              </h2>
-              <p className="text-slate-500 text-sm">
-                {mode === 'extend' ? 'Extend video duration with AI continuation.' : 'Modify characters or details with text prompts.'}
-              </p>
-            </div>
-          </div>
-          
+        <div className="flex items-center justify-between mb-3">
           {/* Mode Toggle */}
           <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
             <button onClick={() => setMode('extend')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'extend' ? 'bg-white shadow text-[#2C666E]' : 'text-slate-600 hover:text-slate-900'}`}>
@@ -453,12 +434,19 @@ export default function JumpStartVideoStudioModal({
               <Edit3 className="w-4 h-4 inline mr-1" /> Edit
             </button>
           </div>
+
+          {/* Tabs */}
+          <TabsList>
+            <TabsTrigger value="source">Source</TabsTrigger>
+            <TabsTrigger value="settings" disabled={!selectedVideo}>Settings</TabsTrigger>
+            <TabsTrigger value="preview" disabled={!generatedVideoUrl}>Preview</TabsTrigger>
+          </TabsList>
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Step 1: Select Source */}
-        {currentStep === 1 && (
+        {/* Source Tab */}
+        <TabsContent value="source" className="flex-1 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col p-6 overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-800">Select a Video to {mode === 'extend' ? 'Extend' : 'Edit'}</h2>
@@ -527,11 +515,11 @@ export default function JumpStartVideoStudioModal({
               )}
             </div>
           </div>
-        )}
+        </TabsContent>
 
-        {/* Step 2: Configure */}
-        {currentStep === 2 && (
-          <div className="flex-1 grid grid-cols-2 overflow-hidden min-h-[500px]">
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="flex-1 overflow-hidden mt-0">
+          <div className="flex-1 grid grid-cols-2 overflow-hidden min-h-[500px] h-full">
             <div className="bg-gray-100 flex items-center justify-center p-8 box-border">
               <div className="w-full max-w-xl space-y-4">
                 <div className="aspect-video rounded-xl overflow-hidden shadow-2xl bg-white border-4 border-slate-600 ring-1 ring-slate-300 relative box-content">
@@ -562,9 +550,9 @@ export default function JumpStartVideoStudioModal({
               {mode === 'extend' && (
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Extend Model</Label>
-                  <select 
-                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" 
-                    value={extendModel} 
+                  <select
+                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer"
+                    value={extendModel}
                     onChange={(e) => {
                       const newModel = e.target.value;
                       setExtendModel(newModel);
@@ -589,9 +577,9 @@ export default function JumpStartVideoStudioModal({
               {mode === 'edit' && (
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Edit Model</Label>
-                  <select 
-                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" 
-                    value={editModel} 
+                  <select
+                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer"
+                    value={editModel}
                     onChange={(e) => {
                       const newModel = e.target.value;
                       setEditModel(newModel);
@@ -671,10 +659,10 @@ export default function JumpStartVideoStudioModal({
               )}
             </div>
           </div>
-        )}
+        </TabsContent>
 
-        {/* Step 3: Result */}
-        {currentStep === 3 && (
+        {/* Preview Tab */}
+        <TabsContent value="preview" className="flex-1 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col bg-gray-100 overflow-hidden">
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="w-full h-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl bg-white relative border-4 border-slate-600 ring-1 ring-slate-300 box-content">
@@ -709,32 +697,32 @@ export default function JumpStartVideoStudioModal({
               </div>
             </div>
           </div>
-        )}
+        </TabsContent>
       </div>
 
       <div className="p-4 border-t bg-white flex items-center justify-between shrink-0">
-        {currentStep === 1 && (
+        {activeTab === 'source' && (
           <>
             <Button variant="ghost" onClick={handleClose}>Cancel</Button>
-            <Button disabled={!selectedVideo} onClick={() => setCurrentStep(2)} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-12 px-8 font-bold rounded-xl">
+            <Button disabled={!selectedVideo} onClick={() => setActiveTab('settings')} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-12 px-8 font-bold rounded-xl">
               Configure {mode === 'extend' ? 'Extension' : 'Edit'} <ArrowRight className="w-4 h-4" />
             </Button>
           </>
         )}
 
-        {currentStep === 2 && (
+        {activeTab === 'settings' && (
           <>
-            <Button variant="outline" onClick={() => setCurrentStep(1)} className="rounded-xl"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
+            <Button variant="outline" onClick={() => setActiveTab('source')} className="rounded-xl"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
             <Button disabled={isGenerating} onClick={handleProcess} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-12 px-10 font-bold rounded-xl shadow-lg">
               {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Play className="w-4 h-4 fill-current" /> Run {mode === 'extend' ? 'Extend' : 'Edit'}</>}
             </Button>
           </>
         )}
 
-        {currentStep === 3 && (
+        {activeTab === 'preview' && (
           <>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCurrentStep(2)} disabled={isGenerating} className="rounded-xl h-12">
+              <Button variant="outline" onClick={() => setActiveTab('settings')} disabled={isGenerating} className="rounded-xl h-12">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Adjust Settings
               </Button>
               <a
@@ -759,32 +747,32 @@ export default function JumpStartVideoStudioModal({
           </>
         )}
       </div>
-    </div>
+    </Tabs>
   );
 
   if (isEmbedded) {
     return (
       <div className="flex flex-col h-full bg-white overflow-hidden">
         {renderContent()}
-        <LoadingModal isOpen={isGenerating && currentStep < 3} message={generationStatus} />
+        <LoadingModal isOpen={isGenerating && activeTab !== 'preview'} message={generationStatus} />
       </div>
     );
   }
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <VisuallyHidden>
-            <DialogTitle>Video Studio</DialogTitle>
-            <DialogDescription>Extend or edit existing videos using AI.</DialogDescription>
-          </VisuallyHidden>
-          {renderContent()}
-        </DialogContent>
-      </Dialog>
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && handleClose()}
+        title="Video Studio"
+        subtitle="Edit and extend your videos"
+        icon={<Video className="w-5 h-5" />}
+      >
+        {renderContent()}
+      </SlideOverPanel>
 
-      <LoadingModal isOpen={isGenerating && currentStep < 3} message={generationStatus} />
-      
+      <LoadingModal isOpen={isGenerating && activeTab !== 'preview'} message={generationStatus} />
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}

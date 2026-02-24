@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription, VisuallyHidden } from "@/components/ui/dialog";
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from "@/components/ui/slide-over-panel";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye, Cpu } from "lucide-react";
+import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -202,11 +203,11 @@ const SelectField = ({ label, value, onChange, options, required }) => (
 /**
  * ImagineerModal - AI Image Generation with form-based prompt builder
  */
-export default function ImagineerModal({ 
-  isOpen, 
-  onClose, 
+export default function ImagineerModal({
+  isOpen,
+  onClose,
   onGenerate,
-  isEmbedded = false 
+  isEmbedded = false
 }) {
   // Model selection
   const [selectedModel, setSelectedModel] = useState("wavespeed");
@@ -214,25 +215,25 @@ export default function ImagineerModal({
   // Core subject
   const [subjectDescription, setSubjectDescription] = useState("");
   const [subjectType, setSubjectType] = useState("");
-  
+
   // Visual style
   const [artisticStyle, setArtisticStyle] = useState("");
   const [colorPalette, setColorPalette] = useState("");
-  
+
   // Technical
   const [lighting, setLighting] = useState("");
   const [cameraAngle, setCameraAngle] = useState("");
   const [dimensions, setDimensions] = useState("16:9");
-  
+
   // Context
   const [mood, setMood] = useState("");
   const [elementsToInclude, setElementsToInclude] = useState("");
-  
+
   // UI state
   const [generating, setGenerating] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState("subject");
+
   const [availableLoras, setAvailableLoras] = useState([]);
   const [selectedLora, setSelectedLora] = useState("");
   const { user } = useAuth();
@@ -262,8 +263,8 @@ export default function ImagineerModal({
       setMood("");
       setElementsToInclude("");
       setGenerating(false);
-      setShowAdvanced(false);
       setShowPreview(false);
+      setActiveTab("subject");
     }
   }, [isOpen]);
 
@@ -318,13 +319,13 @@ export default function ImagineerModal({
     }
 
     setGenerating(true);
-    
+
     try {
       const loraUrl = availableLoras.find(l => l.id === selectedLora)?.fal_model_url;
 
-      await onGenerate({ 
-        prompt: generatedPrompt, 
-        style: artisticStyle, 
+      await onGenerate({
+        prompt: generatedPrompt,
+        style: artisticStyle,
         dimensions,
         model: selectedModel,
         loraUrl: loraUrl,
@@ -340,88 +341,114 @@ export default function ImagineerModal({
 
   const content = (
     <div className="flex flex-col h-full">
-      {!isEmbedded && (
-        <div className="p-6 pb-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Imagineer</h2>
-              <p className="text-slate-500 text-sm">Build your perfect image by selecting options below</p>
-            </div>
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+        <div className="flex-shrink-0 px-5 pt-3 pb-0 border-b bg-white">
+          <TabsList className="w-full justify-start bg-transparent p-0 h-auto gap-0">
+            <TabsTrigger value="subject" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
+              Subject
+            </TabsTrigger>
+            <TabsTrigger value="style" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
+              Style & Atmosphere
+            </TabsTrigger>
+            <TabsTrigger value="output" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
+              Output
+            </TabsTrigger>
+          </TabsList>
         </div>
-      )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-6">
-        <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="flex-1 overflow-y-auto">
+          <TabsContent value="subject" className="mt-0 p-5 space-y-5">
+            {/* Model */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" /> Model
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {IMAGE_MODELS.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setSelectedModel(m.value)}
+                    className={`text-left rounded-lg border-2 p-3 transition-all ${
+                      selectedModel === m.value
+                        ? 'border-[#2C666E] bg-[#2C666E]/5'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="font-medium text-sm text-slate-900">{m.label}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* SECTION: Model */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-800 border-b pb-1 flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5" /> Model
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {IMAGE_MODELS.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  onClick={() => setSelectedModel(m.value)}
-                  className={`text-left rounded-lg border-2 p-3 transition-all ${
-                    selectedModel === m.value
-                      ? 'border-[#2C666E] bg-[#2C666E]/5'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
-                  }`}
-                >
-                  <div className="font-medium text-sm text-slate-900">{m.label}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
-                </button>
-              ))}
+            {/* Subject */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <SelectField
+                  label="Subject Type"
+                  value={subjectType}
+                  onChange={setSubjectType}
+                  options={SUBJECT_TYPE}
+                  required
+                />
+                <SelectField
+                  label="Artistic Style"
+                  value={artisticStyle}
+                  onChange={setArtisticStyle}
+                  options={ARTISTIC_STYLE}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Description (what/who is the subject?)
+                </label>
+                <Input
+                  value={subjectDescription}
+                  onChange={(e) => setSubjectDescription(e.target.value)}
+                  placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
+                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
+                />
+              </div>
             </div>
-          </div>
-          
-          {/* SECTION: Subject */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-800 border-b pb-1">Subject</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <SelectField 
-                label="Subject Type" 
-                value={subjectType} 
-                onChange={setSubjectType} 
-                options={SUBJECT_TYPE}
-                required
-              />
-              <SelectField 
-                label="Artistic Style" 
-                value={artisticStyle} 
-                onChange={setArtisticStyle} 
-                options={ARTISTIC_STYLE}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-600 mb-1 block">
-                Description (what/who is the subject?)
-              </label>
-              <Input
-                value={subjectDescription}
-                onChange={(e) => setSubjectDescription(e.target.value)}
-                placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
-                className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-              />
-            </div>
-          </div>
 
-          {/* SECTION: Style & Atmosphere */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-800 border-b pb-1">Style & Atmosphere</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <SelectField label="Lighting" value={lighting} onChange={setLighting} options={LIGHTING} />
-              <SelectField label="Camera Angle" value={cameraAngle} onChange={setCameraAngle} options={CAMERA_ANGLE} />
-              <SelectField label="Color Palette" value={colorPalette} onChange={setColorPalette} options={COLOR_PALETTE} />
-              <SelectField label="Mood" value={mood} onChange={setMood} options={MOOD} />
+            {/* Custom Brand LoRAs */}
+            {selectedModel === 'fal-flux' && availableLoras.length > 0 && (
+              <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+                <h3 className="text-sm font-semibold text-[#07393C] pb-1">Brand Products (LoRAs)</h3>
+                <Select value={selectedLora} onValueChange={setSelectedLora}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select a trained product..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">None</SelectItem>
+                    {availableLoras.map((lora) => (
+                      <SelectItem key={lora.id} value={lora.id}>
+                        {lora.name} (Trigger: {lora.trigger_word})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">Include the trigger word in your description above!</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="style" className="mt-0 p-5 space-y-5">
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5" /> Visual Settings
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <SelectField label="Lighting" value={lighting} onChange={setLighting} options={LIGHTING} />
+                <SelectField label="Camera Angle" value={cameraAngle} onChange={setCameraAngle} options={CAMERA_ANGLE} />
+                <SelectField label="Color Palette" value={colorPalette} onChange={setColorPalette} options={COLOR_PALETTE} />
+                <SelectField label="Mood" value={mood} onChange={setMood} options={MOOD} />
+              </div>
             </div>
+
             <div>
               <label className="text-xs font-medium text-slate-600 mb-1 block">
                 Elements to Include (optional)
@@ -433,84 +460,66 @@ export default function ImagineerModal({
                 className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
               />
             </div>
-          </div>
+          </TabsContent>
 
-          {/* Custom Brand LoRAs */}
-          {selectedModel === 'fal-flux' && availableLoras.length > 0 && (
-            <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
-              <h3 className="text-sm font-semibold text-[#07393C] pb-1">Brand Products (LoRAs)</h3>
-              <Select value={selectedLora} onValueChange={setSelectedLora}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select a trained product..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none_">None</SelectItem>
-                  {availableLoras.map((lora) => (
-                    <SelectItem key={lora.id} value={lora.id}>
-                      {lora.name} (Trigger: {lora.trigger_word})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500">Include the trigger word in your description above!</p>
-            </div>
-          )}
-
-          {/* Output Settings */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-800 border-b pb-1">Output Settings</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
-                <Select value={dimensions} onValueChange={setDimensions}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {DIMENSIONS.map((d) => (
-                      <SelectItem key={d.value} value={d.value} className="text-sm">
-                        {d.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <TabsContent value="output" className="mt-0 p-5 space-y-5">
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" /> Output Settings
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                  <Select value={dimensions} onValueChange={setDimensions}>
+                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      {DIMENSIONS.map((d) => (
+                        <SelectItem key={d.value} value={d.value} className="text-sm">
+                          {d.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* PREVIEW */}
-          <div className="space-y-2">
-            <div 
-              role="button"
-              tabIndex={0}
-              onClick={() => setShowPreview(prev => !prev)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  setShowPreview(prev => !prev);
-                }
-              }}
-              className="flex items-center gap-2 text-sm font-medium text-[#2C666E] hover:text-[#07393C] cursor-pointer"
-            >
-              <Eye className="w-4 h-4" />
-              {showPreview ? "Hide" : "Preview"} Generated Prompt
-            </div>
-            
-            {showPreview && (
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <p className="text-sm text-slate-700 leading-relaxed">
-                  {generatedPrompt || <span className="text-slate-400 italic">Start selecting options to build your prompt...</span>}
-                </p>
+            {/* Prompt Preview */}
+            <div className="space-y-2">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowPreview(prev => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setShowPreview(prev => !prev);
+                  }
+                }}
+                className="flex items-center gap-2 text-sm font-medium text-[#2C666E] hover:text-[#07393C] cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+                {showPreview ? "Hide" : "Preview"} Generated Prompt
               </div>
-            )}
-          </div>
+
+              {showPreview && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {generatedPrompt || <span className="text-slate-400 italic">Start selecting options to build your prompt...</span>}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </div>
-      </div>
+      </Tabs>
 
-      {/* FOOTER */}
-      <div className="flex justify-between items-center gap-3 pt-4 border-t flex-shrink-0 px-6 pb-4 bg-slate-50 rounded-b-xl">
+      {/* Footer */}
+      <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
         <div className="text-xs text-slate-500">
           {canImagine ? (
-            <span className="text-green-600">✓ Ready to generate</span>
+            <span className="text-green-600 font-medium">Ready to generate</span>
           ) : (
             <span>Select subject type and artistic style to continue</span>
           )}
@@ -521,8 +530,8 @@ export default function ImagineerModal({
               Cancel
             </Button>
           )}
-          <Button 
-            onClick={handleImagine} 
+          <Button
+            onClick={handleImagine}
             disabled={generating || !canImagine}
             className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60"
           >
@@ -552,14 +561,14 @@ export default function ImagineerModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-        <VisuallyHidden>
-          <DialogTitle>Imagineer - AI Image Generation</DialogTitle>
-          <DialogDescription>Generate images from text prompts</DialogDescription>
-        </VisuallyHidden>
-        {content}
-      </DialogContent>
-    </Dialog>
+    <SlideOverPanel
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="Imagineer"
+      subtitle="Build your perfect image by selecting options below"
+      icon={<Sparkles className="w-5 h-5" />}
+    >
+      {content}
+    </SlideOverPanel>
   );
 }

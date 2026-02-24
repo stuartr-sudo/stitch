@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,11 +26,11 @@ import { apiFetch } from '@/lib/api';
 /**
  * InpaintModal - AI Object Removal/Replacement with mask painting
  */
-export default function InpaintModal({ 
-  isOpen, 
-  onClose, 
+export default function InpaintModal({
+  isOpen,
+  onClose,
   onImageEdited,
-  isEmbedded = false 
+  isEmbedded = false
 }) {
   const [image, setImage] = useState(null);
   const [prompt, setPrompt] = useState('');
@@ -45,7 +39,7 @@ export default function InpaintModal({
   const [isLoading, setIsLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
   const [useProUltra, setUseProUltra] = useState(false);
-  
+
   const canvasRef = useRef(null);
   const maskCanvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -88,7 +82,7 @@ export default function InpaintModal({
           prompt: prompt,
         }),
       });
-      
+
       if (response.ok) {
         console.log('[Inpaint] Saved to library');
       } else {
@@ -109,14 +103,14 @@ export default function InpaintModal({
       const canvas = canvasRef.current;
       const maskCanvas = maskCanvasRef.current;
       const container = containerRef.current;
-      
+
       if (!canvas || !maskCanvas || !container) return;
 
       // Calculate display size
       const maxWidth = container.clientWidth;
       const maxHeight = container.clientHeight;
       const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
-      
+
       const displayWidth = img.width * scale;
       const displayHeight = img.height * scale;
 
@@ -125,7 +119,7 @@ export default function InpaintModal({
       canvas.height = displayHeight;
       canvas.style.width = `${displayWidth}px`;
       canvas.style.height = `${displayHeight}px`;
-      
+
       maskCanvas.width = img.width;
       maskCanvas.height = img.height;
 
@@ -149,7 +143,7 @@ export default function InpaintModal({
   const getCanvasCoords = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -170,7 +164,7 @@ export default function InpaintModal({
     ctx.beginPath();
     ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
     ctx.fillStyle = mode === 'paint' ? 'rgba(255, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0)';
-    
+
     if (mode === 'erase') {
       // Redraw portion of original image
       const img = new Image();
@@ -188,7 +182,7 @@ export default function InpaintModal({
     const maskX = x / scale;
     const maskY = y / scale;
     const maskBrush = brushSize / scale;
-    
+
     maskCtx.beginPath();
     maskCtx.arc(maskX, maskY, maskBrush / 2, 0, Math.PI * 2);
     maskCtx.fillStyle = mode === 'paint' ? 'white' : 'black';
@@ -205,20 +199,20 @@ export default function InpaintModal({
   const handleMouseMove = (e) => {
     if (!isDrawing.current) return;
     const { x, y } = getCanvasCoords(e);
-    
+
     // Interpolate between last position and current
     const dx = x - lastPos.current.x;
     const dy = y - lastPos.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const steps = Math.ceil(dist / (brushSize / 4));
-    
+
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const ix = lastPos.current.x + dx * t;
       const iy = lastPos.current.y + dy * t;
       draw(ix, iy);
     }
-    
+
     lastPos.current = { x, y };
   };
 
@@ -315,7 +309,7 @@ export default function InpaintModal({
           body: JSON.stringify({ requestId }),
         });
         const data = await response.json();
-        
+
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
           const resultUrl = data.imageUrl || data.videoUrl;
           setResultImage(resultUrl);
@@ -343,186 +337,171 @@ export default function InpaintModal({
   };
 
   const content = (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
-            <Eraser className="w-5 h-5" />
+    <div className="flex-1 overflow-hidden flex">
+      {/* Canvas Area */}
+      <div className="flex-1 p-4 flex flex-col">
+        {!image ? (
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#2C666E] transition-colors"
+          >
+            <Upload className="w-12 h-12 text-slate-400 mb-3" />
+            <p className="text-slate-600 font-medium">Upload an image</p>
+            <p className="text-slate-400 text-sm">Click or drag to upload</p>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Inpaint</h2>
-            <p className="text-slate-500 text-sm">Paint to remove or replace objects</p>
+        ) : !resultImage ? (
+          <div
+            ref={containerRef}
+            className="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center"
+          >
+            <canvas
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              className="cursor-crosshair"
+            />
+            <canvas ref={maskCanvasRef} className="hidden" />
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center">
+            <img src={resultImage} alt="Result" className="max-w-full max-h-full object-contain" />
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-hidden flex">
-        {/* Canvas Area */}
-        <div className="flex-1 p-4 flex flex-col">
-          {!image ? (
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#2C666E] transition-colors"
-            >
-              <Upload className="w-12 h-12 text-slate-400 mb-3" />
-              <p className="text-slate-600 font-medium">Upload an image</p>
-              <p className="text-slate-400 text-sm">Click or drag to upload</p>
-            </div>
-          ) : !resultImage ? (
-            <div 
-              ref={containerRef}
-              className="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center"
-            >
-              <canvas
-                ref={canvasRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                className="cursor-crosshair"
-              />
-              <canvas ref={maskCanvasRef} className="hidden" />
-            </div>
-          ) : (
-            <div className="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center">
-              <img src={resultImage} alt="Result" className="max-w-full max-h-full object-contain" />
-            </div>
-          )}
-        </div>
+      {/* Controls Panel */}
+      <div className="w-72 border-l p-4 space-y-4 overflow-y-auto">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
 
-        {/* Controls Panel */}
-        <div className="w-72 border-l p-4 space-y-4 overflow-y-auto">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-
-          {image && !resultImage && (
-            <>
-              {/* Brush Controls */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Brush Mode</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={mode === 'paint' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMode('paint')}
-                    className={mode === 'paint' ? 'bg-[#2C666E]' : ''}
-                  >
-                    <Paintbrush className="w-4 h-4 mr-1" /> Paint
-                  </Button>
-                  <Button
-                    variant={mode === 'erase' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMode('erase')}
-                    className={mode === 'erase' ? 'bg-[#2C666E]' : ''}
-                  >
-                    <Eraser className="w-4 h-4 mr-1" /> Erase
-                  </Button>
-                </div>
+        {image && !resultImage && (
+          <>
+            {/* Brush Controls */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Brush Mode</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={mode === 'paint' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMode('paint')}
+                  className={mode === 'paint' ? 'bg-[#2C666E]' : ''}
+                >
+                  <Paintbrush className="w-4 h-4 mr-1" /> Paint
+                </Button>
+                <Button
+                  variant={mode === 'erase' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMode('erase')}
+                  className={mode === 'erase' ? 'bg-[#2C666E]' : ''}
+                >
+                  <Eraser className="w-4 h-4 mr-1" /> Erase
+                </Button>
               </div>
+            </div>
 
-              {/* Brush Size */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Brush Size: {brushSize}px</Label>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setBrushSize(Math.max(5, brushSize - 5))}>
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <input
-                    type="range"
-                    min="5"
-                    max="100"
-                    value={brushSize}
-                    onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                    className="flex-1"
-                  />
-                  <Button variant="outline" size="sm" onClick={() => setBrushSize(Math.min(100, brushSize + 5))}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <Button variant="outline" size="sm" onClick={handleClearMask} className="w-full">
-                <RotateCcw className="w-4 h-4 mr-2" /> Clear Mask
-              </Button>
-
-              <hr />
-
-              {/* Prompt */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Replace With</Label>
-                <Textarea
-                  placeholder="What should appear in the painted area?"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              {/* Pro Ultra Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
+            {/* Brush Size */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Brush Size: {brushSize}px</Label>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setBrushSize(Math.max(5, brushSize - 5))}>
+                  <Minus className="w-4 h-4" />
+                </Button>
                 <input
-                  type="checkbox"
-                  checked={useProUltra}
-                  onChange={(e) => setUseProUltra(e.target.checked)}
-                  className="accent-[#2C666E]"
+                  type="range"
+                  min="5"
+                  max="100"
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                  className="flex-1"
                 />
-                <span className="text-sm">Use Pro Ultra (4K/8K)</span>
-              </label>
-
-              <Button 
-                onClick={handleInpaint}
-                disabled={isLoading || !prompt.trim()}
-                className="w-full bg-[#2C666E] hover:bg-[#07393C]"
-              >
-                {isLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-                ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Inpaint</>
-                )}
-              </Button>
-            </>
-          )}
-
-          {resultImage && (
-            <div className="space-y-3">
-              <div className="text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> Done!
-                </div>
+                <Button variant="outline" size="sm" onClick={() => setBrushSize(Math.min(100, brushSize + 5))}>
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
-              <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
-                Edit Again
-              </Button>
-              <a
-                href={resultImage}
-                download="inpainted-image.png"
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-              >
-                <Download className="w-4 h-4" /> Download to Device
-              </a>
-              <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-                Use This Image
-              </Button>
             </div>
-          )}
 
-          {!image && (
-            <div className="space-y-2">
-              <Button onClick={() => fileInputRef.current?.click()} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-                <Upload className="w-4 h-4 mr-2" /> Upload Image
-              </Button>
-              <Button variant="outline" onClick={() => setShowLibrary(true)} className="w-full">
-                <FolderOpen className="w-4 h-4 mr-2" /> From Library
-              </Button>
+            <Button variant="outline" size="sm" onClick={handleClearMask} className="w-full">
+              <RotateCcw className="w-4 h-4 mr-2" /> Clear Mask
+            </Button>
+
+            <hr />
+
+            {/* Prompt */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Replace With</Label>
+              <Textarea
+                placeholder="What should appear in the painted area?"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="min-h-[80px]"
+              />
             </div>
-          )}
-        </div>
+
+            {/* Pro Ultra Toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useProUltra}
+                onChange={(e) => setUseProUltra(e.target.checked)}
+                className="accent-[#2C666E]"
+              />
+              <span className="text-sm">Use Pro Ultra (4K/8K)</span>
+            </label>
+
+            <Button
+              onClick={handleInpaint}
+              disabled={isLoading || !prompt.trim()}
+              className="w-full bg-[#2C666E] hover:bg-[#07393C]"
+            >
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-2" /> Inpaint</>
+              )}
+            </Button>
+          </>
+        )}
+
+        {resultImage && (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm">
+                <CheckCircle2 className="w-4 h-4" /> Done!
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
+              Edit Again
+            </Button>
+            <a
+              href={resultImage}
+              download="inpainted-image.png"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
+              <Download className="w-4 h-4" /> Download to Device
+            </a>
+            <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
+              Use This Image
+            </Button>
+          </div>
+        )}
+
+        {!image && (
+          <div className="space-y-2">
+            <Button onClick={() => fileInputRef.current?.click()} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
+              <Upload className="w-4 h-4 mr-2" /> Upload Image
+            </Button>
+            <Button variant="outline" onClick={() => setShowLibrary(true)} className="w-full">
+              <FolderOpen className="w-4 h-4 mr-2" /> From Library
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -533,16 +512,16 @@ export default function InpaintModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <VisuallyHidden>
-            <DialogTitle>Inpaint</DialogTitle>
-            <DialogDescription>Paint to remove or replace objects</DialogDescription>
-          </VisuallyHidden>
-          {content}
-        </DialogContent>
-      </Dialog>
-      
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        title="Inpaint"
+        subtitle="Paint and regenerate"
+        icon={<Eraser className="w-5 h-5" />}
+      >
+        {content}
+      </SlideOverPanel>
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}

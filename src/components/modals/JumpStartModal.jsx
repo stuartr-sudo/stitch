@@ -1,12 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -412,7 +407,7 @@ export default function JumpStartModal({
   onVideoGenerated,
   isEmbedded = false
 }) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState('upload');
   
   // Image upload
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -484,12 +479,12 @@ export default function JumpStartModal({
     }
   };
 
-  // Scroll to top when step changes
+  // Scroll to top when tab changes
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
-  }, [currentStep]);
+  }, [activeTab]);
 
   // Get current model config
   const currentModel = VIDEO_MODELS.find(m => m.id === videoModel) || VIDEO_MODELS[0];
@@ -497,7 +492,7 @@ export default function JumpStartModal({
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(1);
+      setActiveTab('upload');
       setUploadedImage(null);
       setAdditionalImages([]);
       setEndFrameImage(null);
@@ -803,7 +798,7 @@ export default function JumpStartModal({
         stopPolling();
         setIsLoading(false);
         setGeneratedVideoUrl(data.videoUrl);
-        setCurrentStep(3);
+        setActiveTab('preview');
         setHasAddedToEditor(false);
         toast.success('Video generated successfully!');
         
@@ -918,7 +913,7 @@ export default function JumpStartModal({
         // Immediate result
         setIsLoading(false);
         setGeneratedVideoUrl(data.videoUrl);
-        setCurrentStep(3);
+        setActiveTab('preview');
         setHasAddedToEditor(false);
         toast.success('Video generated!');
         
@@ -968,56 +963,30 @@ export default function JumpStartModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
-          <VisuallyHidden>
-            <DialogTitle>JumpStart - Image to Video</DialogTitle>
-            <DialogDescription>Transform your image into an animated video</DialogDescription>
-          </VisuallyHidden>
-          {/* Header */}
-          <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#2C666E] rounded-lg">
-                  <Video className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <DialogTitle className="text-lg font-semibold text-gray-900">JumpStart - Image to Video</DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600">Transform your image into an animated video</DialogDescription>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleClose}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && handleClose()}
+        title="JumpStart - Image to Video"
+        subtitle="Transform your image into an animated video"
+        icon={<Video className="w-5 h-5" />}
+      >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <div className="flex-shrink-0 px-5 py-3 border-b">
+            <TabsList className="w-full justify-start bg-slate-100/80 p-1 rounded-lg">
+              <TabsTrigger value="upload" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <ImageIcon className="w-3.5 h-3.5" /> Upload
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <Sparkles className="w-3.5 h-3.5" /> Settings
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <Play className="w-3.5 h-3.5" /> Preview
+              </TabsTrigger>
+            </TabsList>
           </div>
-
-          {/* Step Indicator */}
-          <div className="p-3 bg-white border-b flex items-center justify-center gap-8">
-            {[
-              { num: 1, label: 'Upload Image' },
-              { num: 2, label: 'Video Settings' },
-              { num: 3, label: 'Preview' }
-            ].map((step, idx) => (
-              <React.Fragment key={step.num}>
-                <div className={`flex items-center gap-2 ${currentStep === step.num ? 'text-[#07393C] font-semibold' : 'text-gray-400'}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
-                    currentStep === step.num ? 'bg-[#2C666E] text-white' : 
-                    currentStep > step.num ? 'bg-[#90DDF0] text-[#07393C]' : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {step.num}
-                  </div>
-                  <span className="hidden sm:inline">{step.label}</span>
-                </div>
-                {idx < 2 && <ArrowRight className="w-4 h-4 text-gray-300" />}
-              </React.Fragment>
-            ))}
-          </div>
-
-          {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <SlideOverBody ref={contentRef} className="p-6 bg-gray-50">
             {/* Step 1: Upload Image */}
-            {currentStep === 1 && (
+            <TabsContent value="upload" className="mt-0">
               <div className="max-w-4xl mx-auto space-y-6">
                 {/* Model Selector - Compact Dropdown */}
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
@@ -1547,10 +1516,10 @@ export default function JumpStartModal({
                   </div>
                 )}
               </div>
-            )}
+            </TabsContent>
 
             {/* Step 2: Video Settings */}
-            {currentStep === 2 && (
+            <TabsContent value="settings" className="mt-0">
               <div className="max-w-4xl mx-auto space-y-4">
                 {/* Preview uploaded image */}
                 {uploadedImage && (
@@ -1838,11 +1807,11 @@ export default function JumpStartModal({
                   )}
                 </div>
               </div>
-            )}
+            </TabsContent>
 
             {/* Step 3: Preview */}
-            {currentStep === 3 && generatedVideoUrl && (
-              <div className="max-w-4xl mx-auto space-y-4">
+            <TabsContent value="preview" className="mt-0">
+              {generatedVideoUrl && <div className="max-w-4xl mx-auto space-y-4">
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Play className="w-5 h-5 text-[#2C666E]" />
@@ -1879,20 +1848,18 @@ export default function JumpStartModal({
                 
                 <Button 
                   variant="outline" 
-                  onClick={() => { setCurrentStep(1); setGeneratedVideoUrl(null); }}
+                  onClick={() => { setActiveTab('upload'); setGeneratedVideoUrl(null); }}
                   className="w-full"
                 >
                   Create Another Video
                 </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 bg-white border-t flex items-center justify-between flex-shrink-0">
+              </div>}
+            </TabsContent>
+          </SlideOverBody>
+          <SlideOverFooter className="flex items-center justify-between">
             <div>
-              {currentStep > 1 && currentStep < 3 && (
-                <Button variant="outline" onClick={() => setCurrentStep(prev => prev - 1)}>
+              {activeTab === 'settings' && (
+                <Button variant="outline" onClick={() => setActiveTab('upload')}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
@@ -1900,9 +1867,9 @@ export default function JumpStartModal({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              {currentStep === 1 && (
-                <Button 
-                  onClick={() => setCurrentStep(2)} 
+              {activeTab === 'upload' && (
+                <Button
+                  onClick={() => setActiveTab('settings')}
                   disabled={!uploadedImage || (currentModel.requiresFirstLastFrame && !endFrameImage)}
                   className="bg-[#2C666E] hover:bg-[#07393C] text-white"
                 >
@@ -1910,8 +1877,8 @@ export default function JumpStartModal({
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               )}
-              {currentStep === 2 && (
-                <Button 
+              {activeTab === 'settings' && (
+                <Button
                   onClick={handleGenerateVideo}
                   className="bg-[#2C666E] hover:bg-[#07393C] text-white"
                 >
@@ -1920,9 +1887,9 @@ export default function JumpStartModal({
                 </Button>
               )}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </SlideOverFooter>
+        </Tabs>
+      </SlideOverPanel>
 
       {/* Loading Modal */}
       <LoadingModal isOpen={isLoading} message={loadingMessage || 'Generating video...'} />

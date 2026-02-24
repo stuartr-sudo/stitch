@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,35 +30,35 @@ const MODELS = [
 
 const OUTPUT_SIZES = [
   // Square
-  { id: '1024x1024', label: '1024×1024', ratio: '1:1 Square' },
-  { id: '2048x2048', label: '2048×2048', ratio: '1:1 Square HD' },
+  { id: '1024x1024', label: '1024x1024', ratio: '1:1 Square' },
+  { id: '2048x2048', label: '2048x2048', ratio: '1:1 Square HD' },
   // Landscape 16:9
-  { id: '1920x1080', label: '1920×1080', ratio: '16:9 Landscape' },
-  { id: '2560x1440', label: '2560×1440', ratio: '16:9 2K' },
-  { id: '3840x2160', label: '3840×2160', ratio: '16:9 4K' },
+  { id: '1920x1080', label: '1920x1080', ratio: '16:9 Landscape' },
+  { id: '2560x1440', label: '2560x1440', ratio: '16:9 2K' },
+  { id: '3840x2160', label: '3840x2160', ratio: '16:9 4K' },
   // Portrait 9:16
-  { id: '1080x1920', label: '1080×1920', ratio: '9:16 Portrait' },
-  { id: '1440x2560', label: '1440×2560', ratio: '9:16 2K' },
+  { id: '1080x1920', label: '1080x1920', ratio: '9:16 Portrait' },
+  { id: '1440x2560', label: '1440x2560', ratio: '9:16 2K' },
   // Standard 4:3
-  { id: '1600x1200', label: '1600×1200', ratio: '4:3 Standard' },
-  { id: '2048x1536', label: '2048×1536', ratio: '4:3 HD' },
+  { id: '1600x1200', label: '1600x1200', ratio: '4:3 Standard' },
+  { id: '2048x1536', label: '2048x1536', ratio: '4:3 HD' },
   // Portrait 3:4
-  { id: '1200x1600', label: '1200×1600', ratio: '3:4 Portrait' },
+  { id: '1200x1600', label: '1200x1600', ratio: '3:4 Portrait' },
   // Wide 21:9
-  { id: '2560x1080', label: '2560×1080', ratio: '21:9 Ultrawide' },
+  { id: '2560x1080', label: '2560x1080', ratio: '21:9 Ultrawide' },
   // Social Media
-  { id: '1200x628', label: '1200×628', ratio: 'Facebook Ad' },
-  { id: '1080x1350', label: '1080×1350', ratio: '4:5 Instagram' },
+  { id: '1200x628', label: '1200x628', ratio: 'Facebook Ad' },
+  { id: '1080x1350', label: '1080x1350', ratio: '4:5 Instagram' },
 ];
 
 /**
  * EditImageModal - AI Image Editing with multiple models
  */
-export default function EditImageModal({ 
-  isOpen, 
-  onClose, 
+export default function EditImageModal({
+  isOpen,
+  onClose,
   onImageEdited,
-  isEmbedded = false 
+  isEmbedded = false
 }) {
   const [images, setImages] = useState([]);
   const [prompt, setPrompt] = useState('');
@@ -94,11 +88,11 @@ export default function EditImageModal({
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
     if (url) {
-      setImages(prev => [...prev, { 
-        id: Date.now(), 
-        url: url, 
+      setImages(prev => [...prev, {
+        id: Date.now(),
+        url: url,
         name: item.title || 'Library Image',
-        isBase: prev.length === 0 
+        isBase: prev.length === 0
       }]);
     }
   };
@@ -108,11 +102,11 @@ export default function EditImageModal({
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setImages(prev => [...prev, { 
-          id: Date.now() + Math.random(), 
-          url: event.target.result, 
+        setImages(prev => [...prev, {
+          id: Date.now() + Math.random(),
+          url: event.target.result,
           name: file.name,
-          isBase: prev.length === 0 
+          isBase: prev.length === 0
         }]);
       };
       reader.readAsDataURL(file);
@@ -123,11 +117,11 @@ export default function EditImageModal({
     if (!urlInput.trim()) return;
     try {
       new URL(urlInput);
-      setImages(prev => [...prev, { 
-        id: Date.now(), 
-        url: urlInput.trim(), 
+      setImages(prev => [...prev, {
+        id: Date.now(),
+        url: urlInput.trim(),
         name: 'URL Image',
-        isBase: prev.length === 0 
+        isBase: prev.length === 0
       }]);
       setUrlInput('');
       setShowUrlInput(false);
@@ -214,7 +208,7 @@ export default function EditImageModal({
           body: JSON.stringify({ requestId }),
         });
         const data = await response.json();
-        
+
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
           const resultUrl = data.imageUrl || data.videoUrl;
           setResultImage(resultUrl);
@@ -245,32 +239,19 @@ export default function EditImageModal({
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
-            <Edit3 className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Edit Image</h2>
-            <p className="text-slate-500 text-sm">Transform images with AI-powered editing</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6">
+      <SlideOverBody>
         {!resultImage ? (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6 p-6">
             {/* Image Upload */}
             <div>
               <Label className="text-sm font-medium mb-3 block">
                 Images (first = base, others = references)
               </Label>
-              
+
               <div className="grid grid-cols-4 gap-3 mb-3">
                 {images.map((img) => (
-                  <div 
-                    key={img.id} 
+                  <div
+                    key={img.id}
                     className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                       img.isBase ? 'border-[#2C666E] ring-2 ring-[#90DDF0]/50' : 'border-slate-200'
                     }`}
@@ -278,14 +259,14 @@ export default function EditImageModal({
                     <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                       {!img.isBase && (
-                        <button 
+                        <button
                           onClick={() => handleSetAsBase(img.id)}
                           className="p-1 bg-white rounded text-xs"
                         >
                           Set Base
                         </button>
                       )}
-                      <button 
+                      <button
                         onClick={() => handleRemoveImage(img.id)}
                         className="p-1 bg-red-500 text-white rounded"
                       >
@@ -299,7 +280,7 @@ export default function EditImageModal({
                     )}
                   </div>
                 ))}
-                
+
                 {images.length < 10 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -334,8 +315,8 @@ export default function EditImageModal({
 
               {showUrlInput && (
                 <div className="mt-3 flex gap-2">
-                  <Input 
-                    placeholder="https://example.com/image.jpg" 
+                  <Input
+                    placeholder="https://example.com/image.jpg"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     className="flex-1"
@@ -362,7 +343,7 @@ export default function EditImageModal({
                 <Label className="text-sm font-medium mb-2 block">Model</Label>
                 <div className="space-y-2">
                   {MODELS.map((m) => (
-                    <label 
+                    <label
                       key={m.id}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                         model === m.id ? 'border-[#2C666E] bg-[#90DDF0]/10' : 'border-slate-200 hover:border-slate-300'
@@ -419,8 +400,8 @@ export default function EditImageModal({
             </div>
 
             {/* Generate Button */}
-            <Button 
-              onClick={handleEdit} 
+            <Button
+              onClick={handleEdit}
               disabled={isLoading || images.length === 0 || !prompt.trim()}
               className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white h-12"
             >
@@ -433,7 +414,7 @@ export default function EditImageModal({
           </div>
         ) : (
           /* Result View */
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto p-6">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                 <CheckCircle2 className="w-4 h-4" /> Edit Complete!
@@ -469,7 +450,7 @@ export default function EditImageModal({
             </div>
           </div>
         )}
-      </div>
+      </SlideOverBody>
     </div>
   );
 
@@ -479,16 +460,16 @@ export default function EditImageModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <VisuallyHidden>
-            <DialogTitle>Edit Image</DialogTitle>
-            <DialogDescription>AI-powered image editing</DialogDescription>
-          </VisuallyHidden>
-          {content}
-        </DialogContent>
-      </Dialog>
-      
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        title="Edit Image"
+        subtitle="AI-powered image editing"
+        icon={<Edit3 className="w-5 h-5" />}
+      >
+        {content}
+      </SlideOverPanel>
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}

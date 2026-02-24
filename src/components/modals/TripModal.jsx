@@ -1,13 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,21 +64,21 @@ const STYLE_PRESETS = [
 /**
  * TripModal - Video Restyling with Lucy-Restyle
  */
-export default function TripModal({ 
-  isOpen, 
-  onClose, 
+export default function TripModal({
+  isOpen,
+  onClose,
   username = 'default',
   onInsert,
   isEmbedded = false
 }) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState('source');
   const [selectedVideo, setSelectedVideo] = useState(null);
-  
+
   // Library State
   const [videoLibrary, setVideoLibrary] = useState([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // URL Import State
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [importUrl, setImportUrl] = useState('');
@@ -105,11 +100,11 @@ export default function TripModal({
       toast.success('Video selected from library!');
     }
   };
-  
+
   // Prompt State
   const [prompt, setPrompt] = useState('');
   const [selectedPreset, setSelectedPreset] = useState(null);
-  
+
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
@@ -121,7 +116,7 @@ export default function TripModal({
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(1);
+      setActiveTab('source');
       setSelectedVideo(null);
       setVideoLibrary([]);
       setSearchQuery('');
@@ -141,8 +136,8 @@ export default function TripModal({
   const filteredLibrary = useMemo(() => {
     if (!searchQuery) return videoLibrary;
     const q = searchQuery.toLowerCase();
-    return videoLibrary.filter(v => 
-      v.title.toLowerCase().includes(q) || 
+    return videoLibrary.filter(v =>
+      v.title.toLowerCase().includes(q) ||
       v.source.toLowerCase().includes(q)
     );
   }, [videoLibrary, searchQuery]);
@@ -170,7 +165,7 @@ export default function TripModal({
         source: 'imported',
         created_at: new Date().toISOString()
       };
-      
+
       setSelectedVideo(newVideo);
       setVideoLibrary(prev => [newVideo, ...prev]);
       setShowUrlImport(false);
@@ -199,7 +194,7 @@ export default function TripModal({
         clearInterval(pollIntervalRef.current);
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
-        setCurrentStep(3);
+        setActiveTab('result');
         toast.success('Video restyled successfully!');
       } else if (data.status === 'failed') {
         clearInterval(pollIntervalRef.current);
@@ -224,7 +219,7 @@ export default function TripModal({
 
     setIsGenerating(true);
     setGenerationStatus('Submitting restyle request...');
-    
+
     try {
       const response = await apiFetch('/api/trip/restyle', {
         method: 'POST',
@@ -246,7 +241,7 @@ export default function TripModal({
       if (data.status === 'completed' && data.videoUrl) {
         setGeneratedVideoUrl(data.videoUrl);
         setIsGenerating(false);
-        setCurrentStep(3);
+        setActiveTab('result');
       } else {
         setRequestId(data.requestId);
         setGenerationStatus('Restyling your video (1-3 minutes)...');
@@ -283,7 +278,7 @@ export default function TripModal({
       if (!saveResponse.ok) throw new Error(saveData.error);
 
       setLastSavedVideoUrl(saveData.url);
-      
+
       const newVideo = {
         id: saveData.id,
         title: prompt || 'Restyled Video',
@@ -292,7 +287,7 @@ export default function TripModal({
         created_at: new Date().toISOString()
       };
       setVideoLibrary(prev => [newVideo, ...prev]);
-      
+
       toast.success('Saved to library!');
     } catch (error) {
       console.error('Save error:', error);
@@ -315,7 +310,7 @@ export default function TripModal({
     setLastSavedVideoUrl(null);
     setPrompt('');
     setSelectedPreset(null);
-    setCurrentStep(2);
+    setActiveTab('style');
   };
 
   // Start Over
@@ -325,7 +320,7 @@ export default function TripModal({
     setLastSavedVideoUrl(null);
     setPrompt('');
     setSelectedPreset(null);
-    setCurrentStep(1);
+    setActiveTab('source');
   };
 
   const handleClose = () => {
@@ -346,7 +341,7 @@ export default function TripModal({
 
   useEffect(() => {
     if (isOpen || isEmbedded) {
-      setCurrentStep(1);
+      setActiveTab('source');
       setSelectedVideo(null);
       setGeneratedVideoUrl(null);
       setLastSavedVideoUrl(null);
@@ -364,39 +359,23 @@ export default function TripModal({
 
   const renderContent = () => (
     <div className={`flex-1 flex flex-col overflow-hidden ${isEmbedded ? 'h-full' : ''}`}>
-      {/* Header */}
-      <div className="p-4 border-b shrink-0 bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white shadow-lg">
-              <Wand2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Trip - Video Restyling</h2>
-              <p className="text-slate-500 text-sm">Transform your videos with AI-powered style transfer</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {[1, 2, 3].map((step) => (
-              <div 
-                key={step} 
-                className={`h-2 rounded-full transition-all ${
-                  currentStep === step 
-                    ? 'w-8 bg-gradient-to-r from-[#2C666E] to-[#07393C]' 
-                    : currentStep > step 
-                      ? 'w-2 bg-[#90DDF0]' 
-                      : 'w-2 bg-slate-200'
-                }`} 
-              />
-            ))}
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <div className="flex-shrink-0 px-5 py-3 border-b">
+          <TabsList className="w-full justify-start bg-slate-100/80 p-1 rounded-lg">
+            <TabsTrigger value="source" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Video className="w-3.5 h-3.5" /> Source
+            </TabsTrigger>
+            <TabsTrigger value="style" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Sparkles className="w-3.5 h-3.5" /> Style
+            </TabsTrigger>
+            <TabsTrigger value="result" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Result
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
         {/* Step 1: Select Source Video */}
-        {currentStep === 1 && (
+        <TabsContent value="source" className="flex-1 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col p-6 overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-800">Select a Video to Restyle</h2>
@@ -446,12 +425,12 @@ export default function TripModal({
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {filteredLibrary.map((video) => (
-                    <div 
-                      key={video.id} 
+                    <div
+                      key={video.id}
                       onClick={() => setSelectedVideo(video)}
                       className={`group relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
-                        selectedVideo?.id === video.id 
-                          ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30' 
+                        selectedVideo?.id === video.id
+                          ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30'
                           : 'border-transparent hover:border-slate-300 shadow-sm'
                       }`}
                     >
@@ -487,16 +466,16 @@ export default function TripModal({
                     <p className="text-xs text-slate-500">Selected for restyling</p>
                   </div>
                 </div>
-                <Button onClick={() => setCurrentStep(2)} className="gap-2 bg-gradient-to-r from-[#2C666E] to-[#07393C] hover:from-[#07393C] hover:to-[#0A090C]">
+                <Button onClick={() => setActiveTab('style')} className="gap-2 bg-gradient-to-r from-[#2C666E] to-[#07393C] hover:from-[#07393C] hover:to-[#0A090C]">
                   Continue <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             )}
           </div>
-        )}
+        </TabsContent>
 
         {/* Step 2: Style Configuration */}
-        {currentStep === 2 && (
+        <TabsContent value="style" className="flex-1 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col p-6 overflow-y-auto">
             <div className="max-w-3xl mx-auto w-full">
               {/* Video Preview */}
@@ -562,8 +541,8 @@ export default function TripModal({
 
               {/* Action Buttons */}
               <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
-                <Button 
+                <Button variant="outline" onClick={() => setActiveTab('source')}>Back</Button>
+                <Button
                   onClick={handleRestyle}
                   disabled={isGenerating || !prompt.trim()}
                   className="gap-2 bg-gradient-to-r from-[#2C666E] to-[#07393C] hover:from-[#07393C] hover:to-[#0A090C]"
@@ -577,10 +556,10 @@ export default function TripModal({
               </div>
             </div>
           </div>
-        )}
+        </TabsContent>
 
         {/* Step 3: Result */}
-        {currentStep === 3 && (
+        <TabsContent value="result" className="flex-1 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col p-6 overflow-y-auto">
             <div className="max-w-4xl mx-auto w-full">
               <div className="text-center mb-6">
@@ -617,7 +596,7 @@ export default function TripModal({
                 <Button variant="outline" onClick={handleRestyleAgain} className="gap-2">
                   <RefreshCw className="w-4 h-4" /> Try Another Style
                 </Button>
-                
+
                 <Button variant="outline" onClick={handleStartOver} className="gap-2">
                   <Video className="w-4 h-4" /> New Video
                 </Button>
@@ -656,7 +635,7 @@ export default function TripModal({
                 </a>
 
                 {onInsert && (
-                  <Button 
+                  <Button
                     onClick={handleInsertIntoEditor}
                     className="gap-2 bg-gradient-to-r from-[#2C666E] to-[#07393C] hover:from-[#07393C] hover:to-[#0A090C]"
                   >
@@ -666,11 +645,11 @@ export default function TripModal({
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Loading Overlay */}
-      {isGenerating && currentStep === 2 && (
+      {isGenerating && activeTab === 'style' && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50">
           <div className="relative mb-6">
             <div className="w-20 h-20 rounded-full bg-gradient-to-r from-[#2C666E] to-[#07393C] animate-pulse" />
@@ -694,16 +673,16 @@ export default function TripModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-          <VisuallyHidden>
-            <DialogTitle>Trip - Video Restyling</DialogTitle>
-            <DialogDescription>Transform your videos with AI-powered style transfer</DialogDescription>
-          </VisuallyHidden>
-          {renderContent()}
-        </DialogContent>
-      </Dialog>
-      
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && handleClose()}
+        title="Trip - Video Restyling"
+        subtitle="Transform your videos with AI-powered style transfer"
+        icon={<Wand2 className="w-5 h-5" />}
+      >
+        {renderContent()}
+      </SlideOverPanel>
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}

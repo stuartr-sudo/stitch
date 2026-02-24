@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  VisuallyHidden,
-} from '@/components/ui/dialog';
+import { SlideOverPanel, SlideOverBody } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,17 +25,17 @@ import { apiFetch } from '@/lib/api';
 
 // Try-On Model Options
 const TRYON_MODELS = [
-  { 
-    id: 'fashn', 
-    label: '👗 FASHN Virtual Try-On', 
+  {
+    id: 'fashn',
+    label: '\u{1F457} FASHN Virtual Try-On',
     description: 'High quality, accurate garment fit',
     supportsCategory: true,
     supportsMode: true,
     supportsGarmentType: true,
   },
-  { 
-    id: 'flux2-lora', 
-    label: '✨ Flux 2 Stylized Try-On', 
+  {
+    id: 'flux2-lora',
+    label: '\u2728 Flux 2 Stylized Try-On',
     description: 'Stylized results, prompt-based',
     supportsPrompt: true,
     supportsGuidance: true,
@@ -71,11 +65,11 @@ const GARMENT_TYPES = [
 /**
  * TryStyleModal - Virtual Try-On using FASHN AI
  */
-export default function TryStyleModal({ 
-  isOpen, 
-  onClose, 
+export default function TryStyleModal({
+  isOpen,
+  onClose,
   onImageGenerated,
-  isEmbedded = false 
+  isEmbedded = false
 }) {
   const [modelImage, setModelImage] = useState(null);
   const [garmentImage, setGarmentImage] = useState(null);
@@ -84,26 +78,26 @@ export default function TryStyleModal({
   const [mode, setMode] = useState('balanced');
   const [garmentPhotoType, setGarmentPhotoType] = useState('auto');
   const [numSamples, setNumSamples] = useState(1);
-  
+
   // Flux 2 Lora specific settings
   const [prompt, setPrompt] = useState('A person wearing a stylish outfit, virtual try-on');
   const [guidanceScale, setGuidanceScale] = useState(2.5);
   const [loraScale, setLoraScale] = useState(1.0);
   const [numSteps, setNumSteps] = useState(40);
-  
+
   // Get current model config
   const currentTryonModel = TRYON_MODELS.find(m => m.id === tryonModel) || TRYON_MODELS[0];
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
   const [resultImages, setResultImages] = useState([]);
   const [selectedResult, setSelectedResult] = useState(0);
-  
+
   const [showModelUrlInput, setShowModelUrlInput] = useState(false);
   const [showGarmentUrlInput, setShowGarmentUrlInput] = useState(false);
   const [modelUrlInput, setModelUrlInput] = useState('');
   const [garmentUrlInput, setGarmentUrlInput] = useState('');
-  
+
   const modelFileRef = useRef(null);
   const garmentFileRef = useRef(null);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -168,7 +162,7 @@ export default function TryStyleModal({
   const handleAddUrl = (type) => {
     const url = type === 'model' ? modelUrlInput : garmentUrlInput;
     if (!url.trim()) return;
-    
+
     try {
       new URL(url);
       if (type === 'model') {
@@ -206,7 +200,7 @@ export default function TryStyleModal({
         model_image: modelImage,
         garment_image: garmentImage,
       };
-      
+
       // FASHN specific params
       if (tryonModel === 'fashn') {
         Object.assign(requestBody, {
@@ -216,7 +210,7 @@ export default function TryStyleModal({
           num_samples: numSamples,
         });
       }
-      
+
       // Flux 2 Lora specific params
       if (tryonModel === 'flux2-lora') {
         Object.assign(requestBody, {
@@ -227,7 +221,7 @@ export default function TryStyleModal({
           num_images: numSamples,
         });
       }
-      
+
       const response = await apiFetch('/api/trystyle/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +229,7 @@ export default function TryStyleModal({
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
@@ -244,7 +238,7 @@ export default function TryStyleModal({
         setResultImages(data.images);
         setSelectedResult(0);
         toast.success('Try-on complete!');
-        
+
         // Save to library
         data.images.forEach((imageUrl, idx) => {
           apiFetch('/api/library/save', {
@@ -283,13 +277,13 @@ export default function TryStyleModal({
           body: JSON.stringify({ requestId, model }),
         });
         const data = await response.json();
-        
+
         if (data.status === 'completed' && data.images) {
           setResultImages(data.images);
           setSelectedResult(0);
           setIsLoading(false);
           toast.success('Try-on complete!');
-          
+
           // Save to library
           data.images.forEach((imageUrl, idx) => {
             apiFetch('/api/library/save', {
@@ -333,19 +327,6 @@ export default function TryStyleModal({
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-[#90DDF0]/20 to-[#2C666E]/10">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white">
-            <Shirt className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Try Style</h2>
-            <p className="text-slate-500 text-sm">Virtual try-on powered by FASHN AI</p>
-          </div>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-6">
         {resultImages.length === 0 ? (
           <div className="max-w-4xl mx-auto space-y-6">
@@ -356,11 +337,11 @@ export default function TryStyleModal({
                 <Label className="text-sm font-medium mb-2 flex items-center gap-2">
                   <User className="w-4 h-4" /> Model Image (Person)
                 </Label>
-                <div 
+                <div
                   onClick={() => !modelImage && modelFileRef.current?.click()}
                   className={`aspect-square rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
-                    modelImage 
-                      ? 'border-[#2C666E] bg-slate-50' 
+                    modelImage
+                      ? 'border-[#2C666E] bg-slate-50'
                       : 'border-slate-300 hover:border-[#2C666E] bg-slate-50'
                   }`}
                 >
@@ -368,8 +349,8 @@ export default function TryStyleModal({
                     <div className="relative w-full h-full group">
                       <img src={modelImage} alt="Model" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="secondary"
                           onClick={(e) => { e.stopPropagation(); setModelImage(null); }}
                         >
@@ -405,8 +386,8 @@ export default function TryStyleModal({
                 </div>
                 {showModelUrlInput && (
                   <div className="flex gap-2 mt-2">
-                    <Input 
-                      placeholder="https://..." 
+                    <Input
+                      placeholder="https://..."
                       value={modelUrlInput}
                       onChange={(e) => setModelUrlInput(e.target.value)}
                       className="flex-1"
@@ -421,11 +402,11 @@ export default function TryStyleModal({
                 <Label className="text-sm font-medium mb-2 flex items-center gap-2">
                   <Shirt className="w-4 h-4" /> Garment Image
                 </Label>
-                <div 
+                <div
                   onClick={() => !garmentImage && garmentFileRef.current?.click()}
                   className={`aspect-square rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
-                    garmentImage 
-                      ? 'border-[#2C666E] bg-slate-50' 
+                    garmentImage
+                      ? 'border-[#2C666E] bg-slate-50'
                       : 'border-slate-300 hover:border-[#2C666E] bg-slate-50'
                   }`}
                 >
@@ -433,8 +414,8 @@ export default function TryStyleModal({
                     <div className="relative w-full h-full group">
                       <img src={garmentImage} alt="Garment" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="secondary"
                           onClick={(e) => { e.stopPropagation(); setGarmentImage(null); }}
                         >
@@ -470,8 +451,8 @@ export default function TryStyleModal({
                 </div>
                 {showGarmentUrlInput && (
                   <div className="flex gap-2 mt-2">
-                    <Input 
-                      placeholder="https://..." 
+                    <Input
+                      placeholder="https://..."
                       value={garmentUrlInput}
                       onChange={(e) => setGarmentUrlInput(e.target.value)}
                       className="flex-1"
@@ -491,8 +472,8 @@ export default function TryStyleModal({
                     key={model.id}
                     onClick={() => setTryonModel(model.id)}
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      tryonModel === model.id 
-                        ? 'border-[#2C666E] bg-[#2C666E]/5' 
+                      tryonModel === model.id
+                        ? 'border-[#2C666E] bg-[#2C666E]/5'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -649,7 +630,7 @@ export default function TryStyleModal({
             </div>
 
             {/* Generate Button */}
-            <Button 
+            <Button
               onClick={handleGenerate}
               disabled={isLoading || !modelImage || !garmentImage}
               className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white h-12"
@@ -672,9 +653,9 @@ export default function TryStyleModal({
 
             {/* Result Image */}
             <div className="aspect-square max-w-sm mx-auto bg-slate-100 rounded-xl overflow-hidden mb-4">
-              <img 
-                src={resultImages[selectedResult]} 
-                alt="Try-on result" 
+              <img
+                src={resultImages[selectedResult]}
+                alt="Try-on result"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -747,16 +728,16 @@ export default function TryStyleModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0 relative">
-          <VisuallyHidden>
-            <DialogTitle>Try Style - Virtual Try-On</DialogTitle>
-            <DialogDescription>Virtual clothing try-on powered by FASHN AI</DialogDescription>
-          </VisuallyHidden>
-          {content}
-        </DialogContent>
-      </Dialog>
-      
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        title="Try Style"
+        subtitle="Virtual try-on with AI"
+        icon={<Shirt className="w-5 h-5" />}
+      >
+        {content}
+      </SlideOverPanel>
+
       <LibraryModal
         isOpen={showLibrary}
         onClose={() => setShowLibrary(false)}
