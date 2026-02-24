@@ -55,7 +55,7 @@ const EXTEND_MODELS = [
     label: '🎬 Bytedance Seedance 1.5',
     description: 'Original extend, 4-12s increments',
     durationOptions: [4, 5, 6, 8, 10, 12],
-    resolution: '720p',
+    resolutions: ['720p', '1080p'],
     supportsAudio: true,
     supportsCameraFixed: true,
   },
@@ -64,7 +64,7 @@ const EXTEND_MODELS = [
     label: '⚡ Google Veo 3.1 Fast Extend',
     description: 'Extend up to 30s total, 7s increments',
     durationOptions: [7], // Fixed 7s extension
-    resolution: '720p',
+    resolutions: ['720p'],
     supportsAudio: true,
     supportsCameraFixed: false,
   },
@@ -558,6 +558,9 @@ export default function JumpStartVideoStudioModal({
                       if (config?.durationOptions && !config.durationOptions.includes(parseInt(duration))) {
                         setDuration(config.durationOptions[0]);
                       }
+                      if (config?.resolutions && !config.resolutions.includes(resolution)) {
+                        setResolution(config.resolutions[0]);
+                      }
                     }}
                   >
                     {EXTEND_MODELS.map(m => (
@@ -606,7 +609,7 @@ export default function JumpStartVideoStudioModal({
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Resolution</Label>
                   <div className={`grid gap-2 ${mode === 'edit' && currentEditModel.resolutions.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    {(mode === 'edit' ? currentEditModel.resolutions : ['480p', '720p']).map(res => (
+                    {(mode === 'edit' ? currentEditModel.resolutions : (currentExtendModel.resolutions || ['720p', '1080p'])).map(res => (
                       <button key={res} onClick={() => setResolution(res)}
                         className={`py-2 text-xs font-bold rounded-lg border transition-all ${resolution === res ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                         {res}

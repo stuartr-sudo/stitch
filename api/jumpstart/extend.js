@@ -35,8 +35,11 @@ export default async function handler(req, res) {
     // Route to appropriate handler
     if (model === 'veo3-fast-extend') {
       return await handleVeo3FastExtend(req, res, { videoUrl, prompt, resolution, generate_audio, FAL_KEY });
-    } else {
+    } else if (model === 'seedance' || model === 'luma-ray' || model === 'runway-gen3') {
+      // luma-ray and runway-gen3 use Wavespeed Seedance extend under the hood
       return await handleSeedanceExtend(req, res, { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed, WAVESPEED_API_KEY });
+    } else {
+      return res.status(400).json({ error: `Unsupported extend model: ${model}` });
     }
 
   } catch (error) {
@@ -76,8 +79,14 @@ async function handleSeedanceExtend(req, res, params) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[JumpStart/Seedance Extend] API Error:', errorText);
-    return res.status(response.status).json({ error: 'Wavespeed API error', details: errorText });
+    console.error('[JumpStart/Seedance Extend] API Error:', response.status, errorText);
+    // Parse the error details for a useful message
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.message || parsed.detail || parsed.error || errorText;
+    } catch {}
+    return res.status(response.status).json({ error: `Wavespeed extend error: ${detail}` });
   }
 
   const submitData = await response.json();
