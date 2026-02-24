@@ -108,6 +108,27 @@ export default async function handler(req, res) {
 
   const userId = brandKit.user_id;
 
+  // Fetch SEWO brand guidelines + image style (shared with Doubleclicker)
+  const { data: sewoGuidelines } = await supabase
+    .from('brand_guidelines')
+    .select('voice_and_tone, target_market, brand_personality, content_style_rules, preferred_elements, prohibited_elements, ai_instructions_override')
+    .eq('user_name', brand_username)
+    .order('updated_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: sewoImageStyle } = await supabase
+    .from('brand_image_styles')
+    .select('visual_style, color_palette, mood_and_atmosphere, composition_style, lighting_preferences, subject_guidelines, preferred_elements, prohibited_elements, ai_prompt_instructions')
+    .eq('user_name', brand_username)
+    .order('updated_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Attach to brandKit for downstream use
+  brandKit._sewoGuidelines = sewoGuidelines || null;
+  brandKit._sewoImageStyle = sewoImageStyle || null;
+
   // Get API keys
   const { data: userKeys } = await supabase
     .from('user_api_keys')
@@ -429,8 +450,15 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
 
 /** Re-entry point for retry endpoint — loads job from DB and runs pipeline */
 export async function runPipelineFromJob(job, supabase) {
-  const { data: brandKit } = await supabase.from('brand_kit').select('*').eq('brand_username', job.input_json?.brand_username).single();
+  const brand_username = job.input_json?.brand_username;
+  const { data: brandKit } = await supabase.from('brand_kit').select('*').eq('brand_username', brand_username).single();
   if (!brandKit) throw new Error('Brand not found');
+
+  // Fetch SEWO guidelines for retry re-entry
+  const { data: sewoGl } = await supabase.from('brand_guidelines').select('voice_and_tone, target_market, brand_personality, content_style_rules, preferred_elements, prohibited_elements, ai_instructions_override').eq('user_name', brand_username).order('updated_date', { ascending: false }).limit(1).maybeSingle();
+  const { data: sewoIs } = await supabase.from('brand_image_styles').select('visual_style, color_palette, mood_and_atmosphere, composition_style, lighting_preferences, subject_guidelines, preferred_elements, prohibited_elements, ai_prompt_instructions').eq('user_name', brand_username).order('updated_date', { ascending: false }).limit(1).maybeSingle();
+  brandKit._sewoGuidelines = sewoGl || null;
+  brandKit._sewoImageStyle = sewoIs || null;
 
   const { data: userKeys } = await supabase.from('user_api_keys').select('fal_key, wavespeed_key, openai_key').eq('user_id', job.user_id).maybeSingle();
   const keys = {
@@ -705,6 +733,33 @@ function buildBrandContext(brandKit) {
   if (brandKit.style_preset) lines.push(`Visual style: ${brandKit.style_preset}`);
   if (brandKit.colors?.length) lines.push(`Colors: ${brandKit.colors.join(', ')}`);
   if (brandKit.taglines?.length) lines.push(`Taglines: ${brandKit.taglines.join(' | ')}`);
+
+  // Enrich with SEWO brand guidelines (from Doubleclicker)
+  const gl = brandKit._sewoGuidelines;
+  if (gl) {
+    if (gl.voice_and_tone) lines.push(`Brand voice (detailed): ${gl.voice_and_tone}`);
+    if (gl.target_market) lines.push(`Target market: ${gl.target_market}`);
+    if (gl.brand_personality) lines.push(`Brand personality: ${gl.brand_personality}`);
+    if (gl.content_style_rules) lines.push(`Content style rules: ${gl.content_style_rules}`);
+    if (gl.preferred_elements) lines.push(`Preferred elements: ${gl.preferred_elements}`);
+    if (gl.prohibited_elements) lines.push(`AVOID: ${gl.prohibited_elements}`);
+    if (gl.ai_instructions_override) lines.push(`Custom AI instructions: ${gl.ai_instructions_override}`);
+  }
+
+  // Enrich with SEWO image style (from Doubleclicker)
+  const is = brandKit._sewoImageStyle;
+  if (is) {
+    if (is.visual_style) lines.push(`Image visual style: ${is.visual_style}`);
+    if (is.color_palette) lines.push(`Image color palette: ${is.color_palette}`);
+    if (is.mood_and_atmosphere) lines.push(`Image mood: ${is.mood_and_atmosphere}`);
+    if (is.composition_style) lines.push(`Image composition: ${is.composition_style}`);
+    if (is.lighting_preferences) lines.push(`Lighting: ${is.lighting_preferences}`);
+    if (is.subject_guidelines) lines.push(`Subject guidelines: ${is.subject_guidelines}`);
+    if (is.preferred_elements) lines.push(`Image preferred elements: ${is.preferred_elements}`);
+    if (is.prohibited_elements) lines.push(`Image AVOID: ${is.prohibited_elements}`);
+    if (is.ai_prompt_instructions) lines.push(`AI image prompt prefix: ${is.ai_prompt_instructions}`);
+  }
+
   return lines.join('\n') || 'No brand guidelines configured';
 }
 

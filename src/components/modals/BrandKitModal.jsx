@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Save, User, AtSign, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, User, AtSign, ChevronDown, ChevronUp, Link2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 
-function Section({ title, children, defaultOpen = true }) {
+function Section({ title, children, defaultOpen = true, badge }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -18,7 +18,10 @@ function Section({ title, children, defaultOpen = true }) {
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
       >
-        {title}
+        <span className="flex items-center gap-2">
+          {title}
+          {badge}
+        </span>
         {open ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
       </button>
       {open && <div className="p-4 space-y-4">{children}</div>}
@@ -56,8 +59,29 @@ function AvatarCard({ avatar, onDelete }) {
   );
 }
 
+function GuidelinePreview({ label, value }) {
+  if (!value) return null;
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (!text.trim()) return null;
+  return (
+    <div>
+      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+      <p className="text-xs text-slate-700 mt-0.5 line-clamp-3">{text}</p>
+    </div>
+  );
+}
+
 export default function BrandKitModal({ isOpen, onClose }) {
   const { user } = useAuth();
+
+  // SEWO connection state
+  const [sewoBrands, setSewoBrands] = useState([]);
+  const [selectedSewoBrand, setSelectedSewoBrand] = useState('');
+  const [sewoGuidelines, setSewoGuidelines] = useState(null);
+  const [sewoImageStyle, setSewoImageStyle] = useState(null);
+  const [sewoCompany, setSewoCompany] = useState(null);
+  const [isLoadingSewo, setIsLoadingSewo] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Brand kit state
   const [brandName, setBrandName] = useState('');
@@ -83,8 +107,90 @@ export default function BrandKitModal({ isOpen, onClose }) {
     if (isOpen && user) {
       loadBrandKit();
       loadAvatars();
+      loadSewoBrands();
     }
   }, [isOpen, user]);
+
+  const loadSewoBrands = async () => {
+    try {
+      const res = await apiFetch('/api/brand/usernames');
+      const data = await res.json();
+      if (data.usernames) {
+        // usernames can be array of strings or objects { username, brand_name }
+        const list = data.usernames.map(u => typeof u === 'string' ? { username: u, brand_name: u } : u);
+        setSewoBrands(list);
+      }
+    } catch (err) {
+      console.error('Failed to load SEWO brands:', err);
+    }
+  };
+
+  const handleSewoBrandSelect = async (username) => {
+    setSelectedSewoBrand(username);
+    if (!username) {
+      setSewoGuidelines(null);
+      setSewoImageStyle(null);
+      setSewoCompany(null);
+      setIsConnected(false);
+      return;
+    }
+
+    setIsLoadingSewo(true);
+    try {
+      const res = await apiFetch(`/api/brand/guidelines?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      setSewoCompany(data.company);
+      setSewoGuidelines(data.guidelines);
+      setSewoImageStyle(data.image_style);
+
+      // Auto-populate brand kit fields from SEWO data
+      const co = data.company || {};
+      const gl = data.guidelines || {};
+      const is = data.image_style || {};
+
+      setBrandUsername(username);
+      setBrandName(co.brand_name || co.client_namespace || username);
+      if (co.logo_url || gl.logo_url) setLogoUrl(co.logo_url || gl.logo_url);
+
+      // Map voice_and_tone to closest voice_style enum
+      if (gl.voice_and_tone) {
+        const tone = gl.voice_and_tone.toLowerCase();
+        if (tone.includes('energetic') || tone.includes('exciting') || tone.includes('bold')) setVoiceStyle('energetic');
+        else if (tone.includes('casual') || tone.includes('friendly') || tone.includes('conversational')) setVoiceStyle('casual');
+        else if (tone.includes('luxury') || tone.includes('premium') || tone.includes('elegant')) setVoiceStyle('luxury');
+        else if (tone.includes('playful') || tone.includes('fun') || tone.includes('witty')) setVoiceStyle('playful');
+        else setVoiceStyle('professional');
+      }
+
+      // Map visual_style to closest style_preset
+      if (is.visual_style) {
+        const vs = is.visual_style.toLowerCase();
+        if (vs.includes('minimal') || vs.includes('clean')) setStylePreset('minimal');
+        else if (vs.includes('bold') || vs.includes('vibrant') || vs.includes('graphic')) setStylePreset('bold');
+        else if (vs.includes('luxury') || vs.includes('premium') || vs.includes('elegant')) setStylePreset('luxury');
+        else if (vs.includes('playful') || vs.includes('colorful') || vs.includes('fun')) setStylePreset('playful');
+        else if (vs.includes('corporate') || vs.includes('formal')) setStylePreset('corporate');
+        else setStylePreset('modern');
+      }
+
+      // Extract hex colors from color_palette text
+      if (is.color_palette) {
+        const hexMatches = is.color_palette.match(/#[0-9A-Fa-f]{3,8}/g);
+        if (hexMatches?.length) setColors(hexMatches);
+      } else if (co.primary_color) {
+        setColors([co.primary_color]);
+      }
+
+      setIsConnected(true);
+      toast.success(`Connected to ${co.brand_name || username}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to load brand guidelines');
+    } finally {
+      setIsLoadingSewo(false);
+    }
+  };
 
   const loadBrandKit = async () => {
     setIsLoading(true);
@@ -99,6 +205,11 @@ export default function BrandKitModal({ isOpen, onClose }) {
         setVoiceStyle(data.brandKit.voice_style || 'professional');
         setTaglines(data.brandKit.taglines || []);
         setStylePreset(data.brandKit.style_preset || 'modern');
+
+        // If already connected to a SEWO brand, mark it
+        if (data.brandKit.brand_username) {
+          setSelectedSewoBrand(data.brandKit.brand_username);
+        }
       }
     } catch (error) {
       console.error('Failed to load brand kit:', error);
@@ -189,12 +300,15 @@ export default function BrandKitModal({ isOpen, onClose }) {
     }
   };
 
+  const hasGuidelines = sewoGuidelines && (sewoGuidelines.voice_and_tone || sewoGuidelines.target_market || sewoGuidelines.brand_personality);
+  const hasImageStyle = sewoImageStyle && (sewoImageStyle.visual_style || sewoImageStyle.ai_prompt_instructions);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogTitle className="text-lg font-bold">Brand Kit</DialogTitle>
         <DialogDescription className="text-slate-500">
-          Set up your brand identity. The autonomous pipeline uses this for every generation.
+          Connect to a SEWO brand or set up your brand identity manually.
         </DialogDescription>
 
         {isLoading ? (
@@ -204,8 +318,71 @@ export default function BrandKitModal({ isOpen, onClose }) {
         ) : (
           <div className="space-y-4 mt-2">
 
+            {/* Connect to SEWO */}
+            <Section
+              title={<span className="flex items-center gap-2"><Link2 className="w-4 h-4 text-[#2C666E]" /> Connect to SEWO</span>}
+              defaultOpen
+              badge={isConnected ? <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Connected</span> : null}
+            >
+              <div>
+                <Label className="text-sm text-slate-700">Select a brand from your SEWO account</Label>
+                <p className="text-xs text-slate-500 mb-2">
+                  Pulls brand voice, target market, image style and colors from Doubleclicker automatically.
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedSewoBrand}
+                    onChange={e => handleSewoBrandSelect(e.target.value)}
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                    disabled={isLoadingSewo}
+                  >
+                    <option value="">-- Select a brand --</option>
+                    {sewoBrands.map(b => (
+                      <option key={b.username} value={b.username}>
+                        {b.brand_name || b.username}
+                      </option>
+                    ))}
+                  </select>
+                  {isLoadingSewo && <Loader2 className="w-5 h-5 animate-spin text-[#2C666E] self-center" />}
+                </div>
+              </div>
+
+              {/* Show SEWO guidelines preview when connected */}
+              {isConnected && (hasGuidelines || hasImageStyle) && (
+                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
+                  <p className="text-[10px] font-bold text-[#2C666E] uppercase tracking-wider">Imported from SEWO</p>
+                  {sewoGuidelines && (
+                    <>
+                      <GuidelinePreview label="Voice & Tone" value={sewoGuidelines.voice_and_tone} />
+                      <GuidelinePreview label="Target Market" value={sewoGuidelines.target_market} />
+                      <GuidelinePreview label="Brand Personality" value={sewoGuidelines.brand_personality} />
+                      <GuidelinePreview label="Content Style" value={sewoGuidelines.content_style_rules} />
+                      <GuidelinePreview label="Preferred Elements" value={sewoGuidelines.preferred_elements} />
+                      <GuidelinePreview label="Prohibited Elements" value={sewoGuidelines.prohibited_elements} />
+                    </>
+                  )}
+                  {sewoImageStyle && (
+                    <>
+                      <GuidelinePreview label="Visual Style" value={sewoImageStyle.visual_style} />
+                      <GuidelinePreview label="Color Palette" value={sewoImageStyle.color_palette} />
+                      <GuidelinePreview label="Mood & Atmosphere" value={sewoImageStyle.mood_and_atmosphere} />
+                      <GuidelinePreview label="Lighting" value={sewoImageStyle.lighting_preferences} />
+                      <GuidelinePreview label="Composition" value={sewoImageStyle.composition_style} />
+                      <GuidelinePreview label="AI Prompt Instructions" value={sewoImageStyle.ai_prompt_instructions} />
+                    </>
+                  )}
+                </div>
+              )}
+
+              {isConnected && !hasGuidelines && !hasImageStyle && (
+                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                  Brand found but no guidelines or image style set yet. Set them up in Doubleclicker and they'll sync here automatically.
+                </p>
+              )}
+            </Section>
+
             {/* Identity */}
-            <Section title="Identity" defaultOpen>
+            <Section title="Identity" defaultOpen={!isConnected}>
               <div>
                 <Label className="text-sm font-medium mb-2 block">Brand Name</Label>
                 <Input value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="e.g., Acme Corp" />
@@ -215,7 +392,7 @@ export default function BrandKitModal({ isOpen, onClose }) {
                   <AtSign className="w-3.5 h-3.5 text-slate-500" /> Brand Username
                 </Label>
                 <p className="text-xs text-slate-500 mb-2">
-                  Used by Doubleclicker to identify this brand when sending articles. Lowercase, no spaces.
+                  Shared identifier across SEWO, Doubleclicker and Stitch. Lowercase, no spaces.
                 </p>
                 <Input
                   value={brandUsername}

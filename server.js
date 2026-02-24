@@ -339,6 +339,13 @@ app.get('/api/brand/usernames', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Brand guidelines (SEWO connection — reads shared brand_guidelines + brand_image_styles)
+app.get('/api/brand/guidelines', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/guidelines.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Brand avatar routes (with auth)
 app.get('/api/brand/avatars', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/avatars.js');
