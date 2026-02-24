@@ -32,18 +32,20 @@ import { apiFetch } from '@/lib/api';
 
 // Extend Model Options
 const EXTEND_MODELS = [
-  { 
-    id: 'luma-ray', 
-    label: '✨ Luma Dream Machine (Ray)', 
+  {
+    id: 'luma-ray',
+    label: '✨ Luma Dream Machine (Ray)',
     description: 'High fidelity text+image to video',
+    durationOptions: [5, 10],
     resolutions: ['720p', '1080p'],
     supportsAudio: false,
     supportsCameraFixed: true,
   },
-  { 
-    id: 'runway-gen3', 
-    label: '🏃 Runway Gen-3 Alpha', 
+  {
+    id: 'runway-gen3',
+    label: '🏃 Runway Gen-3 Alpha',
     description: 'Cinematic quality motion',
+    durationOptions: [5, 10],
     resolutions: ['720p'],
     supportsAudio: false,
     supportsCameraFixed: true,
@@ -553,7 +555,7 @@ export default function JumpStartVideoStudioModal({
                       const newModel = e.target.value;
                       setExtendModel(newModel);
                       const config = EXTEND_MODELS.find(m => m.id === newModel);
-                      if (config && !config.durationOptions.includes(parseInt(duration))) {
+                      if (config?.durationOptions && !config.durationOptions.includes(parseInt(duration))) {
                         setDuration(config.durationOptions[0]);
                       }
                     }}
@@ -596,7 +598,7 @@ export default function JumpStartVideoStudioModal({
                   <div className="space-y-3">
                     <Label className="text-sm font-bold">Duration</Label>
                     <select className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
-                      {currentExtendModel.durationOptions.map(d => <option key={d} value={d}>{d} seconds</option>)}
+                      {(currentExtendModel.durationOptions || [5, 10]).map(d => <option key={d} value={d}>{d} seconds</option>)}
                     </select>
                   </div>
                 )}
