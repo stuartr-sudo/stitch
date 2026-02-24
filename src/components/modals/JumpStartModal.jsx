@@ -221,10 +221,10 @@ const ASPECT_RATIO_LABELS = {
 const CAMERA_MOVEMENTS = [
   { value: '', label: 'No Movement' },
   // Realistic / Natural (Best for UGC/Selfie)
-  { value: 'static-stable', label: '📱 Static/Stable (Selfie)' },
-  { value: 'subtle-handheld', label: '🤳 Subtle Handheld Shake' },
-  { value: 'natural-breathing', label: '😮‍💨 Natural Breathing Motion' },
-  { value: 'gentle-sway', label: '🌊 Gentle Natural Sway' },
+  { value: 'static locked-off camera on tripod, perfectly stable with no movement, clean professional stillness', label: '📱 Static/Stable (Selfie)' },
+  { value: 'subtle handheld camera micro-shake, the natural tiny tremor of a real person holding a phone, organic imperfect stability', label: '🤳 Subtle Handheld Shake' },
+  { value: 'gentle rhythmic camera movement matching natural breathing, slight vertical drift up and down at resting breath pace', label: '😮‍💨 Natural Breathing Motion' },
+  { value: 'soft organic lateral sway as if held casually by a relaxed person, gentle weight-shifting motion', label: '🌊 Gentle Natural Sway' },
   // Zoom
   { value: 'slow zoom in', label: 'Slow Zoom In' },
   { value: 'slow zoom out', label: 'Slow Zoom Out' },
@@ -254,10 +254,10 @@ const CAMERA_MOVEMENTS = [
 const CAMERA_ANGLES = [
   { value: '', label: 'Default Angle' },
   // Realistic / Selfie (Best for UGC)
-  { value: 'selfie-closeup', label: '🤳 Selfie Close-up' },
-  { value: 'talking-head', label: '🗣️ Talking Head' },
-  { value: 'vlog-style', label: '📱 Vlog Style' },
-  { value: 'webcam-angle', label: '💻 Webcam Angle' },
+  { value: 'selfie close-up from arm\'s length, front-facing smartphone camera angle, slightly below eye level, wide-angle lens distortion on face edges', label: '🤳 Selfie Close-up' },
+  { value: 'talking head framing from chest up, eye-level camera, centered composition with headroom, the standard direct-to-camera setup', label: '🗣️ Talking Head' },
+  { value: 'vlog-style framing showing face and upper body with background context visible, slightly wider than selfie, casual handheld energy', label: '📱 Vlog Style' },
+  { value: 'webcam angle from slightly above eye level looking down, laptop camera perspective, indoor ambient lighting mixing with screen glow', label: '💻 Webcam Angle' },
   // Standard
   { value: 'eye level', label: 'Eye Level' },
   { value: 'low angle', label: 'Low Angle (Hero)' },
@@ -279,102 +279,127 @@ const CAMERA_ANGLES = [
 const VIDEO_STYLES = [
   { value: '', label: 'Default' },
   // Realistic / UGC (Best for authentic content)
-  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone selfie video, front-facing camera, handheld smartphone footage, natural ambient lighting, authentic candid moment, realistic skin texture, unfiltered unedited look, genuine facial expression' },
-  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'user generated content, authentic testimonial video, real person talking naturally, genuine emotion, casual setting, believable and relatable' },
-  { value: 'tiktok-style', label: '📲 TikTok/Reels Style', prompt: 'vertical social media video, engaging and dynamic, quick natural movements, relatable content creator vibe' },
-  { value: 'facetime-call', label: '📞 FaceTime/Video Call', prompt: 'video call aesthetic, slightly pixelated, casual conversation, natural webcam lighting, authentic remote communication feel' },
+  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone 15 front-facing camera footage, handheld smartphone video with subtle micro-shake, natural ambient room lighting with soft window light on face, visible skin pores and texture, slight lens distortion at edges, authentic unfiltered color profile, natural eye moisture and light reflections in iris, relaxed genuine expression with asymmetric micro-expressions, casual everyday clothing with real fabric wrinkles' },
+  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'authentic user-generated testimonial video, real person speaking with natural speech cadence and breath pauses, subtle lip movements matching natural talking rhythm, genuine micro-expressions — slight eyebrow raises, natural blinks every 3-4 seconds, real skin with natural imperfections and pores visible, soft ambient indoor lighting from overhead, believable casual setting with slight background depth, conversational eye contact with occasional natural glances away' },
+  { value: 'tiktok-style', label: '📲 TikTok/Reels Style', prompt: 'vertical social media content creator video, direct-to-camera engagement with expressive natural facial movements, quick authentic reactions, real skin texture under ring light or natural window light, slightly warm color temperature, genuine personality showing through micro-expressions, natural hand gestures entering frame, contemporary casual styling, energetic but believable body language' },
+  { value: 'facetime-call', label: '📞 FaceTime/Video Call', prompt: 'video call aesthetic shot from laptop webcam angle, slightly above eye level, natural indoor ambient lighting mixing with screen glow on face, casual at-home appearance, real skin texture with slight webcam softness, authentic conversational micro-expressions — nodding, natural blinks, subtle smile shifts, relaxed posture, genuine unperformed body language, slight compression artifacts for realism' },
   // Professional
-  { value: 'cinematic', label: '🎬 Cinematic', prompt: 'cinematic quality, professional lighting, dramatic composition, shallow depth of field, film-like color grading' },
-  { value: 'documentary', label: '📹 Documentary', prompt: 'documentary style, natural movement, observational, authentic moments, journalistic approach' },
-  { value: 'commercial', label: '📺 Commercial/Ad', prompt: 'commercial quality, polished, professional, product-focused, aspirational' },
-  { value: 'product-demo', label: '📦 Product Demo', prompt: 'product demonstration, clean background, professional presentation, clear and informative' },
+  { value: 'cinematic', label: '🎬 Cinematic', prompt: 'cinematic film quality shot on Arri Alexa, 2.39:1 anamorphic framing feel, professional three-point lighting with soft key light creating gentle shadow fall-off on face, shallow depth of field with creamy bokeh separation, natural skin tones with subtle color grading, film-like motion cadence at 24fps, atmospheric haze catching light, precise composition with leading lines, rich shadow detail without crushing blacks' },
+  { value: 'documentary', label: '📹 Documentary', prompt: 'observational documentary style, handheld camera with natural stabilization, available light used authentically, candid unposed moments captured naturally, subject unaware of or comfortable with camera, real environments with lived-in detail, natural skin tones without color grading, genuine emotional moments with real facial expressions, ambient sound atmosphere, journalistic truthful aesthetic' },
+  { value: 'commercial', label: '📺 Commercial/Ad', prompt: 'high-end commercial production quality, precisely controlled studio lighting with soft diffusion, product and subject both in sharp focus, polished but natural-looking skin with subtle retouching feel, aspirational warm color palette, smooth controlled camera movement, clean composition with visual breathing room, professional wardrobe and styling, premium feel without looking artificial' },
+  { value: 'product-demo', label: '📦 Product Demo', prompt: 'clean professional product demonstration, neutral background with soft gradient, even studio lighting revealing surface texture and material quality, smooth deliberate product handling with natural hand movements, clear visual focus on product features, slight reflection on surface below, precise framing with product as hero, informative angle choices showing form and function' },
   // Artistic
-  { value: 'dreamy', label: '✨ Dreamy/Ethereal', prompt: 'dreamy ethereal quality, soft focus, glowing highlights, romantic atmosphere' },
-  { value: 'vintage', label: '📼 Vintage/Retro', prompt: 'vintage film look, nostalgic, warm tones, slight grain, retro aesthetic' },
-  { value: 'noir', label: '🎞️ Film Noir', prompt: 'film noir style, high contrast, dramatic shadows, moody atmosphere' },
-  { value: 'anime', label: '🎌 Anime Style', prompt: 'anime inspired, vibrant colors, expressive, dynamic movement' },
+  { value: 'dreamy', label: '✨ Dreamy/Ethereal', prompt: 'ethereal dreamlike quality with soft diffusion filter effect, gentle overexposed highlights wrapping around subject, pastel and desaturated color palette, slow graceful movement, subtle lens glow on light sources, delicate bokeh orbs in background, romantic golden or blue hour natural light, flowing fabric or hair movement suggesting gentle breeze, painterly soft transitions between tones' },
+  { value: 'vintage', label: '📼 Vintage/Retro', prompt: 'authentic vintage 16mm film aesthetic, warm amber color shift with faded blacks lifted to milky grey, organic film grain texture visible on skin and surfaces, slight vignette darkening at frame edges, period-appropriate soft focus quality, gentle gate weave and frame instability, nostalgic halation around bright highlights, muted greens shifted toward teal, tactile analogue texture throughout' },
+  { value: 'noir', label: '🎞️ Film Noir', prompt: 'classic film noir cinematography, high contrast chiaroscuro lighting with deep blacks and bright specular highlights, dramatic single key light source creating long shadows, venetian blind shadow patterns, smoke or atmospheric haze catching light beams, moody monochromatic or desaturated cool palette, low-key lighting revealing only essential details, reflective wet surfaces' },
+  { value: 'anime', label: '🎌 Anime Style', prompt: 'high-quality anime art style animation, vibrant saturated color palette, expressive character animation with fluid motion, dynamic speed lines and impact frames, detailed background art with atmospheric perspective, cel-shaded lighting with crisp shadow edges, wind-blown hair and clothing movement, dramatic camera angles with foreshortening' },
 ];
 
 // Effect Combos (Quick Presets)
 const EFFECT_COMBOS = [
-  { id: 'realistic', label: '🤳 Realistic/Raw', effects: ['natural lighting', 'subtle skin texture', 'authentic movement'] },
-  { id: 'cinematic', label: '🎬 Cinematic', effects: ['film grain', 'lens flare', 'bokeh blur'] },
-  { id: 'dreamy', label: '✨ Dreamy', effects: ['soft glow', 'bokeh blur', 'floating particles'] },
-  { id: 'vintage', label: '📼 Vintage', effects: ['film grain', 'vignette', 'warm tones'] },
-  { id: 'dynamic', label: '⚡ Dynamic', effects: ['motion blur', 'lens flare', 'light rays'] },
+  { id: 'realistic', label: '🤳 Realistic/Raw', effects: ['natural available light with soft shadow transitions', 'visible skin pores and natural texture with subsurface light scattering', 'authentic human movement with natural weight and momentum'] },
+  { id: 'cinematic', label: '🎬 Cinematic', effects: ['subtle organic film grain at ISO 800', 'anamorphic lens flare streaks on highlights', 'shallow depth of field with creamy circular bokeh'] },
+  { id: 'dreamy', label: '✨ Dreamy', effects: ['soft diffusion glow wrapping around highlights', 'large circular bokeh orbs with chromatic fringing', 'tiny floating particles catching backlight'] },
+  { id: 'vintage', label: '📼 Vintage', effects: ['organic 16mm film grain texture', 'natural vignette darkening at frame edges', 'warm amber color shift with lifted blacks'] },
+  { id: 'dynamic', label: '⚡ Dynamic', effects: ['directional motion blur on fast movement', 'bright anamorphic lens flare streaks', 'volumetric god rays through atmospheric haze'] },
 ];
 
 // Special Effects (Categorized)
 const SPECIAL_EFFECTS = [
   // Realistic
-  { value: 'natural lighting', label: 'Natural Lighting', category: 'realistic' },
-  { value: 'subtle skin texture', label: 'Subtle Skin Texture', category: 'realistic' },
-  { value: 'authentic movement', label: 'Authentic Movement', category: 'realistic' },
-  { value: 'soft focus', label: 'Soft Focus', category: 'realistic' },
+  { value: 'natural available light with soft shadow transitions and true-to-life color temperature', label: 'Natural Lighting', category: 'realistic' },
+  { value: 'visible skin pores, fine facial hair, natural imperfections, subsurface light scattering through skin', label: 'Realistic Skin', category: 'realistic' },
+  { value: 'authentic human movement with natural weight transfer, momentum, and subtle involuntary micro-movements', label: 'Natural Motion', category: 'realistic' },
+  { value: 'natural eye moisture with catchlight reflections, visible iris detail, realistic pupil size', label: 'Realistic Eyes', category: 'realistic' },
+  { value: 'soft focus fall-off mimicking real lens optics with natural depth transition', label: 'Optical Focus', category: 'realistic' },
   // Light
-  { value: 'lens flare', label: 'Lens Flare', category: 'light' },
-  { value: 'bokeh blur', label: 'Bokeh Blur', category: 'light' },
-  { value: 'soft glow', label: 'Soft Glow', category: 'light' },
-  { value: 'light rays', label: 'Light Rays', category: 'light' },
-  { value: 'neon glow', label: 'Neon Glow', category: 'light' },
-  { value: 'dappled sunlight', label: 'Dappled Sunlight', category: 'light' },
+  { value: 'anamorphic lens flare streaks across bright light sources with natural rainbow dispersion', label: 'Lens Flare', category: 'light' },
+  { value: 'shallow depth of field with large creamy circular bokeh orbs and slight chromatic fringing', label: 'Bokeh Blur', category: 'light' },
+  { value: 'soft diffusion glow wrapping around highlights and bright edges of subject', label: 'Soft Glow', category: 'light' },
+  { value: 'volumetric god rays streaming through atmospheric haze, visible light beam shafts', label: 'Light Rays', category: 'light' },
+  { value: 'vivid neon light color cast reflecting off wet surfaces and skin, electric color spill', label: 'Neon Glow', category: 'light' },
+  { value: 'dappled sunlight filtering through tree canopy, shifting light patches on face and ground', label: 'Dappled Sunlight', category: 'light' },
   // Film
-  { value: 'film grain', label: 'Film Grain', category: 'film' },
-  { value: 'vignette', label: 'Vignette', category: 'film' },
-  { value: 'chromatic aberration', label: 'Chromatic Aberration', category: 'film' },
-  { value: 'motion blur', label: 'Motion Blur', category: 'film' },
-  { value: 'warm tones', label: 'Warm Tones', category: 'film' },
+  { value: 'organic photochemical film grain texture visible on skin and midtones, authentic analogue feel', label: 'Film Grain', category: 'film' },
+  { value: 'natural optical vignette with gradual darkening toward frame edges drawing focus to center', label: 'Vignette', category: 'film' },
+  { value: 'subtle chromatic aberration with color fringing on high-contrast edges, vintage lens character', label: 'Chromatic Aberration', category: 'film' },
+  { value: 'directional motion blur on fast movement preserving stillness in static elements', label: 'Motion Blur', category: 'film' },
+  { value: 'warm amber color temperature shift, golden skin tones, orange-tinted highlights', label: 'Warm Tones', category: 'film' },
   // Particles
-  { value: 'floating particles', label: 'Floating Particles', category: 'particles' },
-  { value: 'dust motes', label: 'Dust Motes', category: 'particles' },
-  { value: 'sparkles', label: 'Sparkles', category: 'particles' },
-  { value: 'floating embers', label: 'Floating Embers', category: 'particles' },
+  { value: 'tiny luminous particles floating slowly through air, catching and scattering backlight', label: 'Floating Particles', category: 'particles' },
+  { value: 'fine dust motes drifting through visible light beams, natural indoor atmosphere', label: 'Dust Motes', category: 'particles' },
+  { value: 'delicate glittering sparkle points appearing and fading in air around subject', label: 'Sparkles', category: 'particles' },
+  { value: 'warm glowing embers floating upward through frame, soft orange-red points of light', label: 'Floating Embers', category: 'particles' },
   // Nature
-  { value: 'wind in hair', label: 'Wind in Hair', category: 'nature' },
-  { value: 'rain', label: 'Rain', category: 'nature' },
-  { value: 'snow falling', label: 'Snow', category: 'nature' },
-  { value: 'fog mist', label: 'Fog/Mist', category: 'nature' },
+  { value: 'natural wind flowing through hair with individual strand movement, gentle fabric motion', label: 'Wind in Hair', category: 'nature' },
+  { value: 'realistic rain falling with visible individual droplets, wet surface reflections, splash impacts', label: 'Rain', category: 'nature' },
+  { value: 'gentle snowflakes drifting down at varied speeds and sizes, settling on surfaces and shoulders', label: 'Snow', category: 'nature' },
+  { value: 'atmospheric fog or mist rolling through scene creating visible depth layers and soft obscuration', label: 'Fog/Mist', category: 'nature' },
 ];
 
-// Scene Description Quick Ideas (human-focused natural movements)
+// Scene Description Quick Ideas
 const SCENE_IDEAS = [
   // Facial expressions & micro-movements
-  { label: 'Talking to camera', value: 'person talking naturally to camera, mouth moving, natural speech rhythm' },
-  { label: 'Slow genuine smile', value: 'slow genuine smile forming, eyes crinkling naturally, warm expression' },
-  { label: 'Nodding thoughtfully', value: 'nodding head thoughtfully, engaged listening expression' },
-  { label: 'Raised eyebrows', value: 'eyebrows raising slightly in surprise or interest' },
-  { label: 'Soft blink', value: 'natural soft blinking, relaxed eyes' },
-  { label: 'Slight head tilt', value: 'slight curious head tilt, attentive expression' },
+  { label: 'Talking to camera', value: 'person speaking naturally to camera with realistic lip sync and jaw movement, natural breath pauses between sentences, subtle tongue and teeth visible during speech, slight head micro-movements accompanying words, natural blink rhythm every 3-5 seconds, genuine conversational energy', category: 'person' },
+  { label: 'Slow genuine smile', value: 'a slow Duchenne smile forming naturally — corners of mouth lifting first, then cheeks rising, crow\'s feet crinkling at outer eye corners, slight narrowing of eyes, teeth gradually becoming visible, warmth spreading across entire face over 2-3 seconds, authentic joy reaching the eyes', category: 'person' },
+  { label: 'Nodding thoughtfully', value: 'gentle contemplative head nod with natural neck movement, slight pursing of lips while processing thought, eyes maintaining soft focus with occasional micro-glances, brow slightly furrowed in concentration, chin dipping and rising at natural conversational pace', category: 'person' },
+  { label: 'Raised eyebrows', value: 'eyebrows lifting naturally with forehead creasing, eyes widening slightly in genuine surprise or curiosity, mouth parting just slightly, head tilting back almost imperceptibly, the kind of involuntary micro-expression that lasts 1-2 seconds before settling', category: 'person' },
+  { label: 'Soft blink', value: 'natural relaxed blink with eyelids closing and opening at realistic speed, slight flutter of eyelashes, eye moisture visible as lids reopen, pupils adjusting subtly to light, calm unfocused gaze settling back into gentle eye contact', category: 'person' },
+  { label: 'Slight head tilt', value: 'curious gentle head tilt to one side, neck muscles engaging naturally, one ear dipping closer to shoulder, eyes maintaining contact with slight upward angle, expression of genuine interest and attentive listening, warm approachable body language', category: 'person' },
   // Body language
-  { label: 'Hand gestures', value: 'natural hand gestures while speaking, expressive movement' },
-  { label: 'Leaning in', value: 'leaning slightly forward, engaged and interested body language' },
-  { label: 'Relaxed shoulders', value: 'shoulders relaxing, comfortable natural posture' },
-  { label: 'Hair touch', value: 'casually touching or adjusting hair, natural fidget' },
-  { label: 'Looking down then up', value: 'looking down briefly then back up to camera, thoughtful moment' },
+  { label: 'Hand gestures', value: 'natural illustrative hand gestures while speaking, fingers relaxed and slightly curved, wrist rotating fluidly, hands emphasizing key points at chest height, occasional open-palm gesture, movements timed naturally with speech rhythm, hands returning to rest between gestures', category: 'person' },
+  { label: 'Leaning in', value: 'torso shifting forward slightly with natural weight transfer, shoulders angling toward camera, elbows moving inward, chin advancing, creating intimate engaged proximity, facial expression intensifying with interest, the involuntary lean of someone genuinely captivated', category: 'person' },
+  { label: 'Relaxed shoulders', value: 'visible tension releasing from shoulders as they drop naturally, neck lengthening, jaw unclenching subtly, breathing deepening and becoming visible in chest, overall posture softening from rigid to comfortable, genuine moment of physical ease', category: 'person' },
+  { label: 'Hair touch', value: 'hand rising naturally to tuck a strand of hair behind ear or brush it from forehead, fingers moving through hair with casual practiced ease, brief self-conscious moment, a genuine fidget that communicates comfort and natural human behavior', category: 'person' },
+  { label: 'Looking down then up', value: 'eyes dropping downward as if gathering thoughts, slight lowering of chin, brief pause of internal reflection lasting 1-2 seconds, then eyes lifting back to camera with renewed focus and connection, slight smile forming on the return, a natural thoughtful beat', category: 'person' },
   // Natural actions
-  { label: 'Deep breath', value: 'taking a natural deep breath, chest rising gently' },
-  { label: 'Subtle laugh', value: 'subtle genuine laugh, slight shoulder shake, authentic amusement' },
-  { label: 'Glancing aside', value: 'glancing briefly to the side, natural eye movement' },
-  { label: 'Adjusting posture', value: 'subtly adjusting posture, shifting weight naturally' },
+  { label: 'Deep breath', value: 'a natural deep breath — nostrils flaring slightly on inhale, chest and shoulders rising visibly, brief hold at the top, then a slow controlled exhale with shoulders settling, expression shifting to calm resolve, a grounding moment of genuine composure', category: 'person' },
+  { label: 'Subtle laugh', value: 'genuine spontaneous laugh beginning with eyes crinkling, cheeks lifting, mouth opening naturally, slight head tilt back, shoulders shaking briefly, one hand possibly rising toward face, authentic sound of amusement, the involuntary kind you can\'t fake, settling into a warm residual smile', category: 'person' },
+  { label: 'Glancing aside', value: 'eyes shifting naturally to one side as if noticing something or recalling a memory, head turning slightly to follow gaze, brief 1-second look away before returning focus to camera, natural eye saccade movement, the kind of authentic glance that breaks the fourth wall feeling', category: 'person' },
+  { label: 'Adjusting posture', value: 'subtle weight shift from one side to another, slight hip adjustment, shoulders resettling, chin lifting or tucking, the kind of natural micro-adjustment everyone makes unconsciously every few seconds, maintaining the illusion of a real living person', category: 'person' },
+  { label: 'Lip press', value: 'lips pressing together briefly in thought or mild emphasis, slight jaw clench visible in cheek muscle, a momentary expression of consideration before speaking, tongue briefly touching upper lip, the natural oral movements between sentences', category: 'person' },
+  { label: 'Eye contact shift', value: 'gaze shifting naturally between looking at camera lens and slightly off-center as if looking at a real person\'s eyes, subtle pupil movement and refocusing, the natural way people maintain eye contact by alternating between left and right eye', category: 'person' },
+  // Object & Product movements
+  { label: 'Slow rotation', value: 'object rotating smoothly through 360 degrees on invisible turntable, consistent speed, studio lighting catching different surface angles and reflections as it turns, revealing craftsmanship details and material quality from all sides', category: 'object' },
+  { label: 'Floating hover', value: 'product levitating and hovering with gentle weight, subtle organic up-and-down drift, slight rotation, soft shadow on surface below shifting with movement, dramatic studio lighting accentuating floating isolation', category: 'object' },
+  { label: 'Zoom reveal', value: 'camera slowly pushing in from medium shot to extreme close-up, progressively revealing finer surface texture, material grain, stitching detail, or precision engineering, shallow depth of field increasing as lens approaches', category: 'object' },
+  { label: 'Splash/Impact', value: 'dynamic liquid splash erupting around product, individual water droplets suspended in mid-air catching light, particles dispersing outward, frozen-motion energy, high-speed camera aesthetic, dramatic back-lighting through liquid', category: 'object' },
+  { label: 'Unboxing reveal', value: 'premium packaging lid lifting open smoothly, product emerging from within, tissue paper parting, dramatic lighting revealing product for the first time, anticipation building through pacing, satisfying tactile unboxing experience', category: 'object' },
+  { label: 'Light sweep', value: 'controlled studio light sweeping across product surface from left to right, dramatically revealing contours, embossing, reflective materials, creating moving highlight and shadow that maps the product shape', category: 'object' },
+  { label: 'Assembly/Parts', value: 'product components floating into position from different directions, each piece clicking satisfyingly into place, mechanical precision, the assembled whole emerging greater than its parts, engineering showcase', category: 'object' },
+  { label: 'In-use demo', value: 'natural human hand interacting with product in real-world context, demonstrating primary function with smooth practiced ease, showing scale relative to hand, authentic grip and touch, real-world lighting and environment', category: 'object' },
+  // Environment & Scene
+  { label: 'Parallax depth', value: 'subtle lateral camera drift revealing multiple depth planes, foreground elements sliding past midground and background at different rates, creating dimensional depth and visual richness in an otherwise static scene', category: 'scene' },
+  { label: 'Time-lapse', value: 'accelerated time passage with clouds streaming across sky, shadows rotating and lengthening, light color shifting from golden to blue, traffic or people flowing as blurred streaks, static elements anchoring the moving world', category: 'scene' },
+  { label: 'Gentle breeze', value: 'soft wind flowing through scene causing leaves to rustle and sway, grass bending in waves, light fabric billowing gently, hair lifting slightly, creating the feeling of a living breathing environment', category: 'scene' },
+  { label: 'Water ripple', value: 'calm water surface with concentric ripples expanding outward from a point, reflections of sky and surroundings distorting and reforming, gentle light dancing across water surface, peaceful meditative motion', category: 'scene' },
+  { label: 'Atmospheric fog', value: 'low-lying fog or mist drifting slowly through scene, creating visible depth layers, softening distant elements, volumetric light shafts penetrating through haze, mysterious and moody atmosphere building depth', category: 'scene' },
+  { label: 'Golden hour', value: 'warm golden sunlight from low sun angle, long dramatic shadows stretching across surface, warm orange-amber light wrapping around subjects, backlit edges glowing, the most flattering natural light condition', category: 'scene' },
 ];
 
-// Description Presets (for realistic videos)
+// Description Presets
 const DESCRIPTION_PRESETS = [
-  // Authentic & Raw
-  { id: 'authentic', label: '🤳 Authentic/Raw', prompt: 'real person, genuine emotion, natural lighting, unfiltered look, believable authentic moment, imperfect and human' },
-  { id: 'talking', label: '🗣️ Talking Natural', prompt: 'person talking naturally, conversational tone, casual relaxed body language, genuine facial expressions, natural pauses in speech' },
-  { id: 'testimonial', label: '⭐ Testimonial', prompt: 'honest heartfelt testimonial, sharing genuine experience, enthusiastic but believable, relatable everyday person' },
-  // Human Elements
-  { id: 'thinking', label: '🤔 Thinking Moment', prompt: 'person pausing to think, natural contemplation, eyes moving as if processing thoughts, genuine reflection' },
-  { id: 'excited', label: '😊 Genuine Excitement', prompt: 'authentic excitement building, eyes widening, smile growing naturally, slight forward lean, enthusiastic energy' },
-  { id: 'calm', label: '😌 Calm & Centered', prompt: 'calm peaceful demeanor, soft natural breathing, relaxed facial muscles, serene gentle expression' },
-  { id: 'surprised', label: '😮 Pleasant Surprise', prompt: 'pleasant surprised reaction, eyebrows lifting, mouth opening slightly, genuine delighted response' },
-  { id: 'confident', label: '💪 Quiet Confidence', prompt: 'quiet confident presence, steady gaze, assured subtle smile, grounded posture, self-assured energy' },
-  // Actions
-  { id: 'product', label: '📦 Product Showcase', prompt: 'showing product naturally, demonstrating features with hands, genuine curious reaction, examining closely' },
-  { id: 'lifestyle', label: '🌟 Lifestyle', prompt: 'lifestyle content, aspirational yet achievable, natural setting, warm inviting atmosphere, candid moment' },
-  { id: 'unboxing', label: '📦 Unboxing Reaction', prompt: 'unboxing moment, anticipation building, hands opening package, genuine first reaction, authentic discovery' },
-  { id: 'morning', label: '☀️ Morning Routine', prompt: 'morning routine moment, natural waking energy, soft morning light, relaxed unhurried movement, cozy atmosphere' },
+  // People
+  { id: 'authentic', label: '🤳 Authentic/Raw', category: 'person', prompt: 'real person filmed candidly, visible skin pores and natural texture, uneven skin tone and small imperfections that read as human, natural available light creating soft shadows under chin and nose, unretouched genuine appearance, slightly asymmetric facial features, real fabric texture on clothing with natural wrinkles, the unmistakable look of unfiltered reality' },
+  { id: 'talking', label: '🗣️ Talking Natural', category: 'person', prompt: 'person speaking naturally with realistic lip and jaw movement synced to speech rhythm, natural breath pauses every 5-8 words, subtle tongue visibility on certain consonants, eyebrows rising on emphasized words, head nodding micro-movements accompanying key points, natural blink pattern, casual relaxed shoulders, genuine conversational energy as if talking to a friend' },
+  { id: 'testimonial', label: '⭐ Testimonial', category: 'person', prompt: 'heartfelt authentic testimonial, person sharing genuine experience with visible emotional investment, slight vocal emphasis on key moments, eyes brightening when recalling positive memories, natural speech imperfections like brief pauses and word searching, believable enthusiasm that builds organically, relatable everyday appearance, the kind of real unscripted endorsement that feels trustworthy' },
+  { id: 'thinking', label: '🤔 Thinking Moment', category: 'person', prompt: 'person in genuine contemplation, eyes drifting slightly upward and to one side as if accessing memory, lips pressing together briefly, subtle jaw tension, brow furrowing with fine wrinkle lines appearing, fingers perhaps touching chin or temple, the visible internal process of gathering thoughts before speaking, a natural pregnant pause that feels unscripted' },
+  { id: 'excited', label: '😊 Genuine Excitement', category: 'person', prompt: 'authentic excitement building visibly across the face — eyes widening with pupils dilating slightly, eyebrows lifting, a smile growing from closed-lip to open showing teeth, slight forward lean of entire torso, hands possibly coming together or gesturing outward, increased blink rate, the contagious energy of someone genuinely thrilled, cheeks flushing slightly with real emotion' },
+  { id: 'calm', label: '😌 Calm & Centered', category: 'person', prompt: 'deeply calm centered presence, slow measured breathing visible in gentle chest rise and fall, relaxed jaw and softened facial muscles, half-lidded comfortable eyes with steady gentle gaze, shoulders low and settled, head balanced naturally on neck without tension, serene half-smile, the composed stillness of someone completely at ease in the moment' },
+  { id: 'confident', label: '💪 Quiet Confidence', category: 'person', prompt: 'quietly confident person with steady unwavering eye contact, chin level and centered, subtle assured close-lipped smile, grounded upright posture without rigidity, shoulders back naturally, deliberate unhurried movements, the self-possessed energy of someone who doesn\'t need to prove anything, calm strong presence that commands attention without demanding it' },
+  { id: 'lifestyle', label: '🌟 Lifestyle', category: 'person', prompt: 'aspirational lifestyle moment that feels achievable and real, person in a beautiful but believable natural environment, warm golden ambient lighting, candid movement that feels unposed, genuine comfort and belonging in the space, real fabric textures and natural materials in setting, the kind of authentic aspirational content that inspires without feeling manufactured' },
+  // Product & Object
+  { id: 'product-hero', label: '📦 Product Hero', category: 'object', prompt: 'premium product hero shot with controlled studio lighting, key light creating defined highlight edge, fill light opening shadows to reveal detail, smooth slow rotation revealing all design surfaces, visible material quality — texture grain, reflective surfaces, matte finishes, precise manufacturing details, professional commercial photography quality translated to motion' },
+  { id: 'product-context', label: '🏠 Product in Context', category: 'object', prompt: 'product placed naturally in real-world lifestyle setting, warm ambient lighting from windows or practical sources, surrounding environment telling a story about the product\'s use case, natural material textures in the setting complementing the product, shallow depth of field keeping product sharp against softly blurred environment, aspirational but believable and relatable context' },
+  { id: 'product-close', label: '🔍 Macro Close-up', category: 'object', prompt: 'extreme macro close-up revealing surface texture at near-microscopic detail, visible material grain and manufacturing precision, shallow depth of field with only a thin slice in focus, subtle rack focus pulling attention across surface features, highlighting craftsmanship and quality that isn\'t visible at normal viewing distance, premium tactile detail' },
+  { id: 'product-dynamic', label: '💥 Dynamic Product', category: 'object', prompt: 'high-energy dynamic product reveal with explosive motion, product emerging through particles or liquid splash, dramatic rim lighting creating bright edge separation, bold dramatic shadows, kinetic energy captured at peak moment, high-speed camera aesthetic freezing dynamic elements, attention-commanding visual impact, broadcast commercial quality' },
+  { id: 'food-drink', label: '🍽️ Food & Drink', category: 'object', prompt: 'mouth-watering food or drink presentation with visible steam rising and curling naturally, liquid pouring with realistic fluid dynamics and splashing, fresh ingredients glistening with moisture droplets, warm inviting key light from above creating appetizing highlights, visible texture of every ingredient surface, the kind of sensory-rich food videography that triggers genuine hunger' },
+  { id: 'tech-gadget', label: '💻 Tech/Gadget', category: 'object', prompt: 'sleek technology product with precision-engineered surfaces catching controlled studio light, subtle screen glow illuminating immediate surroundings, clean minimal dark or gradient background isolating the product, reflections in glossy surfaces revealing the studio environment, precise edge lighting defining the form factor, premium technology aesthetic communicating innovation and quality' },
+  // Scene & Environment
+  { id: 'nature-scene', label: '🌿 Nature Scene', category: 'scene', prompt: 'serene natural landscape with organic movement in foliage responding to gentle wind, soft diffused natural light filtering through atmosphere, individual leaves and grass blades moving independently, birds or insects adding background life, natural color palette without artificial saturation, the meditative quality of real undisturbed nature, cinematic wide establishing shot with depth layers' },
+  { id: 'urban-vibe', label: '🏙️ Urban/City', category: 'scene', prompt: 'atmospheric urban street scene with layered city energy, neon signage reflecting off wet pavement, pedestrians moving through frame at varied paces, vehicle headlights creating light streaks, modern architecture with glass reflections of surrounding buildings, steam rising from grates, the textured gritty beauty of a real city at golden hour or twilight' },
+  { id: 'aerial-view', label: '🛩️ Aerial/Drone', category: 'scene', prompt: 'smooth cinematic aerial drone footage with slow controlled flight path, sweeping bird\'s eye perspective revealing landscape scale and patterns, natural topography creating visual rhythm, long shadows indicating time of day, the awe-inspiring perspective shift that only altitude provides, gradual reveal of destination or feature, 4K clarity with atmospheric haze adding depth' },
+  { id: 'cozy-interior', label: '🛋️ Cozy Interior', category: 'scene', prompt: 'warm inviting interior space with layered soft lighting from practical sources — table lamps, candles, fireplace glow — creating pools of warm light, rich comfortable textures visible in fabrics and surfaces, gentle steam rising from a hot drink, subtle dust motes in light beams, the intimate tactile comfort of a lived-in space that feels like home' },
 ];
 
 /**
@@ -427,6 +452,8 @@ export default function JumpStartModal({
   const [cameraFixed, setCameraFixed] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [cfgScale, setCfgScale] = useState(0.5);
+  const [sceneIdeaFilter, setSceneIdeaFilter] = useState('all');
+  const [presetFilter, setPresetFilter] = useState('all');
   
   // Generated video
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
@@ -498,6 +525,8 @@ export default function JumpStartModal({
       setCameraFixed(false);
       setNegativePrompt('');
       setCfgScale(0.5);
+      setSceneIdeaFilter('all');
+      setPresetFilter('all');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
     }
@@ -739,16 +768,19 @@ export default function JumpStartModal({
     
     // Quality boosters for realistic styles
     if (isRealisticStyle) {
-      parts.push('photorealistic, authentic, believable, natural motion');
+      parts.push('photorealistic with natural skin texture and visible pores, authentic micro-expressions and natural blink rhythm, believable weight and momentum in all movement, real-world lighting with true color temperature, natural imperfections that read as human');
+    } else {
+      // General quality booster for all non-realistic styles
+      parts.push('high production quality, smooth natural motion, consistent lighting');
     }
-    
+
     // Aspect ratio hint
     if (aspectRatio !== 'auto') {
       const isPortrait = ['9:16', '3:4', '2:3'].includes(aspectRatio);
       parts.push(isPortrait ? 'vertical portrait video' : 'horizontal video');
     }
-    
-    return parts.join(', ') || 'smooth natural motion, high quality video';
+
+    return parts.join(', ') || 'smooth natural motion with realistic physics and weight, high quality video with natural lighting and authentic detail';
   };
 
   const pollForResult = async (requestId, model) => {
@@ -1402,8 +1434,8 @@ export default function JumpStartModal({
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-500 mb-1 block">Aspect Ratio</label>
-                      <select 
-                        value={aspectRatio} 
+                      <select
+                        value={aspectRatio}
                         onChange={(e) => setAspectRatio(e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
                       >
@@ -1414,8 +1446,8 @@ export default function JumpStartModal({
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 mb-1 block">Resolution</label>
-                      <select 
-                        value={resolution} 
+                      <select
+                        value={resolution}
                         onChange={(e) => setResolution(e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
                       >
@@ -1426,8 +1458,8 @@ export default function JumpStartModal({
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 mb-1 block">Duration</label>
-                      <select 
-                        value={duration} 
+                      <select
+                        value={duration}
                         onChange={(e) => setDuration(parseInt(e.target.value))}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
                       >
@@ -1438,6 +1470,82 @@ export default function JumpStartModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Model Features — only shown when the selected model has toggleable features */}
+                {(currentModel.supportsAudio || currentModel.supportsCameraFixed || currentModel.supportsNegativePrompt || currentModel.supportsCfgScale) && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
+                    <h3 className="font-semibold text-gray-900">Model Features</h3>
+
+                    {/* Audio toggle */}
+                    {currentModel.supportsAudio && (
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          {enableAudio ? <Volume2 className="w-4 h-4 text-[#2C666E]" /> : <VolumeX className="w-4 h-4 text-gray-400" />}
+                          <span className="text-sm text-gray-700">Generate Audio</span>
+                        </div>
+                        <button
+                          onClick={() => setEnableAudio(!enableAudio)}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${enableAudio ? 'bg-[#2C666E]' : 'bg-gray-300'}`}
+                        >
+                          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enableAudio ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Camera Fixed toggle */}
+                    {currentModel.supportsCameraFixed && (
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <Lock className={`w-4 h-4 ${cameraFixed ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <span className="text-sm text-gray-700">Lock Camera Position</span>
+                        </div>
+                        <button
+                          onClick={() => setCameraFixed(!cameraFixed)}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${cameraFixed ? 'bg-blue-600' : 'bg-gray-300'}`}
+                        >
+                          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${cameraFixed ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Negative Prompt */}
+                    {currentModel.supportsNegativePrompt && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Negative Prompt (optional)</label>
+                        <input
+                          value={negativePrompt}
+                          onChange={(e) => setNegativePrompt(e.target.value)}
+                          placeholder="blurry, low quality, distorted..."
+                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* CFG Scale */}
+                    {currentModel.supportsCfgScale && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium text-gray-500">Prompt Adherence (CFG)</label>
+                          <span className="text-xs font-medium text-amber-600">{cfgScale.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={cfgScale}
+                          onChange={(e) => setCfgScale(parseFloat(e.target.value))}
+                          className="w-full accent-amber-500"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                          <span>Creative</span>
+                          <span>Balanced</span>
+                          <span>Precise</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1479,11 +1587,33 @@ export default function JumpStartModal({
                     className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-24" 
                   />
                   
-                  {/* Quick Human Movement Ideas */}
+                  {/* Quick Add Ideas */}
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-gray-500 font-medium">🎭 Quick Add - Natural Human Movements:</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500 font-medium">Quick Add:</p>
+                      {[
+                        { id: 'all', label: 'All' },
+                        { id: 'person', label: '🎭 Person' },
+                        { id: 'object', label: '📦 Object' },
+                        { id: 'scene', label: '🌿 Scene' },
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setSceneIdeaFilter(tab.id)}
+                          className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                            sceneIdeaFilter === tab.id
+                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
                     <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
-                      {SCENE_IDEAS.map(idea => (
+                      {SCENE_IDEAS
+                        .filter(idea => sceneIdeaFilter === 'all' || idea.category === sceneIdeaFilter)
+                        .map(idea => (
                         <button
                           key={idea.label}
                           onClick={() => setSceneDescription(prev => prev ? `${prev}, ${idea.value}` : idea.value)}
@@ -1505,99 +1635,21 @@ export default function JumpStartModal({
                   )}
                 </div>
 
-                {/* Audio Settings */}
-                {currentModel.supportsAudio && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {enableAudio ? <Volume2 className="w-5 h-5 text-[#2C666E]" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
-                        <h3 className="font-semibold text-gray-900">Audio Generation</h3>
-                      </div>
-                      <button
-                        onClick={() => setEnableAudio(!enableAudio)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${enableAudio ? 'bg-[#2C666E]' : 'bg-gray-300'}`}
-                      >
-                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enableAudio ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-                    
-                    {enableAudio && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Speech / Dialogue (Optional)</label>
-                        <textarea 
-                          value={audioTranscript} 
-                          onChange={(e) => setAudioTranscript(e.target.value)} 
-                          placeholder="e.g., 'Hi everyone! Let me show you this amazing product...'"
-                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Leave empty for ambient sounds based on the scene.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Camera Fixed (Seedance only) */}
-                {currentModel.supportsCameraFixed && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Lock Camera Position</h3>
-                          <p className="text-xs text-gray-500">Keep camera stationary throughout the video</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setCameraFixed(!cameraFixed)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${cameraFixed ? 'bg-blue-600' : 'bg-gray-300'}`}
-                      >
-                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${cameraFixed ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Negative Prompt (Veo Fast, Kling) */}
-                {currentModel.supportsNegativePrompt && (
+                {/* Audio Transcript (only when audio is enabled) */}
+                {currentModel.supportsAudio && enableAudio && (
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
-                      <X className="w-5 h-5 text-red-500" />
-                      <h3 className="font-semibold text-gray-900">Negative Prompt</h3>
+                      <Volume2 className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Speech / Dialogue</h3>
                       <span className="text-xs text-gray-400">(optional)</span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-2">Describe what you DON'T want in the video.</p>
-                    <textarea 
-                      value={negativePrompt} 
-                      onChange={(e) => setNegativePrompt(e.target.value)} 
-                      placeholder="e.g., 'blurry, low quality, distorted faces, unnatural movement, glitches'"
-                      className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
+                    <textarea
+                      value={audioTranscript}
+                      onChange={(e) => setAudioTranscript(e.target.value)}
+                      placeholder="e.g., 'Hi everyone! Let me show you this amazing product...'"
+                      className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16"
                     />
-                  </div>
-                )}
-
-                {/* CFG Scale (Kling) */}
-                {currentModel.supportsCfgScale && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-5 h-5 text-amber-500" />
-                      <h3 className="font-semibold text-gray-900">Prompt Adherence (CFG)</h3>
-                      <span className="text-sm font-medium text-amber-600">{cfgScale.toFixed(2)}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">How closely the video follows your prompt. Lower = more creative, Higher = more precise.</p>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={cfgScale}
-                      onChange={(e) => setCfgScale(parseFloat(e.target.value))}
-                      className="w-full accent-amber-500"
-                    />
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>Creative (0)</span>
-                      <span>Balanced (0.5)</span>
-                      <span>Precise (1)</span>
-                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Leave empty for ambient sounds based on the scene.</p>
                   </div>
                 )}
 
@@ -1729,9 +1781,31 @@ export default function JumpStartModal({
                   
                   {/* Prefilled Preset Buttons */}
                   <div className="mb-3">
-                    <p className="text-xs text-gray-500 mb-2">🎯 Quick Presets for Realistic Videos:</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs text-gray-500 font-medium">Quick Presets:</p>
+                      {[
+                        { id: 'all', label: 'All' },
+                        { id: 'person', label: '🎭 Person' },
+                        { id: 'object', label: '📦 Product' },
+                        { id: 'scene', label: '🌿 Scene' },
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setPresetFilter(tab.id)}
+                          className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                            presetFilter === tab.id
+                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {DESCRIPTION_PRESETS.map(preset => (
+                      {DESCRIPTION_PRESETS
+                        .filter(preset => presetFilter === 'all' || preset.category === presetFilter)
+                        .map(preset => (
                         <button
                           key={preset.id}
                           onClick={() => setDescription(preset.prompt)}

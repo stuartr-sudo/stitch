@@ -91,22 +91,35 @@ export default function VideoAdvertCreator() {
   const [zoom, setZoom] = useState(100);
   const [selectedTimelineId, setSelectedTimelineId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const currentTimeRef = useRef(0);
 
-  // Playback loop
+  // Keep ref in sync with state
+  useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
+
+  // Playback loop — stops at end of last element
   useEffect(() => {
     let animationFrameId;
     let lastTime = performance.now();
     const fps = 30;
     const frameInterval = 1000 / fps;
 
+    const getMaxFrame = () => createdVideos.length > 0
+      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90)))
+      : 0;
+
     const playLoop = (time) => {
       if (time - lastTime >= frameInterval) {
-        setCurrentTime(prev => {
-          const maxDuration = createdVideos.length > 0
-            ? Math.max(150, ...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
-            : 150;
-          return prev >= maxDuration ? 0 : prev + 1;
-        });
+        const maxFrame = getMaxFrame();
+        const cur = currentTimeRef.current;
+
+        if (maxFrame === 0 || cur >= maxFrame) {
+          setIsPlaying(false);
+          return; // stop — don't schedule next frame
+        }
+
+        const next = cur + 1;
+        currentTimeRef.current = next;
+        setCurrentTime(next);
         lastTime = time;
       }
       animationFrameId = requestAnimationFrame(playLoop);
@@ -120,6 +133,19 @@ export default function VideoAdvertCreator() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, [isPlaying, createdVideos]);
+
+  // Probe actual video duration from URL
+  const getVideoDuration = (url) => new Promise((resolve) => {
+    const vid = document.createElement('video');
+    vid.preload = 'metadata';
+    vid.onloadedmetadata = () => {
+      const seconds = vid.duration && isFinite(vid.duration) ? vid.duration : 5;
+      vid.src = ''; // release
+      resolve(seconds);
+    };
+    vid.onerror = () => resolve(5); // fallback 5s
+    vid.src = url;
+  });
 
   const handleSignOut = async () => {
     try {
@@ -142,7 +168,7 @@ export default function VideoAdvertCreator() {
     const frames = durationInSeconds * 30;
 
     const nextStartAt = createdVideos.length > 0
-      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90)))
       : 0;
 
     const newVideo = {
@@ -169,13 +195,26 @@ export default function VideoAdvertCreator() {
         title: newVideo.title,
         source: newVideo.source,
       }),
-    }).catch(err => console.warn('Failed to save video to library:', err));
+    }).then(async (res) => {
+      const data = await res.json();
+      if (data.saved) {
+        console.log('[Library] Video saved:', data.id);
+      } else if (data.duplicate) {
+        console.log('[Library] Video already in library');
+      } else {
+        console.error('[Library] Save failed:', data.message || data.error);
+        toast.error('Video not saved to library: ' + (data.message || data.error || 'Unknown error'));
+      }
+    }).catch(err => {
+      console.error('[Library] Network error saving video:', err);
+      toast.error('Could not save video to library — is the API server running?');
+    });
   };
 
   // Handle adding text to timeline
   const handleAddText = () => {
     const nextStartAt = createdVideos.length > 0
-      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+      ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90)))
       : 0;
 
     const newTextItem = {
@@ -683,7 +722,7 @@ export default function VideoAdvertCreator() {
               }}
             >
               {createdVideos.map(item => {
-                const isActive = currentTime >= (item.startAt || 0) && currentTime < (item.startAt || 0) + (item.durationInFrames || 150);
+                const isActive = currentTime >= (item.startAt || 0) && currentTime < (item.startAt || 0) + (item.durationInFrames || 90);
                 if (!isActive) return null;
 
                 if (item.type === 'audio') {
@@ -712,6 +751,8 @@ export default function VideoAdvertCreator() {
                     selectedId={selectedTimelineId}
                     onSelect={setSelectedTimelineId}
                     onUpdate={(id, updates) => setCreatedVideos(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))}
+                    currentTime={currentTime}
+                    isPlaying={isPlaying}
                   />
                 );
               })}
@@ -748,7 +789,7 @@ export default function VideoAdvertCreator() {
                 onSelect={(item) => setSelectedTimelineId(item ? item.id : null)}
                 selectedId={selectedTimelineId}
                 currentTime={currentTime}
-                duration={createdVideos.length > 0 ? Math.max(900, ...createdVideos.map(i => (i.startAt || 0) + (i.durationInFrames || 150))) : 900}
+                duration={createdVideos.length > 0 ? Math.max(900, ...createdVideos.map(i => (i.startAt || 0) + (i.durationInFrames || 90))) : 900}
                 onSeek={(frame) => setCurrentTime(frame)}
                 isPlaying={isPlaying}
                 onTogglePlay={() => setIsPlaying(p => !p)}
@@ -794,11 +835,23 @@ export default function VideoAdvertCreator() {
       <AudioStudioModal
         isOpen={showAudioStudio}
         onClose={() => setShowAudioStudio(false)}
-        onAudioGenerated={(audioItem) => {
+        onAudioGenerated={async (audioItem) => {
+          const audioUrl = audioItem.url || audioItem.audio_url;
+          let frames = 300; // fallback 10s
+          if (audioUrl) {
+            const dur = await new Promise((resolve) => {
+              const a = new Audio();
+              a.preload = 'metadata';
+              a.onloadedmetadata = () => { resolve(a.duration && isFinite(a.duration) ? a.duration : 10); a.src = ''; };
+              a.onerror = () => resolve(10);
+              a.src = audioUrl;
+            });
+            frames = Math.round(dur * 30);
+          }
           const nextStartAt = createdVideos.length > 0
-            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150)))
+            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90)))
             : 0;
-          setCreatedVideos(prev => [...prev, { ...audioItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: 300, trackIndex: 1 }]);
+          setCreatedVideos(prev => [...prev, { ...audioItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: frames, trackIndex: 1 }]);
           toast.success('Audio added to timeline!');
         }}
       />
@@ -920,17 +973,20 @@ export default function VideoAdvertCreator() {
       <LibraryModal 
         isOpen={activeModal === 'library'} 
         onClose={() => setActiveModal(null)}
-        onSelect={(item) => {
+        onSelect={async (item) => {
           if (item.type === 'video') {
-            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
+            const videoUrl = item.url || item.video_url;
+            const actualDuration = await getVideoDuration(videoUrl);
+            const frames = Math.round(actualDuration * 30);
+            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90))) : 0;
             const newVideo = {
               id: Date.now().toString(),
               type: 'video',
-              url: item.url || item.video_url,
+              url: videoUrl,
               title: item.title || `Video from Library`,
               createdAt: new Date().toISOString(),
               source: 'library',
-              durationInFrames: 300,
+              durationInFrames: frames,
               startAt: nextStartAt,
               trackIndex: 0
             };
@@ -938,7 +994,7 @@ export default function VideoAdvertCreator() {
             setCurrentPreviewVideo(newVideo);
             toast.success('Video added to your collection!');
           } else {
-            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
+            const nextStartAt = createdVideos.length > 0 ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90))) : 0;
             const newImage = {
               id: Date.now().toString(),
               type: 'image',
@@ -946,7 +1002,7 @@ export default function VideoAdvertCreator() {
               title: item.title || 'Library image',
               createdAt: new Date().toISOString(),
               startAt: nextStartAt,
-              durationInFrames: 150,
+              durationInFrames: 90,
               trackIndex: 0
             };
             setCreatedVideos(prev => [newImage, ...prev]);
@@ -985,10 +1041,13 @@ export default function VideoAdvertCreator() {
       <MotionTransferModal
         isOpen={showMotionTransfer}
         onClose={() => setShowMotionTransfer(false)}
-        onMotionGenerated={(motionItem) => {
+        onMotionGenerated={async (motionItem) => {
+          const videoUrl = motionItem.url || motionItem.video_url;
+          const actualDuration = videoUrl ? await getVideoDuration(videoUrl) : 5;
+          const frames = Math.round(actualDuration * 30);
           const nextStartAt = createdVideos.length > 0
-            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 150))) : 0;
-          setCreatedVideos(prev => [...prev, { ...motionItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: 300, trackIndex: 0 }]);
+            ? Math.max(...createdVideos.map(v => (v.startAt || 0) + (v.durationInFrames || 90))) : 0;
+          setCreatedVideos(prev => [...prev, { ...motionItem, id: Date.now().toString(), startAt: nextStartAt, durationInFrames: frames, trackIndex: 0 }]);
           toast.success('Motion transfer added to timeline!');
         }}
       />

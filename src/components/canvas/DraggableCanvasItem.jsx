@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-export default function DraggableCanvasItem({ item, selectedId, onSelect, onUpdate }) {
+export default function DraggableCanvasItem({ item, selectedId, onSelect, onUpdate, currentTime, isPlaying }) {
   const isSelected = selectedId === item.id;
-  
+
   // Default bounds and sizes based on item type
   const isText = item.type === 'text';
   const isVideo = item.type === 'video';
   const isImage = item.type === 'image';
-  
+
   const defaultW = isText ? null : 100;
   const defaultH = isText ? null : 100;
   const defaultX = isText ? 10 : 0;
@@ -21,9 +21,29 @@ export default function DraggableCanvasItem({ item, selectedId, onSelect, onUpda
 
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(item.content || '');
-  
+
   const containerRef = useRef(null);
+  const videoRef = useRef(null);
   const [dragState, setDragState] = useState(null); // { type: 'move' | 'resize', startX, startY, initX, initY, initW, initH }
+
+  // Sync video element with timeline
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !isVideo) return;
+
+    const targetTime = (currentTime - (item.startAt || 0)) / 30;
+
+    if (isPlaying) {
+      if (el.paused) el.play().catch(() => {});
+      // Re-sync if drifted more than 0.3s
+      if (Math.abs(el.currentTime - targetTime) > 0.3) {
+        el.currentTime = targetTime;
+      }
+    } else {
+      if (!el.paused) el.pause();
+      el.currentTime = Math.max(0, targetTime);
+    }
+  }, [currentTime, isPlaying, isVideo, item.startAt]);
 
   useEffect(() => {
     if (!dragState) return;
@@ -159,10 +179,11 @@ export default function DraggableCanvasItem({ item, selectedId, onSelect, onUpda
       
       {isVideo && (
         <video
+          ref={videoRef}
           src={item.url}
-          autoPlay
           muted
-          loop
+          playsInline
+          preload="auto"
           className="w-full h-full object-cover pointer-events-none"
         />
       )}

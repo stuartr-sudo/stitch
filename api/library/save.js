@@ -190,7 +190,12 @@ export default async function handler(req, res) {
     if (req.user?.id) {
       insertData.user_id = req.user.id;
     }
-    
+
+    // user_name is NOT NULL on generated_videos — use email prefix or 'user'
+    if (table === 'generated_videos') {
+      insertData.user_name = req.user?.email?.split('@')[0] || 'user';
+    }
+
     // Add optional fields if they might exist
     if (prompt) {
       insertData.prompt = prompt;

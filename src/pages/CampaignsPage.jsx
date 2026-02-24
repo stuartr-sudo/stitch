@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import {
   ArrowLeft, Plus, Loader2, Calendar, Link, Video, Image, Layers,
   Clock, CheckCircle2, AlertCircle, Play, Send, Eye, Download,
-  ChevronDown, ChevronUp, X, RefreshCw,
+  ChevronDown, ChevronUp, X, RefreshCw, RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
+import RegenerateSceneModal from '@/components/RegenerateSceneModal';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -103,65 +104,123 @@ function ScheduleModal({ draftId, onClose, onScheduled }) {
 }
 
 // ── Asset grid (videos + images per ratio) ────────────────────────────────────
-function AssetGrid({ assets, onPreview }) {
+function AssetGrid({ assets, draft, onPreview, onRegenerated }) {
+  const [regenTarget, setRegenTarget] = useState(null); // { sceneIndex, ratio, scene, sceneAsset }
+
   if (!assets?.length) return <p className="text-xs text-slate-400 italic">No assets generated yet</p>;
 
+  const isReady = draft?.generation_status === 'ready';
+  const consistencyScores = draft?.consistency_scores_json || [];
+
+  const getConsistencyBadge = (sceneIdx) => {
+    const score = consistencyScores.find(s => s.scene_index === sceneIdx);
+    if (!score || score.error) return null;
+    const val = score.face_similarity;
+    const color = val >= 0.8 ? 'bg-green-500' : val >= 0.6 ? 'bg-yellow-500' : 'bg-red-500';
+    return (
+      <span className={`absolute top-1 right-1 ${color} text-white text-xs px-1 py-0.5 rounded font-medium`} title={`Consistency: ${Math.round(val * 100)}% — ${score.notes || ''}`}>
+        {Math.round(val * 100)}%
+      </span>
+    );
+  };
+
   return (
-    <div className="space-y-4">
-      {assets.map((group, gi) => (
-        <div key={gi}>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            {group.ratio} — {group.platforms?.join(', ')}
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {group.scenes?.map((scene, si) => (
-              <div key={si} className="space-y-1">
-                {/* Video clip */}
-                {scene.videoUrl && (
-                  <button onClick={() => onPreview({ url: scene.videoUrl, type: 'video', title: scene.scene?.headline })}
-                    className="relative w-full aspect-[9/16] rounded-lg overflow-hidden bg-slate-900 group hover:ring-2 hover:ring-[#2C666E] transition">
-                    <video src={scene.videoUrl} className="w-full h-full object-cover" muted />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                      <Play className="w-8 h-8 text-white" />
-                    </div>
-                    <span className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                      {scene.scene?.role || `S${si + 1}`}
-                    </span>
-                  </button>
-                )}
-                {/* Static image */}
-                {!scene.videoUrl && scene.imageUrl && (
-                  <button onClick={() => onPreview({ url: scene.imageUrl, type: 'image', title: scene.scene?.headline })}
-                    className="relative w-full aspect-[9/16] rounded-lg overflow-hidden bg-slate-200 group hover:ring-2 hover:ring-[#2C666E] transition">
-                    <img src={scene.imageUrl} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                      <Eye className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                      {scene.scene?.role || `S${si + 1}`}
-                    </span>
-                  </button>
-                )}
-                {/* Caption */}
-                {scene.scene?.headline && (
-                  <p className="text-xs text-slate-600 text-center truncate" title={scene.scene.headline}>
-                    {scene.scene.headline}
-                  </p>
-                )}
-              </div>
-            ))}
+    <>
+      <div className="space-y-4">
+        {assets.map((group, gi) => (
+          <div key={gi}>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              {group.ratio} — {group.platforms?.join(', ')}
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {group.scenes?.map((scene, si) => (
+                <div key={si} className="space-y-1">
+                  {/* Video clip */}
+                  {scene.videoUrl && (
+                    <button onClick={() => onPreview({ url: scene.videoUrl, type: 'video', title: scene.scene?.headline })}
+                      className="relative w-full aspect-[9/16] rounded-lg overflow-hidden bg-slate-900 group hover:ring-2 hover:ring-[#2C666E] transition">
+                      <video src={scene.videoUrl} className="w-full h-full object-cover" muted />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <Play className="w-8 h-8 text-white" />
+                      </div>
+                      <span className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                        {scene.scene?.role || `S${si + 1}`}
+                      </span>
+                      {getConsistencyBadge(si)}
+                      {/* Regenerate button */}
+                      {isReady && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setRegenTarget({ sceneIndex: si, ratio: group.ratio, scene: draft?.storyboard_json?.scenes?.[si], sceneAsset: scene }); }}
+                          className="absolute bottom-1 right-1 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition"
+                          title="Regenerate this scene"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </button>
+                  )}
+                  {/* Static image */}
+                  {!scene.videoUrl && scene.imageUrl && (
+                    <button onClick={() => onPreview({ url: scene.imageUrl, type: 'image', title: scene.scene?.headline })}
+                      className="relative w-full aspect-[9/16] rounded-lg overflow-hidden bg-slate-200 group hover:ring-2 hover:ring-[#2C666E] transition">
+                      <img src={scene.imageUrl} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <Eye className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                        {scene.scene?.role || `S${si + 1}`}
+                      </span>
+                      {getConsistencyBadge(si)}
+                      {/* Regenerate button */}
+                      {isReady && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setRegenTarget({ sceneIndex: si, ratio: group.ratio, scene: draft?.storyboard_json?.scenes?.[si], sceneAsset: scene }); }}
+                          className="absolute bottom-1 right-1 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition"
+                          title="Regenerate this scene"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </button>
+                  )}
+                  {/* Caption */}
+                  {scene.scene?.headline && (
+                    <p className="text-xs text-slate-600 text-center truncate" title={scene.scene.headline}>
+                      {scene.scene.headline}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Regenerate scene modal */}
+      {regenTarget && (
+        <RegenerateSceneModal
+          draft={draft}
+          sceneIndex={regenTarget.sceneIndex}
+          ratio={regenTarget.ratio}
+          scene={regenTarget.scene}
+          sceneAsset={regenTarget.sceneAsset}
+          onClose={() => setRegenTarget(null)}
+          onRegenerated={onRegenerated}
+        />
+      )}
+    </>
   );
 }
 
 // ── Single draft card ─────────────────────────────────────────────────────────
-function DraftCard({ draft, onPreview, onUpdated }) {
+function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [isGeneratingThumbs, setIsGeneratingThumbs] = useState(false);
+  const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
+  const [captionStyle, setCaptionStyle] = useState('sentence');
+  const [isScoringConsistency, setIsScoringConsistency] = useState(false);
 
   const isReady = draft.generation_status === 'ready';
 
@@ -250,7 +309,7 @@ function DraftCard({ draft, onPreview, onUpdated }) {
                 <Loader2 className="w-4 h-4 animate-spin" /> Generating assets...
               </div>
             ) : (
-              <AssetGrid assets={draft.assets_json || []} onPreview={onPreview} />
+              <AssetGrid assets={draft.assets_json || []} draft={draft} onPreview={onPreview} onRegenerated={onRefresh} />
             )}
 
             {/* Storyboard scenes */}
@@ -266,6 +325,210 @@ function DraftCard({ draft, onPreview, onUpdated }) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Thumbnails section */}
+            {isReady && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Thumbnails</p>
+                  {!draft.thumbnails_json?.length && (
+                    <Button
+                      size="sm" variant="outline"
+                      disabled={isGeneratingThumbs}
+                      onClick={async () => {
+                        setIsGeneratingThumbs(true);
+                        try {
+                          const r = await apiFetch('/api/campaigns/generate-thumbnails', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ draft_id: draft.id }),
+                          });
+                          const d = await r.json();
+                          if (!d.success) throw new Error(d.error);
+                          toast.success('Generating thumbnails...');
+                          // Poll for completion via campaign refresh
+                          setTimeout(() => onRefresh?.(), 5000);
+                          setTimeout(() => onRefresh?.(), 15000);
+                          setTimeout(() => onRefresh?.(), 30000);
+                        } catch (err) {
+                          toast.error(err.message || 'Failed to generate thumbnails');
+                        } finally {
+                          setIsGeneratingThumbs(false);
+                        }
+                      }}
+                      className="text-xs h-7"
+                    >
+                      {isGeneratingThumbs ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Image className="w-3 h-3 mr-1" />}
+                      Generate
+                    </Button>
+                  )}
+                </div>
+                {draft.thumbnails_json?.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {draft.thumbnails_json.map((thumb, ti) => (
+                      <div key={ti} className="space-y-1">
+                        <button
+                          onClick={() => onPreview({ url: thumb.url, type: 'image', title: `${thumb.platform} thumbnail` })}
+                          className="relative w-full aspect-video rounded-lg overflow-hidden bg-slate-200 group hover:ring-2 hover:ring-[#2C666E] transition"
+                        >
+                          <img src={thumb.url} alt={thumb.platform} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <Eye className="w-5 h-5 text-white" />
+                          </div>
+                          <span className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {thumb.platform}
+                          </span>
+                          {thumb.fallback && (
+                            <span className="absolute top-1 right-1 bg-yellow-500/80 text-white text-xs px-1 py-0.5 rounded">fallback</span>
+                          )}
+                        </button>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-500">{thumb.ratio}</p>
+                          <a href={thumb.url} download target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-[#2C666E] hover:underline flex items-center gap-0.5">
+                            <Download className="w-3 h-3" /> Download
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No thumbnails yet — click Generate to create platform thumbnails</p>
+                )}
+              </div>
+            )}
+
+            {/* Captions section */}
+            {isReady && draft.captions_json?.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Captions / Subtitles</p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={captionStyle}
+                      onChange={e => setCaptionStyle(e.target.value)}
+                      className="text-xs border border-slate-200 rounded px-1.5 py-0.5 bg-white"
+                    >
+                      <option value="sentence">Sentence</option>
+                      <option value="word_highlight">Word-by-word</option>
+                    </select>
+                    <Button
+                      size="sm" variant="outline"
+                      disabled={isGeneratingCaptions}
+                      onClick={async () => {
+                        setIsGeneratingCaptions(true);
+                        try {
+                          const r = await apiFetch('/api/campaigns/generate-captions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ draft_id: draft.id, style: captionStyle }),
+                          });
+                          const d = await r.json();
+                          if (!d.success) throw new Error(d.error);
+                          toast.success(`Generated ${d.cue_count} caption cues (${captionStyle})`);
+                          onRefresh?.();
+                        } catch (err) {
+                          toast.error(err.message || 'Failed to generate captions');
+                        } finally {
+                          setIsGeneratingCaptions(false);
+                        }
+                      }}
+                      className="text-xs h-7"
+                    >
+                      {isGeneratingCaptions ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                      Generate
+                    </Button>
+                  </div>
+                </div>
+                {(draft.subtitles_srt || draft.subtitles_vtt) ? (
+                  <div className="space-y-2">
+                    {/* SRT preview */}
+                    <pre className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-3 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                      {(draft.subtitles_srt || '').slice(0, 400)}{(draft.subtitles_srt || '').length > 400 ? '...' : ''}
+                    </pre>
+                    <div className="flex gap-2">
+                      <a
+                        href={`/api/campaigns/download-subtitles?draft_id=${draft.id}&format=srt`}
+                        download
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#2C666E] bg-white border border-[#2C666E]/30 rounded-lg hover:bg-[#2C666E]/5 transition"
+                      >
+                        <Download className="w-3 h-3" /> SRT
+                      </a>
+                      <a
+                        href={`/api/campaigns/download-subtitles?draft_id=${draft.id}&format=vtt`}
+                        download
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#2C666E] bg-white border border-[#2C666E]/30 rounded-lg hover:bg-[#2C666E]/5 transition"
+                      >
+                        <Download className="w-3 h-3" /> VTT
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Select a style and click Generate to create subtitle files</p>
+                )}
+              </div>
+            )}
+
+            {/* Consistency scoring */}
+            {isReady && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avatar Consistency</p>
+                  <Button
+                    size="sm" variant="outline"
+                    disabled={isScoringConsistency}
+                    onClick={async () => {
+                      setIsScoringConsistency(true);
+                      try {
+                        const r = await apiFetch('/api/campaigns/score-consistency', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ draft_id: draft.id }),
+                        });
+                        const d = await r.json();
+                        if (!d.success) throw new Error(d.error);
+                        if (d.scores?.length > 0) {
+                          const avg = d.scores.reduce((s, sc) => s + (sc.face_similarity || 0), 0) / d.scores.length;
+                          toast.success(`Consistency: ${Math.round(avg * 100)}% avg across ${d.scores.length} scenes`);
+                          if (d.low_consistency_scenes?.length > 0) {
+                            toast.warning(`Scenes ${d.low_consistency_scenes.map(i => i + 1).join(', ')} below ${Math.round(d.threshold * 100)}% threshold`);
+                          }
+                        } else {
+                          toast.info(d.message || 'No scores generated');
+                        }
+                        onRefresh?.();
+                      } catch (err) {
+                        toast.error(err.message || 'Failed to score consistency');
+                      } finally {
+                        setIsScoringConsistency(false);
+                      }
+                    }}
+                    className="text-xs h-7"
+                  >
+                    {isScoringConsistency ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Eye className="w-3 h-3 mr-1" />}
+                    Score
+                  </Button>
+                </div>
+                {draft.consistency_scores_json?.length > 0 ? (
+                  <div className="flex gap-2 flex-wrap">
+                    {draft.consistency_scores_json.map((score, i) => {
+                      const val = score.face_similarity;
+                      const bgColor = val >= 0.8 ? 'bg-green-100 text-green-700 border-green-200'
+                        : val >= 0.6 ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                        : 'bg-red-100 text-red-700 border-red-200';
+                      return (
+                        <div key={i} className={`px-2 py-1 rounded-lg border text-xs font-medium ${bgColor}`}
+                          title={score.notes || ''}>
+                          S{score.scene_index + 1}: {score.error ? 'err' : `${Math.round(val * 100)}%`}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Click Score to check avatar consistency across scenes</p>
+                )}
               </div>
             )}
           </div>
@@ -471,6 +734,7 @@ export default function CampaignsPage() {
                     draft={draft}
                     onPreview={setPreviewMedia}
                     onUpdated={handleDraftUpdated}
+                    onRefresh={() => loadCampaigns(true)}
                   />
                 ))}
               </div>

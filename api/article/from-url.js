@@ -27,6 +27,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { matchTemplate, groupPlatformsByRatio, VIDEO_TEMPLATES } from '../lib/videoTemplates.js';
 import { generateImage, animateImage, generateMusic, scrapeArticle, extractLastFrame, analyzeFrameContinuity, concatVideos } from '../lib/pipelineHelpers.js';
 import { VISUAL_STYLE_PRESETS, getStyleSuffix } from '../lib/stylePresets.js';
+import { logCost } from '../lib/costLogger.js';
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -225,6 +226,11 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
 
   const analysis = analysisCompletion.choices[0].message.parsed;
 
+  // Log cost for analysis call
+  if (analysisCompletion.usage) {
+    logCost({ username: brand_username, category: 'openai', operation: 'article_analysis', model: 'gpt-4.1-mini', input_tokens: analysisCompletion.usage.prompt_tokens, output_tokens: analysisCompletion.usage.completion_tokens });
+  }
+
   // If no templates matched, auto-match one built-in template
   if (useAutoMatch) {
     const templateKey = matchTemplate(analysis);
@@ -397,6 +403,11 @@ Rules:
 
   const storyboard = storyboardCompletion.choices[0].message.parsed;
 
+  // Log cost for storyboard generation
+  if (storyboardCompletion.usage) {
+    logCost({ username: brandKit.brand_username, category: 'openai', operation: 'storyboard_generation', model: 'gpt-4.1-mini', input_tokens: storyboardCompletion.usage.prompt_tokens, output_tokens: storyboardCompletion.usage.completion_tokens });
+  }
+
   // Create draft record
   const { data: draft } = await supabase.from('ad_drafts').insert({
     campaign_id: campaign.id,
@@ -419,6 +430,7 @@ Rules:
   //           via GPT-4o-mini vision so the motion prompt can reference exact lighting,
   //           color, and composition details for maximum continuity.
   const allRatioAssets = [];
+  const sceneInputsJson = []; // Track generation params per scene for regeneration
 
   for (const { ratio, platforms: groupPlatforms } of ratioGroups) {
     console.log(`[pipeline] [${template.name}] Generating ${ratio} assets (sequential frame-chain)`);
@@ -483,6 +495,19 @@ Rules:
       }
 
       sceneAssets.push({ scene, imageUrl, videoUrl });
+
+      // Record exact generation inputs for scene-level regeneration (Feature #14)
+      if (!sceneInputsJson[sceneIdx]) {
+        sceneInputsJson[sceneIdx] = {
+          scene_index: sceneIdx,
+          visual_prompt: scene.visual_prompt,
+          motion_prompt: scene.motion_prompt,
+          image_model: modelPrefs.image_model || null,
+          video_model: modelPrefs.video_model || null,
+          lora_config: loraConfig || null,
+          style_suffix: styleSuffix || '',
+        };
+      }
     }
 
     allRatioAssets.push({ ratio, platforms: groupPlatforms, scenes: sceneAssets });
@@ -525,6 +550,7 @@ Rules:
     timelines_json: timelinesByRatio,
     final_videos_json: finalVideosByRatio,
     captions_json: buildCaptionsJson(storyboard),
+    scene_inputs_json: sceneInputsJson,
   }).eq('id', draft.id);
 
   // Increment campaign completed count
