@@ -32,15 +32,79 @@ export default async function handler(req, res) {
 
     const modelUrl = resultData.diffusers_lora_file?.url || null;
 
-    if (loraId && modelUrl) {
+    if (loraId) {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-      await supabase
-        .from('brand_loras')
-        .update({ fal_model_url: modelUrl, status: 'ready' })
-        .eq('id', loraId);
+
+      if (modelUrl) {
+        // Update the brand_loras record
+        await supabase
+          .from('brand_loras')
+          .update({ fal_model_url: modelUrl, status: 'ready' })
+          .eq('id', loraId);
+
+        // Auto-update linked visual subject if one exists
+        const { data: loraRecord } = await supabase
+          .from('brand_loras')
+          .select('visual_subject_id, trigger_word')
+          .eq('id', loraId)
+          .single();
+
+        if (loraRecord?.visual_subject_id) {
+          await supabase
+            .from('visual_subjects')
+            .update({
+              lora_url: modelUrl,
+              lora_trigger_word: loraRecord.trigger_word,
+              brand_lora_id: loraId,
+              training_status: 'ready',
+            })
+            .eq('id', loraRecord.visual_subject_id);
+        }
+      } else {
+        // Training completed but no model URL — mark as failed
+        await supabase
+          .from('brand_loras')
+          .update({ status: 'failed' })
+          .eq('id', loraId);
+
+        const { data: loraRecord } = await supabase
+          .from('brand_loras')
+          .select('visual_subject_id')
+          .eq('id', loraId)
+          .single();
+
+        if (loraRecord?.visual_subject_id) {
+          await supabase
+            .from('visual_subjects')
+            .update({ training_status: 'failed' })
+            .eq('id', loraRecord.visual_subject_id);
+        }
+      }
     }
 
     return res.json({ success: true, status: 'completed', modelUrl, requestId });
+  }
+
+  if (statusData.status === 'FAILED') {
+    if (loraId) {
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.from('brand_loras').update({ status: 'failed' }).eq('id', loraId);
+
+      const { data: loraRecord } = await supabase
+        .from('brand_loras')
+        .select('visual_subject_id')
+        .eq('id', loraId)
+        .single();
+
+      if (loraRecord?.visual_subject_id) {
+        await supabase
+          .from('visual_subjects')
+          .update({ training_status: 'failed' })
+          .eq('id', loraRecord.visual_subject_id);
+      }
+    }
+
+    return res.json({ success: false, status: 'failed', requestId });
   }
 
   return res.json({

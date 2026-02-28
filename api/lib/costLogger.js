@@ -25,6 +25,9 @@ const PRICING = {
   'minimax-video':    { input: 0, output: 0, per_video: 0.08 },
   'wavespeed':        { input: 0, output: 0, per_image: 0.02 },
   'minimax-music':    { input: 0, output: 0, per_track: 0.05 },
+  'flux-2-lora':      { input: 0, output: 0, per_image: 0.035 },
+  'flux-2-lora-edit': { input: 0, output: 0, per_image: 0.035 },
+  'lora-training':    { input: 0, output: 0, per_training: 0.50 },
 };
 
 export async function logCost({
@@ -52,6 +55,9 @@ export async function logCost({
     }
     if (pricing.per_track && metadata.track_count) {
       estimated_cost_usd += pricing.per_track * metadata.track_count;
+    }
+    if (pricing.per_training && metadata.training_count) {
+      estimated_cost_usd += pricing.per_training * metadata.training_count;
     }
   }
 

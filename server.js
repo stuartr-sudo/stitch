@@ -131,6 +131,19 @@ app.post('/api/imagineer/generate', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/imagineer/edit', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/edit.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/edit] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
 app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
   try {
     const handler = await loadApiRoute('imagineer/result.js');
@@ -212,6 +225,19 @@ app.post('/api/brand/kit', authenticateToken, async (req, res) => {
 
 app.get('/api/brand/kit', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// PDF brand guidelines extraction (with auth)
+app.post('/api/brand/extract-pdf', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/extract-pdf.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
@@ -361,6 +387,20 @@ app.post('/api/brand/avatars', authenticateToken, async (req, res) => {
 
 app.delete('/api/brand/avatars/:id', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Pre-built LoRA library (with auth)
+app.get('/api/lora/library', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/library.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Visual subject LoRA training (with auth)
+app.post('/api/brand/avatars/:id/train', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/train-avatar.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
@@ -568,6 +608,23 @@ async function pollStitchQueue() {
 
     if (claimErr) return;
 
+    // Per-brand concurrency lock: skip if another item for the same brand is already processing
+    const { count: processingCount } = await supabase
+      .from('stitch_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_username', item.brand_username)
+      .eq('status', 'processing')
+      .neq('id', item.id);
+
+    if (processingCount > 0) {
+      // Release the item back to pending so it gets picked up later
+      await supabase.from('stitch_queue')
+        .update({ status: 'pending', picked_up_at: null })
+        .eq('id', item.id);
+      console.log(`[queue] Released ${item.id} — brand "${item.brand_username}" already has a processing item`);
+      return;
+    }
+
     const payloadType = item.payload?.type || 'article';
     console.log(`[queue] Processing ${item.id} — type: ${payloadType}, brand: ${item.brand_username}`);
 
@@ -606,11 +663,28 @@ async function pollStitchQueue() {
     }
   } catch (err) {
     console.error('[queue] Poll error:', err.message);
+    throw err; // propagate so backoff wrapper can track consecutive failures
   }
 }
 
-// Start polling after server boots
-let queueInterval;
+// Dynamic queue poller with exponential backoff
+let consecutiveQueueErrors = 0;
+const MIN_POLL_MS = QUEUE_POLL_INTERVAL_MS; // 15s
+const MAX_POLL_MS = 120000; // 2 minutes
+
+async function pollWithBackoff() {
+  try {
+    await pollStitchQueue();
+    consecutiveQueueErrors = 0;
+  } catch {
+    consecutiveQueueErrors++;
+  }
+
+  const nextDelay = consecutiveQueueErrors === 0
+    ? MIN_POLL_MS
+    : Math.min(MIN_POLL_MS * Math.pow(2, consecutiveQueueErrors), MAX_POLL_MS);
+  setTimeout(pollWithBackoff, nextDelay);
+}
 
 // Serve Vite build output
 app.use(express.static(join(__dirname, 'dist')));
@@ -625,9 +699,8 @@ app.listen(PORT, () => {
 
   // Start queue poller
   if (supabaseUrl && supabaseServiceKey) {
-    queueInterval = setInterval(pollStitchQueue, QUEUE_POLL_INTERVAL_MS);
-    pollStitchQueue(); // run once immediately
-    console.log(`[queue] Polling every ${QUEUE_POLL_INTERVAL_MS / 1000}s`);
+    pollWithBackoff(); // self-scheduling with exponential backoff on errors
+    console.log(`[queue] Polling every ${QUEUE_POLL_INTERVAL_MS / 1000}s (with backoff on errors)`);
 
     // Start scheduled post publisher (polls every 30s)
     setInterval(pollScheduledPublications, 30000);

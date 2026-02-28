@@ -244,7 +244,7 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
   };
 
   const renderContent = () => (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Tab navigation */}
       <div className="flex-shrink-0 px-5 py-3 border-b">
         <TabsList className="w-full justify-start bg-slate-100/80 p-1 rounded-lg">
@@ -261,8 +261,8 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       </div>
 
       {/* Inputs tab */}
-      <TabsContent value="inputs" className="flex-1 flex flex-col overflow-hidden mt-0">
-        <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+      <TabsContent value="inputs" className="flex-1 flex flex-col min-h-0 overflow-hidden mt-0">
+        <div className="p-6 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full space-y-6">
 
             {/* Mode Selector */}
@@ -409,8 +409,8 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       </TabsContent>
 
       {/* Settings tab */}
-      <TabsContent value="settings" className="flex-1 flex flex-col overflow-hidden mt-0">
-        <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+      <TabsContent value="settings" className="flex-1 flex flex-col min-h-0 overflow-hidden mt-0">
+        <div className="p-6 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full space-y-6">
 
             {/* Previews */}
@@ -501,8 +501,8 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       </TabsContent>
 
       {/* Result tab */}
-      <TabsContent value="result" className="flex-1 flex flex-col overflow-hidden mt-0">
-        <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+      <TabsContent value="result" className="flex-1 flex flex-col min-h-0 overflow-hidden mt-0">
+        <div className="p-6 overflow-y-auto">
           <div className="max-w-4xl mx-auto w-full">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-2">
@@ -608,7 +608,7 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
 
   if (isEmbedded) {
     return (
-      <div className="flex flex-col h-full bg-white overflow-hidden relative">
+      <div className="flex flex-col h-full bg-white overflow-hidden relative min-h-0">
         {renderContent()}
         <LibraryModal
           isOpen={showLibrary}

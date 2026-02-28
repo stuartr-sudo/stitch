@@ -25,7 +25,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { matchTemplate, groupPlatformsByRatio, VIDEO_TEMPLATES } from '../lib/videoTemplates.js';
-import { generateImage, animateImage, generateMusic, scrapeArticle, extractLastFrame, analyzeFrameContinuity, concatVideos } from '../lib/pipelineHelpers.js';
+import { generateImage, animateImage, generateMusic, scrapeArticle, extractLastFrame, analyzeFrameContinuity, concatVideos, enhancePromptForPipeline, selectModelForScene } from '../lib/pipelineHelpers.js';
 import { VISUAL_STYLE_PRESETS, getStyleSuffix } from '../lib/stylePresets.js';
 import { logCost } from '../lib/costLogger.js';
 import { WorkflowEngine } from '../lib/workflowEngine.js';
@@ -333,34 +333,50 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
 
   if (wf.isPaused) return;
 
-  // Step 5: Generate assets — run each template in parallel
+  // Step 5: Generate assets — run each template in parallel, with per-template tracking
   if (!wf.hasCompleted('generate_assets')) {
     const openai = new OpenAI({ apiKey: keys.openaiKey });
     const brandContext = buildBrandContext(brandKit);
 
+    // Check which templates already succeeded on a previous run (for resume)
+    const priorAssetResult = wf.getStepResult('generate_assets') || {};
+    const priorTemplates = priorAssetResult.templates || {};
+
     const templateResults = await Promise.allSettled(
-      templatesToRun.map((template, idx) =>
-        runTemplateForArticle({
+      templatesToRun.map((template, idx) => {
+        const templateKey = String(template.id);
+        // Skip templates that already succeeded (resume-safe)
+        if (priorTemplates[templateKey]?.status === 'completed') {
+          console.log(`[pipeline] Skipping already-completed template "${template.name}" (draft ${priorTemplates[templateKey].draftId})`);
+          return Promise.resolve(priorTemplates[templateKey].draftId);
+        }
+        return runTemplateForArticle({
           template, analysis, truncated, campaign, userId, brandKit, brandContext,
           keys, openai, platformsOverride, outputTypeOverride, supabase, jobId,
           templateIndex: idx, totalTemplates: templatesToRun.length,
-        })
-      )
+        });
+      })
     );
 
-    const successful = templateResults.filter(r => r.status === 'fulfilled').length;
-    const failed = templateResults.filter(r => r.status === 'rejected').length;
-    const successfulDraftIds = templateResults
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value);
+    // Build per-template result map (merge with prior results)
+    const templates = { ...priorTemplates };
+    templateResults.forEach((r, i) => {
+      const templateKey = String(templatesToRun[i].id);
+      if (r.status === 'fulfilled') {
+        templates[templateKey] = { status: 'completed', draftId: r.value };
+      } else if (templates[templateKey]?.status !== 'completed') {
+        templates[templateKey] = { status: 'failed', error: r.reason?.message || 'Unknown error' };
+        console.error(`[pipeline] Template ${templatesToRun[i]?.name} failed:`, r.reason?.message);
+      }
+    });
 
-    if (failed > 0) {
-      templateResults.forEach((r, i) => {
-        if (r.status === 'rejected') console.error(`[pipeline] Template ${templatesToRun[i]?.name} failed:`, r.reason?.message);
-      });
-    }
+    const successful = Object.values(templates).filter(t => t.status === 'completed').length;
+    const failed = Object.values(templates).filter(t => t.status === 'failed').length;
+    const successfulDraftIds = Object.values(templates)
+      .filter(t => t.status === 'completed')
+      .map(t => t.draftId);
 
-    await wf.transition('generate_assets', { successful, failed, draftIds: successfulDraftIds });
+    await wf.transition('generate_assets', { successful, failed, draftIds: successfulDraftIds, templates });
 
     // A/B Variant generation — spawn additional drafts with contrasting style presets
     if (enableVariants && successful > 0) {
@@ -400,6 +416,14 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
           console.error(`[pipeline] Variant "${variantPreset}" failed:`, varErr.message);
         }
       }
+
+      // Update campaign total_drafts to account for variant drafts
+      const variantCount = variantPresets.length * templatesToRun.length;
+      const newTotal = templatesToRun.length + variantCount;
+      await supabase.from('campaigns')
+        .update({ total_drafts: newTotal })
+        .eq('id', campaign.id);
+      console.log(`[pipeline] Updated campaign ${campaign.id} total_drafts: ${templatesToRun.length} originals + ${variantCount} variants = ${newTotal}`);
     }
   }
 
@@ -417,7 +441,7 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
 
   // Autonomous: auto-schedule drafts if config says so
   if (autonomousConfig?.auto_publish && successful > 0) {
-    const publishAt = calculateNextPublishSlot(autonomousConfig);
+    const publishAt = await calculateNextPublishSlot(autonomousConfig, userId, supabase);
     await supabase.from('ad_drafts')
       .update({
         publish_status: 'scheduled',
@@ -498,19 +522,10 @@ async function runTemplateForArticle({
 
   console.log(`[pipeline] Running template "${template.name}" for campaign ${campaign.id}`);
 
-  // Fetch the visual subject (LoRA) assigned to this template, if any.
-  // The trigger word is prepended to every image prompt; the LoRA URL is passed to FAL models.
-  let loraConfig = null;
-  if (template.avatar_id) {
-    const { data: subject } = await supabase
-      .from('visual_subjects')
-      .select('name, lora_url, lora_trigger_word')
-      .eq('id', template.avatar_id)
-      .maybeSingle();
-    if (subject?.lora_url) {
-      loraConfig = { triggerWord: subject.lora_trigger_word || null, loraUrl: subject.lora_url };
-      console.log(`[pipeline] Visual subject "${subject.name}" (LoRA) attached to template`);
-    }
+  // Resolve LoRA configs: template lora_config[] > legacy avatar_id > brand default_loras
+  const loraConfigs = await resolveLoraConfigs(template, brandKit, supabase);
+  if (loraConfigs.length) {
+    console.log(`[pipeline] ${loraConfigs.length} LoRA(s) attached to template "${template.name}"`);
   }
 
   // Normalize scenes (built-in templates use 'duration', user templates use 'duration_seconds')
@@ -524,6 +539,11 @@ async function runTemplateForArticle({
     ? VISUAL_STYLE_PRESETS[template.visual_style_preset]
     : null;
   const styleSuffix = getStyleSuffix(template.visual_style_preset);
+
+  // SEWO image style suffix — hard-appended to image prompts alongside styleSuffix
+  const sewoSuffix = brandKit._sewoImageStyle?.ai_prompt_instructions
+    ? `, ${brandKit._sewoImageStyle.ai_prompt_instructions}`
+    : '';
 
   const styleGuideBlock = stylePreset
     ? `\nVisual Style Preset — "${stylePreset.label}" (LOCKED — every visual_prompt must match this style):
@@ -614,11 +634,13 @@ Rules:
       let imageUrl = null;
       try {
         if (isFirstScene || !prevFrameUrl) {
+          const sceneModel = selectModelForScene(scene.role, modelPrefs, loraConfigs);
           const basePrompt = wantStatic && !wantVideo
             ? `${scene.visual_prompt}, with bold text overlay reading "${scene.headline}", ${scene.overlay_style.replace(/_/g, ' ')} style`
             : scene.visual_prompt;
+          const enhancedPrompt = enhancePromptForPipeline(basePrompt, scene.role, sceneModel);
           imageUrl = await withRetry(
-            () => generateImage(`${basePrompt}${styleSuffix}`, ratio, keys, supabase, modelPrefs.image_model, loraConfig),
+            () => generateImage(`${enhancedPrompt}${styleSuffix}${sewoSuffix}`, ratio, keys, supabase, sceneModel, loraConfigs),
             { maxAttempts: 3, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[pipeline] [${template.name}] Scene ${sceneIdx} image retry ${a}: ${e.message}`) }
           );
         } else {
@@ -642,7 +664,7 @@ Rules:
           const motionPrompt = `${scene.motion_prompt || scene.visual_prompt}${continuityNote}`;
 
           videoUrl = await withRetry(
-            () => animateImage(imageUrl, motionPrompt, ratio, Math.min(scene.duration_seconds || 5, 5), keys, supabase, modelPrefs.video_model),
+            () => animateImage(imageUrl, motionPrompt, ratio, Math.min(scene.duration_seconds || 5, 5), keys, supabase, modelPrefs.video_model, loraConfigs),
             { maxAttempts: 2, baseDelayMs: 5000, onRetry: (a, e) => console.warn(`[pipeline] [${template.name}] Scene ${sceneIdx} video retry ${a}: ${e.message}`) }
           );
 
@@ -668,8 +690,8 @@ Rules:
           motion_prompt: scene.motion_prompt,
           image_model: modelPrefs.image_model || null,
           video_model: modelPrefs.video_model || null,
-          lora_config: loraConfig || null,
-          style_suffix: styleSuffix || '',
+          lora_config: loraConfigs.length ? loraConfigs : null,
+          style_suffix: `${styleSuffix}${sewoSuffix}` || '',
         };
       }
     }
@@ -836,4 +858,55 @@ function chunkArray(arr, size) {
   const chunks = [];
   for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
   return chunks;
+}
+
+/**
+ * Resolve LoRA configs for a template, with fallback chain:
+ * 1. template.lora_config[] (explicit multi-LoRA)
+ * 2. template.avatar_id (legacy single LoRA via visual subject)
+ * 3. brandKit.default_loras (brand-level defaults)
+ *
+ * @returns {Array<{ triggerWord, loraUrl, scale }>}
+ */
+async function resolveLoraConfigs(template, brandKit, supabase) {
+  const configs = [];
+
+  // 1. Template-level multi-LoRA config (new)
+  if (template.lora_config?.length) {
+    for (const entry of template.lora_config) {
+      if (entry.source === 'prebuilt') {
+        const { data: lib } = await supabase.from('lora_library').select('*').eq('id', entry.lora_id).maybeSingle();
+        if (lib) configs.push({ loraUrl: lib.hf_repo_id, triggerWord: lib.recommended_trigger_word || null, scale: entry.scale ?? lib.default_scale });
+      } else {
+        // Custom or visual_subject source — look up from brand_loras
+        const { data: lora } = await supabase.from('brand_loras').select('fal_model_url, trigger_word').eq('id', entry.lora_id).eq('status', 'ready').maybeSingle();
+        if (lora?.fal_model_url) configs.push({ loraUrl: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: entry.scale ?? 1.0 });
+      }
+    }
+    if (configs.length) return configs;
+  }
+
+  // 2. Legacy avatar_id (single visual subject LoRA)
+  if (template.avatar_id) {
+    const { data: subject } = await supabase.from('visual_subjects').select('name, lora_url, lora_trigger_word').eq('id', template.avatar_id).maybeSingle();
+    if (subject?.lora_url) {
+      configs.push({ loraUrl: subject.lora_url, triggerWord: subject.lora_trigger_word || null, scale: 1.0 });
+      return configs;
+    }
+  }
+
+  // 3. Brand-level default LoRAs (fallback)
+  if (brandKit.default_loras?.length) {
+    for (const entry of brandKit.default_loras) {
+      if (entry.source === 'prebuilt') {
+        const { data: lib } = await supabase.from('lora_library').select('*').eq('id', entry.lora_id).maybeSingle();
+        if (lib) configs.push({ loraUrl: lib.hf_repo_id, triggerWord: lib.recommended_trigger_word || null, scale: entry.scale ?? lib.default_scale });
+      } else {
+        const { data: lora } = await supabase.from('brand_loras').select('fal_model_url, trigger_word').eq('id', entry.lora_id).eq('status', 'ready').maybeSingle();
+        if (lora?.fal_model_url) configs.push({ loraUrl: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: entry.scale ?? 1.0 });
+      }
+    }
+  }
+
+  return configs;
 }

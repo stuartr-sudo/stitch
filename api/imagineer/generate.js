@@ -248,11 +248,15 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
     num_images: 1
   };
 
-  if (loraUrl) {
+  // Support both single loraUrl (legacy) and loras array (stacking)
+  const lorasFromBody = req.body.loras; // [{ url, scale }]
+  if (lorasFromBody?.length) {
+    payload.loras = lorasFromBody.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
+  } else if (loraUrl) {
     payload.loras = [{ path: loraUrl, scale: 1 }];
   }
 
-  const response = await fetch('https://queue.fal.run/fal-ai/flux/dev', {
+  const response = await fetch('https://queue.fal.run/fal-ai/flux-2/lora', {
     method: 'POST',
     headers: {
       'Authorization': `Key ${FAL_KEY}`,

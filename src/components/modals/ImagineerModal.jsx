@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal } from "lucide-react";
+import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/api";
+import LoRAPicker from "@/components/LoRAPicker";
 
 const IMAGE_MODELS = [
-  { value: "fal-flux", label: "Flux Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
+  { value: "fal-flux", label: "Flux 2 Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
   { value: "wavespeed", label: "Nano Banana Pro", description: "Fast, high-quality image generation" },
   { value: "seeddream", label: "SeedDream 4.5", description: "ByteDance stylized generation" },
 ];
@@ -236,6 +238,15 @@ export default function ImagineerModal({
 
   const [availableLoras, setAvailableLoras] = useState([]);
   const [selectedLora, setSelectedLora] = useState("");
+
+  // Edit tab state
+  const [editSourceUrl, setEditSourceUrl] = useState("");
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editStrength, setEditStrength] = useState(0.75);
+  const [editLoras, setEditLoras] = useState([]);
+  const [editDimensions, setEditDimensions] = useState("1:1");
+  const [isEditing, setIsEditing] = useState(false);
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -339,6 +350,42 @@ export default function ImagineerModal({
     }
   };
 
+  const handleEdit = async () => {
+    if (!editSourceUrl.trim() || !editPrompt.trim()) {
+      toast.error("Source image URL and edit prompt are required.");
+      return;
+    }
+    setIsEditing(true);
+    try {
+      const res = await apiFetch('/api/imagineer/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: editSourceUrl.trim(),
+          prompt: editPrompt.trim(),
+          strength: editStrength,
+          dimensions: editDimensions,
+          loras: editLoras.map(l => ({ url: l.url, scale: l.scale })),
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Edit failed');
+
+      if (data.imageUrl) {
+        toast.success('Image edited successfully');
+        if (onGenerate) await onGenerate({ editedImageUrl: data.imageUrl });
+        onClose();
+      } else if (data.requestId) {
+        toast.info('Edit queued — check results shortly');
+        onClose();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to edit image');
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
   const content = (
     <div className="flex flex-col h-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
@@ -352,6 +399,9 @@ export default function ImagineerModal({
             </TabsTrigger>
             <TabsTrigger value="output" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
               Output
+            </TabsTrigger>
+            <TabsTrigger value="edit" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
+              Edit
             </TabsTrigger>
           </TabsList>
         </div>
@@ -510,6 +560,82 @@ export default function ImagineerModal({
                   </p>
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="edit" className="mt-0 p-5 space-y-5">
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> LoRA-Enhanced Editing
+              </h3>
+              <p className="text-xs text-slate-500">
+                Edit an existing image with FLUX 2 + LoRA. The source image is modified according to your prompt while maintaining LoRA consistency.
+              </p>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image URL</label>
+                <Input
+                  value={editSourceUrl}
+                  onChange={(e) => setEditSourceUrl(e.target.value)}
+                  placeholder="https://... (paste the image URL to edit)"
+                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Edit Prompt</label>
+                <Input
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  placeholder="e.g., change the background to a beach sunset, add a hat..."
+                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                    Strength: {editStrength.toFixed(2)}
+                  </label>
+                  <input
+                    type="range" min="0.1" max="1.0" step="0.05"
+                    value={editStrength}
+                    onChange={(e) => setEditStrength(parseFloat(e.target.value))}
+                    className="w-full h-2 accent-[#2C666E]"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle edit, Higher = creative rewrite</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                  <Select value={editDimensions} onValueChange={setEditDimensions}>
+                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      {DIMENSIONS.map((d) => (
+                        <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="text-xs font-semibold text-slate-600">LoRA Models (optional)</label>
+                <LoRAPicker value={editLoras} onChange={setEditLoras} />
+              </div>
+
+              <Button
+                onClick={handleEdit}
+                disabled={isEditing || !editSourceUrl.trim() || !editPrompt.trim()}
+                className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white"
+              >
+                {isEditing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
+                ) : (
+                  <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>
+                )}
+              </Button>
             </div>
           </TabsContent>
         </div>

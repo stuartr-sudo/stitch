@@ -26,6 +26,7 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 
 const FAL_BASE = 'https://queue.fal.run';
 const FAL_DIRECT = 'https://fal.run';
+const MAX_VIDEO_DURATION = 90;
 
 const SceneDefinitionSchema = z.object({
   role: z.enum(['hook', 'problem', 'solution', 'proof', 'point', 'step', 'comparison', 'cta']),
@@ -142,10 +143,14 @@ async function transcribeAudio(videoUrl, falKey) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { description, video_url, name, duration_seconds = 30 } = req.body;
+  const { description, video_url, name, duration_seconds: rawDuration = 30 } = req.body;
   if (!description && !video_url) {
     return res.status(400).json({ error: 'Provide a description or video_url to analyze' });
   }
+  if (rawDuration > MAX_VIDEO_DURATION) {
+    return res.status(400).json({ error: `Video duration must be ${MAX_VIDEO_DURATION} seconds or less. Got ${rawDuration}s.` });
+  }
+  const duration_seconds = Math.min(rawDuration, MAX_VIDEO_DURATION);
 
   try {
     const keys = await getUserKeys(req.user.id, req.user.email);

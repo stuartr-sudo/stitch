@@ -32,6 +32,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
+import LoRAPicker from '@/components/LoRAPicker';
 
 const SCENE_ROLES = ['hook', 'problem', 'solution', 'proof', 'point', 'step', 'comparison', 'cta'];
 const OVERLAY_STYLES = ['bold_white', 'minimal_dark', 'gradient_overlay'];
@@ -85,7 +86,7 @@ const PLATFORMS = [
 const IMAGE_MODELS = [
   { value: 'wavespeed',      label: 'Wavespeed',      strength: 'Fastest',                price: '~$0.01/img',  lora: false },
   { value: 'fal_seedream',   label: 'SeedDream',      strength: 'Photorealistic',         price: '~$0.02/img',  lora: false },
-  { value: 'fal_flux',       label: 'FLUX Dev',       strength: 'Creative, versatile',    price: '$0.025/MP',   lora: true },
+  { value: 'fal_flux',       label: 'FLUX 2 Dev',     strength: 'Creative, versatile, LoRA',  price: '$0.035/img',  lora: true },
   { value: 'fal_imagen4',    label: 'Imagen 4',       strength: "Google's best quality",  price: '$0.04/img',   lora: false },
   { value: 'fal_kling_img',  label: 'Kling Image V3', strength: 'Consistent photorealism', price: '$0.028/img', lora: false },
   { value: 'fal_grok',       label: 'Grok Imagine',   strength: 'Highly aesthetic',       price: '$0.02/img',   lora: false },
@@ -304,6 +305,7 @@ export default function TemplatesPage() {
   const [voicePacing, setVoicePacing] = useState('');
   const [referenceVideoUrl, setReferenceVideoUrl] = useState('');
   const [analyzeDescription, setAnalyzeDescription] = useState('');
+  const [analyzeDuration, setAnalyzeDuration] = useState(30);
   const [outputType, setOutputType] = useState('both');
   const [selectedPlatforms, setSelectedPlatforms] = useState(['tiktok', 'instagram_reels', 'youtube_shorts']);
   const [selectedStructures, setSelectedStructures] = useState([]);
@@ -315,6 +317,7 @@ export default function TemplatesPage() {
   });
   const [visualStylePreset, setVisualStylePreset] = useState(null);
   const [brandUsernames, setBrandUsernames] = useState([]);
+  const [templateLoraConfig, setTemplateLoraConfig] = useState([]);
 
   // Assign modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -373,6 +376,11 @@ export default function TemplatesPage() {
         : template.brand_username ? [template.brand_username]
         : []
     );
+    setTemplateLoraConfig(
+      (template.lora_config || []).map(l => ({
+        id: l.lora_id, type: l.source || 'custom', url: l.url || '', triggerWord: l.trigger_word || null, scale: l.scale ?? 1.0,
+      }))
+    );
   };
 
   const handleNewTemplate = () => {
@@ -389,6 +397,7 @@ export default function TemplatesPage() {
     setModelPreferences({ image_model: 'wavespeed', video_model: 'wavespeed_wan', motion_style: 'standard', music_model: 'beatoven' });
     setVisualStylePreset(null);
     setBrandUsernames([]);
+    setTemplateLoraConfig([]);
   };
 
   const handleAnalyze = async () => {
@@ -398,7 +407,7 @@ export default function TemplatesPage() {
       const res = await apiFetch('/api/templates/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: analyzeDescription || undefined, video_url: referenceVideoUrl || undefined, name: name || undefined }),
+        body: JSON.stringify({ description: analyzeDescription || undefined, video_url: referenceVideoUrl || undefined, name: name || undefined, duration_seconds: analyzeDuration }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -447,6 +456,7 @@ export default function TemplatesPage() {
           platforms: selectedPlatforms,
           visual_style_preset: visualStylePreset || null,
           brand_usernames: brandUsernames,
+          lora_config: templateLoraConfig.length ? templateLoraConfig.map(l => ({ lora_id: l.id, scale: l.scale, source: l.type })) : [],
         }),
       });
       const data = await res.json();
@@ -501,6 +511,7 @@ export default function TemplatesPage() {
           platforms: selectedPlatforms,
           visual_style_preset: visualStylePreset || null,
           brand_usernames: brandUsernames,
+          lora_config: templateLoraConfig.length ? templateLoraConfig.map(l => ({ lora_id: l.id, scale: l.scale, source: l.type })) : [],
         }),
       });
       const data = await res.json();
@@ -941,6 +952,22 @@ export default function TemplatesPage() {
                     Motion Transfer uses Kling 2.6 Standard Motion Control. The pipeline requires a reference motion video URL set in the brand kit or visual subject.
                   </div>
                 )}
+
+                {/* LoRA Configuration */}
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#2C666E]" />
+                    <Label className="text-xs font-semibold text-gray-700">LoRA Models</Label>
+                  </div>
+                  <p className="text-[10px] text-gray-400">
+                    Select LoRAs to apply during image generation. Overrides brand defaults. Requires FLUX 2 Dev image model.
+                  </p>
+                  <LoRAPicker
+                    value={templateLoraConfig}
+                    onChange={setTemplateLoraConfig}
+                    brandUsername={brandUsernames[0] || undefined}
+                  />
+                </div>
               </div>
             </TabsContent>
 
@@ -957,6 +984,20 @@ export default function TemplatesPage() {
                 <Input value={referenceVideoUrl} onChange={e => setReferenceVideoUrl(e.target.value)}
                   placeholder="https://... (YouTube, TikTok, or direct video URL)"
                   className="bg-white border-gray-300 text-gray-900 text-sm" />
+                {referenceVideoUrl && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500">Video Duration (seconds)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input type="number" min={5} max={90} value={analyzeDuration}
+                        onChange={e => setAnalyzeDuration(Math.min(90, Math.max(1, parseInt(e.target.value) || 30)))}
+                        className="bg-white border-gray-300 text-gray-900 text-sm w-24" />
+                      <span className="text-xs text-gray-500">Max 90s — used to space frame extraction evenly</span>
+                    </div>
+                    {analyzeDuration > 90 && (
+                      <p className="text-xs text-red-500">Videos over 90 seconds are not supported for analysis</p>
+                    )}
+                  </div>
+                )}
                 <Textarea value={analyzeDescription} onChange={e => setAnalyzeDescription(e.target.value)}
                   placeholder="Describe the style: '4-scene product review, quick cuts, bold text overlays, 30 seconds total...'"
                   className="bg-white border-gray-300 text-gray-900 text-sm h-16 resize-none" />

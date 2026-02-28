@@ -34,6 +34,7 @@ import {
   Clapperboard,
   Music,
   Mic,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -444,19 +445,19 @@ export default function VideoAdvertCreator() {
         {/* LEFT PANEL - Asset & Generation Hub */}
         <div className="w-56 bg-white border-r border-gray-200 overflow-y-auto shrink-0">
           <div className="p-4 space-y-4">
-            {/* Brand Kit and Brand Assets Buttons */}
+            {/* Brand Kit and LoRA Trainer Buttons */}
             <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={() => setShowBrandKit(true)}
                 className="h-10 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium gap-1"
               >
-                <Palette className="w-4 h-4" /> Brand Kit
+                <Palette className="w-4 h-4" /> Brand
               </Button>
               <Button
                 onClick={() => setShowBrandAssets(true)}
                 className="h-10 bg-[#2C666E] hover:bg-[#07393C] text-white text-xs font-medium gap-1"
               >
-                <Plus className="w-4 h-4" /> Assets
+                <Zap className="w-4 h-4" /> Train LoRA
               </Button>
             </div>
 

@@ -55,10 +55,10 @@ Stitch API  (Express, port 3003)
         ├─ Fires every template in parallel (Promise.allSettled)
         │
         │  Each template:
-        │    GPT-4o → Storyboard
-        │    Wavespeed/FAL → Images (per scene, per ratio)
+        │    GPT-5-mini → Storyboard
+        │    Wavespeed/FAL → Images (per scene, per ratio, + LoRA)
         │    Wavespeed/FAL → Videos (animate each image)
-        │    Beatoven → Music
+        │    Beatoven/MiniMax → Music
         │    → Saves Draft record to Supabase
         │
         ▼
@@ -163,12 +163,26 @@ Free text strings that get passed to the music generation and inform the voiceov
 ### Model Preferences
 | Setting | Options |
 |---------|---------|
-| Image Generation | Wavespeed (fastest), SeedDream (photorealistic), FLUX (creative/artistic) |
-| Video Animation | Wavespeed WAN (fastest), Kling (most realistic), Hailuo/Minimax (cinematic) |
+| Image Generation | Wavespeed (fastest), SeedDream (photorealistic), FLUX 2 Dev (creative/artistic, LoRA support), Imagen 4, Kling Image V3, Grok Imagine, Ideogram V2 |
+| Video Animation | Wavespeed WAN (fastest), Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Hailuo/Minimax (cinematic), Veo 2, Veo 3 (best quality + audio), Wan 2.5, Wan Pro, PixVerse V4.5 |
 | Motion Style | Standard (AI animates the image freely), Motion Transfer (Kling mimics a reference video's movement) |
-| Music | Beatoven AI (custom generated), None (no music) |
+| Music | Beatoven AI (custom generated), MiniMax Music, None (no music) |
 
 These preferences are stored per-template and used in the pipeline at generation time.
+
+### LoRA Configuration
+Templates can optionally specify a set of LoRA models to apply during image (and video) generation. LoRAs provide style consistency, product accuracy, or character likeness across all generated scenes.
+
+The LoRA picker in the Models tab shows both:
+- **Pre-built library** — curated style/effect LoRAs (White Background, Film Noir, Multi-Angle Product, etc.)
+- **Custom trained** — your brand's own trained LoRAs (products, characters)
+
+Each LoRA has an independent **scale slider** (0.1–1.5) controlling its influence. Up to 4 LoRAs can be stacked simultaneously. Selecting any LoRA forces the FLUX 2 Dev image model.
+
+**LoRA resolution chain** (in the autonomous pipeline):
+1. Template's explicit `lora_config[]` — highest priority
+2. Legacy `avatar_id` on the template — backward compat, single LoRA
+3. Brand Kit's `default_loras` — brand-level fallback, applied when no template override exists
 
 ### Platforms
 Pill toggles for 10 platforms. The pipeline generates a separate asset set for each aspect ratio implied by your selection:
@@ -241,10 +255,47 @@ Each avatar has:
 | LoRA Trigger Word | The word you prepend to prompts to activate the LoRA |
 
 **LoRA status badges:**
-- Green "LoRA Ready" = URL is set, this avatar will produce consistent results
-- Yellow "No LoRA" = reference image only, less consistent
+- Green "LoRA trained" = trained LoRA URL is set, this avatar will produce consistent results
+- Blue "Training..." (animated spinner) = LoRA training is in progress
+- Red "Training failed" = training failed, can retry
+- Yellow "No LoRA yet" = reference image only, less consistent
 
-> LoRA training is a separate process (via `/api/lora/train`). You train on a set of photos and get back a LoRA URL. You then paste that URL into the avatar record.
+**In-app LoRA training:** Click "Train LoRA" on any avatar card that has a reference image. This:
+1. Auto-detects training type from the avatar description (product/character/style)
+2. Creates a `brand_loras` record linked to the visual subject
+3. Submits a training job to fal.ai (`fal-ai/flux-lora-fast-training`)
+4. On completion, auto-updates the avatar with the LoRA URL and trigger word
+
+Training parameters are configurable per type:
+| Type | Rank | Steps | Learning Rate | Caption Style |
+|------|------|-------|---------------|---------------|
+| Product | 16 | 1000 | 0.0004 | "a photo of {trigger}" |
+| Style | 32 | 1500 | 0.0002 | "an image in {trigger} style" |
+| Character | 16 | 1200 | 0.0003 | "a portrait of {trigger}" |
+
+### Default LoRAs
+The Brand Kit's Visual tab has a "Default LoRAs" section where you can select LoRAs that apply to **all** image generation for this brand, unless a template explicitly overrides with its own `lora_config`. This is useful for brand-wide style consistency (e.g., always use the white background product LoRA).
+
+### Pre-built LoRA Library
+Stitch includes a curated library of pre-trained LoRAs from HuggingFace, available to all users:
+
+| Name | Category | Use Case |
+|------|----------|----------|
+| White Background Product | Product | Clean e-commerce product shots |
+| Multi-Angle Product | Product | Consistent product from multiple angles |
+| Epic Realism | Realism | Photorealistic enhancement |
+| Film Noir | Style | Black and white cinematic style |
+| Oil Painting | Style | Classical oil painting aesthetic |
+| Retro Pixel Art | Style | 8-bit retro pixel art |
+| Modern Pixel Art | Style | Contemporary pixel art |
+| Victorian Drawing | Style | Vintage illustration style |
+| Seamless Texture | Composition | Tileable texture patterns |
+| Outpaint | Composition | Extend image boundaries |
+| Zoom Effect | Effect | Zoom transition effect |
+| Virtual Try-On | Effect | Virtual clothing try-on |
+| 2D Game Assets | Style | Game sprite/asset generation |
+
+Access via `GET /api/lora/library` or through the LoRA picker in any UI that supports LoRA selection.
 
 ---
 
@@ -410,10 +461,18 @@ Before the prompt hits the image API, the **Visual Style Preset suffix is append
 
 The image model is selected from the template's `model_preferences.image_model`.
 
+**LoRA stacking:** If any LoRAs are resolved (via the template → avatar → brand default chain), the pipeline:
+1. Prepends all LoRA trigger words to the prompt (comma-separated)
+2. Builds a `loras[]` array with per-item `{ path, scale }` for the fal.ai API
+3. Forces the FLUX 2 Dev model (`fal-ai/flux-2/lora`) regardless of `image_model` preference
+4. Skips Wavespeed for that generation (Wavespeed doesn't support LoRA injection)
+
 #### 5c — Animate Images to Video (per scene, per ratio)
 Each generated image is animated using the scene's `motion_prompt` (e.g. "slow zoom into face").
 Video clips are batched 2 at a time (they take longer than images).
 The video model is selected from `model_preferences.video_model`.
+
+If LoRAs are configured and the video model is Wavespeed WAN, the LoRA configs are passed through with scale capped at 0.8 (lower than image generation to avoid video artifacts). Fal.ai video models (Kling, Hailuo, Veo, etc.) use image-to-video, so the LoRA effect is already baked into the seed image — no additional LoRA injection needed.
 
 This step is skipped if `output_type === 'static'`.
 
@@ -445,21 +504,34 @@ After all templates complete:
 
 ## 8. AI Models Used at Each Step
 
-| Step | Model | Provider | Configurable? |
-|------|-------|----------|---------------|
-| Article analysis | GPT-4o-mini | OpenAI | No (hardcoded) |
-| Storyboard generation | GPT-4o-mini | OpenAI | No (hardcoded) |
-| Image generation (default) | Imagen / Nano Banana | Wavespeed | Yes — per template |
-| Image generation (alt 1) | SeedDream v4.5 | FAL.ai | Yes |
-| Image generation (alt 2) | FLUX Dev | FAL.ai | Yes |
-| Video animation (default) | WAN 2.2 | Wavespeed | Yes — per template |
-| Video animation (alt 1) | Kling v2 Master | FAL.ai | Yes |
-| Video animation (alt 2) | Minimax Video-01 | FAL.ai | Yes |
-| Music | Custom generation | Beatoven / FAL.ai | Yes (or disable) |
-| Template extraction | GPT-4o (vision) | OpenAI | No |
+| Step | Model | Provider | Configurable? | Price |
+|------|-------|----------|---------------|-------|
+| Article analysis | GPT-5-mini | OpenAI | No (hardcoded) | ~$0.001 |
+| Storyboard generation | GPT-5-mini | OpenAI | No (hardcoded) | ~$0.002 |
+| Image generation (default) | Nano Banana Pro | Wavespeed | Yes — per template | ~$0.01/img |
+| Image generation (alt 1) | SeedDream v4.5 | FAL.ai | Yes | ~$0.02/img |
+| Image generation (alt 2) | FLUX 2 Dev (LoRA) | FAL.ai | Yes | $0.035/img |
+| Image generation (alt 3) | Imagen 4 | FAL.ai (Google) | Yes | $0.04/img |
+| Image generation (alt 4) | Kling Image V3 | FAL.ai | Yes | $0.028/img |
+| Image generation (alt 5) | Grok Imagine | FAL.ai | Yes | $0.02/img |
+| Image generation (alt 6) | Ideogram V2 | FAL.ai | Yes | ~$0.04/img |
+| Image editing | FLUX 2 Dev Edit (LoRA) | FAL.ai | Yes | $0.035/img |
+| Video animation (default) | WAN 2.2 Spicy | Wavespeed | Yes — per template | ~$0.10/vid |
+| Video animation (alt 1) | Kling 2.0 Master | FAL.ai | Yes | $0.28/sec |
+| Video animation (alt 2) | Kling V3 Pro | FAL.ai | Yes | ~$0.30/sec |
+| Video animation (alt 3) | Kling O3 Pro | FAL.ai | Yes | ~$0.30/sec |
+| Video animation (alt 4) | Hailuo/Minimax | FAL.ai | Yes | $0.50/vid |
+| Video animation (alt 5) | Veo 3 (Google) | FAL.ai | Yes | $0.15/sec |
+| Video animation (alt 6) | Veo 2 (Google) | FAL.ai | Yes | $0.50/sec |
+| Video animation (alt 7) | Wan 2.5 Preview | FAL.ai | Yes | ~$0.15/vid |
+| Video animation (alt 8) | Wan Pro | FAL.ai | Yes | ~$0.20/vid |
+| Video animation (alt 9) | PixVerse V4.5 | FAL.ai | Yes | ~$0.15/vid |
+| Music | Custom generation | Beatoven / MiniMax | Yes (or disable) | ~$0.05/track |
+| LoRA training | FLUX LoRA Fast Training | FAL.ai | Yes | $0.50/training |
+| Template extraction | GPT-4o (vision) | OpenAI | No | ~$0.01 |
 
 **Fallback logic:**
-- Image gen: tries Wavespeed first, falls back to FAL SeedDream if no Wavespeed key
+- Image gen: tries Wavespeed first, falls back to FAL SeedDream if no Wavespeed key. If LoRAs are configured, forces FLUX 2 Dev (only model supporting LoRA injection)
 - Video gen: tries Wavespeed WAN first, falls back to FAL Kling if no Wavespeed key
 - Music: non-fatal — failure is logged and skipped, draft still saves
 
@@ -675,7 +747,11 @@ The scheduling UI is a datetime-local picker in the UI.
 | `POST` | `/api/audio/voiceover` | Generate voiceover for text |
 | `POST` | `/api/audio/music` | Generate background music |
 | `POST` | `/api/images/search` | Search stock images |
-| `POST` | `/api/lora/train` | Start LoRA training job |
+| `POST` | `/api/lora/train` | Start LoRA training job (configurable type/rank/steps/lr) |
+| `POST` | `/api/lora/result` | Check LoRA training result (auto-updates visual subjects) |
+| `GET` | `/api/lora/library` | List pre-built LoRA library (grouped by category) |
+| `POST` | `/api/brand/avatars/:id/train` | Train LoRA from a visual subject's reference images |
+| `POST` | `/api/imagineer/edit` | LoRA-enhanced image editing (FLUX 2 Dev Edit) |
 | `POST` | `/api/library/save` | Save asset to library |
 
 ---
@@ -684,15 +760,23 @@ The scheduling UI is a datetime-local picker in the UI.
 
 ### `brand_kit`
 Stores brand identity per user. One per user (upsert on save).
-Key fields: `brand_name`, `brand_username`, `colors` (jsonb), `voice_style`, `style_preset`, `taglines` (jsonb), `logo_url`.
+Key fields: `brand_name`, `brand_username`, `colors` (jsonb), `voice_style`, `style_preset`, `taglines` (jsonb), `logo_url`, `default_loras` (jsonb — array of LoRA configs applied to all generation unless template overrides).
 
-### `brand_avatars`
+### `brand_avatars` / `visual_subjects`
 Custom AI personas tied to a brand. Many per user.
-Key fields: `brand_username`, `name`, `description`, `reference_image_url`, `lora_url`, `lora_trigger_word`.
+Key fields: `brand_username`, `name`, `description`, `reference_image_url`, `lora_url`, `lora_trigger_word`, `brand_lora_id` (links to `brand_loras`), `training_status` (`none`/`training`/`ready`/`failed`).
+
+### `brand_loras`
+Trained LoRA models. Many per user.
+Key fields: `name`, `trigger_word`, `fal_model_url`, `status` (`training`/`ready`/`failed`), `training_type` (`product`/`style`/`character`), `rank`, `steps`, `learning_rate`, `brand_username`, `visual_subject_id` (links to `visual_subjects`), `lora_type` (`custom`/`prebuilt`).
+
+### `lora_library`
+Pre-built curated LoRA models (shared, public). Seeded via `api/lora/seed-library.js`.
+Key fields: `name`, `slug` (unique), `description`, `category` (`style`/`product`/`effect`/`realism`/`composition`), `hf_repo_id` (HuggingFace repo), `preview_url`, `default_scale`, `recommended_trigger_word`, `compatible_models` (jsonb), `is_featured`, `sort_order`.
 
 ### `user_templates`
 User-defined video templates.
-Key fields: `name`, `scenes` (jsonb), `output_type`, `model_preferences` (jsonb), `applicable_writing_structures` (jsonb), `platforms` (jsonb), `visual_style_preset`, `avatar_id`.
+Key fields: `name`, `scenes` (jsonb), `output_type`, `model_preferences` (jsonb), `applicable_writing_structures` (jsonb), `platforms` (jsonb), `visual_style_preset`, `avatar_id`, `lora_config` (jsonb — array of `{ lora_id, scale, source }` for multi-LoRA stacking).
 
 ### `campaigns`
 One per article run. Groups all drafts.
@@ -728,9 +812,10 @@ Run these in order in your Supabase SQL editor (or via the CLI):
 | `supabase/migrations/20260222_add_content_signal_review_fields.sql` | Review fields |
 | `supabase-migration-v6.sql` | Main v6: extends user_templates, brand_kit, ad_drafts, campaigns; creates brand_avatars; adds RPC `increment_campaign_completed_drafts` |
 | `supabase/migrations/20260223_add_visual_style_preset.sql` | Adds `visual_style_preset` column to `user_templates` |
+| `supabase/migrations/20260228_lora_enhancements.sql` | LoRA system: adds training config cols to `brand_loras`, training status to `visual_subjects`, `default_loras` to `brand_kit`, `lora_config` to `user_templates`, creates `lora_library` table |
 
-> **If you're setting up from scratch**, run v6 first, then the 20260223 migration.
-> **If you're upgrading an existing DB**, just run the two newest ones.
+> **If you're setting up from scratch**, run v6 first, then the dated migrations in order.
+> **If you're upgrading an existing DB**, run any migrations newer than your last applied one.
 
 ---
 
@@ -804,3 +889,21 @@ Currently hardcoded to `gpt-5-mini` (fastest, cheapest, good enough for structur
 
 **Q: What's Motion Transfer?**
 Motion Transfer uses Kling's motion control feature — instead of the AI freely deciding how to animate an image, it mimics the motion from a reference video. This is useful for consistent brand movements (e.g. always a slow left-to-right pan). The reference video URL needs to be set on the brand avatar or brand kit. Currently flagged as a warning in the template builder — full pipeline integration is pending.
+
+**Q: How does LoRA stacking work?**
+You can select up to 4 LoRAs simultaneously (mix of custom-trained and pre-built library). Each has an independent scale slider. All trigger words are prepended to the image prompt, and the `loras[]` array is sent to `fal-ai/flux-2/lora`. The FLUX 2 model handles blending them. Common combos: product LoRA + white background LoRA, character LoRA + style LoRA.
+
+**Q: What happens if I set LoRAs but choose a non-FLUX image model?**
+The pipeline auto-overrides to FLUX 2 Dev whenever LoRAs are present. Wavespeed and other models don't support LoRA injection, so FLUX is the only option. This is transparent — you'll see FLUX-quality images with your LoRA applied.
+
+**Q: How do brand default LoRAs interact with template LoRAs?**
+Template `lora_config` takes full priority. If the template has its own LoRA config (even an empty array), brand defaults are not applied. If the template has no `lora_config` and no legacy `avatar_id`, the brand's `default_loras` are used as a fallback.
+
+**Q: Can I train a LoRA from the UI?**
+Yes. In the Brand Kit → Avatars tab, any avatar with a reference image shows a "Train LoRA" button. Click it, enter a trigger word, and the training job is submitted to fal.ai. Training takes ~5–10 minutes. The avatar card shows a spinner during training and auto-updates to "LoRA trained" on completion.
+
+**Q: What's the Imagineer Edit tab?**
+The Edit tab in Imagineer lets you modify an existing image using FLUX 2 + optional LoRA models. Paste a source image URL, describe the edit ("change background to beach sunset"), set a strength slider (lower = subtle, higher = creative rewrite), and optionally select LoRAs for brand consistency. Uses the `fal-ai/flux-2/lora/edit` endpoint.
+
+**Q: How do I seed the pre-built LoRA library?**
+Run `node api/lora/seed-library.js` once. It inserts 13 curated HuggingFace LoRAs into the `lora_library` table. Uses upsert on slug, so it's safe to re-run.

@@ -24,8 +24,8 @@ export default async function handler(req, res) {
     if (model === 'seeddream') {
       return pollSeedDream(req, res, requestId);
     }
-    if (model === 'fal-flux') {
-      return pollFalFlux(req, res, requestId);
+    if (model === 'fal-flux' || model === 'fal-flux-edit') {
+      return pollFalFlux(req, res, requestId, model === 'fal-flux-edit' ? 'fal-ai/flux-2/lora/edit' : 'fal-ai/flux-2/lora');
     }
     return pollWavespeed(req, res, requestId);
   } catch (error) {
@@ -130,12 +130,12 @@ async function pollSeedDream(req, res, requestId) {
   });
 }
 
-async function pollFalFlux(req, res, requestId) {
+async function pollFalFlux(req, res, requestId, endpoint = 'fal-ai/flux-2/lora') {
   const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
 
   const headers = { 'Authorization': `Key ${FAL_KEY}` };
-  const checkUrl = `https://queue.fal.run/fal-ai/flux/dev/requests/${requestId}/status?logs=1`;
+  const checkUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}/status?logs=1`;
 
   const statusResponse = await fetch(checkUrl, { headers });
   if (!statusResponse.ok) {
@@ -144,9 +144,9 @@ async function pollFalFlux(req, res, requestId) {
   }
 
   const statusData = await statusResponse.json();
-  
+
   if (statusData.status === 'COMPLETED') {
-    const resultUrl = `https://queue.fal.run/fal-ai/flux/dev/requests/${requestId}`;
+    const resultUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}`;
     const resultResponse = await fetch(resultUrl, { headers });
     
     if (!resultResponse.ok) {

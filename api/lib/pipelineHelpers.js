@@ -7,6 +7,9 @@ const WAVESPEED_BASE = 'https://api.wavespeed.ai/api/v3';
 const FAL_BASE = 'https://queue.fal.run';
 const FAL_DIRECT = 'https://fal.run';
 
+// Default negative prompt for image generation (models that support it)
+const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
+
 // ---------------------------------------------------------------------------
 // Internal polling utilities
 // ---------------------------------------------------------------------------
@@ -67,6 +70,35 @@ async function pollFalQueue(requestId, model, falKey, maxRetries = 120, delayMs 
 // Upload a URL's content to Supabase storage
 // ---------------------------------------------------------------------------
 
+/**
+ * Lightweight image buffer validation (no external dependencies).
+ * Throws if the buffer is likely a blank, corrupt, or error image.
+ */
+function validateImageBuffer(buffer) {
+  // Check 1: Minimum size — blank/error images are typically < 5KB
+  if (buffer.length < 5120) {
+    throw new Error(`Image too small (${buffer.length} bytes) — likely blank or error placeholder`);
+  }
+
+  // Check 2: Entropy — sample the second half of the buffer (past headers)
+  // and reject if >90% of sampled bytes are the same value (solid color)
+  const sampleStart = Math.floor(buffer.length * 0.5);
+  const sampleEnd = Math.min(sampleStart + 2048, buffer.length);
+  const sample = buffer.slice(sampleStart, sampleEnd);
+
+  if (sample.length >= 256) {
+    const freq = new Map();
+    for (let i = 0; i < sample.length; i++) {
+      freq.set(sample[i], (freq.get(sample[i]) || 0) + 1);
+    }
+    const maxFreq = Math.max(...freq.values());
+    const uniformity = maxFreq / sample.length;
+    if (uniformity > 0.90) {
+      throw new Error(`Image appears blank — ${(uniformity * 100).toFixed(0)}% uniform pixel data`);
+    }
+  }
+}
+
 async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
   try {
     const response = await fetch(url);
@@ -82,6 +114,12 @@ async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
       : contentType.includes('flac') ? 'flac'
       : 'mp3';
 
+    // Validate image quality before uploading (skip video/audio)
+    const isImage = ext === 'jpg' || ext === 'png';
+    if (isImage) {
+      validateImageBuffer(buffer);
+    }
+
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const bucket = ext === 'mp4' || ext === 'webm' ? 'videos' : 'media';
 
@@ -90,8 +128,87 @@ async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
 
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
     return publicUrl;
-  } catch {
-    return url; // non-fatal — return original URL
+  } catch (err) {
+    // Re-throw validation errors so withRetry() can catch and retry generation
+    if (err.message?.includes('Image too small') || err.message?.includes('Image appears blank')) {
+      throw err;
+    }
+    return url; // non-fatal for other errors — return original URL
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Prompt enhancement for pipeline image generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Append quality tokens to a pipeline image prompt based on context.
+ * Keeps suffix short to avoid diluting the main prompt. Deduplicates.
+ *
+ * @param {string} prompt - the base visual prompt
+ * @param {string} [sceneRole] - 'hook', 'cta', 'solution', 'proof', etc.
+ * @param {string} [model] - image model identifier
+ * @returns {string} enhanced prompt
+ */
+export function enhancePromptForPipeline(prompt, sceneRole, model) {
+  const lowerPrompt = prompt.toLowerCase();
+  const tokens = [];
+
+  if (!lowerPrompt.includes('high quality')) tokens.push('high quality');
+  if (!lowerPrompt.includes('detailed')) tokens.push('detailed');
+
+  // Photorealistic models get sharpness tokens
+  const photoModels = ['fal_seedream', 'fal_kling_img', 'fal_imagen4'];
+  if (photoModels.includes(model)) {
+    if (!lowerPrompt.includes('sharp focus')) tokens.push('sharp focus');
+    if (!lowerPrompt.includes('professional')) tokens.push('professional photograph');
+  }
+
+  // Product showcase scenes get studio tokens
+  if (sceneRole === 'solution' || sceneRole === 'proof') {
+    if (!lowerPrompt.includes('studio lighting')) tokens.push('studio lighting');
+  }
+
+  if (tokens.length === 0) return prompt;
+  return `${prompt}, ${tokens.join(', ')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Smart model routing by scene role (opt-in via model_preferences.smart_routing)
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the optimal image generation model for a scene based on its role.
+ * Only activates when template.model_preferences.smart_routing is truthy.
+ *
+ * @param {string} sceneRole - 'hook', 'cta', 'point', 'step', 'solution', 'proof', etc.
+ * @param {object} modelPrefs - template.model_preferences
+ * @param {Array} loraConfigs - resolved LoRA configs
+ * @returns {string|undefined} model identifier
+ */
+export function selectModelForScene(sceneRole, modelPrefs, loraConfigs) {
+  if (!modelPrefs?.smart_routing) return modelPrefs?.image_model;
+
+  const hasLoras = loraConfigs?.length > 0;
+  const preferred = modelPrefs?.image_model;
+
+  // LoRAs constrain us to FLUX 2 (only fal model supporting LoRA weights)
+  if (hasLoras) return 'fal_flux';
+
+  switch (sceneRole) {
+    case 'hook':
+      return preferred || 'fal_seedream';
+    case 'cta':
+      return 'fal_ideogram';
+    case 'solution':
+    case 'proof':
+      return preferred || 'fal_seedream';
+    case 'point':
+    case 'step':
+    case 'comparison':
+      return preferred || 'fal_flux';
+    default:
+      return preferred;
   }
 }
 
@@ -105,39 +222,46 @@ async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
  * @param {object} keys - { wavespeedKey, falKey }
  * @param {object} supabase - Supabase client
  * @param {string} [model] - 'wavespeed' | 'fal_seedream' | 'fal_flux' | 'fal_imagen4' | 'fal_kling_img' | 'fal_grok' | 'fal_ideogram'
- * @param {object} [loraConfig] - { triggerWord, loraUrl } — injects a trained LoRA (visual subject)
+ * @param {object|object[]} [loraConfig] - Single { triggerWord, loraUrl, scale } or array of them for stacking
  * @returns {Promise<string>} public image URL
  */
 export async function generateImage(prompt, aspectRatio, keys, supabase, model, loraConfig = null) {
-  // Prepend the LoRA trigger word so the trained visual subject appears in every generated image.
-  // The trigger word is a short unique token (e.g. "sks person", "ohwx product") baked into the LoRA
-  // during training. Without it, the LoRA has no effect even if the weights are loaded.
-  const finalPrompt = loraConfig?.triggerWord
-    ? `${loraConfig.triggerWord}, ${prompt}`
-    : prompt;
+  // Normalize loraConfig to an array for stacking support (backward compat with single object)
+  const loraConfigs = !loraConfig ? []
+    : Array.isArray(loraConfig) ? loraConfig
+    : [loraConfig];
+
+  // Prepend all LoRA trigger words so trained visual subjects appear in the generated image.
+  const triggerPrefix = loraConfigs.map(c => c.triggerWord).filter(Boolean).join(', ');
+  const finalPrompt = triggerPrefix ? `${triggerPrefix}, ${prompt}` : prompt;
+
+  // Build loras array for fal.ai (supports up to 4 simultaneous LoRAs)
+  const lorasPayload = loraConfigs
+    .filter(c => c.loraUrl)
+    .map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 }));
+  const hasLoras = lorasPayload.length > 0;
+
   const sizeMap = { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9', '2:3': 'portrait_4_3' };
 
-  // Route to specific model if requested.
-  // When a LoRA URL is present and the model supports it, route to fal-ai/flux-lora
-  // (which accepts a `loras` array) instead of the standard fal-ai/flux/dev.
+  // Route to FLUX 2 with LoRA when LoRAs are present or explicitly requested
   if (model === 'fal_flux' && keys.falKey) {
-    const falModel = loraConfig?.loraUrl ? 'fal-ai/flux-lora' : 'fal-ai/flux/dev';
+    const falModel = 'fal-ai/flux-2/lora';
     const body = {
       prompt: finalPrompt,
       image_size: sizeMap[aspectRatio] || 'portrait_16_9',
       num_inference_steps: 28,
-      ...(loraConfig?.loraUrl && { loras: [{ path: loraConfig.loraUrl, scale: 1.0 }] }),
+      ...(hasLoras && { loras: lorasPayload }),
     };
     const res = await fetch(`${FAL_BASE}/${falModel}`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`FAL FLUX image gen failed: ${await res.text()}`);
+    if (!res.ok) throw new Error(`FAL FLUX 2 image gen failed: ${await res.text()}`);
     const queueData = await res.json();
     const output = await pollFalQueue(queueData.request_id, falModel, keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL FLUX');
+    if (!imageUrl) throw new Error('No image URL from FAL FLUX 2');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
   }
 
@@ -177,7 +301,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     const res = await fetch(`${FAL_BASE}/fal-ai/kling-image/v3/text-to-image`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, negative_prompt: DEFAULT_NEGATIVE_PROMPT }),
     });
     if (!res.ok) throw new Error(`FAL Kling Image gen failed: ${await res.text()}`);
     const queueData = await res.json();
@@ -209,7 +333,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     const res = await fetch(`${FAL_BASE}/fal-ai/ideogram/v2`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
+      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, negative_prompt: DEFAULT_NEGATIVE_PROMPT }),
     });
     if (!res.ok) throw new Error(`FAL Ideogram image gen failed: ${await res.text()}`);
     const queueData = await res.json();
@@ -221,8 +345,8 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
   }
 
   // Default: Wavespeed first (fastest), FAL SeedDream fallback.
-  // Wavespeed doesn't support LoRA weights — if a LoRA is configured, skip to FAL FLUX instead.
-  if (keys.wavespeedKey && !model?.startsWith('fal_') && !loraConfig?.loraUrl) {
+  // Wavespeed doesn't support LoRA weights — if LoRAs are configured, skip to FAL FLUX instead.
+  if (keys.wavespeedKey && !model?.startsWith('fal_') && !hasLoras) {
     const res = await fetch(`${WAVESPEED_BASE}/google/nano-banana-pro/text-to-image`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' },
@@ -243,24 +367,24 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
   }
 
   if (keys.falKey) {
-    // Use fal-ai/flux-lora when a LoRA is configured, otherwise fall back to SeedDream
-    if (loraConfig?.loraUrl) {
+    // Use FLUX 2 LoRA when LoRAs are configured, otherwise fall back to SeedDream
+    if (hasLoras) {
       const body = {
         prompt: finalPrompt,
         image_size: sizeMap[aspectRatio] || 'portrait_16_9',
         num_inference_steps: 28,
-        loras: [{ path: loraConfig.loraUrl, scale: 1.0 }],
+        loras: lorasPayload,
       };
-      const res = await fetch(`${FAL_BASE}/fal-ai/flux-lora`, {
+      const res = await fetch(`${FAL_BASE}/fal-ai/flux-2/lora`, {
         method: 'POST',
         headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`FAL FLUX-LoRA image gen failed: ${await res.text()}`);
+      if (!res.ok) throw new Error(`FAL FLUX 2 LoRA image gen failed: ${await res.text()}`);
       const queueData = await res.json();
-      const output = await pollFalQueue(queueData.request_id, 'fal-ai/flux-lora', keys.falKey);
+      const output = await pollFalQueue(queueData.request_id, 'fal-ai/flux-2/lora', keys.falKey);
       const imageUrl = output?.images?.[0]?.url;
-      if (!imageUrl) throw new Error('No image URL from FAL FLUX-LoRA');
+      if (!imageUrl) throw new Error('No image URL from FAL FLUX 2 LoRA');
       return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
     }
 
@@ -299,7 +423,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
  * @param {string} [model] - 'wavespeed_wan' | 'fal_kling' | 'fal_hailuo' | 'fal_veo3' | 'fal_veo2' | 'fal_kling_v3' | 'fal_kling_o3' | 'fal_wan25' | 'fal_wan_pro' | 'fal_pixverse'
  * @returns {Promise<string>} public video URL
  */
-export async function animateImage(imageUrl, motionPrompt, aspectRatio, durationSeconds = 5, keys, supabase, model) {
+export async function animateImage(imageUrl, motionPrompt, aspectRatio, durationSeconds = 5, keys, supabase, model, loraConfigs = []) {
   // --- Veo 3 Fast (Google) via FAL ---
   if (model === 'fal_veo3' && keys.falKey) {
     const res = await fetch(`${FAL_BASE}/fal-ai/veo3/fast`, {
@@ -445,6 +569,12 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
         duration: durationSeconds,
         resolution: '720p',
         seed: -1,
+        ...(loraConfigs.length > 0 && {
+          loras: loraConfigs.filter(c => c.loraUrl).map(c => ({
+            url: c.loraUrl,
+            scale: Math.min(c.scale ?? 0.7, 0.8), // cap at 0.8 for video stability
+          })),
+        }),
       }),
     });
 
