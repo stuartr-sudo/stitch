@@ -14,17 +14,21 @@
 5. [Brand Kit & Avatars](#5-brand-kit--avatars)
 6. [How Doubleclicker Triggers a Pipeline Run](#6-how-doubleclicker-triggers-a-pipeline-run)
 7. [The Autonomous Pipeline — Step by Step](#7-the-autonomous-pipeline--step-by-step)
-8. [AI Models Used at Each Step](#8-ai-models-used-at-each-step)
-9. [Visual Style Presets — How They Lock the Look](#9-visual-style-presets--how-they-lock-the-look)
-10. [Campaigns & Drafts — The Output Layer](#10-campaigns--drafts--the-output-layer)
-11. [The Campaigns Viewer](#11-the-campaigns-viewer)
-12. [Publish & Schedule](#12-publish--schedule)
-13. [Data Structures Reference](#13-data-structures-reference)
-14. [API Endpoint Reference](#14-api-endpoint-reference)
-15. [Database Tables Reference](#15-database-tables-reference)
-16. [Supabase Migrations — What to Run](#16-supabase-migrations--what-to-run)
-17. [Environment Variables](#17-environment-variables)
-18. [FAQ / Likely Questions](#18-faq--likely-questions)
+7b. [The AI Director Pipeline — Template-Free Alternative](#7b-the-ai-director-pipeline--template-free-alternative)
+8. [Studio Tools — The Creative Toolkit](#8-studio-tools--the-creative-toolkit)
+9. [AI Models Used at Each Step](#9-ai-models-used-at-each-step)
+10. [Visual Style Presets — How They Lock the Look](#10-visual-style-presets--how-they-lock-the-look)
+11. [Campaigns & Drafts — The Output Layer](#11-campaigns--drafts--the-output-layer)
+12. [The Campaigns Viewer](#12-the-campaigns-viewer)
+13. [Publish & Schedule](#13-publish--schedule)
+14. [Bulk Processing & Autonomous Config](#14-bulk-processing--autonomous-config)
+15. [Cost Dashboard](#15-cost-dashboard)
+16. [Data Structures Reference](#16-data-structures-reference)
+17. [API Endpoint Reference](#17-api-endpoint-reference)
+18. [Database Tables Reference](#18-database-tables-reference)
+19. [Supabase Migrations — What to Run](#19-supabase-migrations--what-to-run)
+20. [Environment Variables](#20-environment-variables)
+21. [FAQ / Likely Questions](#21-faq--likely-questions)
 
 ---
 
@@ -78,6 +82,7 @@ Stitch UI  (React 18 + Vite, port 4390)
 - Stitch UI ↔ Stitch API: Supabase JWT (Bearer token), verified per-request
 - Doubleclicker → Stitch: No direct HTTP calls — communication via shared `stitch_queue` table
 - Stitch also supports direct `POST /api/article/from-url` with `x-webhook-secret` for manual triggers
+- Stitch also supports `POST /api/article/ai-director` — a template-free pipeline where the AI designs the entire storyboard from scratch
 
 ---
 
@@ -93,6 +98,9 @@ The idea is:
 - You open Campaigns → pick the drafts you like → publish or schedule
 
 You never touch the generation step. It just runs.
+
+### Alternative: AI Director (template-free)
+There's a second pipeline — the **AI Director** — that does the same job but without templates. Instead of forcing the article into a fixed scene structure, the AI reads the article and designs the entire storyboard from scratch: how many scenes, what narrative arc, what durations, what visual direction. See [Section 7b](#7b-the-ai-director-pipeline--template-free-alternative) for the full breakdown.
 
 ---
 
@@ -133,7 +141,7 @@ Free text. The name appears in the campaign viewer so you know which format each
 
 ### Visual Style Preset ← New
 Locks the lighting, camera style, and color grade for **every image and video** this template generates.
-See [Section 9](#9-visual-style-presets--how-they-lock-the-look) for the full list and how it works.
+See [Section 10](#10-visual-style-presets--how-they-lock-the-look) for the full list and how it works.
 
 ### Extract from Reference (AI Analysis)
 Paste a video URL and/or describe the style in words.
@@ -502,7 +510,230 @@ After all templates complete:
 
 ---
 
-## 8. AI Models Used at Each Step
+## 7b. The AI Director Pipeline — Template-Free Alternative
+
+> **File:** `api/article/ai-director.js`
+> **Endpoint:** `POST /api/article/ai-director`
+> **Auth:** Webhook secret (`x-webhook-secret` header) **or** Supabase JWT (`Authorization: Bearer ...`)
+
+The AI Director is a **parallel pipeline** that runs alongside the template-based pipeline. It does **not** replace or modify the existing pipeline — it's a completely separate entry point.
+
+### Why it exists
+
+Templates are great for repeatable formats, but they're rigid. If you have an article that doesn't fit a 5-scene listicle or a 4-scene product review, the template forces it into that shape anyway. The AI Director removes that constraint — the AI reads the article and decides the best structure.
+
+### How it differs from the template pipeline
+
+| | Template Pipeline (`from-url`) | AI Director (`ai-director`) |
+|---|---|---|
+| Scene count | Fixed by template (e.g. 5 scenes) | AI decides (3–8 scenes) |
+| Scene roles | Fixed by template (hook → point → CTA) | AI designs the narrative arc |
+| Durations | Fixed per scene | AI assigns per scene (2–8s each) |
+| Visual direction | Style preset suffix only | AI writes a `creative_rationale` explaining its choices |
+| Model selection | Template's `model_preferences` | AI suggests `image_model_hint` per scene, pipeline routes accordingly |
+| Quality control | Template structure is the guardrail | Quality gate — AI self-reviews and regenerates if score < 7/10 |
+
+### Input
+
+```json
+{
+  "url": "https://example.com/article",
+  "brand_username": "myshop",
+  "platforms": ["tiktok", "instagram_reels"],
+  "output_type": "video",
+  "style_preset": "cinematic",
+  "duration_target": 30,
+  "lora_config": []
+}
+```
+
+All fields except `brand_username` are optional. Defaults: all platforms, video output, no style preset, 30s duration.
+
+You can pass `content` (raw markdown) instead of `url`.
+
+### The pipeline — step by step
+
+**Step 1 — Scrape & Analyse**
+Same as the template pipeline. Firecrawl (or fallback fetch) gets the article, then GPT analyses it for type, tone, and key themes.
+
+**Step 2 — Dynamic Storyboard (the key difference)**
+Instead of slotting content into a fixed template, GPT receives:
+- The full article text
+- Brand guidelines (name, voice, colors, taglines)
+- Duration target and platform list
+- Style preset (if any)
+
+And is told: *"You are a creative director. Design a video storyboard from scratch."*
+
+GPT returns a full storyboard with a `creative_rationale` explaining its structural choices:
+
+```json
+{
+  "creative_rationale": "Opening with a visceral problem scene to hook viewers emotionally, then rapid-fire proof points to build credibility, closing with an aspirational outcome rather than a hard sell — matches the article's educational tone.",
+  "campaign_name": "Why Your Air Fryer Is Lying to You",
+  "scenes": [
+    {
+      "role": "hook",
+      "headline": "Your air fryer is ruining your food",
+      "visual_prompt": "close-up of burnt, dried-out chicken in a cheap air fryer...",
+      "motion_prompt": "slow zoom into the disappointing food",
+      "duration_seconds": 3,
+      "image_model_hint": "seeddream"
+    },
+    ...
+  ]
+}
+```
+
+**Step 3 — Quality Gate**
+GPT reviews its own storyboard and scores it on 5 criteria (hook strength, narrative flow, visual variety, brand alignment, CTA effectiveness). If the average score is below 7/10, it regenerates once with feedback on what to improve. This compensates for the lack of template guardrails.
+
+**Step 4 — Create Campaign & Draft**
+Same as the template pipeline — one campaign record, one draft record. The draft is tagged with `template_name: 'AI Director'` so you can identify it in the Campaigns viewer.
+
+**Step 5 — Generate Assets**
+Same asset generation as the template pipeline — images per scene per ratio, then video animation, then music. Uses all the same helper functions (`generateImage`, `animateImage`, `generateMusic`, etc.). Frame-to-frame continuity analysis is included (extracts last frame of each clip, analyses it with GPT-4o vision, feeds context to the next scene).
+
+**Step 6 — Concat & Finalise**
+Video clips are concatenated per ratio using `concatVideos`. The draft and campaign records are updated to `ready`.
+
+### Triggering it
+
+**Direct HTTP call (webhook secret):**
+```bash
+curl -X POST https://stitch-app.fly.dev/api/article/ai-director \
+  -H "x-webhook-secret: your_secret" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://yourblog.com/article", "brand_username": "myshop"}'
+```
+
+**Direct HTTP call (JWT auth from studio UI):**
+```bash
+curl -X POST https://stitch-app.fly.dev/api/article/ai-director \
+  -H "Authorization: Bearer USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://yourblog.com/article", "brand_username": "myshop"}'
+```
+
+**Response (immediate — runs in background):**
+```json
+{
+  "success": true,
+  "jobId": "abc-123",
+  "pipeline": "ai_director",
+  "poll_url": "/api/jobs/public-status?jobId=abc-123"
+}
+```
+
+> **Note:** The AI Director is not yet wired into the `stitch_queue` poller. Queue items from Doubleclicker still route to the template pipeline. To use the AI Director, call the endpoint directly.
+
+---
+
+## 8. Studio Tools — The Creative Toolkit
+
+Beyond the autonomous pipeline, Stitch has a suite of interactive creative tools accessible from the main UI. Each tool is a modal in the Video Advert Creator page (`/`).
+
+### JumpStart — One-Off Video Generation
+The primary manual video creation tool. Enter a text prompt, pick an image or video model, set resolution and duration, and generate a single video clip.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/jumpstart/generate` | Start generation (returns request ID) |
+| `POST /api/jumpstart/result` | Poll generation status |
+| `POST /api/jumpstart/save-video` | Download video to Supabase storage (avoids CORS) |
+| `POST /api/jumpstart/edit` | Edit an existing video via text prompt (Wavespeed WAN 2.2 / Grok) |
+| `POST /api/jumpstart/extend` | Extend/elongate a video clip (Seedance, Veo 3.1, etc.) |
+
+### Imagineer — AI Image Generation & Editing
+Text-to-image generation with multi-model support. Also has an Edit tab for modifying existing images with LoRA-enhanced inpainting.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/imagineer/generate` | Generate image from text prompt |
+| `POST /api/imagineer/edit` | Edit existing image with FLUX 2 Dev + optional LoRAs |
+| `POST /api/imagineer/result` | Poll generation/edit status |
+
+### Animate — Image-to-Video
+Takes a still image and animates it using WAN v2.2-14b. Supports move and replace modes.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/animate/generate` | Start animation (returns request ID) |
+| `POST /api/animate/result` | Poll animation status |
+
+### Trip — Video Restyling
+Text-guided video restyling using Decart's Lucy-Restyle model via Wavespeed. Takes an existing video and applies a new visual style based on a text prompt.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/trip/restyle` | Restyle a video with a text prompt |
+
+### Lens — Perspective Adjustment
+Adjusts image angle and perspective via FAL.ai. Control horizontal angle, vertical angle, and zoom level.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/lens/generate` | Adjust image perspective |
+
+### Smoosh — Canvas Composition
+Canvas-based image composition with AI enhancement via Google Nano-Banana Pro. Combine images and enhance the result.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/smoosh/generate` | Compose and enhance canvas image |
+
+### TryStyle — Virtual Try-On
+Virtual clothing try-on using FASHN AI or FLUX 2 LoRA models. Upload a model image and a garment image; the AI composites the clothing onto the person.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/trystyle/generate` | Start virtual try-on (async) |
+| `POST /api/trystyle/result` | Poll try-on status |
+
+### Image Utilities
+General-purpose image processing tools used across the UI.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/images/search` | Search stock images |
+| `POST /api/images/import-url` | Download image from URL to Supabase storage |
+| `POST /api/images/edit` | Multi-model AI image editing with aspect ratio normalization |
+| `POST /api/images/inpaint` | AI object removal/replacement with mask |
+
+### Audio Studio
+Audio generation and processing tools.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/audio/voiceover` | Generate voiceover from text |
+| `POST /api/audio/music` | Generate background music |
+| `POST /api/audio/generate` | Text-to-speech (ElevenLabs), music generation (Suno, Stable Audio), foley sounds |
+| `POST /api/audio/captions` | Speech-to-text transcription (Whisper via FAL.ai) with word-level timing |
+| `GET /api/audio/result` | Poll audio generation status |
+
+### Brand Utilities
+Tools for managing brand assets and extracting brand guidelines.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/brand/extract-pdf` | Extract brand guidelines from PDF using GPT (returns auto-filled brand kit fields) |
+| `POST /api/brand/remove-bg` | Background removal using Bria (FAL.ai) |
+| `GET /api/brand/usernames` | List available brand usernames (role-based access from shared DB) |
+| `GET /api/brand/guidelines` | Fetch brand guidelines + image style preferences from Doubleclicker tables |
+
+### Canvas Editor
+A drag-and-drop canvas for composing images, text, and shapes. Built with Konva.js. Primarily used for assembling ad creatives manually. The canvas output can be enhanced via the Smoosh endpoint.
+
+### Library
+Save any generated asset (image, video, audio) to a personal library for later reuse.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/library/save` | Save asset to library |
+
+---
+
+## 9. AI Models Used at Each Step
 
 | Step | Model | Provider | Configurable? | Price |
 |------|-------|----------|---------------|-------|
@@ -543,7 +774,7 @@ Generated files are uploaded to Supabase Storage (`videos` bucket for mp4/webm, 
 
 ---
 
-## 9. Visual Style Presets — How They Lock the Look
+## 10. Visual Style Presets — How They Lock the Look
 
 Without a preset, the AI generates each scene's `visual_prompt` freely — and over a multi-scene storyboard, it will drift. Scene 1 might look cinematic, scene 3 might look like stock photography.
 
@@ -588,7 +819,7 @@ frustrated person looking at a disappointing air fryer, kitchen background, warm
 
 ---
 
-## 10. Campaigns & Drafts — The Output Layer
+## 11. Campaigns & Drafts — The Output Layer
 
 ### Campaign
 One campaign = one article run. It groups all drafts together.
@@ -624,7 +855,7 @@ One draft = one template's complete output for this campaign.
 
 ---
 
-## 11. The Campaigns Viewer
+## 12. The Campaigns Viewer
 
 Found at `/campaigns` in the Stitch UI.
 
@@ -648,7 +879,7 @@ Found at `/campaigns` in the Stitch UI.
 
 ---
 
-## 12. Publish & Schedule
+## 13. Publish & Schedule
 
 Both actions work per-draft, not per-campaign.
 
@@ -664,11 +895,80 @@ Sets `publish_status = 'scheduled'` and records the `scheduled_for` datetime.
 Validation: must be a valid datetime in the future.
 The scheduling UI is a datetime-local picker in the UI.
 
-> Actual scheduled posting (a cron job or queue that posts at the scheduled time) is not yet built. The schedule is recorded for when that posting layer is added.
+### Scheduled Publisher (Background Service)
+A background poller (`lib/scheduledPublisher.js`) runs every 30 seconds. It checks `ad_drafts` for any draft where `publish_status = 'scheduled'` and `scheduled_for <= now()`. When found, it auto-updates the draft to `published` and syncs the parent campaign status.
+
+This means scheduled publishing **does work** — drafts will automatically flip to published at the scheduled time. What doesn't exist yet is posting the actual video to external platforms (TikTok, Instagram, etc.).
 
 ---
 
-## 13. Data Structures Reference
+## 14. Bulk Processing & Autonomous Config
+
+### Bulk Article Processing
+Process up to 20 article URLs in a single request. Each URL gets queued as a separate pipeline run, grouped under a `job_batches` record.
+
+```
+POST /api/article/bulk
+Headers: x-webhook-secret
+Body: { "urls": [...], "brand_username": "myshop", "writing_structure": "AFF-LISTICLE" }
+```
+
+Returns a `batchId` immediately. Poll progress via `GET /api/jobs/batch-status?batchId=xxx`.
+
+### Autonomous Pipeline
+An enhanced version of `from-url` that auto-generates and can auto-schedule based on brand-level autonomous config. Supports single URL, multiple URLs, or raw content.
+
+```
+POST /api/article/autonomous
+Headers: x-webhook-secret
+Body: { "url": "...", "brand_username": "myshop" }
+```
+
+### Autonomous Config
+Per-brand configuration that controls autonomous behavior (auto-publish, scheduling preferences, etc.). Stored in `autonomous_configs` table.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/autonomous/config?brand_username=xxx` | Fetch config for a brand (JWT auth) |
+| `POST /api/autonomous/config` | Save/update config for a brand (JWT auth) |
+
+The config is accessible from the UI via the Autonomous Config modal (gear icon).
+
+### Job Management
+Jobs can be paused, resumed, and retried from the UI or API.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/jobs/status` | Get job details (JWT auth) |
+| `POST /api/jobs/pause` | Pause a running job (JWT auth) |
+| `POST /api/jobs/resume` | Resume a paused job (JWT auth) |
+| `POST /api/jobs/retry` | Retry a failed job from a specific step (JWT auth) |
+| `GET /api/jobs/public-status?jobId=xxx` | Poll job progress (no auth) |
+| `GET /api/jobs/batch-status?batchId=xxx` | Poll batch progress (no auth) |
+
+---
+
+## 15. Cost Dashboard
+
+Found at `/costs` in the Stitch UI.
+
+Every AI generation call (image, video, music, LoRA training) is logged to the `cost_ledger` table with the model used and estimated cost. The cost dashboard aggregates this data.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/costs/summary?range=7d` | Cost breakdown by model, day, and category |
+
+Supported ranges: `7d`, `30d`, `90d`.
+
+The dashboard shows:
+- Total spend over the selected period
+- Breakdown by model (which models cost the most)
+- Breakdown by day (spending trend)
+- Breakdown by category (image vs video vs audio vs training)
+
+---
+
+## 16. Data Structures Reference
 
 ### `assets_json` (stored on draft)
 ```json
@@ -718,45 +1018,132 @@ The scheduling UI is a datetime-local picker in the UI.
 
 ---
 
-## 14. API Endpoint Reference
+## 17. API Endpoint Reference
 
 ### Public / Webhook (no JWT — uses webhook secret or open)
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/health` | Health check |
-| `POST` | `/api/article/from-url` | Trigger autonomous pipeline (webhook secret) |
-| `GET` | `/api/jobs/public-status?jobId=xxx` | Poll job progress (no auth, for Doubleclicker) |
+| `POST` | `/api/article/from-url` | Trigger template pipeline (webhook secret) |
+| `POST` | `/api/article/ai-director` | Trigger AI Director pipeline — template-free (webhook secret or JWT) |
+| `POST` | `/api/article/autonomous` | Autonomous pipeline with auto-scheduling (webhook secret) |
+| `POST` | `/api/article/bulk` | Batch process multiple article URLs (webhook secret) |
+| `POST` | `/api/webhooks/content` | Blog-to-ad webhook (webhook secret) |
+| `GET` | `/api/jobs/public-status?jobId=xxx` | Poll job progress (no auth) |
+| `GET` | `/api/jobs/batch-status?batchId=xxx` | Poll batch progress (no auth) |
 
 ### Authenticated (Supabase JWT required)
+
+**Brand Management**
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/brand/kit` | Fetch brand kit |
-| `POST` | `/api/brand/kit` | Save brand kit |
-| `GET` | `/api/brand/avatars` | List brand avatars |
+| `POST` | `/api/brand/kit` | Save/update brand kit |
+| `DELETE` | `/api/brand/kit` | Delete brand kit |
+| `GET` | `/api/brand/avatars` | List brand avatars / visual subjects |
 | `POST` | `/api/brand/avatars` | Create avatar |
 | `DELETE` | `/api/brand/avatars/:id` | Delete avatar |
+| `POST` | `/api/brand/avatars/:id/train` | Train LoRA from a visual subject's reference images |
+| `POST` | `/api/brand/extract-pdf` | Extract brand guidelines from PDF via GPT |
+| `POST` | `/api/brand/remove-bg` | Background removal (Bria via FAL.ai) |
+| `GET` | `/api/brand/usernames` | List available brand usernames (role-based) |
+| `GET` | `/api/brand/guidelines` | Fetch brand guidelines from Doubleclicker tables |
+
+**Templates**
+| Method | Path | Description |
+|--------|------|-------------|
 | `GET` | `/api/templates/list` | List templates (built-in + user's) |
 | `POST` | `/api/templates/analyze` | AI-extract template from description/video |
 | `POST` | `/api/templates/save` | Create or update a template |
+| `POST` | `/api/templates/assign` | Assign template to multiple brands |
 | `DELETE` | `/api/templates/:id` | Delete a user template |
+
+**Campaigns**
+| Method | Path | Description |
+|--------|------|-------------|
 | `GET` | `/api/campaigns/list` | List all campaigns with drafts |
-| `GET` | `/api/campaigns/:id` | Single campaign detail |
+| `GET` | `/api/campaigns/:id` | Single campaign detail with full draft assets |
+| `POST` | `/api/campaigns/create` | Create campaign manually with custom storyboard |
 | `POST` | `/api/campaigns/publish` | Publish or schedule a draft |
-| `POST` | `/api/jumpstart/generate` | Manual one-off video generation (JumpStart tool) |
-| `POST` | `/api/animate/generate` | Animate a single image |
-| `POST` | `/api/audio/voiceover` | Generate voiceover for text |
-| `POST` | `/api/audio/music` | Generate background music |
+
+**JumpStart (Video Generation)**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/jumpstart/generate` | Generate video from text prompt |
+| `POST` | `/api/jumpstart/result` | Poll generation status |
+| `POST` | `/api/jumpstart/save-video` | Save video to Supabase storage |
+| `POST` | `/api/jumpstart/edit` | Edit existing video via text prompt |
+| `POST` | `/api/jumpstart/extend` | Extend/elongate a video clip |
+
+**Imagineer (Image Generation & Editing)**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/imagineer/generate` | Generate image from text prompt |
+| `POST` | `/api/imagineer/edit` | Edit image with FLUX 2 Dev + optional LoRAs |
+| `POST` | `/api/imagineer/result` | Poll generation/edit status |
+
+**Animate (Image-to-Video)**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/animate/generate` | Animate a still image (WAN v2.2) |
+| `POST` | `/api/animate/result` | Poll animation status |
+
+**Trip / Lens / Smoosh / TryStyle**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/trip/restyle` | Text-guided video restyling (Lucy-Restyle) |
+| `POST` | `/api/lens/generate` | Adjust image perspective/angle |
+| `POST` | `/api/smoosh/generate` | Canvas composition with AI enhancement |
+| `POST` | `/api/trystyle/generate` | Virtual clothing try-on (FASHN AI / FLUX 2) |
+| `POST` | `/api/trystyle/result` | Poll try-on status |
+
+**Image Utilities**
+| Method | Path | Description |
+|--------|------|-------------|
 | `POST` | `/api/images/search` | Search stock images |
-| `POST` | `/api/lora/train` | Start LoRA training job (configurable type/rank/steps/lr) |
-| `POST` | `/api/lora/result` | Check LoRA training result (auto-updates visual subjects) |
+| `POST` | `/api/images/import-url` | Import image from URL to Supabase storage |
+| `POST` | `/api/images/edit` | Multi-model AI image editing |
+| `POST` | `/api/images/inpaint` | AI object removal/replacement with mask |
+
+**Audio**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/audio/voiceover` | Generate voiceover from text |
+| `POST` | `/api/audio/music` | Generate background music |
+| `POST` | `/api/audio/generate` | TTS (ElevenLabs), music (Suno/Stable Audio), foley |
+| `POST` | `/api/audio/captions` | Speech-to-text (Whisper) with word-level timing |
+| `GET` | `/api/audio/result` | Poll audio generation status |
+
+**LoRA**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/lora/train` | Start LoRA training job |
+| `POST` | `/api/lora/result` | Check training result (auto-updates visual subjects) |
 | `GET` | `/api/lora/library` | List pre-built LoRA library (grouped by category) |
-| `POST` | `/api/brand/avatars/:id/train` | Train LoRA from a visual subject's reference images |
-| `POST` | `/api/imagineer/edit` | LoRA-enhanced image editing (FLUX 2 Dev Edit) |
-| `POST` | `/api/library/save` | Save asset to library |
+
+**Jobs & Costs**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/jobs/status` | Get job details |
+| `POST` | `/api/jobs/pause` | Pause a running job |
+| `POST` | `/api/jobs/resume` | Resume a paused job |
+| `POST` | `/api/jobs/retry` | Retry a failed job from a specific step |
+| `GET` | `/api/costs/summary?range=7d` | Cost breakdown by model/day/category |
+
+**Autonomous Config**
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/autonomous/config?brand_username=xxx` | Fetch autonomous config for a brand |
+| `POST` | `/api/autonomous/config` | Save/update autonomous config |
+
+**Library**
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/library/save` | Save asset to personal library |
 
 ---
 
-## 15. Database Tables Reference
+## 18. Database Tables Reference
 
 ### `brand_kit`
 Stores brand identity per user. One per user (upsert on save).
@@ -794,32 +1181,45 @@ Key fields: `type`, `status`, `current_step`, `total_steps`, `completed_steps`, 
 Per-user API key overrides. If set, takes precedence over server env vars.
 Fields: `fal_key`, `wavespeed_key`, `openai_key`.
 
+### `cost_ledger`
+Logs every AI generation call with estimated cost.
+Key fields: `user_id`, `model` (e.g. `wavespeed-wan-2.2`, `fal-seeddream`), `category` (`image`/`video`/`audio`/`training`), `cost` (decimal), `job_id`, `created_at`.
+
+### `job_batches`
+Groups multiple pipeline jobs from a bulk request.
+Key fields: `id`, `brand_username`, `total_jobs`, `completed_jobs`, `failed_jobs`, `status` (pending/processing/completed/failed), `created_at`.
+
+### `autonomous_configs`
+Per-brand autonomous pipeline configuration.
+Key fields: `user_id`, `brand_username`, settings for auto-publish, scheduling preferences, model overrides, etc. Unique constraint on `(user_id, brand_username)`.
+
 ### `stitch_queue` (shared with Doubleclicker)
 Queue table for DC → Stitch handoff. Stitch polls every 15s for `status = 'pending'`.
-Key fields: `username`, `article_id`, `writing_structure`, `metadata` (jsonb), `status` (pending/processing/completed/failed), `created_at`, `processed_at`.
+Key fields: `username`, `brand_username`, `article_id`, `article_title`, `article_content`, `writing_structure`, `payload` (jsonb), `status` (pending/processing/completed/failed), `created_at`, `picked_up_at`, `completed_at`, `error`.
 
 ---
 
-## 16. Supabase Migrations — What to Run
+## 19. Supabase Migrations — What to Run
 
 Run these in order in your Supabase SQL editor (or via the CLI):
 
 | File | What it does |
 |------|-------------|
-| `supabase/migrations/20260222_add_aff_signal_structures.sql` | Adds signal structures |
-| `supabase/migrations/20260222_add_content_signals.sql` | Adds content signals table |
-| `supabase/migrations/20260222_add_signal_runs.sql` | Adds signal runs table |
-| `supabase/migrations/20260222_add_content_signal_review_fields.sql` | Review fields |
-| `supabase-migration-v6.sql` | Main v6: extends user_templates, brand_kit, ad_drafts, campaigns; creates brand_avatars; adds RPC `increment_campaign_completed_drafts` |
+| `supabase/migrations/20250101000000_stitch_initial_schema.sql` | Initial schema: all core tables (brand_kit, user_templates, campaigns, ad_drafts, jobs, cost_ledger, etc.) |
+| `supabase/migrations/20260223_add_brand_username_to_templates.sql` | Adds `brand_username` column to `user_templates` |
+| `supabase/migrations/20260223_add_final_videos_to_drafts.sql` | Adds `final_videos` column to `ad_drafts` for concatenated output |
+| `supabase/migrations/20260223_add_stitch_queue.sql` | Creates `stitch_queue` table for Doubleclicker handoff |
 | `supabase/migrations/20260223_add_visual_style_preset.sql` | Adds `visual_style_preset` column to `user_templates` |
-| `supabase/migrations/20260228_lora_enhancements.sql` | LoRA system: adds training config cols to `brand_loras`, training status to `visual_subjects`, `default_loras` to `brand_kit`, `lora_config` to `user_templates`, creates `lora_library` table |
+| `supabase/migrations/20260223_rename_brand_avatars_to_visual_subjects.sql` | Renames `brand_avatars` table to `visual_subjects` |
+| `supabase/migrations/20260224_add_brand_usernames_jsonb.sql` | Adds `assigned_usernames` JSONB column to `user_profiles` |
+| `supabase/migrations/20260228_lora_enhancements.sql` | LoRA system: training config on `brand_loras`, training status on `visual_subjects`, `default_loras` on `brand_kit`, `lora_config` on `user_templates`, creates `lora_library` table |
 
-> **If you're setting up from scratch**, run v6 first, then the dated migrations in order.
+> **If you're setting up from scratch**, run the initial schema first, then the dated migrations in order.
 > **If you're upgrading an existing DB**, run any migrations newer than your last applied one.
 
 ---
 
-## 17. Environment Variables
+## 20. Environment Variables
 
 ### Required
 ```env
@@ -837,13 +1237,15 @@ FAL_KEY=                # FAL.ai — SeedDream, FLUX, Kling, Hailuo, Beatoven
 ### Optional
 ```env
 FIRECRAWL_API_KEY=      # Better article scraping (falls back to raw HTML fetch if missing)
-WEBHOOK_SECRET=         # If set, all calls to /api/article/from-url must include x-webhook-secret header
+WEBHOOK_SECRET=         # If set, webhook endpoints require x-webhook-secret header
+ELEVENLABS_API_KEY=     # ElevenLabs TTS for voiceover generation
+QUEUE_POLL_MS=15000     # Queue poll interval in ms (default 15000)
 PORT=3003               # Express server port (default 3003)
 ```
 
 ---
 
-## 18. FAQ / Likely Questions
+## 21. FAQ / Likely Questions
 
 **Q: What if no templates match a writing structure?**
 The pipeline falls back to "auto-match" — it reads the article analysis (type, tone, has_product etc.) and picks the most appropriate built-in template. One draft is created. This is the fallback so the pipeline never produces zero output.
@@ -901,6 +1303,21 @@ Template `lora_config` takes full priority. If the template has its own LoRA con
 
 **Q: Can I train a LoRA from the UI?**
 Yes. In the Brand Kit → Avatars tab, any avatar with a reference image shows a "Train LoRA" button. Click it, enter a trigger word, and the training job is submitted to fal.ai. Training takes ~5–10 minutes. The avatar card shows a spinner during training and auto-updates to "LoRA trained" on completion.
+
+**Q: What's the AI Director and when should I use it?**
+The AI Director (`POST /api/article/ai-director`) is a template-free pipeline. Use it when you don't have a matching template, want to experiment with creative structures, or want the AI to have full control over the storyboard design. The template pipeline is better when you want predictable, repeatable formats. Both produce the same output (campaigns, drafts, assets) and appear in the same Campaigns viewer.
+
+**Q: Can I run AI Director and templates on the same article?**
+Yes. They're completely independent pipelines. Call `/api/article/from-url` for the template version and `/api/article/ai-director` for the AI Director version. They'll create separate campaigns.
+
+**Q: Does the AI Director use templates at all?**
+No. It skips template matching entirely. The AI designs the storyboard from scratch based on the article content, brand guidelines, and any style/duration preferences you pass in.
+
+**Q: What's the quality gate in the AI Director?**
+After generating the storyboard, GPT reviews its own work and scores it on 5 criteria (hook strength, narrative flow, visual variety, brand alignment, CTA effectiveness). If the average is below 7/10, it regenerates once with specific feedback. This compensates for having no template guardrails.
+
+**Q: Can Doubleclicker trigger the AI Director via the queue?**
+Not yet. Queue items always route to the template pipeline. To use the AI Director, call the endpoint directly via HTTP. Queue routing could be added later by checking a field in the queue item's payload.
 
 **Q: What's the Imagineer Edit tab?**
 The Edit tab in Imagineer lets you modify an existing image using FLUX 2 + optional LoRA models. Paste a source image URL, describe the edit ("change background to beach sunset"), set a strength slider (lower = subtle, higher = creative rewrite), and optionally select LoRAs for brand consistency. Uses the `fal-ai/flux-2/lora/edit` endpoint.

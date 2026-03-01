@@ -483,6 +483,13 @@ app.post('/api/article/autonomous', async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// AI Director pipeline (NO auth middleware — handler does dual auth: webhook secret OR JWT)
+app.post('/api/article/ai-director', async (req, res) => {
+  const handler = await loadApiRoute('article/ai-director.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Batch status (no auth — for external polling)
 app.get('/api/jobs/batch-status', async (req, res) => {
   const { batchId } = req.query;
