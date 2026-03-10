@@ -95,8 +95,12 @@ export default function ShortsFactoryPage() {
         const res = await apiFetch('/api/brand/usernames');
         const data = await res.json();
         if (data.usernames?.length) {
-          setBrands(data.usernames);
-          setBrandUsername(data.usernames[0]);
+          // API returns [{username, brand_name}] objects
+          const brandList = data.usernames.map(u =>
+            typeof u === 'string' ? { username: u, brand_name: u } : u
+          );
+          setBrands(brandList);
+          setBrandUsername(brandList[0].username);
         }
       } catch (e) {
         console.error('Failed to load brands:', e);
@@ -246,7 +250,7 @@ export default function ShortsFactoryPage() {
               disabled={isGenerating}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
             >
-              {brands.map(b => <option key={b} value={b}>{b}</option>)}
+              {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
             </select>
           </div>
         )}
