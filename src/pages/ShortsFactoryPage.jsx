@@ -25,7 +25,11 @@ import {
   Type,
   Image,
   Video,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import LoRAPicker from '@/components/LoRAPicker';
 
 // ── Niche definitions ───────────────────────────────────────────────────────
 
@@ -74,6 +78,8 @@ export default function ShortsFactoryPage() {
   const [captionStyle, setCaptionStyle] = useState('word_pop');
   const [brandUsername, setBrandUsername] = useState('');
   const [brands, setBrands] = useState([]);
+  const [loraConfig, setLoraConfig] = useState([]);
+  const [showLoraPicker, setShowLoraPicker] = useState(false);
 
   // Pipeline state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -172,6 +178,7 @@ export default function ShortsFactoryPage() {
           brand_username: brandUsername,
           voice_id: voiceId || undefined,
           caption_style: captionStyle,
+          lora_config: loraConfig.length > 0 ? loraConfig : undefined,
         }),
       });
 
@@ -371,6 +378,51 @@ export default function ShortsFactoryPage() {
           </div>
         )}
 
+        {/* LoRA Style (optional) */}
+        {niche && (
+          <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <button
+              onClick={() => !isGenerating && setShowLoraPicker(!showLoraPicker)}
+              disabled={isGenerating}
+              className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#2C666E]" />
+                <span className="text-sm font-semibold text-slate-800">LoRA Style Models</span>
+                {loraConfig.length > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-[#2C666E] text-white rounded-full font-medium">
+                    {loraConfig.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">
+                  {loraConfig.length > 0 ? 'Using FLUX 2' : 'Optional'}
+                </span>
+                {showLoraPicker ? (
+                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                )}
+              </div>
+            </button>
+
+            {showLoraPicker && (
+              <div className="px-5 pb-5 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500 mb-3">
+                  Add trained LoRA models for consistent visual styles or branded characters.
+                  When enabled, images use FLUX 2 Dev with LoRA weights.
+                </p>
+                <LoRAPicker
+                  value={loraConfig}
+                  onChange={setLoraConfig}
+                  brandUsername={brandUsername}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Generate Button */}
         {niche && (
           <Button
@@ -487,6 +539,8 @@ export default function ShortsFactoryPage() {
                   setJobId(null);
                   setCurrentStep(null);
                   setCompletedSteps(0);
+                  setLoraConfig([]);
+                  setShowLoraPicker(false);
                 }}
                 className="flex-1 bg-[#2C666E] hover:bg-[#07393C]"
               >

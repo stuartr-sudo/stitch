@@ -11,6 +11,7 @@
  *   visual_style?: string,   // style preset key (default: template's visual_style)
  *   caption_style?: string,  // 'word_pop' | 'karaoke_glow' | 'word_highlight'
  *   words_per_chunk?: number, // caption words per group (default: 3)
+ *   lora_config?: Array<{ id, type, url, triggerWord, scale }>,  // from LoRAPicker UI
  * }
  *
  * Response: { success, jobId, poll_url }
@@ -27,6 +28,7 @@ import { logCost } from '../lib/costLogger.js';
 import { WorkflowEngine } from '../lib/workflowEngine.js';
 import { withRetry } from '../lib/retryHelper.js';
 import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
+import { resolveLoraConfigs, mapPickerToLoraConfigs } from '../lib/resolveLoraConfigs.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -39,6 +41,7 @@ export default async function handler(req, res) {
     visual_style,
     caption_style = 'word_pop',
     words_per_chunk = 3,
+    lora_config,
   } = req.body;
 
   if (!brand_username) return res.status(400).json({ error: 'Missing brand_username' });
@@ -88,6 +91,22 @@ export default async function handler(req, res) {
   if (!keys.elevenlabsKey) return res.status(400).json({ error: 'ElevenLabs API key required' });
   if (!keys.falKey) return res.status(400).json({ error: 'FAL API key required' });
 
+  // Resolve LoRA configs:
+  //  1. Explicit from UI (lora_config in request body)
+  //  2. Fallback to brand_kit.default_loras
+  let loraConfigs = [];
+  if (lora_config?.length) {
+    // Direct from LoRAPicker UI: [{ id, type, url, triggerWord, scale }]
+    loraConfigs = mapPickerToLoraConfigs(lora_config);
+    console.log(`[shorts] ${loraConfigs.length} LoRA(s) from request body`);
+  } else {
+    // Try brand-level defaults (resolveLoraConfigs handles null template gracefully)
+    loraConfigs = await resolveLoraConfigs(null, effectiveBrandKit, supabase);
+    if (loraConfigs.length) {
+      console.log(`[shorts] ${loraConfigs.length} LoRA(s) from brand defaults`);
+    }
+  }
+
   // Create job record
   const { data: job, error: jobErr } = await supabase
     .from('jobs')
@@ -98,7 +117,7 @@ export default async function handler(req, res) {
       current_step: 'generating_script',
       total_steps: 9,
       completed_steps: 0,
-      input_json: { niche, topic, brand_username, voice_id, visual_style, caption_style },
+      input_json: { niche, topic, brand_username, voice_id, visual_style, caption_style, lora_count: loraConfigs.length },
       workflow_state: 'running',
     })
     .select()
@@ -120,6 +139,7 @@ export default async function handler(req, res) {
     visualStyle: visual_style || nicheTemplate.visual_style,
     captionStyle: caption_style,
     wordsPerChunk: words_per_chunk,
+    loraConfigs,
     supabase,
   }).catch(async (err) => {
     console.error('[shorts/generate] Pipeline error:', err);
@@ -135,7 +155,7 @@ export default async function handler(req, res) {
 
 async function runShortsPipeline({
   job, userId, brandKit, keys, niche, topic, nicheTemplate,
-  voiceId, visualStyle, captionStyle, wordsPerChunk, supabase,
+  voiceId, visualStyle, captionStyle, wordsPerChunk, loraConfigs, supabase,
 }) {
   const jobId = job.id;
   const updateJob = (patch) => supabase.from('jobs').update(patch).eq('id', jobId);
@@ -145,6 +165,16 @@ async function runShortsPipeline({
   await wf.loadState();
 
   const styleSuffix = getStyleSuffix(visualStyle);
+  const hasLoras = loraConfigs.length > 0;
+
+  // When LoRAs are present, force FLUX 2 model; otherwise use fal_flux as default
+  const imageModel = hasLoras ? 'fal_flux' : 'fal_flux';
+  const videoModel = 'fal_kling';  // default video model for shorts
+
+  if (hasLoras) {
+    console.log(`[shorts] LoRA mode: ${loraConfigs.length} LoRA(s) → using FLUX 2 for images`);
+    loraConfigs.forEach((c, i) => console.log(`  LoRA ${i + 1}: ${c.triggerWord || '(no trigger)'} @ scale ${c.scale}`));
+  }
 
   // ── Step 1: Generate Script ─────────────────────────────────────────────────
   let script;
@@ -215,7 +245,7 @@ async function runShortsPipeline({
   let sceneImages;
   if (!wf.hasCompleted('generate_images')) {
     await updateJob({ current_step: 'generating_images', completed_steps: 3 });
-    console.log(`[shorts] Step 4: Generating ${script.scenes.length} scene images`);
+    console.log(`[shorts] Step 4: Generating ${script.scenes.length} scene images${hasLoras ? ' (with LoRA)' : ''}`);
 
     sceneImages = [];
     let prevFrameUrl = null;
@@ -223,6 +253,14 @@ async function runShortsPipeline({
 
     for (let i = 0; i < script.scenes.length; i++) {
       const scene = script.scenes[i];
+
+      // Use selectModelForScene for smart routing (LoRAs force FLUX 2)
+      const sceneModel = selectModelForScene(
+        scene.role,
+        { smart_routing: true, image_model: imageModel },
+        loraConfigs
+      );
+
       let prompt = `${scene.visual_prompt}${styleSuffix}`;
 
       // Add continuity context from previous frame
@@ -234,7 +272,7 @@ async function runShortsPipeline({
       prompt += '. Vertical 9:16 format, cinematic, no text or words in image.';
 
       const imageUrl = await withRetry(
-        () => generateImage(prompt, keys, { aspect_ratio: '9:16' }),
+        () => generateImage(prompt, '9:16', keys, supabase, sceneModel, loraConfigs),
         { maxAttempts: 2, baseDelayMs: 2000 }
       );
       sceneImages.push(imageUrl);
@@ -243,8 +281,8 @@ async function runShortsPipeline({
         username: brand_username,
         category: 'fal',
         operation: 'shorts_image',
-        model: 'flux-pro',
-        metadata: { image_count: 1 },
+        model: hasLoras ? 'flux-2-lora' : 'flux-pro',
+        metadata: { image_count: 1, lora_count: loraConfigs.length },
       });
 
       // Extract last frame for continuity chain (skip for last scene)
@@ -258,7 +296,7 @@ async function runShortsPipeline({
         }
       }
 
-      console.log(`[shorts] Image ${i + 1}/${script.scenes.length} done`);
+      console.log(`[shorts] Image ${i + 1}/${script.scenes.length} done (model: ${sceneModel})`);
     }
 
     await wf.transition('generate_images', { sceneImages });
@@ -286,7 +324,7 @@ async function runShortsPipeline({
       const motionPrompt = scene.motion_prompt || 'slow cinematic pan';
 
       const clipUrl = await withRetry(
-        () => animateImage(sceneImages[i], motionPrompt, keys, { duration, aspect_ratio: '9:16' }),
+        () => animateImage(sceneImages[i], motionPrompt, '9:16', duration, keys, supabase, videoModel, loraConfigs),
         { maxAttempts: 2, baseDelayMs: 5000 }
       );
       sceneClips.push(clipUrl);
@@ -413,6 +451,7 @@ async function runShortsPipeline({
         scene_clips: sceneClips,
         music_url: musicUrl,
         assembled_url: assembledUrl,
+        lora_config: loraConfigs.length ? loraConfigs : null,
       },
       generation_status: 'ready',
       aspect_ratio: '9:16',

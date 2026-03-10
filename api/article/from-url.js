@@ -28,6 +28,7 @@ import { matchTemplate, groupPlatformsByRatio, VIDEO_TEMPLATES } from '../lib/vi
 import { generateImage, animateImage, generateMusic, scrapeArticle, extractLastFrame, analyzeFrameContinuity, concatVideos, enhancePromptForPipeline, selectModelForScene } from '../lib/pipelineHelpers.js';
 import { VISUAL_STYLE_PRESETS, getStyleSuffix } from '../lib/stylePresets.js';
 import { logCost } from '../lib/costLogger.js';
+import { resolveLoraConfigs } from '../lib/resolveLoraConfigs.js';
 import { WorkflowEngine } from '../lib/workflowEngine.js';
 import { withRetry } from '../lib/retryHelper.js';
 import { selectVariantPresets } from '../lib/variantGenerator.js';
@@ -860,53 +861,4 @@ function chunkArray(arr, size) {
   return chunks;
 }
 
-/**
- * Resolve LoRA configs for a template, with fallback chain:
- * 1. template.lora_config[] (explicit multi-LoRA)
- * 2. template.avatar_id (legacy single LoRA via visual subject)
- * 3. brandKit.default_loras (brand-level defaults)
- *
- * @returns {Array<{ triggerWord, loraUrl, scale }>}
- */
-async function resolveLoraConfigs(template, brandKit, supabase) {
-  const configs = [];
-
-  // 1. Template-level multi-LoRA config (new)
-  if (template.lora_config?.length) {
-    for (const entry of template.lora_config) {
-      if (entry.source === 'prebuilt') {
-        const { data: lib } = await supabase.from('lora_library').select('*').eq('id', entry.lora_id).maybeSingle();
-        if (lib) configs.push({ loraUrl: lib.hf_repo_id, triggerWord: lib.recommended_trigger_word || null, scale: entry.scale ?? lib.default_scale });
-      } else {
-        // Custom or visual_subject source — look up from brand_loras
-        const { data: lora } = await supabase.from('brand_loras').select('fal_model_url, trigger_word').eq('id', entry.lora_id).eq('status', 'ready').maybeSingle();
-        if (lora?.fal_model_url) configs.push({ loraUrl: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: entry.scale ?? 1.0 });
-      }
-    }
-    if (configs.length) return configs;
-  }
-
-  // 2. Legacy avatar_id (single visual subject LoRA)
-  if (template.avatar_id) {
-    const { data: subject } = await supabase.from('visual_subjects').select('name, lora_url, lora_trigger_word').eq('id', template.avatar_id).maybeSingle();
-    if (subject?.lora_url) {
-      configs.push({ loraUrl: subject.lora_url, triggerWord: subject.lora_trigger_word || null, scale: 1.0 });
-      return configs;
-    }
-  }
-
-  // 3. Brand-level default LoRAs (fallback)
-  if (brandKit.default_loras?.length) {
-    for (const entry of brandKit.default_loras) {
-      if (entry.source === 'prebuilt') {
-        const { data: lib } = await supabase.from('lora_library').select('*').eq('id', entry.lora_id).maybeSingle();
-        if (lib) configs.push({ loraUrl: lib.hf_repo_id, triggerWord: lib.recommended_trigger_word || null, scale: entry.scale ?? lib.default_scale });
-      } else {
-        const { data: lora } = await supabase.from('brand_loras').select('fal_model_url, trigger_word').eq('id', entry.lora_id).eq('status', 'ready').maybeSingle();
-        if (lora?.fal_model_url) configs.push({ loraUrl: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: entry.scale ?? 1.0 });
-      }
-    }
-  }
-
-  return configs;
-}
+// resolveLoraConfigs is now imported from ../lib/resolveLoraConfigs.js
