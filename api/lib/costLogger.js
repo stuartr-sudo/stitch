@@ -28,6 +28,8 @@ const PRICING = {
   'flux-2-lora':      { input: 0, output: 0, per_image: 0.035 },
   'flux-2-lora-edit': { input: 0, output: 0, per_image: 0.035 },
   'lora-training':    { input: 0, output: 0, per_training: 0.50 },
+  'elevenlabs-tts':   { input: 0, output: 0, per_character: 0.00030 },
+  'whisper':          { input: 0, output: 0, per_audio_sec: 0.0001 },
 };
 
 export async function logCost({
@@ -58,6 +60,12 @@ export async function logCost({
     }
     if (pricing.per_training && metadata.training_count) {
       estimated_cost_usd += pricing.per_training * metadata.training_count;
+    }
+    if (pricing.per_character && metadata.character_count) {
+      estimated_cost_usd += pricing.per_character * metadata.character_count;
+    }
+    if (pricing.per_audio_sec && metadata.audio_seconds) {
+      estimated_cost_usd += pricing.per_audio_sec * metadata.audio_seconds;
     }
   }
 

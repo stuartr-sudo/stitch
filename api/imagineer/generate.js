@@ -1,6 +1,6 @@
 /**
  * Imagineer - AI Image Generation API
- * Supports Wavespeed Nano Banana Pro and SeedDream 4.5
+ * Supports Nano Banana 2 (via fal.ai) and Flux 2 (LoRA)
  */
 
 import { getUserKeys } from '../lib/getUserKeys.js';
@@ -88,14 +88,8 @@ const STYLE_PROMPTS = {
   'chinese-ink': 'traditional Chinese ink painting, flowing calligraphic brushwork, mountain and water landscapes, philosophical emptiness, Shanshui aesthetic, meditative harmony',
 };
 
-const SEEDDREAM_SIZE_MAP = {
-  '1:1': 'square_hd',
-  '16:9': 'landscape_16_9',
-  '9:16': 'portrait_16_9',
-  '4:3': 'landscape_4_3',
-  '3:4': 'portrait_4_3',
-  '3:2': { width: 2048, height: 1365 },
-};
+// Nano Banana 2 valid aspect ratios
+const VALID_ASPECT_RATIOS = ['auto', '21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -103,7 +97,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, style, dimensions = '16:9', model = 'wavespeed' } = req.body;
+    const { prompt, style, dimensions = '16:9', model = 'nano-banana-2' } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Missing prompt' });
@@ -120,74 +114,25 @@ export default async function handler(req, res) {
 
     console.log('[Imagineer] Enhanced prompt:', enhancedPrompt.substring(0, 120) + '...');
 
-    if (model === 'seeddream') {
-      return handleSeedDream(req, res, enhancedPrompt, dimensions);
-    }
     if (model === 'fal-flux') {
       return handleFalFlux(req, res, enhancedPrompt, dimensions, req.body.loraUrl);
     }
-    return handleWavespeed(req, res, enhancedPrompt, dimensions);
+    return handleNanoBanana2(req, res, enhancedPrompt, dimensions);
   } catch (error) {
     console.error('[Imagineer] Server Error:', error);
     return res.status(500).json({ error: error.message });
   }
 }
 
-async function handleWavespeed(req, res, enhancedPrompt, dimensions) {
-  const { wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
-  if (!WAVESPEED_API_KEY) {
-    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
-  }
-
-  const response = await fetch('https://api.wavespeed.ai/api/v3/google/nano-banana-pro/text-to-image', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt: enhancedPrompt,
-      aspect_ratio: dimensions,
-      num_images: 1,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Imagineer/Wavespeed] API Error:', errorText);
-    return res.status(response.status).json({ error: 'Wavespeed API error', details: errorText });
-  }
-
-  const data = await response.json();
-  const imageUrl = data.outputs?.[0] || data.data?.outputs?.[0];
-
-  if (imageUrl) {
-    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
-  }
-
-  const requestId = data.id || data.request_id || data.data?.id;
-  if (requestId) {
-    return res.status(200).json({
-      success: true,
-      requestId,
-      model: 'wavespeed',
-      status: data.status || data.data?.status || 'processing',
-      pollEndpoint: '/api/imagineer/result',
-    });
-  }
-
-  return res.status(500).json({ error: 'Unexpected API response format' });
-}
-
-async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
+async function handleNanoBanana2(req, res, enhancedPrompt, dimensions) {
   const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'Fal.ai API key not configured. Please add it in API Keys settings.' });
   }
 
-  const imageSize = SEEDDREAM_SIZE_MAP[dimensions] || 'square_hd';
+  const aspectRatio = VALID_ASPECT_RATIOS.includes(dimensions) ? dimensions : 'auto';
 
-  const response = await fetch('https://queue.fal.run/fal-ai/bytedance/seedream/v4.5/text-to-image', {
+  const response = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
     method: 'POST',
     headers: {
       'Authorization': `Key ${FAL_KEY}`,
@@ -195,20 +140,23 @@ async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
     },
     body: JSON.stringify({
       prompt: enhancedPrompt,
-      image_size: imageSize,
+      aspect_ratio: aspectRatio,
+      resolution: '1K',
       num_images: 1,
-      enable_safety_checker: true,
+      output_format: 'png',
+      safety_tolerance: '4',
+      limit_generations: true,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[Imagineer/SeedDream] API Error:', errorText);
-    return res.status(response.status).json({ error: 'SeedDream API error', details: errorText });
+    console.error('[Imagineer/NanoBanana2] API Error:', errorText);
+    return res.status(response.status).json({ error: 'Nano Banana 2 API error', details: errorText });
   }
 
   const data = await response.json();
-  console.log('[Imagineer/SeedDream] Queue response:', JSON.stringify(data).substring(0, 300));
+  console.log('[Imagineer/NanoBanana2] Queue response:', JSON.stringify(data).substring(0, 300));
 
   if (data.images?.[0]?.url) {
     return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
@@ -219,7 +167,7 @@ async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
     return res.status(200).json({
       success: true,
       requestId,
-      model: 'seeddream',
+      model: 'nano-banana-2',
       status: data.status || 'IN_QUEUE',
       statusUrl: data.status_url || null,
       responseUrl: data.response_url || null,
@@ -227,7 +175,7 @@ async function handleSeedDream(req, res, enhancedPrompt, dimensions) {
     });
   }
 
-  return res.status(500).json({ error: 'Unexpected SeedDream response format' });
+  return res.status(500).json({ error: 'Unexpected Nano Banana 2 response format' });
 }
 
 async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {

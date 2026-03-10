@@ -12,9 +12,8 @@ import { apiFetch } from "@/lib/api";
 import LoRAPicker from "@/components/LoRAPicker";
 
 const IMAGE_MODELS = [
+  { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
   { value: "fal-flux", label: "Flux 2 Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
-  { value: "wavespeed", label: "Nano Banana Pro", description: "Fast, high-quality image generation" },
-  { value: "seeddream", label: "SeedDream 4.5", description: "ByteDance stylized generation" },
 ];
 
 // Dropdown options
@@ -162,10 +161,14 @@ const MOOD = [
 const DIMENSIONS = [
   { value: "1:1", label: "Square (1:1)" },
   { value: "16:9", label: "Landscape Wide (16:9)" },
+  { value: "21:9", label: "Ultra Wide (21:9)" },
   { value: "9:16", label: "Portrait Tall (9:16)" },
   { value: "4:3", label: "Landscape Standard (4:3)" },
   { value: "3:2", label: "Photo Landscape (3:2)" },
+  { value: "5:4", label: "Photo Standard (5:4)" },
   { value: "3:4", label: "Portrait Standard (3:4)" },
+  { value: "4:5", label: "Portrait Photo (4:5)" },
+  { value: "2:3", label: "Portrait Tall (2:3)" },
 ];
 
 const COLOR_PALETTE = [
@@ -212,7 +215,7 @@ export default function ImagineerModal({
   isEmbedded = false
 }) {
   // Model selection
-  const [selectedModel, setSelectedModel] = useState("wavespeed");
+  const [selectedModel, setSelectedModel] = useState("nano-banana-2");
 
   // Core subject
   const [subjectDescription, setSubjectDescription] = useState("");
@@ -263,7 +266,7 @@ export default function ImagineerModal({
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedModel("wavespeed");
+      setSelectedModel("nano-banana-2");
       setSubjectDescription("");
       setSubjectType("");
       setArtisticStyle("");

@@ -327,6 +327,19 @@ app.get('/api/audio/result', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Shorts Factory routes (with auth)
+app.post('/api/shorts/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/shorts/topics', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/topics.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('templates/list.js');

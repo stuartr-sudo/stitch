@@ -41,7 +41,7 @@ async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs 
   throw new Error('Wavespeed polling timeout');
 }
 
-async function pollFalQueue(requestId, model, falKey, maxRetries = 120, delayMs = 2000) {
+export async function pollFalQueue(requestId, model, falKey, maxRetries = 120, delayMs = 2000) {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(`${FAL_BASE}/${model}/requests/${requestId}`, {
       headers: {
@@ -99,7 +99,7 @@ function validateImageBuffer(buffer) {
   }
 }
 
-async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
+export async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
   try {
     const response = await fetch(url);
     if (!response.ok) return url; // fall back to original URL
@@ -609,6 +609,83 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
   }
 
   throw new Error('No video generation API key configured');
+}
+
+// ---------------------------------------------------------------------------
+// Assemble a faceless short: video clips + voiceover + background music
+// ---------------------------------------------------------------------------
+
+/**
+ * Assembles a faceless short video from scene clips, voiceover, and music.
+ * Unlike concatVideos() which mixes video-embedded audio with music, this
+ * function discards scene clip audio and mixes voiceover (100%) + music (15%).
+ *
+ * @param {string[]} videoUrls - Ordered list of scene clip URLs
+ * @param {string} voiceoverUrl - Voiceover narration audio URL
+ * @param {string|null} musicUrl - Optional background music URL
+ * @param {string} falKey
+ * @param {object} supabase
+ * @returns {Promise<string>} Public URL of the assembled video
+ */
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase) {
+  if (!falKey) throw new Error('falKey required for short assembly');
+  if (!videoUrls?.length) throw new Error('No video clips to assemble');
+  if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
+
+  const n = videoUrls.length;
+  const inputs = [
+    ...videoUrls.map(url => ({ url })),
+    { url: voiceoverUrl },
+  ];
+
+  const voIdx = n; // voiceover input index
+  let filterComplex;
+  let outputMap;
+
+  if (musicUrl) {
+    inputs.push({ url: musicUrl });
+    const musIdx = n + 1;
+
+    // Concat video streams only (a=0 discards clip audio), then mix voiceover + music
+    filterComplex = [
+      `${Array.from({ length: n }, (_, i) => `[${i}:v]`).join('')}concat=n=${n}:v=1:a=0[outv]`,
+      `[${voIdx}:a]volume=1.0[vo]`,
+      `[${musIdx}:a]volume=0.15[mus]`,
+      `[vo][mus]amix=inputs=2:duration=first[outa]`,
+    ].join(';');
+  } else {
+    // No music — concat video, use voiceover as sole audio
+    filterComplex = [
+      `${Array.from({ length: n }, (_, i) => `[${i}:v]`).join('')}concat=n=${n}:v=1:a=0[outv]`,
+      `[${voIdx}:a]anull[outa]`,
+    ].join(';');
+  }
+
+  outputMap = ['-map', '[outv]', '-map', '[outa]'];
+
+  const body = {
+    inputs,
+    filter_complex: filterComplex,
+    output_options: [...outputMap, '-c:v', 'libx264', '-c:a', 'aac', '-shortest'],
+    output_filename: `short_${Date.now()}.mp4`,
+  };
+
+  console.log(`[assembleShort] Assembling ${n} clips + voiceover${musicUrl ? ' + music' : ''}`);
+
+  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`FAL ffmpeg short assembly failed: ${await res.text()}`);
+  const queueData = await res.json();
+
+  const output = await pollFalQueue(queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
+  const videoUrl = output?.video?.url || output?.output_url;
+  if (!videoUrl) throw new Error('No video URL from FFmpeg short assembly');
+
+  return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
 }
 
 // ---------------------------------------------------------------------------
