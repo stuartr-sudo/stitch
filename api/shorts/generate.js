@@ -26,6 +26,7 @@ import { getStyleSuffix } from '../lib/stylePresets.js';
 import { logCost } from '../lib/costLogger.js';
 import { WorkflowEngine } from '../lib/workflowEngine.js';
 import { withRetry } from '../lib/retryHelper.js';
+import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -53,18 +54,21 @@ export default async function handler(req, res) {
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  // Look up brand kit
-  const { data: brandKit, error: brandErr } = await supabase
-    .from('brand_kit')
-    .select('*')
-    .eq('brand_username', brand_username)
-    .single();
-
-  if (brandErr || !brandKit) {
+  // Resolve user_id: brand_kit → company_information → authenticated user
+  const userId = await resolveUserIdFromBrand(brand_username, supabase, req.user?.id);
+  if (!userId) {
     return res.status(404).json({ error: `Brand not found: ${brand_username}` });
   }
 
-  const userId = brandKit.user_id;
+  // Try to load brand kit (optional — shorts don't strictly need it)
+  const { data: brandKit } = await supabase
+    .from('brand_kit')
+    .select('*')
+    .eq('brand_username', brand_username)
+    .maybeSingle();
+
+  // Build a minimal brandKit fallback if none exists
+  const effectiveBrandKit = brandKit || { brand_username: brand_username, user_id: userId };
 
   // Get API keys
   const { data: userKeys } = await supabase
@@ -111,7 +115,7 @@ export default async function handler(req, res) {
 
   // Run pipeline in background
   runShortsPipeline({
-    job, userId, brandKit, keys, niche, topic, nicheTemplate,
+    job, userId, brandKit: effectiveBrandKit, keys, niche, topic, nicheTemplate,
     voiceId: voice_id || nicheTemplate.default_voice,
     visualStyle: visual_style || nicheTemplate.visual_style,
     captionStyle: caption_style,
