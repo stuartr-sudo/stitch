@@ -35,6 +35,7 @@ import {
   Music,
   Mic,
   Zap,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -60,6 +61,7 @@ import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
+import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetModal';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -541,6 +543,17 @@ export default function VideoAdvertCreator() {
                       <span className="text-xs font-medium text-gray-800">Try Style</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">Virtual try-on</p>
+                  </div>
+
+                  <div
+                    onClick={() => setActiveModal('turnaround')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RotateCcw className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Turnaround</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Character sheet</p>
                   </div>
                 </div>
               )}
@@ -1035,6 +1048,12 @@ export default function VideoAdvertCreator() {
             body: JSON.stringify({ url, type: 'image', title: 'Try Style Result', source: 'trystyle' }),
           }).catch(err => console.warn('Failed to save to library:', err));
         }}
+      />
+
+      <TurnaroundSheetModal
+        isOpen={activeModal === 'turnaround'}
+        onClose={() => setActiveModal(null)}
+        onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet')}
       />
 
       <ApiKeysModal

@@ -144,6 +144,19 @@ app.post('/api/imagineer/edit', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/imagineer/turnaround', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/turnaround.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/turnaround] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
 app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
   try {
     const handler = await loadApiRoute('imagineer/result.js');
