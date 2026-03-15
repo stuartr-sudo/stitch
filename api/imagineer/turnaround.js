@@ -14,19 +14,8 @@
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
-const STYLE_PRESETS = {
-  'concept-art': 'professional concept art, clean detailed rendering, animation studio quality',
-  'anime': 'anime cel-shaded illustration, clean line art, vibrant colors',
-  '3d-render': '3D rendered character model, clean studio lighting, subsurface scattering',
-  'comic-book': 'comic book illustration, bold ink outlines, professional coloring',
-  'pixar': 'Pixar-style 3D animation, smooth appealing design, warm lighting',
-  'realistic': 'photorealistic rendering, studio photography lighting, high detail',
-  'ghibli': 'Studio Ghibli style, soft watercolor, gentle tones, hand-drawn warmth',
-  'game-art': 'AAA video game character art, PBR textures, detailed rendering',
-};
-
 function buildTurnaroundPrompt(characterDescription, style, hasReference) {
-  const stylePrompt = STYLE_PRESETS[style] || STYLE_PRESETS['concept-art'];
+  const stylePrompt = (style && style.trim()) ? `${style.trim()} style, high quality rendering` : 'professional concept art, clean detailed rendering, animation studio quality';
 
   const refNote = hasReference
     ? 'Use the reference image as the character design. Recreate this exact character in every cell of the grid'

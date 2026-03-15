@@ -10,15 +10,25 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 
-const STYLE_PRESETS = [
-  { value: "concept-art", label: "Concept Art" },
-  { value: "anime", label: "Anime" },
-  { value: "3d-render", label: "3D Render" },
-  { value: "comic-book", label: "Comic Book" },
-  { value: "pixar", label: "Pixar 3D" },
-  { value: "realistic", label: "Realistic" },
-  { value: "ghibli", label: "Studio Ghibli" },
-  { value: "game-art", label: "Game Art" },
+const STYLE_CHIPS = [
+  "Concept Art",
+  "Anime",
+  "3D Render",
+  "Comic Book",
+  "Pixar 3D",
+  "Realistic",
+  "Studio Ghibli",
+  "Game Art",
+  "Watercolor",
+  "Pixel Art",
+  "Chibi",
+  "Dark Fantasy",
+  "Cyberpunk",
+  "Storybook",
+  "Flat Vector",
+  "Ink & Wash",
+  "Low Poly",
+  "Claymation",
 ];
 
 const MODEL_OPTIONS = [
@@ -57,7 +67,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referencePreview, setReferencePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState("concept-art");
+  const [styleText, setStyleText] = useState("Concept Art");
   const [selectedModel, setSelectedModel] = useState("nano-banana-2");
 
   // AI analysis
@@ -110,7 +120,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       setReferencePreview("");
       setUploadingRef(false);
       setAnalyzingRef(false);
-      setSelectedStyle("concept-art");
+      setStyleText("Concept Art");
       setSelectedModel("nano-banana-2");
       setGenerating(false);
       setSheetImageUrl(null);
@@ -227,7 +237,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
         body: JSON.stringify({
           characterDescription: characterDescription.trim(),
           referenceImageUrl: referenceImageUrl.trim() || undefined,
-          style: selectedStyle,
+          style: styleText.trim(),
           model: selectedModel,
         }),
       });
@@ -496,38 +506,51 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             )}
           </div>
 
-          {/* Model & Style */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {MODEL_OPTIONS.map((m) => (
-                    <SelectItem key={m.value} value={m.value} className="text-sm">
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Model */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                {MODEL_OPTIONS.map((m) => (
+                  <SelectItem key={m.value} value={m.value} className="text-sm">
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Style — chips + free text */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Style</Label>
+            <Input
+              value={styleText}
+              onChange={(e) => setStyleText(e.target.value)}
+              placeholder="e.g. dark gothic ink, retro 80s neon, cel-shaded anime..."
+              className="bg-white text-sm mb-2"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {STYLE_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setStyleText(chip)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
+                    styleText === chip
+                      ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                  }`}
+                >
+                  {chip}
+                </button>
+              ))}
             </div>
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1 block">Style</Label>
-              <Select value={selectedStyle} onValueChange={setSelectedStyle}>
-                <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {STYLE_PRESETS.map((s) => (
-                    <SelectItem key={s.value} value={s.value} className="text-sm">
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Pick a preset or type any style you want — it's injected directly into the generation prompt.
+            </p>
           </div>
 
           {/* Model requires a reference but none provided */}
