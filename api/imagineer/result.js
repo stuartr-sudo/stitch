@@ -21,9 +21,18 @@ export default async function handler(req, res) {
 
     console.log('[Imagineer/Result] Checking:', requestId, '| Model:', model);
 
-    if (model === 'fal-flux' || model === 'fal-flux-edit') {
-      return pollFalFlux(req, res, requestId, model === 'fal-flux-edit' ? 'fal-ai/flux-2/lora/edit' : 'fal-ai/flux-2/lora');
+    // Map model IDs to fal.ai queue endpoints
+    const endpointMap = {
+      'fal-flux':           'fal-ai/flux-2/lora',
+      'fal-flux-edit':      'fal-ai/flux-2/lora/edit',
+      'nano-banana-pro':    'fal-ai/nano-banana-pro/edit',
+      'seedream':           'fal-ai/bytedance/seedream/v4.5/edit',
+    };
+
+    if (endpointMap[model]) {
+      return pollFalFlux(req, res, requestId, endpointMap[model]);
     }
+    // Default: nano-banana-2 (both generate and edit share the same queue namespace)
     return pollNanoBanana2(req, res, requestId);
   } catch (error) {
     console.error('[Imagineer/Result] Error:', error);

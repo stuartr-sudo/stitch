@@ -22,8 +22,10 @@ const STYLE_PRESETS = [
 ];
 
 const MODEL_OPTIONS = [
-  { value: "nano-banana-2", label: "Nano Banana 2" },
-  { value: "fal-flux", label: "Flux 2 (+ LoRA)" },
+  { value: "nano-banana-2", label: "Nano Banana 2", needsRef: false },
+  { value: "nano-banana-pro", label: "Nano Banana Pro (Edit)", needsRef: true },
+  { value: "seedream", label: "Seedream v4.5 (Edit)", needsRef: true },
+  { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
 const GRID_COLS = 4;
@@ -452,11 +454,12 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             </div>
           </div>
 
-          {referenceImageUrl && selectedModel === 'nano-banana-2' && (
+          {/* Model requires a reference but none provided */}
+          {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
             <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
               <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800">
-                Nano Banana 2 doesn't support reference images. Switch to <strong>Flux 2</strong> for image-to-image.
+                <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image. Upload one above or switch to Nano Banana 2.
               </p>
             </div>
           )}
@@ -595,7 +598,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={generating || !characterDescription.trim()}
+              disabled={generating || !characterDescription.trim() || (!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef)}
               className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60"
             >
               {generating ? (
