@@ -44,7 +44,7 @@ Return ONLY the character description paragraph, nothing else.`,
           },
         ],
       }],
-      max_tokens: 400,
+      max_completion_tokens: 400,
     });
 
     const description = response.choices[0].message.content.trim();
