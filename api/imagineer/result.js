@@ -64,8 +64,14 @@ async function pollNanoBanana2(req, res, requestId) {
 
   if (!statusResponse.ok) {
     const errorText = await statusResponse.text();
-    console.error('[Imagineer/Result] Nano Banana 2 status error:', statusResponse.status, errorText);
-    return res.status(statusResponse.status).json({ error: 'Failed to check Nano Banana 2 status', details: errorText });
+    console.error('[Imagineer/Result] Nano Banana 2 status error:', statusResponse.status, errorText.substring(0, 200));
+    return res.status(200).json({
+      success: true,
+      status: 'processing',
+      requestId,
+      imageUrl: null,
+      _upstreamError: `fal.ai returned ${statusResponse.status}`,
+    });
   }
 
   const statusData = await statusResponse.json();
@@ -79,7 +85,14 @@ async function pollNanoBanana2(req, res, requestId) {
     const resultResponse = await fetch(resultUrl, { headers });
 
     if (!resultResponse.ok) {
-      return res.status(resultResponse.status).json({ error: 'Failed to fetch Nano Banana 2 result' });
+      console.error('[Imagineer/Result] Nano Banana 2 result fetch error:', resultResponse.status);
+      return res.status(200).json({
+        success: true,
+        status: 'processing',
+        requestId,
+        imageUrl: null,
+        _upstreamError: `fal.ai result fetch returned ${resultResponse.status}`,
+      });
     }
 
     const resultData = await resultResponse.json();
@@ -111,20 +124,39 @@ async function pollFalFlux(req, res, requestId, endpoint = 'fal-ai/flux-2/lora')
   const headers = { 'Authorization': `Key ${FAL_KEY}` };
   const checkUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}/status?logs=1`;
 
+  console.log('[Imagineer/Result] Polling fal.ai:', checkUrl);
+
   const statusResponse = await fetch(checkUrl, { headers });
   if (!statusResponse.ok) {
     const errorText = await statusResponse.text();
-    return res.status(statusResponse.status).json({ error: 'Status check failed', details: errorText });
+    console.error(`[Imagineer/Result] fal.ai status ${statusResponse.status}:`, errorText.substring(0, 200));
+    // Don't proxy upstream errors — return "processing" so client keeps polling
+    return res.status(200).json({
+      success: true,
+      status: 'processing',
+      requestId,
+      imageUrl: null,
+      _upstreamError: `fal.ai returned ${statusResponse.status}`,
+    });
   }
 
   const statusData = await statusResponse.json();
+  console.log('[Imagineer/Result] fal.ai queue status:', statusData.status);
 
   if (statusData.status === 'COMPLETED') {
     const resultUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}`;
     const resultResponse = await fetch(resultUrl, { headers });
-    
+
     if (!resultResponse.ok) {
-      return res.status(resultResponse.status).json({ error: 'Failed to fetch Flux result' });
+      const errorText = await resultResponse.text();
+      console.error(`[Imagineer/Result] fal.ai result fetch ${resultResponse.status}:`, errorText.substring(0, 200));
+      return res.status(200).json({
+        success: true,
+        status: 'processing',
+        requestId,
+        imageUrl: null,
+        _upstreamError: `fal.ai result fetch returned ${resultResponse.status}`,
+      });
     }
 
     const resultData = await resultResponse.json();
@@ -133,6 +165,17 @@ async function pollFalFlux(req, res, requestId, endpoint = 'fal-ai/flux-2/lora')
       status: 'completed',
       requestId,
       imageUrl: resultData.images?.[0]?.url || null,
+    });
+  }
+
+  if (statusData.status === 'FAILED') {
+    console.error('[Imagineer/Result] fal.ai job FAILED:', JSON.stringify(statusData).substring(0, 300));
+    return res.status(200).json({
+      success: true,
+      status: 'failed',
+      requestId,
+      imageUrl: null,
+      error: 'Image generation failed on fal.ai',
     });
   }
 
