@@ -28,6 +28,10 @@ const MODEL_OPTIONS = [
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
+const DEFAULT_PROMPT = `Full-body character turnaround reference sheet. 4 columns, 6 rows grid on a clean white background. Each cell shows the SAME character in a different pose or angle. Consistent proportions, outfit, colors, and features across every cell. No background elements, no props unless specified. Clean line separation between cells.
+
+Character: [describe your character here — e.g., a young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build]`;
+
 const GRID_COLS = 4;
 const GRID_ROWS = 6;
 const TOTAL_CELLS = GRID_COLS * GRID_ROWS;
@@ -45,7 +49,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const { user } = useAuth();
 
   // Form
-  const [characterDescription, setCharacterDescription] = useState("");
+  const [characterDescription, setCharacterDescription] = useState(DEFAULT_PROMPT);
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referencePreview, setReferencePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
@@ -69,7 +73,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   // Reset on open
   useEffect(() => {
     if (isOpen) {
-      setCharacterDescription("");
+      setCharacterDescription(DEFAULT_PROMPT);
       setReferenceImageUrl("");
       setReferencePreview("");
       setUploadingRef(false);
@@ -341,12 +345,12 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             <Textarea
               value={characterDescription}
               onChange={(e) => setCharacterDescription(e.target.value)}
-              placeholder="e.g., a young female warrior with short blue hair, leather armor, green eyes, athletic build, carrying a sword on her back..."
-              rows={3}
-              className="bg-white text-sm resize-none"
+              placeholder="Describe your character..."
+              rows={6}
+              className="bg-white text-sm"
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Be specific about clothing, hair, body type, accessories. The model renders all 24 poses as one consistent character in a single image.
+              Edit the default prompt above — replace the bracketed section with your character details. The structural instructions help the model produce a consistent grid.
             </p>
           </div>
 
