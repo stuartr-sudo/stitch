@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RotateCcw, Loader2, Download, Image, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle, Clock, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -54,8 +54,11 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   // Form state
   const [characterDescription, setCharacterDescription] = useState("");
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
+  const [referencePreview, setReferencePreview] = useState(""); // local preview (dataURL or URL)
+  const [uploadingRef, setUploadingRef] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState("concept-art");
   const [selectedModel, setSelectedModel] = useState("nano-banana-2");
+  const [savingForLora, setSavingForLora] = useState(false);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -66,14 +69,18 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   // Canvas ref for compositing
   const canvasRef = useRef(null);
   const pollingRef = useRef(false);
+  const fileInputRef = useRef(null);
 
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
       setCharacterDescription("");
       setReferenceImageUrl("");
+      setReferencePreview("");
+      setUploadingRef(false);
       setSelectedStyle("concept-art");
       setSelectedModel("nano-banana-2");
+      setSavingForLora(false);
       setGenerating(false);
       setCellStates([]);
       setCompletedCount(0);
@@ -149,6 +156,97 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
 
     return () => clearInterval(interval);
   }, [generating, cellStates, pollCell]);
+
+  // Handle file upload — convert to base64, upload to library for a hosted URL
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target.result;
+      setReferencePreview(dataUrl);
+      setUploadingRef(true);
+
+      try {
+        // Upload to library to get a hosted URL
+        const res = await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: dataUrl,
+            type: 'image',
+            title: 'Turnaround Reference',
+            source: 'turnaround-ref',
+          }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          setReferenceImageUrl(data.url);
+          toast.success('Reference image uploaded!');
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      } catch (err) {
+        toast.error('Failed to upload reference image: ' + err.message);
+        setReferencePreview('');
+      } finally {
+        setUploadingRef(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearReferenceImage = () => {
+    setReferenceImageUrl('');
+    setReferencePreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Save all completed cell images to library for LoRA training
+  const handleSaveForLora = async () => {
+    const completedCells = cellStates.filter(c => c.status === 'completed' && c.imageUrl);
+    if (completedCells.length === 0) {
+      toast.error('No completed cells to save.');
+      return;
+    }
+
+    setSavingForLora(true);
+    let saved = 0;
+
+    try {
+      for (const cell of completedCells) {
+        try {
+          const res = await apiFetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: cell.imageUrl,
+              type: 'image',
+              title: `Turnaround — ${cell.label}`,
+              prompt: characterDescription,
+              source: 'turnaround-lora',
+            }),
+          });
+          const data = await res.json();
+          if (data.saved || data.duplicate) saved++;
+        } catch (err) {
+          console.warn(`Failed to save cell ${cell.label}:`, err.message);
+        }
+      }
+      toast.success(`Saved ${saved}/${completedCells.length} images to library for LoRA training!`);
+    } catch (err) {
+      toast.error('Failed to save images: ' + err.message);
+    } finally {
+      setSavingForLora(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!characterDescription.trim()) {
@@ -342,28 +440,79 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             </p>
           </div>
 
-          {/* Reference Image */}
+          {/* Reference Image — Upload or URL */}
           <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-              Reference Image URL (optional)
+            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+              Reference Image (optional)
             </Label>
-            <Input
-              value={referenceImageUrl}
-              onChange={(e) => setReferenceImageUrl(e.target.value)}
-              placeholder="https://... paste a reference image URL"
-              className="bg-white text-sm"
-            />
-            {referenceImageUrl && (
-              <div className="mt-2 flex items-start gap-3">
-                <img
-                  src={referenceImageUrl}
-                  alt="Reference"
-                  className="w-20 h-20 object-cover rounded-lg border border-slate-200"
-                  onError={(e) => { e.target.style.display = 'none'; }}
+
+            {(referencePreview || referenceImageUrl) ? (
+              /* Preview with clear button */
+              <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={referencePreview || referenceImageUrl}
+                    alt="Reference"
+                    className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+                    onError={(e) => { e.target.src = ''; }}
+                  />
+                  {uploadingRef && (
+                    <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-600 font-medium mb-1">
+                    {uploadingRef ? 'Uploading...' : 'Reference image loaded'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    When using Flux 2, this reference guides character consistency via image-to-image editing.
+                  </p>
+                  <button
+                    onClick={clearReferenceImage}
+                    className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Upload + URL input */
+              <div className="space-y-2">
+                {/* Upload button */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors"
+                >
+                  <Upload className="w-5 h-5 text-slate-400" />
+                  <span className="text-sm text-slate-500">Click to upload a reference image</span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  When using Flux 2, this reference guides character consistency via image-to-image editing.
-                </p>
+
+                {/* OR divider */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[10px] text-slate-400 font-medium">OR</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+
+                {/* URL input */}
+                <Input
+                  value={referenceImageUrl}
+                  onChange={(e) => {
+                    setReferenceImageUrl(e.target.value);
+                    setReferencePreview(e.target.value);
+                  }}
+                  placeholder="https://... paste a reference image URL"
+                  className="bg-white text-sm"
+                />
               </div>
             )}
           </div>
@@ -527,14 +676,25 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           </div>
           <div className="flex gap-2">
             {sheetReady && (
-              <Button
-                onClick={handleDownloadSheet}
-                variant="outline"
-                className="text-sm gap-1"
-              >
-                <Download className="w-4 h-4" />
-                Download Sheet
-              </Button>
+              <>
+                <Button
+                  onClick={handleSaveForLora}
+                  disabled={savingForLora}
+                  variant="outline"
+                  className="text-sm gap-1"
+                >
+                  {savingForLora ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {savingForLora ? 'Saving...' : 'Save for LoRA'}
+                </Button>
+                <Button
+                  onClick={handleDownloadSheet}
+                  variant="outline"
+                  className="text-sm gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Sheet
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={onClose} disabled={generating}>
               {sheetReady ? 'Close' : 'Cancel'}
