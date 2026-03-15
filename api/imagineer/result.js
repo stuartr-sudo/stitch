@@ -23,10 +23,13 @@ export default async function handler(req, res) {
 
     // Map model IDs to fal.ai queue endpoints
     const endpointMap = {
-      'fal-flux':           'fal-ai/flux-2/lora',
-      'fal-flux-edit':      'fal-ai/flux-2/lora/edit',
-      'nano-banana-pro':    'fal-ai/nano-banana-pro/edit',
-      'seedream':           'fal-ai/bytedance/seedream/v4.5/edit',
+      'fal-flux':              'fal-ai/flux-2/lora',
+      'fal-flux-edit':         'fal-ai/flux-2/lora/edit',
+      'nano-banana-2-edit':    'fal-ai/nano-banana-2/edit',
+      'nano-banana-pro':       'fal-ai/nano-banana-pro/edit',
+      'nano-banana-pro-edit':  'fal-ai/nano-banana-pro/edit',
+      'seedream':              'fal-ai/bytedance/seedream/v4.5/edit',
+      'seedream-edit':         'fal-ai/bytedance/seedream/v4.5/edit',
     };
 
     if (endpointMap[model]) {

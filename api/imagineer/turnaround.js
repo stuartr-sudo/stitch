@@ -197,7 +197,9 @@ async function generateWithEdit(falKey, model, prompt, referenceImageUrl) {
 
   const data = await response.json();
   if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  if (data.request_id) return { requestId: data.request_id, model, status: 'processing' };
+  // Return model with '-edit' suffix so result.js polls the correct edit endpoint
+  const pollModel = model.endsWith('-edit') ? model : `${model}-edit`;
+  if (data.request_id) return { requestId: data.request_id, model: pollModel, status: 'processing' };
   throw new Error(`Unexpected ${model} response`);
 }
 

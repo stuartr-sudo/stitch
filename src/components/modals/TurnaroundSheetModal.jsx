@@ -147,6 +147,13 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId, model: pollModel }),
         });
+
+        // Transient HTTP errors (405, 502, etc.) — skip this poll, try again next interval
+        if (!res.ok) {
+          console.warn(`[Turnaround] Poll HTTP ${res.status} — retrying...`);
+          return;
+        }
+
         const data = await res.json();
 
         if (data.imageUrl) {
@@ -154,12 +161,14 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           setGenerating(false);
           setRequestId(null);
           toast.success('Turnaround sheet generated!');
-        } else if (data.status === 'failed' || data.error) {
+        } else if (data.status === 'failed') {
+          // Only stop polling on explicit failure from fal.ai queue
           setGenerating(false);
           setRequestId(null);
           toast.error(data.error || 'Generation failed');
         }
       } catch (err) {
+        // Network error — skip this poll, try again next interval
         console.warn('[Turnaround] Poll error:', err.message);
       } finally {
         pollingRef.current = false;
