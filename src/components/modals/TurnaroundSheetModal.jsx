@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle, Save, X, Grid3X3, Scissors } from "lucide-react";
+import { RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle, Save, X, Grid3X3, Scissors, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -28,9 +28,13 @@ const MODEL_OPTIONS = [
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
-const DEFAULT_PROMPT = `Full-body character turnaround reference sheet. 4 columns, 6 rows grid on a clean white background. Each cell shows the SAME character in a different pose or angle. Consistent proportions, outfit, colors, and features across every cell. No background elements, no props unless specified. Clean line separation between cells.
+const PROMPT_PREFIX = `Full-body character turnaround reference sheet. 4 columns, 6 rows grid on a clean white background. Each cell shows the SAME character in a different pose or angle. Consistent proportions, outfit, colors, and features across every cell. No background elements, no props unless specified. Clean line separation between cells.
 
-Character: [describe your character here — e.g., a young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build]`;
+Character: `;
+
+const PLACEHOLDER_DESC = `[describe your character here — e.g., a young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build]`;
+
+const DEFAULT_PROMPT = PROMPT_PREFIX + PLACEHOLDER_DESC;
 
 const GRID_COLS = 4;
 const GRID_ROWS = 6;
@@ -56,6 +60,9 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const [selectedStyle, setSelectedStyle] = useState("concept-art");
   const [selectedModel, setSelectedModel] = useState("nano-banana-2");
 
+  // AI analysis
+  const [analyzingRef, setAnalyzingRef] = useState(false);
+
   // Generation
   const [generating, setGenerating] = useState(false);
   const [sheetImageUrl, setSheetImageUrl] = useState(null);
@@ -70,6 +77,31 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const fileInputRef = useRef(null);
   const pollingRef = useRef(false);
 
+  // Auto-describe a reference image using AI vision
+  const describeCharacter = async (hostedUrl) => {
+    setAnalyzingRef(true);
+    try {
+      const res = await apiFetch('/api/imagineer/describe-character', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: hostedUrl }),
+      });
+      const data = await res.json();
+      if (data.description) {
+        // Replace only the character description portion, keep the structural prefix
+        setCharacterDescription(PROMPT_PREFIX + data.description);
+        toast.success('Character analyzed! Description auto-filled.');
+      } else if (data.error) {
+        toast.error('Could not analyze character: ' + data.error);
+      }
+    } catch (err) {
+      console.warn('[Turnaround] Describe error:', err.message);
+      toast.error('Character analysis failed — describe manually.');
+    } finally {
+      setAnalyzingRef(false);
+    }
+  };
+
   // Reset on open
   useEffect(() => {
     if (isOpen) {
@@ -77,6 +109,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       setReferenceImageUrl("");
       setReferencePreview("");
       setUploadingRef(false);
+      setAnalyzingRef(false);
       setSelectedStyle("concept-art");
       setSelectedModel("nano-banana-2");
       setGenerating(false);
@@ -154,7 +187,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
         const data = await res.json();
         if (data.url) {
           setReferenceImageUrl(data.url);
-          toast.success('Reference image uploaded!');
+          toast.success('Reference image uploaded — analyzing character...');
+          describeCharacter(data.url);
         } else {
           throw new Error(data.error || 'Upload failed');
         }
@@ -339,18 +373,48 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
         <div className="flex-shrink-0 p-5 space-y-4 border-b bg-white">
           {/* Character Description */}
           <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-              Character Description <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              value={characterDescription}
-              onChange={(e) => setCharacterDescription(e.target.value)}
-              placeholder="Describe your character..."
-              rows={6}
-              className="bg-white text-sm"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs font-semibold text-slate-600">
+                Character Description <span className="text-red-500">*</span>
+              </Label>
+              {referenceImageUrl && (
+                <button
+                  onClick={() => describeCharacter(referenceImageUrl)}
+                  disabled={analyzingRef}
+                  className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                >
+                  {analyzingRef ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Re-analyze reference</>
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <Textarea
+                value={characterDescription}
+                onChange={(e) => setCharacterDescription(e.target.value)}
+                placeholder="Describe your character..."
+                rows={6}
+                className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`}
+                disabled={analyzingRef}
+              />
+              {analyzingRef && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
+                  <div className="flex items-center gap-2 text-[#2C666E]">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm font-medium">Analyzing character...</span>
+                  </div>
+                </div>
+              )}
+            </div>
             <p className="text-[10px] text-slate-400 mt-1">
-              Edit the default prompt above — replace the bracketed section with your character details. The structural instructions help the model produce a consistent grid.
+              {analyzingRef
+                ? 'AI vision is describing your character from the reference image...'
+                : referenceImageUrl
+                  ? 'Auto-filled from your reference image. Edit freely to refine.'
+                  : 'Edit the default prompt above — replace the bracketed section with your character details.'}
             </p>
           </div>
 
@@ -377,10 +441,12 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-600 font-medium mb-1">
-                    {uploadingRef ? 'Uploading...' : 'Reference image loaded'}
+                    {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing character...' : 'Reference image loaded'}
                   </p>
                   <p className="text-[10px] text-slate-400">
-                    Used with Flux 2 for character consistency via image-to-image.
+                    {analyzingRef
+                      ? 'AI is describing your character — the prompt will auto-fill.'
+                      : 'Character description auto-filled from reference image.'}
                   </p>
                   <button
                     onClick={clearReferenceImage}
@@ -416,6 +482,12 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
                   onChange={(e) => {
                     setReferenceImageUrl(e.target.value);
                     setReferencePreview(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    const url = e.target.value.trim();
+                    if (url && url.startsWith('http')) {
+                      describeCharacter(url);
+                    }
                   }}
                   placeholder="https://... paste a reference image URL"
                   className="bg-white text-sm"
