@@ -2,16 +2,23 @@
  * Turnaround Sheet Generator
  * Generates a SINGLE image containing a 4×6 character turnaround grid.
  *
- * ALL models use queue.fal.run to submit async jobs — returns a requestId
- * for the frontend to poll via /api/imagineer/result.
- * This avoids Fly.io proxy timeouts (60s) on long-running generations.
+ * Edit models (nano-banana-2/edit, nano-banana-pro/edit, seedream/edit):
+ *   → Use synchronous fal.run — returns image directly. These are fast and
+ *     queue.fal.run is unreliable for edit endpoints.
+ *
+ * Generate models (nano-banana-2, fal-flux):
+ *   → Use queue.fal.run — returns requestId for frontend polling.
+ *
+ * The 3-minute timeout on this route (set in server.js) covers sync calls.
  */
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
 function buildTurnaroundPrompt(characterDescription, style, hasReference) {
-  const stylePrompt = (style && style.trim()) ? `${style.trim()} style, high quality rendering` : 'professional concept art, clean detailed rendering, animation studio quality';
+  const stylePrompt = (style && style.trim())
+    ? `${style.trim()} style, high quality rendering`
+    : 'professional concept art, clean detailed rendering, animation studio quality';
 
   const refNote = hasReference
     ? 'Use the reference image as the character design. Recreate this exact character in every cell of the grid'
@@ -32,12 +39,85 @@ function buildTurnaroundPrompt(characterDescription, style, hasReference) {
   ].join('. ');
 }
 
-// Model ID → fal.ai endpoint mapping
-const MODEL_ENDPOINTS = {
-  'nano-banana-2':      { generate: 'fal-ai/nano-banana-2',            edit: 'fal-ai/nano-banana-2/edit' },
-  'nano-banana-pro':    { generate: null,                               edit: 'fal-ai/nano-banana-pro/edit' },
-  'seedream':           { generate: null,                               edit: 'fal-ai/bytedance/seedream/v4.5/edit' },
-  'fal-flux':           { generate: 'fal-ai/flux-2/lora',             edit: 'fal-ai/flux-2/lora/edit' },
+// ─── Model Definitions ────────────────────────────────────────────────────────
+// type: 'edit' = requires reference image, uses sync fal.run
+// type: 'generate' = text-to-image, uses queue.fal.run
+// type: 'both' = can do either (like fal-flux)
+
+const MODELS = {
+  'nano-banana-2-edit': {
+    endpoint: 'fal-ai/nano-banana-2/edit',
+    type: 'edit',
+    buildPayload: (prompt, refUrl) => ({
+      prompt,
+      image_urls: [refUrl],
+      num_images: 1,
+      output_format: 'png',
+      aspect_ratio: '2:3',
+      resolution: '1K',
+      safety_tolerance: '4',
+    }),
+  },
+  'nano-banana-pro': {
+    endpoint: 'fal-ai/nano-banana-pro/edit',
+    type: 'edit',
+    buildPayload: (prompt, refUrl) => ({
+      prompt,
+      image_urls: [refUrl],
+      num_images: 1,
+      output_format: 'png',
+      aspect_ratio: '2:3',
+      resolution: '1K',
+      safety_tolerance: '4',
+    }),
+  },
+  'seedream': {
+    endpoint: 'fal-ai/bytedance/seedream/v4.5/edit',
+    type: 'edit',
+    buildPayload: (prompt, refUrl) => ({
+      prompt,
+      image_urls: [refUrl],
+      num_images: 1,
+      width: 1440,
+      height: 2560,
+    }),
+  },
+  'nano-banana-2': {
+    endpoint: 'fal-ai/nano-banana-2',
+    type: 'generate',
+    buildPayload: (prompt) => ({
+      prompt,
+      num_images: 1,
+      output_format: 'png',
+      aspect_ratio: '2:3',
+      resolution: '1K',
+      safety_tolerance: '4',
+    }),
+  },
+  'fal-flux': {
+    endpoint: 'fal-ai/flux-2/lora',
+    editEndpoint: 'fal-ai/flux-2/lora/edit',
+    type: 'both',
+    buildPayload: (prompt, refUrl, extras) => {
+      const loraList = extras?.loras;
+      if (refUrl) {
+        return {
+          prompt,
+          image_urls: [refUrl],
+          image_size: { width: 1024, height: 1536 },
+          strength: 0.85,
+          num_images: 1,
+          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+        };
+      }
+      return {
+        prompt,
+        image_size: { width: 1024, height: 1536 },
+        num_images: 1,
+        ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+      };
+    },
+  },
 };
 
 export default async function handler(req, res) {
@@ -47,7 +127,7 @@ export default async function handler(req, res) {
     referenceImageUrl,
     characterDescription,
     style = 'concept-art',
-    model = 'nano-banana-2',
+    model = 'nano-banana-2-edit',
     loraUrl,
     loras,
   } = req.body;
@@ -56,76 +136,47 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'characterDescription is required' });
   }
 
+  const modelDef = MODELS[model];
+  if (!modelDef) {
+    return res.status(400).json({ error: `Unknown model: ${model}` });
+  }
+
   const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
 
   const hasRef = !!referenceImageUrl;
   const prompt = buildTurnaroundPrompt(characterDescription, style, hasRef);
 
-  console.log(`[Turnaround] Model: ${model} | Style: ${style} | Reference: ${hasRef}`);
+  // Validate: edit models REQUIRE a reference image
+  if (modelDef.type === 'edit' && !hasRef) {
+    return res.status(400).json({
+      error: `${model} requires a reference image. Please upload one or switch to a generate model (Nano Banana 2 or Flux 2).`,
+    });
+  }
+
+  console.log(`[Turnaround] Model: ${model} | Type: ${modelDef.type} | Style: ${style} | Reference: ${hasRef}`);
   console.log(`[Turnaround] Character: ${characterDescription.substring(0, 100)}...`);
 
   try {
     let result;
+    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null) };
+    const payload = modelDef.buildPayload(prompt, hasRef ? referenceImageUrl : null, extras);
 
-    if (model === 'fal-flux') {
-      const loraList = loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null);
-      if (hasRef) {
-        result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS['fal-flux'].edit, 'fal-flux-edit', {
-          image_urls: [referenceImageUrl],
-          prompt,
-          image_size: { width: 1024, height: 1536 },
-          strength: 0.85,
-          num_images: 1,
-          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
-        });
-      } else {
-        result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS['fal-flux'].generate, 'fal-flux', {
-          prompt,
-          image_size: { width: 1024, height: 1536 },
-          num_images: 1,
-          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
-        });
-      }
-    } else if (hasRef) {
-      const endpoint = MODEL_ENDPOINTS[model]?.edit;
-      if (!endpoint) {
-        return res.status(400).json({ error: `No edit endpoint for model: ${model}` });
-      }
+    if (modelDef.type === 'edit') {
+      // Edit models → synchronous fal.run (more reliable than queue for edit endpoints)
+      result = await callSync(FAL_KEY, modelDef.endpoint, payload);
 
-      const payload = {
-        prompt,
-        image_urls: [referenceImageUrl],
-        num_images: 1,
-      };
+    } else if (modelDef.type === 'both' && hasRef) {
+      // Flux with reference → edit endpoint, sync
+      result = await callSync(FAL_KEY, modelDef.editEndpoint, payload);
 
-      // Model-specific options
-      if (model === 'seedream') {
-        payload.width = 1440;
-        payload.height = 2560;
-      } else {
-        payload.output_format = 'png';
-        payload.aspect_ratio = '2:3';
-        payload.resolution = '1K';
-        payload.safety_tolerance = '4';
-      }
+    } else if (modelDef.type === 'both' && !hasRef) {
+      // Flux without reference → generate endpoint, queue
+      result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
 
-      const pollModelId = `${model}-edit`;
-      result = await submitToQueue(FAL_KEY, endpoint, pollModelId, payload);
-
-    } else if (MODEL_ENDPOINTS[model]?.generate) {
-      result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS[model].generate, model, {
-        prompt,
-        aspect_ratio: '2:3',
-        resolution: '1K',
-        num_images: 1,
-        output_format: 'png',
-        safety_tolerance: '4',
-      });
     } else {
-      return res.status(400).json({
-        error: `${model} requires a reference image. Please upload one or switch to Nano Banana 2.`,
-      });
+      // Pure generate → queue
+      result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
     }
 
     await logCost({
@@ -148,12 +199,44 @@ export default async function handler(req, res) {
   }
 }
 
-// ─── Submit to fal.ai queue (all models) ──────────────────────────────────────
-// Posts to queue.fal.run and returns requestId + model for frontend polling.
-// Never blocks waiting for the image — returns immediately.
+// ─── Synchronous call (edit endpoints) ────────────────────────────────────────
+// Uses fal.run — blocks until image is returned. More reliable for edit models.
+
+async function callSync(falKey, endpoint, payload) {
+  console.log(`[Turnaround] Sync call: fal.run/${endpoint}`);
+  console.log(`[Turnaround] Payload keys: ${Object.keys(payload).join(', ')}`);
+
+  const response = await fetch(`https://fal.run/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${falKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Turnaround] Sync error (${response.status}): ${errorText.substring(0, 300)}`);
+    throw new Error(`${endpoint} error (${response.status}): ${errorText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  console.log(`[Turnaround] Sync response keys: ${Object.keys(data).join(', ')}`);
+
+  if (data.images?.[0]?.url) {
+    console.log(`[Turnaround] Got image from sync call`);
+    return { imageUrl: data.images[0].url, status: 'completed' };
+  }
+
+  throw new Error(`No image returned from ${endpoint}`);
+}
+
+// ─── Queue-based call (generate endpoints) ────────────────────────────────────
+// Posts to queue.fal.run — returns requestId for frontend polling.
 
 async function submitToQueue(falKey, endpoint, pollModelId, payload) {
-  console.log(`[Turnaround] Submitting to queue: ${endpoint}`);
+  console.log(`[Turnaround] Queue submit: queue.fal.run/${endpoint}`);
   console.log(`[Turnaround] Payload keys: ${Object.keys(payload).join(', ')}`);
 
   const response = await fetch(`https://queue.fal.run/${endpoint}`, {
@@ -167,8 +250,8 @@ async function submitToQueue(falKey, endpoint, pollModelId, payload) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[Turnaround] Queue submit error (${response.status}): ${errorText.substring(0, 300)}`);
-    throw new Error(`${pollModelId} error: ${errorText.substring(0, 200)}`);
+    console.error(`[Turnaround] Queue error (${response.status}): ${errorText.substring(0, 300)}`);
+    throw new Error(`${pollModelId} queue error: ${errorText.substring(0, 200)}`);
   }
 
   const data = await response.json();

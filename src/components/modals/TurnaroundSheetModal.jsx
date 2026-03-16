@@ -22,9 +22,10 @@ const STYLE_CHIPS = [
 ];
 
 const MODEL_OPTIONS = [
-  { value: "nano-banana-2", label: "Nano Banana 2", needsRef: false },
-  { value: "nano-banana-pro", label: "Nano Banana Pro (Edit)", needsRef: true },
-  { value: "seedream", label: "Seedream v4.5 (Edit)", needsRef: true },
+  { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
+  { value: "nano-banana-pro", label: "Nano Banana Pro Edit", needsRef: true, tag: "Premium" },
+  { value: "seedream", label: "Seedream v4.5 Edit", needsRef: true },
+  { value: "nano-banana-2", label: "Nano Banana 2 (No Ref)", needsRef: false, tag: "Generate" },
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
@@ -61,7 +62,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [referencePreview, setReferencePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
   const [styleText, setStyleText] = useState("Concept Art");
-  const [selectedModel, setSelectedModel] = useState("nano-banana-2");
+  const [selectedModel, setSelectedModel] = useState("nano-banana-2-edit");
 
   // AI analysis
   const [analyzingRef, setAnalyzingRef] = useState(false);
@@ -130,7 +131,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       setStep('configure');
       setCharacterDescription(DEFAULT_PROMPT);
       setStyleText("Concept Art");
-      setSelectedModel("nano-banana-2");
+      setSelectedModel("nano-banana-2-edit");
       setGenerating(false);
       setSheetImageUrl(null);
       setRequestId(null);
