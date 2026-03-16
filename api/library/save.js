@@ -201,6 +201,11 @@ export default async function handler(req, res) {
       insertData.prompt = prompt;
     }
 
+    // alt_text is NOT NULL in image_library_items
+    if (table === 'image_library_items') {
+      insertData.alt_text = title || prompt || 'Generated image';
+    }
+
     console.log(`[Library Save] Inserting into ${table}...`);
 
     const { data, error } = await supabase
