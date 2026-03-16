@@ -199,8 +199,9 @@ export default async function handler(req, res) {
     }
 
     // Populate ALL NOT NULL columns for image_library_items
+    // NOTE: source column has a CHECK constraint — only 'ai_generated' and 'amazon_import' are allowed
     if (table === 'image_library_items') {
-      insertData.source = source || 'unknown';
+      insertData.source = 'ai_generated';
       insertData.alt_text = safeTitle || prompt || 'Generated image';
       insertData.user_name = userName;
     }
