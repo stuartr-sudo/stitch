@@ -182,9 +182,9 @@ const VIDEO_MODELS = [
     supportsEndFrame: false,
     requiresAudioUrl: true,
   },
-  { 
-    id: 'kling-video', 
-    label: '🎬 Kling 2.5 Turbo Pro', 
+  {
+    id: 'kling-video',
+    label: '🎬 Kling 2.5 Turbo Pro',
     shortLabel: 'Kling',
     description: 'Cinematic, fluid motion, precise',
     provider: 'fal',
@@ -196,6 +196,52 @@ const VIDEO_MODELS = [
     supportsEndFrame: true,
     supportsNegativePrompt: true,
     supportsCfgScale: true,
+  },
+  {
+    id: 'kling-r2v-pro',
+    label: '🎭 Kling O3 Pro — Reference-to-Video',
+    shortLabel: 'Kling R2V Pro',
+    description: 'Character-consistent video from reference images (Pro)',
+    provider: 'fal',
+    durationOptions: [5, 10],
+    resolutions: ['720p'],
+    aspectRatios: ['16:9', '9:16', '1:1'],
+    supportsAudio: true,
+    supportsCameraFixed: false,
+    supportsEndFrame: true,
+    supportsNegativePrompt: true,
+    supportsCfgScale: true,
+    supportsReferenceImages: true,
+  },
+  {
+    id: 'kling-r2v-standard',
+    label: '🎭 Kling O3 Standard — Reference-to-Video',
+    shortLabel: 'Kling R2V Std',
+    description: 'Character-consistent video from reference images (Standard)',
+    provider: 'fal',
+    durationOptions: [5, 10],
+    resolutions: ['720p'],
+    aspectRatios: ['16:9', '9:16', '1:1'],
+    supportsAudio: true,
+    supportsCameraFixed: false,
+    supportsEndFrame: true,
+    supportsNegativePrompt: true,
+    supportsCfgScale: true,
+    supportsReferenceImages: true,
+  },
+  {
+    id: 'ltx-iclora',
+    label: '🧬 LTX ICLoRA — Subject-Consistent Video',
+    shortLabel: 'LTX ICLoRA',
+    description: 'In-context LoRA: pose/depth/canny control for consistent characters',
+    provider: 'fal',
+    durationOptions: [3, 4, 5],
+    resolutions: ['720p'],
+    aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    supportsICLoRA: true,
   },
 ];
 
@@ -449,6 +495,13 @@ export default function JumpStartModal({
   const [cfgScale, setCfgScale] = useState(0.5);
   const [sceneIdeaFilter, setSceneIdeaFilter] = useState('all');
   const [presetFilter, setPresetFilter] = useState('all');
+
+  // Kling R2V — character reference images
+  const [referenceImages, setReferenceImages] = useState([]);
+
+  // LTX ICLoRA controls
+  const [icLoraType, setIcLoraType] = useState('pose');
+  const [icLoraScale, setIcLoraScale] = useState(1.0);
   
   // Generated video
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
@@ -894,6 +947,17 @@ export default function JumpStartModal({
       // Multi-image support for Veo 3.1
       if (currentModel.supportsMultipleImages && additionalImages.length > 0) {
         formData.append('additionalImages', JSON.stringify(additionalImages));
+      }
+
+      // Reference images for Kling R2V
+      if (currentModel.supportsReferenceImages && referenceImages.length > 0) {
+        formData.append('referenceImages', JSON.stringify(referenceImages));
+      }
+
+      // ICLoRA controls for LTX
+      if (currentModel.supportsICLoRA) {
+        formData.append('icLoraType', icLoraType);
+        formData.append('icLoraScale', icLoraScale.toString());
       }
 
       console.log('[JumpStart] Generating with:', { model: videoModel, aspectRatio, resolution, duration, enableAudio });
@@ -1511,6 +1575,87 @@ export default function JumpStartModal({
                           <span>Balanced</span>
                           <span>Precise</span>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Reference Images for Kling R2V */}
+                    {currentModel.supportsReferenceImages && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 block">
+                          Character Reference Images (optional)
+                        </label>
+                        <p className="text-[10px] text-gray-400">
+                          Add extra angles/poses of your character for better consistency. Use @Element in your prompt to reference the character.
+                        </p>
+                        {referenceImages.length > 0 && (
+                          <div className="flex gap-2 flex-wrap">
+                            {referenceImages.map((url, i) => (
+                              <div key={i} className="relative w-16 h-16">
+                                <img src={url} alt={`Ref ${i+1}`} className="w-full h-full object-cover rounded-lg border" />
+                                <button
+                                  onClick={() => setReferenceImages(referenceImages.filter((_, j) => j !== i))}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px]"
+                                >
+                                  &times;
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <input
+                          type="text"
+                          placeholder="Paste image URL and press Enter..."
+                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.target.value.trim()) {
+                              setReferenceImages([...referenceImages, e.target.value.trim()]);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* ICLoRA Controls for LTX */}
+                    {currentModel.supportsICLoRA && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 block">IC-LoRA Type</label>
+                        <p className="text-[10px] text-gray-400">
+                          Controls how the reference image conditions the video
+                        </p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {[
+                            { value: 'pose', label: 'Pose' },
+                            { value: 'depth', label: 'Depth' },
+                            { value: 'canny', label: 'Canny Edge' },
+                            { value: 'detailer', label: 'Detailer' },
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setIcLoraType(opt.value)}
+                              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                                icLoraType === opt.value
+                                  ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-medium text-gray-500">IC-LoRA Strength</label>
+                          <span className="text-xs font-medium text-[#2C666E]">{icLoraScale.toFixed(1)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="1.5"
+                          step="0.1"
+                          value={icLoraScale}
+                          onChange={(e) => setIcLoraScale(parseFloat(e.target.value))}
+                          className="w-full accent-[#2C666E]"
+                        />
                       </div>
                     )}
                   </div>

@@ -97,6 +97,12 @@ app.post('/api/jumpstart/extend', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/jumpstart/erase', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/erase.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Trip route (with auth)
 app.post('/api/trip/restyle', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('trip/restyle.js');

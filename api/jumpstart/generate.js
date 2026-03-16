@@ -145,6 +145,28 @@ export default async function handler(req, res) {
       return await handleLtxAudioVideo(req, res, {
         imageUrl, prompt, audioUrl: fields.audioUrl?.[0], FAL_KEY
       });
+    } else if (model === 'kling-r2v-pro' || model === 'kling-r2v-standard') {
+      // Kling O3 Reference-to-Video — character-consistent video from reference images
+      let referenceImages = [];
+      try {
+        if (fields.referenceImages?.[0]) {
+          referenceImages = JSON.parse(fields.referenceImages[0]);
+        }
+      } catch (e) {
+        console.warn('[JumpStart] Failed to parse referenceImages:', e);
+      }
+      return await handleKlingR2V(req, res, {
+        imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl,
+        referenceImages, enableAudio, model, FAL_KEY
+      });
+    } else if (model === 'ltx-iclora') {
+      // LTX-Video ICLoRA — in-context LoRA for subject-consistent video
+      const icLoraType = fields.icLoraType?.[0] || 'pose';
+      const icLoraScale = parseFloat(fields.icLoraScale?.[0] || '1.0');
+      const videoUrl = fields.videoUrl?.[0] || null;
+      return await handleLtxICLoRA(req, res, {
+        imageUrl, prompt, duration, aspectRatio, videoUrl, icLoraType, icLoraScale, FAL_KEY
+      });
     } else if (model === 'kling-video') {
       return await handleKlingVideo(req, res, {
         imageUrl, prompt, duration, negativePrompt, cfgScale, endImageUrl, FAL_KEY
@@ -753,6 +775,161 @@ async function handleLtxAudioVideo(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from LTX API' });
+}
+
+/**
+ * Handle Kling O3 Reference-to-Video (Pro & Standard)
+ * Uses elements array for character-consistent video generation
+ */
+async function handleKlingR2V(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, enableAudio, model, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  const tier = model === 'kling-r2v-pro' ? 'pro' : 'standard';
+  console.log(`[JumpStart/KlingR2V] Submitting to Kling O3 ${tier} R2V...`);
+  console.log(`[JumpStart/KlingR2V] Settings:`, { duration, aspectRatio, enableAudio, refImages: referenceImages?.length || 0, hasEndFrame: !!endImageUrl });
+
+  const requestBody = {
+    prompt,
+    duration: String(Math.min(Math.max(duration, 5), 10)),
+    aspect_ratio: aspectRatio || '16:9',
+    negative_prompt: negativePrompt || 'blur, distort, and low quality',
+    cfg_scale: cfgScale || 0.5,
+    generate_audio: enableAudio,
+  };
+
+  // Build elements array — frontal image is the main uploaded image,
+  // reference_image_urls are additional angle/pose references
+  const element = { frontal_image_url: imageUrl };
+  if (referenceImages?.length > 0) {
+    element.reference_image_urls = referenceImages;
+  }
+  requestBody.elements = [element];
+
+  // Start image (first frame) — use same as frontal if not separately provided
+  if (imageUrl) {
+    requestBody.start_image_url = imageUrl;
+  }
+
+  // End frame
+  if (endImageUrl) {
+    requestBody.end_image_url = endImageUrl;
+  }
+
+  console.log('[JumpStart/KlingR2V] Request:', {
+    ...requestBody,
+    elements: `[${requestBody.elements.length} element(s)]`,
+    prompt: requestBody.prompt.substring(0, 100) + '...',
+  });
+
+  const submitResponse = await fetch(`https://fal.run/fal-ai/kling-video/o3/${tier}/reference-to-video`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/KlingR2V] Error:', errorText);
+    return res.status(500).json({ error: `Kling R2V ${tier} API error: ` + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/KlingR2V] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({ success: true, requestId, model, status: 'processing' });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Kling R2V API' });
+}
+
+/**
+ * Handle LTX-Video ICLoRA — In-Context LoRA for subject-consistent video
+ * Conditions video generation on reference images using IC-LoRA adapters
+ */
+async function handleLtxICLoRA(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, videoUrl, icLoraType, icLoraScale, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  console.log('[JumpStart/LTX-ICLoRA] Submitting...');
+  console.log('[JumpStart/LTX-ICLoRA] Settings:', { icLoraType, icLoraScale, hasVideo: !!videoUrl, duration, aspectRatio });
+
+  // Use the distilled endpoint for faster inference
+  const endpoint = videoUrl
+    ? 'fal-ai/ltx-2-19b/distilled/video-to-video/lora'
+    : 'fal-ai/ltx-2-19b/distilled/image-to-video/lora';
+
+  const requestBody = {
+    prompt,
+    ic_lora: icLoraType, // 'pose', 'depth', 'canny', 'detailer', 'match_preprocessor'
+    ic_lora_scale: icLoraScale,
+  };
+
+  if (videoUrl) {
+    requestBody.video_url = videoUrl;
+  }
+
+  if (imageUrl) {
+    requestBody.image_url = imageUrl;
+  }
+
+  // Map aspect ratio to width/height for LTX
+  const dims = { '16:9': [768, 432], '9:16': [432, 768], '1:1': [576, 576], '4:3': [640, 480] };
+  const [w, h] = dims[aspectRatio] || dims['16:9'];
+  requestBody.width = w;
+  requestBody.height = h;
+  requestBody.num_frames = Math.min(Math.max(Math.round(duration * 24), 49), 257);
+
+  console.log('[JumpStart/LTX-ICLoRA] Request:', {
+    ...requestBody,
+    image_url: requestBody.image_url ? '[image]' : undefined,
+    video_url: requestBody.video_url ? '[video]' : undefined,
+    prompt: requestBody.prompt.substring(0, 100) + '...',
+  });
+
+  const submitResponse = await fetch(`https://fal.run/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/LTX-ICLoRA] Error:', errorText);
+    return res.status(500).json({ error: 'LTX ICLoRA API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/LTX-ICLoRA] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({ success: true, requestId, model: 'ltx-iclora', status: 'processing' });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from LTX ICLoRA API' });
 }
 
 export const config = {

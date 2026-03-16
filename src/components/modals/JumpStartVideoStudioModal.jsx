@@ -91,6 +91,14 @@ const EDIT_MODELS = [
     resolutions: ['auto', '480p', '720p'],
     promptPlaceholder: "Describe specific changes to make. e.g., 'Change the shirt colour to blue and add rain falling in the background'",
   },
+  {
+    id: 'bria-erase',
+    label: 'Bria Video Erase',
+    description: 'Remove objects from video using a text prompt (max 5s)',
+    resolutions: ['auto'],
+    promptPlaceholder: "Describe what to remove. e.g., 'the watermark in the top right corner' or 'the person in the background'",
+    isErase: true,
+  },
 ];
 
 /**
@@ -292,8 +300,18 @@ export default function JumpStartVideoStudioModal({
     setGenerationStatus(`Submitting ${mode} request...`);
 
     try {
-      const endpoint = mode === 'extend' ? '/api/jumpstart/extend' : '/api/jumpstart/edit';
-      const body = {
+      const isBriaErase = mode === 'edit' && editModel === 'bria-erase';
+      const endpoint = mode === 'extend'
+        ? '/api/jumpstart/extend'
+        : isBriaErase
+          ? '/api/jumpstart/erase'
+          : '/api/jumpstart/edit';
+      const body = isBriaErase ? {
+        video_url: selectedVideo.url,
+        prompt,
+        preserve_audio: true,
+        auto_trim: true,
+      } : {
         videoUrl: selectedVideo.url,
         prompt,
         resolution,
@@ -326,7 +344,7 @@ export default function JumpStartVideoStudioModal({
       } else {
         setRequestId(data.requestId);
         setGenerationStatus(`Processing your video (may take 1-3 minutes)...`);
-        const pollModel = mode === 'extend' ? extendModel : editModel;
+        const pollModel = mode === 'extend' ? extendModel : (isBriaErase ? 'bria-erase' : editModel);
         pollIntervalRef.current = setInterval(() => pollForResult(data.requestId, pollModel), 5000);
       }
     } catch (error) {

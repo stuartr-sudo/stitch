@@ -20,7 +20,15 @@ export default async function handler(req, res) {
 
     const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
 
-    if (model === 'veo3') {
+    if (model === 'bria-erase') {
+      return await checkFalResult(req, res, requestId, FAL_KEY, 'bria/video/erase/prompt', model);
+    } else if (model === 'kling-r2v-pro' || model === 'kling-r2v-standard') {
+      const tier = model === 'kling-r2v-pro' ? 'pro' : 'standard';
+      return await checkFalResult(req, res, requestId, FAL_KEY, `fal-ai/kling-video/o3/${tier}/reference-to-video`, model);
+    } else if (model === 'ltx-iclora') {
+      // Try distilled image-to-video first (most common path)
+      return await checkFalResult(req, res, requestId, FAL_KEY, 'fal-ai/ltx-2-19b/distilled/image-to-video/lora', model);
+    } else if (model === 'veo3') {
       return await checkVeo3Result(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-fast') {
       return await checkVeo3FastResult(req, res, requestId, FAL_KEY);
@@ -873,4 +881,73 @@ async function checkLtxResult(req, res, requestId, FAL_KEY) {
     model: 'ltx-audio-video',
     queuePosition: data.queue_position,
   });
+}
+
+/**
+ * Generic FAL.ai queue result checker — works for any fal.ai model
+ * Reusable for Kling R2V, LTX ICLoRA, Bria, etc.
+ */
+async function checkFalResult(req, res, requestId, FAL_KEY, endpoint, model) {
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    if (pollResponse.status === 404) {
+      // FAL returns 404 when request is complete — fetch result directly
+      return await getFalResult(req, res, requestId, FAL_KEY, endpoint, model);
+    }
+    const errorText = await pollResponse.text();
+    console.error(`[JumpStart/${model}] Poll error:`, errorText);
+    return res.status(pollResponse.status).json({ error: 'Failed to check status', details: errorText });
+  }
+
+  const data = await pollResponse.json();
+  console.log(`[JumpStart/${model}] Status:`, JSON.stringify(data).substring(0, 300));
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getFalResult(req, res, requestId, FAL_KEY, endpoint, model);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model,
+    queuePosition: data.queue_position,
+  });
+}
+
+async function getFalResult(req, res, requestId, FAL_KEY, endpoint, model) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/${endpoint}/requests/${requestId}`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error(`[JumpStart/${model}] Result fetch error:`, errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log(`[JumpStart/${model}] Result:`, JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model,
+    });
+  }
+
+  return res.status(200).json({ success: true, status: 'processing', requestId, model });
 }
