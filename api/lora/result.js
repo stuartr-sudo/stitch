@@ -30,7 +30,15 @@ export default async function handler(req, res) {
     const resultResponse = await fetch(resultUrl, { headers });
     const resultData = await resultResponse.json();
 
-    const modelUrl = resultData.diffusers_lora_file?.url || null;
+    console.log('[LoRA Result] Full fal.ai response keys:', Object.keys(resultData));
+    console.log('[LoRA Result] Full fal.ai response:', JSON.stringify(resultData).substring(0, 1000));
+
+    // Check multiple possible field names for the LoRA model file
+    const modelUrl = resultData.diffusers_lora_file?.url
+      || resultData.lora_file?.url
+      || resultData.config_file?.url
+      || resultData.output?.url
+      || null;
 
     if (loraId) {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);

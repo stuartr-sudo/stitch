@@ -239,8 +239,7 @@ export default function ImagineerModal({
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState("subject");
 
-  const [availableLoras, setAvailableLoras] = useState([]);
-  const [selectedLora, setSelectedLora] = useState("");
+  const [generateLoras, setGenerateLoras] = useState([]);
 
   // Edit tab state
   const [editSourceUrl, setEditSourceUrl] = useState("");
@@ -252,16 +251,6 @@ export default function ImagineerModal({
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (isOpen && user) {
-      import('@/lib/supabase').then(({ supabase }) => {
-        if (supabase) {
-          supabase.from('brand_loras').select('*').eq('user_id', user.id).eq('status', 'ready')
-            .then(({ data }) => setAvailableLoras(data || []));
-        }
-      });
-    }
-  }, [isOpen, user]);
 
   // Reset when modal opens
   useEffect(() => {
@@ -279,6 +268,7 @@ export default function ImagineerModal({
       setGenerating(false);
       setShowPreview(false);
       setActiveTab("subject");
+      setGenerateLoras([]);
     }
   }, [isOpen]);
 
@@ -335,14 +325,17 @@ export default function ImagineerModal({
     setGenerating(true);
 
     try {
-      const loraUrl = availableLoras.find(l => l.id === selectedLora)?.fal_model_url;
+      // Build loras array from LoRAPicker selections
+      const loras = generateLoras
+        .filter(l => l.url)
+        .map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
 
       await onGenerate({
         prompt: generatedPrompt,
         style: artisticStyle,
         dimensions,
-        model: selectedModel,
-        loraUrl: loraUrl,
+        model: loras.length > 0 ? 'fal-flux' : selectedModel,
+        loras: loras.length > 0 ? loras : undefined,
       });
       onClose();
     } catch (error) {
@@ -467,26 +460,12 @@ export default function ImagineerModal({
               </div>
             </div>
 
-            {/* Custom Brand LoRAs */}
-            {selectedModel === 'fal-flux' && availableLoras.length > 0 && (
-              <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
-                <h3 className="text-sm font-semibold text-[#07393C] pb-1">Brand Products (LoRAs)</h3>
-                <Select value={selectedLora} onValueChange={setSelectedLora}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select a trained product..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">None</SelectItem>
-                    {availableLoras.map((lora) => (
-                      <SelectItem key={lora.id} value={lora.id}>
-                        {lora.name} (Trigger: {lora.trigger_word})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500">Include the trigger word in your description above!</p>
-              </div>
-            )}
+            {/* LoRA Models */}
+            <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+              <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
+              <p className="text-xs text-slate-500 -mt-2">Select LoRAs to use FLUX 2 Dev with your trained models. Include trigger words in your description!</p>
+              <LoRAPicker value={generateLoras} onChange={setGenerateLoras} />
+            </div>
           </TabsContent>
 
           <TabsContent value="style" className="mt-0 p-5 space-y-5">

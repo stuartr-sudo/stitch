@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, Sparkles, Package, Paintbrush } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const CATEGORY_ICONS = {
   product: Package,
@@ -33,7 +34,7 @@ const CATEGORY_LABELS = {
 };
 
 export default function LoRAPicker({ value = [], onChange, brandUsername }) {
-  const { supabase, user } = useAuth();
+  const { user } = useAuth();
   const [libraryLoras, setLibraryLoras] = useState([]);
   const [customLoras, setCustomLoras] = useState([]);
   const [loading, setLoading] = useState(true);

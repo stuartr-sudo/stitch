@@ -399,7 +399,7 @@ export default function LibraryModal({
       if (isInitial || hasMore.videos) {
         const { data: videos } = await supabase
           .from('generated_videos')
-          .select('id, url, video_url, title, prompt, created_at')
+          .select('id, url, title, prompt, created_at')
           .order('created_at', { ascending: false })
           .range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
         if (videos) {

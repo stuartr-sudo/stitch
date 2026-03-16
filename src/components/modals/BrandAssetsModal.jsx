@@ -77,6 +77,32 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   const [trainingStage, setTrainingStage] = useState(''); // uploading, queued, training, complete
   const [trainingResult, setTrainingResult] = useState(null);
 
+  // Reset all state when the modal closes so user can train again
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep('upload');
+      setUploadedImages([]);
+      setProcessedImages({});
+      setIsProcessing(false);
+      setProcessingId(null);
+      setShowLibraryBrowser(false);
+      setLibraryItems([]);
+      setLibraryFolders([]);
+      setSelectedFolder(null);
+      setSelectedLibraryIds(new Set());
+      setLoadingLibrary(false);
+      setLoadingMoreLibrary(false);
+      setLibraryHasMore(true);
+      setLibraryOffset(0);
+      setLoraName('');
+      setTriggerWord('');
+      setIsTraining(false);
+      setTrainingProgress(null);
+      setTrainingStage('');
+      setTrainingResult(null);
+    }
+  }, [isOpen]);
+
   const handleFileUpload = async (files) => {
     const newImages = [];
     for (const file of files) {
@@ -324,13 +350,25 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
         const result = await response.json();
 
         if (result.status === 'completed') {
-          setTrainingStage('complete');
-          setTrainingResult({
-            modelUrl: result.modelUrl,
-            triggerWord: triggerWord.trim(),
-            loraName: loraName.trim(),
-          });
-          toast.success('LoRA training complete! Your model is ready to use.');
+          if (result.modelUrl) {
+            setTrainingStage('complete');
+            setTrainingResult({
+              modelUrl: result.modelUrl,
+              triggerWord: triggerWord.trim(),
+              loraName: loraName.trim(),
+            });
+            toast.success('LoRA training complete! Your model is ready to use.');
+          } else {
+            setTrainingStage('failed');
+            toast.error('Training finished but no model was produced. Try again with different images.');
+          }
+          setIsTraining(false);
+          return;
+        }
+
+        if (result.status === 'failed') {
+          setTrainingStage('failed');
+          toast.error('LoRA training failed. Try again with different images.');
           setIsTraining(false);
           return;
         }
@@ -743,6 +781,38 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   >
                     Done
                   </Button>
+                </>
+              )}
+
+              {/* Stage: Failed */}
+              {trainingStage === 'failed' && (
+                <>
+                  <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                    <Info className="w-8 h-8 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">Training failed</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      The model could not be produced. This can happen with low-quality images or incompatible training data.
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-left space-y-1">
+                    <p className="text-xs font-medium text-amber-800">Tips for next attempt:</p>
+                    <ul className="text-xs text-amber-700 list-disc list-inside space-y-0.5">
+                      <li>Use 5-15 high-quality, consistent photos</li>
+                      <li>Remove busy backgrounds before training</li>
+                      <li>Keep lighting and style consistent across images</li>
+                      <li>Avoid very small or low-resolution images</li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => { setCurrentStep('upload'); setTrainingStage(''); }} className="border-gray-300">
+                      Try Again
+                    </Button>
+                    <Button onClick={onClose} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                      Close
+                    </Button>
+                  </div>
                 </>
               )}
 
