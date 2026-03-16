@@ -198,6 +198,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
               src={mediaUrl}
               alt={item.title || 'Media'}
               className="max-w-full max-h-full object-contain"
+              loading="lazy"
               onLoad={handleMediaLoad}
             />
             <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -268,7 +269,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
 /**
  * MediaGrid — renders the filtered grid of items
  */
-function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoading }) {
+function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoading, canLoadMore, isLoadingMore, onLoadMore }) {
   const filtered = items.filter(item => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -297,16 +298,33 @@ function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoa
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-max p-4">
-      {filtered.map(item => (
-        <MediaCard
-          key={`${item.type}-${item.id}`}
-          item={item}
-          isSelected={selectedItem?.id === item.id}
-          onSelect={onSelect}
-          onDelete={onDelete}
-        />
-      ))}
+    <div className="p-4 space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-max">
+        {filtered.map(item => (
+          <MediaCard
+            key={`${item.type}-${item.id}`}
+            item={item}
+            isSelected={selectedItem?.id === item.id}
+            onSelect={onSelect}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+      {canLoadMore && !searchQuery && (
+        <div className="flex justify-center pt-2 pb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="px-6 text-xs border-gray-300"
+          >
+            {isLoadingMore
+              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Loading...</>
+              : `Load More`}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -314,6 +332,8 @@ function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoa
 /**
  * LibraryModal - Browse and manage saved media
  */
+const PAGE_SIZE = 20;
+
 export default function LibraryModal({
   isOpen,
   onClose,
@@ -323,18 +343,25 @@ export default function LibraryModal({
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(mediaType === 'all' ? 'all' : mediaType);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [hasMore, setHasMore] = useState({ images: true, videos: true, audio: true });
+  const [offsets, setOffsets] = useState({ images: 0, videos: 0, audio: 0 });
 
   useEffect(() => {
     if (isOpen || isEmbedded) {
-      loadLibrary();
+      setItems([]);
+      setOffsets({ images: 0, videos: 0, audio: 0 });
+      setHasMore({ images: true, videos: true, audio: true });
+      loadLibrary(true);
     }
   }, [isOpen, isEmbedded]);
 
-  const loadLibrary = async () => {
-    setIsLoading(true);
+  const loadLibrary = async (isInitial = false) => {
+    if (isInitial) setIsLoading(true);
+    else setIsLoadingMore(true);
 
     if (!supabase) {
       setItems([
@@ -346,45 +373,84 @@ export default function LibraryModal({
       return;
     }
 
+    const currentOffsets = isInitial ? { images: 0, videos: 0, audio: 0 } : offsets;
+
     try {
       const results = [];
+      const newHasMore = { ...hasMore };
+      const newOffsets = { ...currentOffsets };
 
-      const { data: images } = await supabase
-        .from('image_library_items')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (images) {
-        results.push(...images.map(img => ({ ...img, type: 'image' })));
+      // Only fetch types that have more data
+      if (isInitial || hasMore.images) {
+        const { data: images } = await supabase
+          .from('image_library_items')
+          .select('id, url, title, prompt, created_at, alt_text')
+          .order('created_at', { ascending: false })
+          .range(currentOffsets.images, currentOffsets.images + PAGE_SIZE - 1);
+        if (images) {
+          results.push(...images.map(img => ({ ...img, type: 'image' })));
+          newHasMore.images = images.length === PAGE_SIZE;
+          newOffsets.images = currentOffsets.images + images.length;
+        } else {
+          newHasMore.images = false;
+        }
       }
 
-      const { data: videos } = await supabase
-        .from('generated_videos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (videos) {
-        results.push(...videos.map(vid => ({ ...vid, type: 'video' })));
+      if (isInitial || hasMore.videos) {
+        const { data: videos } = await supabase
+          .from('generated_videos')
+          .select('id, url, video_url, title, prompt, created_at')
+          .order('created_at', { ascending: false })
+          .range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
+        if (videos) {
+          results.push(...videos.map(vid => ({ ...vid, type: 'video' })));
+          newHasMore.videos = videos.length === PAGE_SIZE;
+          newOffsets.videos = currentOffsets.videos + videos.length;
+        } else {
+          newHasMore.videos = false;
+        }
       }
 
-      const { data: audio } = await supabase
-        .from('generated_audio')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (audio) {
-        results.push(...audio.map(aud => ({ ...aud, type: 'audio' })));
+      if (isInitial || hasMore.audio) {
+        const { data: audio } = await supabase
+          .from('generated_audio')
+          .select('id, audio_url, title, prompt, created_at, duration_seconds')
+          .order('created_at', { ascending: false })
+          .range(currentOffsets.audio, currentOffsets.audio + PAGE_SIZE - 1);
+        if (audio) {
+          results.push(...audio.map(aud => ({ ...aud, type: 'audio' })));
+          newHasMore.audio = audio.length === PAGE_SIZE;
+          newOffsets.audio = currentOffsets.audio + audio.length;
+        } else {
+          newHasMore.audio = false;
+        }
       }
 
       results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setItems(results);
+
+      if (isInitial) {
+        setItems(results);
+      } else {
+        setItems(prev => {
+          // Deduplicate by type+id
+          const existingKeys = new Set(prev.map(i => `${i.type}-${i.id}`));
+          const newItems = results.filter(r => !existingKeys.has(`${r.type}-${r.id}`));
+          return [...prev, ...newItems].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        });
+      }
+
+      setHasMore(newHasMore);
+      setOffsets(newOffsets);
     } catch (error) {
       console.error('Library load error:', error);
       toast.error('Failed to load library');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
+
+  const canLoadMore = hasMore.images || hasMore.videos || hasMore.audio;
 
   const getFilteredByTab = (tab) => {
     if (tab === 'all') return items;
@@ -444,7 +510,7 @@ export default function LibraryModal({
               className="pl-9"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={loadLibrary} disabled={isLoading}>
+          <Button variant="outline" size="sm" onClick={() => { setItems([]); setOffsets({ images: 0, videos: 0, audio: 0 }); setHasMore({ images: true, videos: true, audio: true }); loadLibrary(true); }} disabled={isLoading}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
           </Button>
         </div>
@@ -484,6 +550,9 @@ export default function LibraryModal({
               onSelect={handleSelect}
               onDelete={handleDelete}
               isLoading={isLoading}
+              canLoadMore={canLoadMore}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={() => loadLibrary(false)}
             />
           </TabsContent>
         ))}

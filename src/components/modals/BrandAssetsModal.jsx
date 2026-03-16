@@ -62,6 +62,10 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   const [selectedFolder, setSelectedFolder] = useState(null); // null = all images
   const [selectedLibraryIds, setSelectedLibraryIds] = useState(new Set());
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [loadingMoreLibrary, setLoadingMoreLibrary] = useState(false);
+  const [libraryOffset, setLibraryOffset] = useState(0);
+  const [libraryHasMore, setLibraryHasMore] = useState(true);
+  const LIBRARY_PAGE_SIZE = 40;
 
   // Config state
   const [loraName, setLoraName] = useState('');
@@ -137,31 +141,56 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
 
   // ─── Library Import ─────────────────────────────────────────────────────
 
-  const loadLibraryItems = async () => {
-    setLoadingLibrary(true);
+  const loadLibraryItems = async (isInitial = true) => {
+    if (isInitial) {
+      setLoadingLibrary(true);
+      setLibraryOffset(0);
+      setLibraryHasMore(true);
+    } else {
+      setLoadingMoreLibrary(true);
+    }
+
+    const offset = isInitial ? 0 : libraryOffset;
+
     try {
       const { data: images } = await supabase
         .from('image_library_items')
         .select('id, url, title, created_at')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .range(offset, offset + LIBRARY_PAGE_SIZE - 1);
 
       if (images) {
-        setLibraryItems(images);
+        const hasMore = images.length === LIBRARY_PAGE_SIZE;
+        setLibraryHasMore(hasMore);
+        setLibraryOffset(offset + images.length);
 
-        // Extract folder names from titles with [FolderName] prefix pattern
+        if (isInitial) {
+          setLibraryItems(images);
+        } else {
+          setLibraryItems(prev => {
+            const existingIds = new Set(prev.map(i => i.id));
+            const newItems = images.filter(i => !existingIds.has(i.id));
+            return [...prev, ...newItems];
+          });
+        }
+
+        // Extract folder names from all loaded items
+        const allItems = isInitial ? images : [...libraryItems, ...images];
         const folders = new Set();
-        images.forEach(img => {
+        allItems.forEach(img => {
           const match = img.title?.match(/^\[([^\]]+)\]/);
           if (match) folders.add(match[1]);
         });
         setLibraryFolders(Array.from(folders).sort());
+      } else {
+        setLibraryHasMore(false);
       }
     } catch (err) {
       console.error('Failed to load library:', err);
       toast.error('Failed to load library');
     } finally {
       setLoadingLibrary(false);
+      setLoadingMoreLibrary(false);
     }
   };
 
@@ -169,7 +198,8 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     setShowLibraryBrowser(true);
     setSelectedLibraryIds(new Set());
     setSelectedFolder(null);
-    loadLibraryItems();
+    setLibraryItems([]);
+    loadLibraryItems(true);
   };
 
   const toggleLibraryItem = (id) => {
@@ -872,6 +902,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                           src={item.url}
                           alt={item.title || ''}
                           className="w-full aspect-square object-cover"
+                          loading="lazy"
                         />
                         {isSelected && (
                           <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#2C666E] flex items-center justify-center">
@@ -885,6 +916,21 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     );
                   })}
                 </div>
+                {libraryHasMore && !selectedFolder && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => loadLibraryItems(false)}
+                      disabled={loadingMoreLibrary}
+                      className="px-6 text-xs border-gray-300"
+                    >
+                      {loadingMoreLibrary
+                        ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Loading...</>
+                        : 'Load More'}
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </div>
