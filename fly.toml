@@ -1,4 +1,4 @@
-# fly.toml — stitch (experiment, no custom domain)
+# fly.toml — stitch
 app = "stitch-app"
 primary_region = "syd"
 
@@ -16,6 +16,11 @@ primary_region = "syd"
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
 
 [[vm]]
   memory = "512mb"

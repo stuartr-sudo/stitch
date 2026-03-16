@@ -63,9 +63,9 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   const [selectedLibraryIds, setSelectedLibraryIds] = useState(new Set());
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [loadingMoreLibrary, setLoadingMoreLibrary] = useState(false);
-  const [libraryOffset, setLibraryOffset] = useState(0);
   const [libraryHasMore, setLibraryHasMore] = useState(true);
-  const LIBRARY_PAGE_SIZE = 40;
+  const [libraryOffset, setLibraryOffset] = useState(0);
+  const LIBRARY_PAGE_SIZE = 24;
 
   // Config state
   const [loraName, setLoraName] = useState('');

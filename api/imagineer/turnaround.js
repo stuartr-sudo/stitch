@@ -1,14 +1,10 @@
 /**
  * Turnaround Sheet Generator
  * Generates a SINGLE image containing a 4×6 character turnaround grid.
- * The model renders all 24 poses in one image, maintaining character consistency.
  *
- * Supported models:
- *   - nano-banana-2       (text-to-image)
- *   - nano-banana-2-edit  (image-to-image via /edit endpoint, uses image_urls[])
- *   - nano-banana-pro     (image-to-image via /edit endpoint, uses image_urls[])
- *   - seedream            (ByteDance Seedream v4.5 /edit, uses image_urls[])
- *   - fal-flux            (Flux 2 + LoRA, text-to-image or image_url edit)
+ * ALL models use queue.fal.run to submit async jobs — returns a requestId
+ * for the frontend to poll via /api/imagineer/result.
+ * This avoids Fly.io proxy timeouts (60s) on long-running generations.
  */
 
 import { getUserKeys } from '../lib/getUserKeys.js';
@@ -44,14 +40,6 @@ const MODEL_ENDPOINTS = {
   'fal-flux':           { generate: 'fal-ai/flux-2/lora',             edit: 'fal-ai/flux-2/lora/edit' },
 };
 
-// For polling — map back to the queue endpoint format
-const MODEL_POLL_IDS = {
-  'nano-banana-2':      'nano-banana-2',
-  'nano-banana-pro':    'nano-banana-pro',  // will use nano-banana-2 poll format
-  'seedream':           'seedream',
-  'fal-flux':           'fal-flux',
-};
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -81,21 +69,60 @@ export default async function handler(req, res) {
     let result;
 
     if (model === 'fal-flux') {
-      // Flux path — supports LoRAs
       const loraList = loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null);
       if (hasRef) {
-        result = await generateFluxEdit(FAL_KEY, prompt, referenceImageUrl, loraList);
+        result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS['fal-flux'].edit, 'fal-flux-edit', {
+          image_urls: [referenceImageUrl],
+          prompt,
+          image_size: { width: 1024, height: 1536 },
+          strength: 0.85,
+          num_images: 1,
+          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+        });
       } else {
-        result = await generateFlux(FAL_KEY, prompt, loraList);
+        result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS['fal-flux'].generate, 'fal-flux', {
+          prompt,
+          image_size: { width: 1024, height: 1536 },
+          num_images: 1,
+          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+        });
       }
     } else if (hasRef) {
-      // All other models with a reference image → use their /edit endpoint
-      result = await generateWithEdit(FAL_KEY, model, prompt, referenceImageUrl);
+      const endpoint = MODEL_ENDPOINTS[model]?.edit;
+      if (!endpoint) {
+        return res.status(400).json({ error: `No edit endpoint for model: ${model}` });
+      }
+
+      const payload = {
+        prompt,
+        image_urls: [referenceImageUrl],
+        num_images: 1,
+      };
+
+      // Model-specific options
+      if (model === 'seedream') {
+        payload.width = 1440;
+        payload.height = 2560;
+      } else {
+        payload.output_format = 'png';
+        payload.aspect_ratio = '2:3';
+        payload.resolution = '1K';
+        payload.safety_tolerance = '4';
+      }
+
+      const pollModelId = `${model}-edit`;
+      result = await submitToQueue(FAL_KEY, endpoint, pollModelId, payload);
+
     } else if (MODEL_ENDPOINTS[model]?.generate) {
-      // Text-to-image (only nano-banana-2 supports this without a reference)
-      result = await generateNanoBanana2(FAL_KEY, prompt);
+      result = await submitToQueue(FAL_KEY, MODEL_ENDPOINTS[model].generate, model, {
+        prompt,
+        aspect_ratio: '2:3',
+        resolution: '1K',
+        num_images: 1,
+        output_format: 'png',
+        safety_tolerance: '4',
+      });
     } else {
-      // Models that only have edit endpoints (nano-banana-pro, seedream) require a reference
       return res.status(400).json({
         error: `${model} requires a reference image. Please upload one or switch to Nano Banana 2.`,
       });
@@ -121,68 +148,15 @@ export default async function handler(req, res) {
   }
 }
 
-// ─── Nano Banana 2 text-to-image (no reference) ────────────────────────────
+// ─── Submit to fal.ai queue (all models) ──────────────────────────────────────
+// Posts to queue.fal.run and returns requestId + model for frontend polling.
+// Never blocks waiting for the image — returns immediately.
 
-async function generateNanoBanana2(falKey, prompt) {
-  const response = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${falKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt,
-      aspect_ratio: '2:3',
-      resolution: '1K',
-      num_images: 1,
-      output_format: 'png',
-      safety_tolerance: '4',
-      limit_generations: true,
-    }),
-  });
+async function submitToQueue(falKey, endpoint, pollModelId, payload) {
+  console.log(`[Turnaround] Submitting to queue: ${endpoint}`);
+  console.log(`[Turnaround] Payload keys: ${Object.keys(payload).join(', ')}`);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Nano Banana 2 error: ${errorText.substring(0, 200)}`);
-  }
-
-  const data = await response.json();
-  if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  if (data.request_id) return { requestId: data.request_id, model: 'nano-banana-2', status: 'processing' };
-  throw new Error('Unexpected response format');
-}
-
-// ─── Generic edit endpoint (Nano Banana 2/Pro, Seedream) ────────────────────
-// All use image_urls[] array format
-
-async function generateWithEdit(falKey, model, prompt, referenceImageUrl) {
-  const endpoint = MODEL_ENDPOINTS[model]?.edit;
-  if (!endpoint) throw new Error(`No edit endpoint for model: ${model}`);
-
-  const payload = {
-    prompt,
-    image_urls: [referenceImageUrl],
-    num_images: 1,
-    output_format: 'png',
-  };
-
-  // Model-specific options
-  if (model === 'seedream') {
-    payload.width = 1440;
-    payload.height = 2560;
-    delete payload.output_format; // seedream doesn't accept this
-  } else {
-    // nano-banana-2/edit and nano-banana-pro/edit
-    payload.aspect_ratio = '2:3';
-    payload.resolution = '1K';
-    payload.safety_tolerance = '4';
-    payload.limit_generations = true;
-  }
-
-  console.log(`[Turnaround] Using edit endpoint (sync): ${endpoint}`);
-
-  // Use synchronous fal.run (not queue.fal.run) — edit endpoints don't support queue polling
-  const response = await fetch(`https://fal.run/${endpoint}`, {
+  const response = await fetch(`https://queue.fal.run/${endpoint}`, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${falKey}`,
@@ -193,70 +167,30 @@ async function generateWithEdit(falKey, model, prompt, referenceImageUrl) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`${model} edit error: ${errorText.substring(0, 200)}`);
+    console.error(`[Turnaround] Queue submit error (${response.status}): ${errorText.substring(0, 300)}`);
+    throw new Error(`${pollModelId} error: ${errorText.substring(0, 200)}`);
   }
 
   const data = await response.json();
-  if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  throw new Error(`Unexpected ${model} response — no image returned`);
-}
+  console.log(`[Turnaround] Queue response keys: ${Object.keys(data).join(', ')}`);
 
-// ─── Flux 2 + LoRA (text-to-image) ─────────────────────────────────────────
-
-async function generateFlux(falKey, prompt, loras) {
-  const payload = {
-    prompt,
-    image_size: { width: 1024, height: 1536 },
-    num_images: 1,
-  };
-  if (loras?.length) {
-    payload.loras = loras.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
+  // Some fast models return the image directly even via queue
+  if (data.images?.[0]?.url) {
+    console.log(`[Turnaround] Got immediate result from queue`);
+    return { imageUrl: data.images[0].url, status: 'completed' };
   }
 
-  const response = await fetch('https://queue.fal.run/fal-ai/flux-2/lora', {
-    method: 'POST',
-    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Flux error: ${errorText.substring(0, 200)}`);
+  // Normal queue response — return requestId for polling
+  if (data.request_id) {
+    console.log(`[Turnaround] Queued: ${data.request_id} → poll as ${pollModelId}`);
+    return {
+      requestId: data.request_id,
+      model: pollModelId,
+      status: 'processing',
+      statusUrl: data.status_url,
+      responseUrl: data.response_url,
+    };
   }
 
-  const data = await response.json();
-  if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  if (data.request_id) return { requestId: data.request_id, model: 'fal-flux', status: 'processing' };
-  throw new Error('Unexpected Flux response');
-}
-
-// ─── Flux 2 + LoRA edit (image-to-image) ────────────────────────────────────
-
-async function generateFluxEdit(falKey, prompt, imageUrl, loras) {
-  const payload = {
-    image_url: imageUrl,
-    prompt,
-    image_size: { width: 1024, height: 1536 },
-    strength: 0.85,
-    num_images: 1,
-  };
-  if (loras?.length) {
-    payload.loras = loras.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
-  }
-
-  const response = await fetch('https://queue.fal.run/fal-ai/flux-2/lora/edit', {
-    method: 'POST',
-    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Flux edit error: ${errorText.substring(0, 200)}`);
-  }
-
-  const data = await response.json();
-  if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  if (data.request_id) return { requestId: data.request_id, model: 'fal-flux-edit', status: 'processing' };
-  throw new Error('Unexpected Flux edit response');
+  throw new Error(`Unexpected response from ${endpoint} — no image or request_id`);
 }
