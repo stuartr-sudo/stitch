@@ -158,6 +158,9 @@ app.post('/api/imagineer/describe-character', authenticateToken, async (req, res
 });
 
 app.post('/api/imagineer/turnaround', authenticateToken, async (req, res) => {
+  // Edit endpoints run synchronously and can take 60-120s
+  req.setTimeout(180000);
+  res.setTimeout(180000);
   try {
     const handler = await loadApiRoute('imagineer/turnaround.js');
     if (handler) return await handler(req, res);

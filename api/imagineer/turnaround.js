@@ -179,9 +179,10 @@ async function generateWithEdit(falKey, model, prompt, referenceImageUrl) {
     payload.limit_generations = true;
   }
 
-  console.log(`[Turnaround] Using edit endpoint: ${endpoint}`);
+  console.log(`[Turnaround] Using edit endpoint (sync): ${endpoint}`);
 
-  const response = await fetch(`https://queue.fal.run/${endpoint}`, {
+  // Use synchronous fal.run (not queue.fal.run) — edit endpoints don't support queue polling
+  const response = await fetch(`https://fal.run/${endpoint}`, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${falKey}`,
@@ -197,10 +198,7 @@ async function generateWithEdit(falKey, model, prompt, referenceImageUrl) {
 
   const data = await response.json();
   if (data.images?.[0]?.url) return { imageUrl: data.images[0].url, status: 'completed' };
-  // Return model with '-edit' suffix so result.js polls the correct edit endpoint
-  const pollModel = model.endsWith('-edit') ? model : `${model}-edit`;
-  if (data.request_id) return { requestId: data.request_id, model: pollModel, status: 'processing' };
-  throw new Error(`Unexpected ${model} response`);
+  throw new Error(`Unexpected ${model} response — no image returned`);
 }
 
 // ─── Flux 2 + LoRA (text-to-image) ─────────────────────────────────────────
