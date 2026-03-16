@@ -180,10 +180,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build insert data - only include fields that exist in the tables
+    // Build insert data — populate ALL NOT NULL columns for both tables
+    const userName = req.user?.email?.split('@')[0] || 'user';
+    const safeTitle = title || `${source || 'Generated'} - ${new Date().toLocaleString()}`;
+
     const insertData = {
       [urlField]: finalUrl,
-      title: title || `${source || 'Generated'} - ${new Date().toLocaleString()}`,
+      title: safeTitle,
       created_at: new Date().toISOString(),
     };
 
@@ -191,25 +194,23 @@ export default async function handler(req, res) {
       insertData.user_id = req.user.id;
     }
 
-    // user_name is NOT NULL on generated_videos — use email prefix or 'user'
-    if (table === 'generated_videos') {
-      insertData.user_name = req.user?.email?.split('@')[0] || 'user';
-    }
-
-    // Add optional fields if they might exist
     if (prompt) {
       insertData.prompt = prompt;
     }
 
-    // source is NOT NULL in image_library_items
+    // Populate ALL NOT NULL columns for image_library_items
     if (table === 'image_library_items') {
       insertData.source = source || 'unknown';
+      insertData.alt_text = safeTitle || prompt || 'Generated image';
+      insertData.user_name = userName;
     }
 
-    // alt_text is NOT NULL in image_library_items
-    if (table === 'image_library_items') {
-      insertData.alt_text = title || prompt || 'Generated image';
+    // Populate ALL NOT NULL columns for generated_videos
+    if (table === 'generated_videos') {
+      insertData.user_name = userName;
     }
+
+    console.log(`[Library Save] Insert fields: ${Object.keys(insertData).join(', ')}`);
 
     console.log(`[Library Save] Inserting into ${table}...`);
 
