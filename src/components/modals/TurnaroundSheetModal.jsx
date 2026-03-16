@@ -286,7 +286,11 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       if (data.imageUrl) {
         setSheetImageUrl(data.imageUrl);
         setGenerating(false);
-        toast.success('Turnaround sheet generated!');
+        if (data.fallbackNote) {
+          toast.success(data.fallbackNote);
+        } else {
+          toast.success('Turnaround sheet generated!');
+        }
       } else if (data.requestId) {
         setRequestId(data.requestId);
         setPollModel(data.model || selectedModel);

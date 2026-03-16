@@ -120,6 +120,9 @@ const MODELS = {
   },
 };
 
+// Fallback order for edit models: if the selected model is down, try the next one
+const EDIT_FALLBACK_ORDER = ['nano-banana-2-edit', 'nano-banana-pro', 'seedream'];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -160,22 +163,19 @@ export default async function handler(req, res) {
   try {
     let result;
     const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null) };
-    const payload = modelDef.buildPayload(prompt, hasRef ? referenceImageUrl : null, extras);
 
-    if (modelDef.type === 'edit') {
-      // Edit models → synchronous fal.run (more reliable than queue for edit endpoints)
-      result = await callSync(FAL_KEY, modelDef.endpoint, payload);
-
-    } else if (modelDef.type === 'both' && hasRef) {
-      // Flux with reference → edit endpoint, sync
-      result = await callSync(FAL_KEY, modelDef.editEndpoint, payload);
+    if (modelDef.type === 'edit' || (modelDef.type === 'both' && hasRef)) {
+      // Edit path — try with automatic fallback through available models
+      result = await tryEditWithFallback(FAL_KEY, model, modelDef, prompt, referenceImageUrl, extras);
 
     } else if (modelDef.type === 'both' && !hasRef) {
       // Flux without reference → generate endpoint, queue
+      const payload = modelDef.buildPayload(prompt, null, extras);
       result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
 
     } else {
       // Pure generate → queue
+      const payload = modelDef.buildPayload(prompt, null, extras);
       result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
     }
 
@@ -183,7 +183,7 @@ export default async function handler(req, res) {
       username: req.user.email || req.user.id,
       category: 'fal',
       operation: 'turnaround_sheet',
-      model,
+      model: result.usedModel || model,
       metadata: { style, has_reference: hasRef },
     });
 
@@ -197,6 +197,62 @@ export default async function handler(req, res) {
     console.error('[Turnaround] Error:', err);
     return res.status(500).json({ error: err.message });
   }
+}
+
+// ─── Try edit with automatic fallback ─────────────────────────────────────────
+// If the selected edit model returns a service error (502/503/504), automatically
+// try the next available edit model. This ensures the turnaround works even when
+// one fal.ai model endpoint is temporarily down.
+
+async function tryEditWithFallback(falKey, requestedModel, requestedModelDef, prompt, refUrl, extras) {
+  // Build the ordered list: requested model first, then fallbacks
+  const modelsToTry = [requestedModel];
+  for (const fallback of EDIT_FALLBACK_ORDER) {
+    if (fallback !== requestedModel && MODELS[fallback]) {
+      modelsToTry.push(fallback);
+    }
+  }
+
+  const errors = [];
+
+  for (const modelId of modelsToTry) {
+    const def = MODELS[modelId];
+    if (!def) continue;
+
+    const endpoint = def.type === 'both' ? def.editEndpoint : def.endpoint;
+    if (!endpoint) continue;
+
+    const payload = def.buildPayload(prompt, refUrl, extras);
+
+    if (modelId !== requestedModel) {
+      console.log(`[Turnaround] ⚠️  Falling back to ${modelId} after ${requestedModel} failed`);
+    }
+
+    try {
+      const result = await callSync(falKey, endpoint, payload);
+      if (result) {
+        if (modelId !== requestedModel) {
+          console.log(`[Turnaround] ✅ Fallback ${modelId} succeeded`);
+          result.usedModel = modelId;
+          result.fallbackUsed = true;
+          result.fallbackNote = `${requestedModel} was unavailable — used ${modelId} instead`;
+        }
+        return result;
+      }
+    } catch (err) {
+      const isServiceDown = err.statusCode >= 500 || err.message?.includes('unavailable') || err.message?.includes('504') || err.message?.includes('503') || err.message?.includes('502');
+      errors.push({ model: modelId, error: err.message });
+      console.warn(`[Turnaround] ${modelId} failed: ${err.message?.substring(0, 100)}`);
+
+      if (!isServiceDown) {
+        // Non-service error (400, auth, etc.) — don't try fallbacks, it's our fault
+        throw err;
+      }
+      // Service error — continue to next fallback
+    }
+  }
+
+  throw new Error(`All models unavailable. Tried: ${errors.map(e => e.model).join(', ')}. Please try again in a few minutes.`);
 }
 
 // ─── Synchronous call (edit endpoints) ────────────────────────────────────────
@@ -217,15 +273,17 @@ async function callSync(falKey, endpoint, payload) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[Turnaround] Sync error (${response.status}): ${errorText.substring(0, 300)}`);
-    throw new Error(`${endpoint} error (${response.status}): ${errorText.substring(0, 200)}`);
+    console.error(`[Turnaround] Sync error (${response.status}) from ${endpoint}: ${errorText.substring(0, 300)}`);
+    const err = new Error(`${endpoint} error (${response.status}): ${errorText.substring(0, 200)}`);
+    err.statusCode = response.status;
+    throw err;
   }
 
   const data = await response.json();
   console.log(`[Turnaround] Sync response keys: ${Object.keys(data).join(', ')}`);
 
   if (data.images?.[0]?.url) {
-    console.log(`[Turnaround] Got image from sync call`);
+    console.log(`[Turnaround] ✅ Got image from sync call to ${endpoint}`);
     return { imageUrl: data.images[0].url, status: 'completed' };
   }
 
