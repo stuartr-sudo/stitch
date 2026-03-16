@@ -58,6 +58,7 @@ export default function EditImageModal({
   isOpen,
   onClose,
   onImageEdited,
+  initialImage = null,
   isEmbedded = false
 }) {
   const [images, setImages] = useState([]);
@@ -74,7 +75,7 @@ export default function EditImageModal({
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
-      setImages([]);
+      setImages(initialImage ? [initialImage] : []);
       setPrompt('');
       setModel('wavespeed-nano-ultra');
       setOutputSize('1920x1080');
@@ -83,7 +84,7 @@ export default function EditImageModal({
       setShowUrlInput(false);
       setUrlInput('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialImage]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Upload, Zap, Trash2, ImagePlus, Sparkles, CheckCircle2,
-  ArrowRight, Info, Clock, Layers,
+  ArrowRight, Info, Clock, Layers, FolderOpen, Check, Library,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 const STEPS = [
   { key: 'upload', label: 'Upload Photos', icon: ImagePlus },
@@ -53,6 +54,14 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   const [processedImages, setProcessedImages] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingId, setProcessingId] = useState(null);
+
+  // Library import state
+  const [showLibraryBrowser, setShowLibraryBrowser] = useState(false);
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryFolders, setLibraryFolders] = useState([]); // unique folder prefixes
+  const [selectedFolder, setSelectedFolder] = useState(null); // null = all images
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState(new Set());
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
 
   // Config state
   const [loraName, setLoraName] = useState('');
@@ -125,6 +134,83 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
       return next;
     });
   };
+
+  // ─── Library Import ─────────────────────────────────────────────────────
+
+  const loadLibraryItems = async () => {
+    setLoadingLibrary(true);
+    try {
+      const { data: images } = await supabase
+        .from('image_library_items')
+        .select('id, url, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (images) {
+        setLibraryItems(images);
+
+        // Extract folder names from titles with [FolderName] prefix pattern
+        const folders = new Set();
+        images.forEach(img => {
+          const match = img.title?.match(/^\[([^\]]+)\]/);
+          if (match) folders.add(match[1]);
+        });
+        setLibraryFolders(Array.from(folders).sort());
+      }
+    } catch (err) {
+      console.error('Failed to load library:', err);
+      toast.error('Failed to load library');
+    } finally {
+      setLoadingLibrary(false);
+    }
+  };
+
+  const handleOpenLibrary = () => {
+    setShowLibraryBrowser(true);
+    setSelectedLibraryIds(new Set());
+    setSelectedFolder(null);
+    loadLibraryItems();
+  };
+
+  const toggleLibraryItem = (id) => {
+    setSelectedLibraryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllInFolder = (folderName) => {
+    const folderItems = libraryItems.filter(item => {
+      if (folderName === null) return true;
+      return item.title?.startsWith(`[${folderName}]`);
+    });
+    const allIds = new Set(folderItems.map(item => item.id));
+    setSelectedLibraryIds(allIds);
+  };
+
+  const handleImportFromLibrary = () => {
+    const selected = libraryItems.filter(item => selectedLibraryIds.has(item.id));
+    if (selected.length === 0) { toast.error('No images selected'); return; }
+
+    const imported = selected.map(item => ({
+      id: Date.now() + Math.random(),
+      dataUrl: item.url,
+      fileName: item.title || 'Library image',
+      size: 0,
+      fromLibrary: true,
+    }));
+
+    setUploadedImages(prev => [...prev, ...imported]);
+    setShowLibraryBrowser(false);
+    setSelectedLibraryIds(new Set());
+    toast.success(`Imported ${imported.length} images from library`);
+  };
+
+  const filteredLibraryItems = selectedFolder === null
+    ? libraryItems
+    : libraryItems.filter(item => item.title?.startsWith(`[${selectedFolder}]`));
 
   const handleStartTraining = async () => {
     if (!loraName.trim()) { toast.error('Enter a name for your LoRA model'); return; }
@@ -315,15 +401,29 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
               />
 
               {uploadedImages.length === 0 ? (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 cursor-pointer transition-all group"
-                >
-                  <Upload className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-[#2C666E] transition-colors" />
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Click to upload photos</p>
-                  <p className="text-xs text-gray-400 mt-1">JPG, PNG, or WebP. 5-15 images recommended.</p>
-                </button>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 cursor-pointer transition-all group"
+                  >
+                    <Upload className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-[#2C666E] transition-colors" />
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Click to upload photos</p>
+                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, or WebP. 5-15 images recommended.</p>
+                  </button>
+                  <div className="text-center">
+                    <span className="text-xs text-gray-400">or</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenLibrary}
+                    className="w-full border-2 border-dashed border-[#2C666E]/30 rounded-xl p-6 text-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 cursor-pointer transition-all group"
+                  >
+                    <FolderOpen className="w-8 h-8 mx-auto mb-2 text-[#2C666E]/40 group-hover:text-[#2C666E] transition-colors" />
+                    <p className="text-sm font-medium text-[#2C666E]/70 group-hover:text-[#2C666E]">Import from Library</p>
+                    <p className="text-xs text-gray-400 mt-1">Select images or folders from your saved library</p>
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-3">
@@ -380,7 +480,16 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
                     >
                       <ImagePlus className="w-6 h-6 text-gray-400" />
-                      <span className="text-xs text-gray-400 mt-1">Add more</span>
+                      <span className="text-xs text-gray-400 mt-1">Upload</span>
+                    </button>
+                    {/* Import from library */}
+                    <button
+                      type="button"
+                      onClick={handleOpenLibrary}
+                      className="aspect-square rounded-lg border-2 border-dashed border-[#2C666E]/30 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
+                    >
+                      <FolderOpen className="w-6 h-6 text-[#2C666E]/40" />
+                      <span className="text-xs text-[#2C666E]/60 mt-1">Library</span>
                     </button>
                   </div>
 
@@ -664,6 +773,136 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             )}
           </div>
         </SlideOverFooter>
+      )}
+      {/* Library Browser Overlay */}
+      {showLibraryBrowser && (
+        <div className="absolute inset-0 bg-white z-50 flex flex-col">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-[#2C666E]" />
+              <h3 className="text-sm font-semibold text-gray-900">Import from Library</h3>
+              {selectedLibraryIds.size > 0 && (
+                <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded-full">
+                  {selectedLibraryIds.size} selected
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowLibraryBrowser(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          {/* Folder tabs */}
+          {libraryFolders.length > 0 && (
+            <div className="flex items-center gap-1.5 px-5 py-2 border-b border-gray-100 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setSelectedFolder(null)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedFolder === null
+                    ? 'bg-[#2C666E] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                All Images
+              </button>
+              {libraryFolders.map(folder => (
+                <button
+                  key={folder}
+                  type="button"
+                  onClick={() => setSelectedFolder(folder)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                    selectedFolder === folder
+                      ? 'bg-[#2C666E] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <FolderOpen className="w-3 h-3" /> {folder}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Image grid */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {loadingLibrary ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                <span className="ml-2 text-sm text-gray-500">Loading library...</span>
+              </div>
+            ) : filteredLibraryItems.length === 0 ? (
+              <div className="text-center py-12">
+                <FolderOpen className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-gray-500">No images found in library</p>
+                <p className="text-xs text-gray-400 mt-1">Save images from Turnaround or Imagineer to see them here</p>
+              </div>
+            ) : (
+              <>
+                {selectedFolder !== null && (
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500">{filteredLibraryItems.length} images in "{selectedFolder}"</span>
+                    <button
+                      type="button"
+                      onClick={() => selectAllInFolder(selectedFolder)}
+                      className="text-xs text-[#2C666E] hover:underline font-medium"
+                    >
+                      Select all in folder
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-4 gap-2">
+                  {filteredLibraryItems.map(item => {
+                    const isSelected = selectedLibraryIds.has(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleLibraryItem(item.id)}
+                        className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                          isSelected
+                            ? 'border-[#2C666E] ring-2 ring-[#2C666E]/20'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <img
+                          src={item.url}
+                          alt={item.title || ''}
+                          className="w-full aspect-square object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#2C666E] flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                          <p className="text-[10px] text-white truncate">{item.title || 'Untitled'}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50">
+            <Button variant="ghost" onClick={() => setShowLibraryBrowser(false)} className="text-gray-500">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImportFromLibrary}
+              disabled={selectedLibraryIds.size === 0}
+              className="bg-[#2C666E] hover:bg-[#07393C] text-white px-6"
+            >
+              Import {selectedLibraryIds.size > 0 ? `${selectedLibraryIds.size} Images` : ''}
+            </Button>
+          </div>
+        </div>
       )}
     </SlideOverPanel>
   );

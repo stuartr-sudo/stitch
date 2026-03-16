@@ -49,7 +49,7 @@ const CELL_LABELS = [
   "Face Detail", "Hand Detail", "Top-Down", "Low Angle",
 ];
 
-export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }) {
+export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, initialImage = null }) {
   const { user } = useAuth();
 
   // Steps: 'configure' | 'results' | 'cells'
@@ -82,6 +82,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const [editingCellIndex, setEditingCellIndex] = useState(null); // which cell is expanded for editing
   const [savingForLora, setSavingForLora] = useState(false);
   const [slicing, setSlicing] = useState(false);
+  const [loraFolderName, setLoraFolderName] = useState('');
 
   const fileInputRef = useRef(null);
   const pollingRef = useRef(false);
@@ -128,10 +129,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
     if (isOpen) {
       setStep('configure');
       setCharacterDescription(DEFAULT_PROMPT);
-      setReferenceImageUrl("");
-      setReferencePreview("");
-      setUploadingRef(false);
-      setAnalyzingRef(false);
       setStyleText("Concept Art");
       setSelectedModel("nano-banana-2");
       setGenerating(false);
@@ -144,9 +141,25 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       setEditingCellIndex(null);
       setSavingForLora(false);
       setSlicing(false);
+      setLoraFolderName('');
       setElapsedSeconds(0);
       pollingRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
+
+      // Pre-load initial image if passed from another tool
+      if (initialImage) {
+        setReferenceImageUrl(initialImage);
+        setReferencePreview(initialImage);
+        setUploadingRef(false);
+        setAnalyzingRef(false);
+        // Auto-analyze the character
+        describeCharacter(initialImage);
+      } else {
+        setReferenceImageUrl("");
+        setReferencePreview("");
+        setUploadingRef(false);
+        setAnalyzingRef(false);
+      }
     }
   }, [isOpen]);
 
@@ -449,6 +462,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
 
     setSavingForLora(true);
     let saved = 0;
+    const folder = loraFolderName.trim();
+    const titlePrefix = folder ? `[${folder}] Turnaround` : 'Turnaround';
 
     try {
       for (const cell of keepCells) {
@@ -459,7 +474,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             body: JSON.stringify({
               url: cell.url,
               type: 'image',
-              title: `Turnaround — ${cell.label}`,
+              title: `${titlePrefix} — ${cell.label}`,
               prompt: characterDescription,
               source: 'turnaround-lora',
             }),
@@ -982,24 +997,36 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
             </div>
 
             {/* Cells Footer */}
-            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+            <div className="px-5 py-3 border-t bg-slate-50 flex-shrink-0 space-y-3">
               <div className="flex items-center gap-2">
-                <button onClick={() => setStep('results')}
-                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Back to sheet
-                </button>
-                <span className="text-xs text-slate-400 ml-2">
-                  {activeCells.length} of {TOTAL_CELLS} cells will be saved
-                </span>
+                <Label className="text-xs font-medium text-gray-600 whitespace-nowrap">LoRA Folder:</Label>
+                <Input
+                  value={loraFolderName}
+                  onChange={(e) => setLoraFolderName(e.target.value)}
+                  placeholder="e.g., Hero Character, Red Sneaker"
+                  className="h-7 text-xs bg-white border-gray-300 max-w-xs"
+                />
+                <span className="text-[10px] text-gray-400 whitespace-nowrap">Groups saved cells by folder name</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>Close</Button>
-                <Button onClick={handleSaveCellsForLora} disabled={savingForLora || activeCells.length === 0}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
-                  {savingForLora
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                    : <><Save className="w-4 h-4" /> Save {activeCells.length} Cells for LoRA</>}
-                </Button>
+              <div className="flex justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setStep('results')}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
+                    <ArrowLeft className="w-3.5 h-3.5" /> Back to sheet
+                  </button>
+                  <span className="text-xs text-slate-400 ml-2">
+                    {activeCells.length} of {TOTAL_CELLS} cells will be saved
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={onClose}>Close</Button>
+                  <Button onClick={handleSaveCellsForLora} disabled={savingForLora || activeCells.length === 0}
+                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                    {savingForLora
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                      : <><Save className="w-4 h-4" /> Save {activeCells.length} Cells for LoRA</>}
+                  </Button>
+                </div>
               </div>
             </div>
           </>

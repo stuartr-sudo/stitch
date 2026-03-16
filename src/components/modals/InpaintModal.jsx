@@ -30,6 +30,7 @@ export default function InpaintModal({
   isOpen,
   onClose,
   onImageEdited,
+  initialImage = null,
   isEmbedded = false
 }) {
   const [image, setImage] = useState(null);
@@ -51,7 +52,7 @@ export default function InpaintModal({
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
-      setImage(null);
+      setImage(initialImage || null);
       setPrompt('');
       setBrushSize(30);
       setMode('paint');
@@ -59,7 +60,7 @@ export default function InpaintModal({
       setResultImage(null);
       setUseProUltra(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialImage]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;

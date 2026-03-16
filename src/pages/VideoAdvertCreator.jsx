@@ -88,6 +88,8 @@ export default function VideoAdvertCreator() {
   const [showImportBlog, setShowImportBlog] = useState(false);
   const [showMotionTransfer, setShowMotionTransfer] = useState(false);
   const [showAudioStudio, setShowAudioStudio] = useState(false);
+  const [lastGeneratedImage, setLastGeneratedImage] = useState(null); // { url, prompt } for action buttons
+  const [pendingImage, setPendingImage] = useState(null); // image URL to pass to next modal
 
   // Editor & Timeline state
   const [currentTime, setCurrentTime] = useState(0);
@@ -292,6 +294,7 @@ export default function VideoAdvertCreator() {
       createdAt: new Date().toISOString(),
     };
     setCreatedImages(prev => [newImage, ...prev]);
+    setLastGeneratedImage({ url, prompt });
     toast.success('Image generated successfully!');
 
     apiFetch('/api/library/save', {
@@ -299,6 +302,13 @@ export default function VideoAdvertCreator() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, type: 'image', title: 'Imagineer Image', prompt, source: 'imagineer' }),
     }).catch(err => console.warn('Failed to save image to library:', err));
+  };
+
+  const handleSendToTool = (tool) => {
+    if (!lastGeneratedImage) return;
+    setPendingImage(lastGeneratedImage.url);
+    setActiveModal(tool);
+    setLastGeneratedImage(null);
   };
 
   const pollForImageResult = async (requestId, model, maxAttempts = 60, statusUrl = null, responseUrl = null) => {
@@ -903,9 +913,10 @@ export default function VideoAdvertCreator() {
         onInsert={handleVideoCreated}
       />
 
-      <EditImageModal 
-        isOpen={activeModal === 'editimage'} 
-        onClose={() => setActiveModal(null)}
+      <EditImageModal
+        isOpen={activeModal === 'editimage'}
+        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        initialImage={pendingImage}
         onImageEdited={(url) => {
           const newImage = {
             id: Date.now().toString(),
@@ -924,9 +935,10 @@ export default function VideoAdvertCreator() {
         }}
       />
 
-      <InpaintModal 
-        isOpen={activeModal === 'inpaint'} 
-        onClose={() => setActiveModal(null)}
+      <InpaintModal
+        isOpen={activeModal === 'inpaint'}
+        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        initialImage={pendingImage}
         onImageEdited={(url) => {
           const newImage = {
             id: Date.now().toString(),
@@ -1052,7 +1064,8 @@ export default function VideoAdvertCreator() {
 
       <TurnaroundSheetModal
         isOpen={activeModal === 'turnaround'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        initialImage={pendingImage}
         onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet')}
       />
 
@@ -1074,6 +1087,54 @@ export default function VideoAdvertCreator() {
           toast.success('Motion transfer added to timeline!');
         }}
       />
+
+      {/* Floating action panel after image generation */}
+      {lastGeneratedImage && (
+        <div className="fixed bottom-6 right-6 z-[100] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-start gap-3">
+            <img
+              src={lastGeneratedImage.url}
+              alt="Generated"
+              className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 mb-0.5">Image Generated</p>
+              <p className="text-xs text-gray-500 truncate mb-2">{lastGeneratedImage.prompt}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleSendToTool('turnaround')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E] text-white hover:bg-[#07393C] transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" /> Turnaround
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendToTool('inpaint')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors"
+                >
+                  <Eraser className="w-3 h-3" /> Inpaint
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendToTool('editimage')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors"
+                >
+                  <Edit3 className="w-3 h-3" /> Edit
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLastGeneratedImage(null)}
+              className="text-gray-400 hover:text-gray-600 -mt-1 -mr-1"
+            >
+              <span className="sr-only">Close</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
