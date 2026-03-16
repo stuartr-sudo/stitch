@@ -5,30 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle, Save, X, Grid3X3, Scissors, Sparkles } from "lucide-react";
+import { RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle, Save, X, Grid3X3, Scissors, Sparkles, ArrowLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 
 const STYLE_CHIPS = [
-  "Concept Art",
-  "Anime",
-  "3D Render",
-  "Comic Book",
-  "Pixar 3D",
-  "Realistic",
-  "Studio Ghibli",
-  "Game Art",
-  "Watercolor",
-  "Pixel Art",
-  "Chibi",
-  "Dark Fantasy",
-  "Cyberpunk",
-  "Storybook",
-  "Flat Vector",
-  "Ink & Wash",
-  "Low Poly",
-  "Claymation",
+  "Concept Art", "Anime", "3D Render", "Comic Book", "Pixar 3D",
+  "Realistic", "Studio Ghibli", "Game Art", "Watercolor", "Pixel Art",
+  "Chibi", "Dark Fantasy", "Cyberpunk", "Storybook", "Flat Vector",
+  "Ink & Wash", "Low Poly", "Claymation",
 ];
 
 const MODEL_OPTIONS = [
@@ -62,6 +48,9 @@ const CELL_LABELS = [
 export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }) {
   const { user } = useAuth();
 
+  // Steps: 'configure' | 'results'
+  const [step, setStep] = useState('configure');
+
   // Form
   const [characterDescription, setCharacterDescription] = useState(DEFAULT_PROMPT);
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
@@ -78,6 +67,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   const [sheetImageUrl, setSheetImageUrl] = useState(null);
   const [requestId, setRequestId] = useState(null);
   const [pollModel, setPollModel] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Slice & select
   const [showGrid, setShowGrid] = useState(true);
@@ -86,6 +76,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
 
   const fileInputRef = useRef(null);
   const pollingRef = useRef(false);
+  const timerRef = useRef(null);
 
   // Auto-describe a reference image using AI vision
   const describeCharacter = async (hostedUrl) => {
@@ -98,7 +89,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       });
       const data = await res.json();
       if (data.description) {
-        // Replace only the character description portion, keep the structural prefix
         setCharacterDescription(PROMPT_PREFIX + data.description);
         toast.success('Character analyzed! Description auto-filled.');
       } else if (data.error) {
@@ -115,6 +105,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
   // Reset on open
   useEffect(() => {
     if (isOpen) {
+      setStep('configure');
       setCharacterDescription(DEFAULT_PROMPT);
       setReferenceImageUrl("");
       setReferencePreview("");
@@ -129,9 +120,24 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       setShowGrid(true);
       setSelectedCells(new Set());
       setSavingForLora(false);
+      setElapsedSeconds(0);
       pollingRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [isOpen]);
+
+  // Elapsed time counter during generation
+  useEffect(() => {
+    if (generating) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(timerRef.current);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+  }, [generating]);
 
   // Poll for result
   useEffect(() => {
@@ -148,7 +154,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           body: JSON.stringify({ requestId, model: pollModel }),
         });
 
-        // Transient HTTP errors (405, 502, etc.) — skip this poll, try again next interval
         if (!res.ok) {
           console.warn(`[Turnaround] Poll HTTP ${res.status} — retrying...`);
           return;
@@ -162,13 +167,11 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           setRequestId(null);
           toast.success('Turnaround sheet generated!');
         } else if (data.status === 'failed') {
-          // Only stop polling on explicit failure from fal.ai queue
           setGenerating(false);
           setRequestId(null);
           toast.error(data.error || 'Generation failed');
         }
       } catch (err) {
-        // Network error — skip this poll, try again next interval
         console.warn('[Turnaround] Poll error:', err.message);
       } finally {
         pollingRef.current = false;
@@ -234,6 +237,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       return;
     }
 
+    // Move to results step immediately
+    setStep('results');
     setGenerating(true);
     setSheetImageUrl(null);
     setRequestId(null);
@@ -266,7 +271,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
       } else if (data.requestId) {
         setRequestId(data.requestId);
         setPollModel(data.model || selectedModel);
-        toast.info('Generating turnaround sheet, please wait...');
       } else {
         throw new Error('Unexpected response');
       }
@@ -304,7 +308,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
     setSavingForLora(true);
 
     try {
-      // Load the sheet image
       const img = await new Promise((resolve, reject) => {
         const i = new window.Image();
         i.crossOrigin = 'anonymous';
@@ -324,7 +327,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
         const col = cellIndex % GRID_COLS;
         const row = Math.floor(cellIndex / GRID_COLS);
 
-        // Slice this cell
         canvas.width = Math.round(cellW);
         canvas.height = Math.round(cellH);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -336,7 +338,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
           canvas.width, canvas.height
         );
 
-        // Convert to data URL and upload
         const dataUrl = canvas.toDataURL('image/png');
 
         try {
@@ -379,346 +380,432 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated }
     toast.success('Download started!');
   };
 
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}:${sec.toString().padStart(2, '0')}` : `${sec}s`;
+  };
+
+  const canGenerate = characterDescription.trim() && !(
+    !referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
+  );
+
   return (
     <SlideOverPanel
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
       title="Character Turnaround"
-      subtitle="Generate a single image with 24 character poses"
+      subtitle={step === 'configure' ? 'Configure your character sheet' : generating ? 'Generating...' : 'Your turnaround sheet is ready'}
       icon={<RotateCcw className="w-5 h-5" />}
     >
-      <div className="flex flex-col h-full">
-        {/* Form */}
-        <div className="flex-shrink-0 p-5 space-y-4 border-b bg-white">
-          {/* Character Description */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs font-semibold text-slate-600">
-                Character Description <span className="text-red-500">*</span>
-              </Label>
-              {referenceImageUrl && (
-                <button
-                  onClick={() => describeCharacter(referenceImageUrl)}
-                  disabled={analyzingRef}
-                  className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
-                >
-                  {analyzingRef ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Re-analyze reference</>
+      <div className="flex flex-col h-full overflow-hidden">
+
+        {/* ─── STEP 1: CONFIGURE ─────────────────────────────────────────── */}
+        {step === 'configure' && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Character Description */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-semibold text-slate-600">
+                    Character Description <span className="text-red-500">*</span>
+                  </Label>
+                  {referenceImageUrl && (
+                    <button
+                      onClick={() => describeCharacter(referenceImageUrl)}
+                      disabled={analyzingRef}
+                      className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                    >
+                      {analyzingRef ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                      ) : (
+                        <><Sparkles className="w-3 h-3" /> Re-analyze reference</>
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
-            </div>
-            <div className="relative">
-              <Textarea
-                value={characterDescription}
-                onChange={(e) => setCharacterDescription(e.target.value)}
-                placeholder="Describe your character..."
-                rows={6}
-                className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`}
-                disabled={analyzingRef}
-              />
-              {analyzingRef && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
-                  <div className="flex items-center gap-2 text-[#2C666E]">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm font-medium">Analyzing character...</span>
-                  </div>
                 </div>
-              )}
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              {analyzingRef
-                ? 'AI vision is describing your character from the reference image...'
-                : referenceImageUrl
-                  ? 'Auto-filled from your reference image. Edit freely to refine.'
-                  : 'Edit the default prompt above — replace the bracketed section with your character details.'}
-            </p>
-          </div>
-
-          {/* Reference Image — Upload or URL */}
-          <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-              Reference Image (optional)
-            </Label>
-
-            {(referencePreview || referenceImageUrl) ? (
-              <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={referencePreview || referenceImageUrl}
-                    alt="Reference"
-                    className="w-24 h-24 object-cover rounded-lg border border-slate-200"
-                    onError={(e) => { e.target.src = ''; }}
+                <div className="relative">
+                  <Textarea
+                    value={characterDescription}
+                    onChange={(e) => setCharacterDescription(e.target.value)}
+                    placeholder="Describe your character..."
+                    rows={6}
+                    className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`}
+                    disabled={analyzingRef}
                   />
-                  {uploadingRef && (
-                    <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                  {analyzingRef && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
+                      <div className="flex items-center gap-2 text-[#2C666E]">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm font-medium">Analyzing character...</span>
+                      </div>
                     </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-600 font-medium mb-1">
-                    {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing character...' : 'Reference image loaded'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {analyzingRef
-                      ? 'AI is describing your character — the prompt will auto-fill.'
-                      : 'Character description auto-filled from reference image.'}
-                  </p>
-                  <button
-                    onClick={clearReferenceImage}
-                    className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
-                  >
-                    <X className="w-3 h-3" /> Remove
-                  </button>
-                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {analyzingRef
+                    ? 'AI vision is describing your character from the reference image...'
+                    : referenceImageUrl
+                      ? 'Auto-filled from your reference image. Edit freely to refine.'
+                      : 'Edit the default prompt above — replace the bracketed section with your character details.'}
+                </p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors"
-                >
-                  <Upload className="w-5 h-5 text-slate-400" />
-                  <span className="text-sm text-slate-500">Click to upload a reference image</span>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-[10px] text-slate-400 font-medium">OR</span>
-                  <div className="flex-1 h-px bg-slate-200" />
-                </div>
-                <Input
-                  value={referenceImageUrl}
-                  onChange={(e) => {
-                    setReferenceImageUrl(e.target.value);
-                    setReferencePreview(e.target.value);
-                  }}
-                  onBlur={(e) => {
-                    const url = e.target.value.trim();
-                    if (url && url.startsWith('http')) {
-                      describeCharacter(url);
-                    }
-                  }}
-                  placeholder="https://... paste a reference image URL"
-                  className="bg-white text-sm"
-                />
-              </div>
-            )}
-          </div>
 
-          {/* Model */}
-          <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 text-slate-900">
-                {MODEL_OPTIONS.map((m) => (
-                  <SelectItem key={m.value} value={m.value} className="text-sm">
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Reference Image — Upload or URL */}
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                  Reference Image (optional)
+                </Label>
 
-          {/* Style — chips + free text */}
-          <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Style</Label>
-            <Input
-              value={styleText}
-              onChange={(e) => setStyleText(e.target.value)}
-              placeholder="e.g. dark gothic ink, retro 80s neon, cel-shaded anime..."
-              className="bg-white text-sm mb-2"
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {STYLE_CHIPS.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => setStyleText(chip)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
-                    styleText === chip
-                      ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
-                  }`}
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Pick a preset or type any style you want — it's injected directly into the generation prompt.
-            </p>
-          </div>
-
-          {/* Model requires a reference but none provided */}
-          {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
-            <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800">
-                <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image. Upload one above or switch to Nano Banana 2.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Result Section */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {generating && !sheetImageUrl && (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-              <Loader2 className="w-10 h-10 animate-spin mb-3" />
-              <p className="text-sm font-medium">Generating turnaround sheet...</p>
-              <p className="text-xs text-slate-400 mt-1">This generates one image with all 24 poses</p>
-            </div>
-          )}
-
-          {sheetImageUrl && (
-            <div>
-              {/* Grid toggle & selection controls */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowGrid(prev => !prev)}
-                    className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors ${
-                      showGrid ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    <Grid3X3 className="w-3.5 h-3.5" />
-                    {showGrid ? 'Grid On' : 'Grid Off'}
-                  </button>
-                  {showGrid && (
-                    <>
-                      <button onClick={selectAll} className="text-[10px] text-[#2C666E] hover:underline font-medium">
-                        Select All
-                      </button>
-                      <button onClick={selectNone} className="text-[10px] text-slate-400 hover:underline font-medium">
-                        Clear
-                      </button>
-                      {selectedCells.size > 0 && (
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          {selectedCells.size} selected
-                        </span>
+                {(referencePreview || referenceImageUrl) ? (
+                  <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={referencePreview || referenceImageUrl}
+                        alt="Reference"
+                        className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+                        onError={(e) => { e.target.src = ''; }}
+                      />
+                      {uploadingRef && (
+                        <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                        </div>
                       )}
-                    </>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400">Click cells to select for LoRA training</p>
-              </div>
-
-              {/* Sheet image with grid overlay */}
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
-                <img
-                  src={sheetImageUrl}
-                  alt="Character turnaround sheet"
-                  className="w-full h-auto block"
-                  crossOrigin="anonymous"
-                />
-
-                {/* Grid overlay */}
-                {showGrid && (
-                  <div
-                    className="absolute inset-0 grid"
-                    style={{
-                      gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-                      gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-                    }}
-                  >
-                    {Array.from({ length: TOTAL_CELLS }).map((_, i) => (
-                      <div
-                        key={i}
-                        onClick={() => toggleCell(i)}
-                        className={`border cursor-pointer transition-all flex items-end justify-center pb-1 ${
-                          selectedCells.has(i)
-                            ? 'border-[#2C666E] bg-[#2C666E]/20 border-2'
-                            : 'border-white/30 hover:bg-white/10'
-                        }`}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-600 font-medium mb-1">
+                        {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing character...' : 'Reference image loaded'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {analyzingRef
+                          ? 'AI is describing your character — the prompt will auto-fill.'
+                          : 'Character description auto-filled from reference image.'}
+                      </p>
+                      <button
+                        onClick={clearReferenceImage}
+                        className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
                       >
-                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-                          selectedCells.has(i)
-                            ? 'bg-[#2C666E] text-white'
-                            : 'bg-black/50 text-white/80'
-                        }`}>
-                          {CELL_LABELS[i]}
-                        </span>
-                      </div>
-                    ))}
+                        <X className="w-3 h-3" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors"
+                    >
+                      <Upload className="w-5 h-5 text-slate-400" />
+                      <span className="text-sm text-slate-500">Click to upload a reference image</span>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-px bg-slate-200" />
+                      <span className="text-[10px] text-slate-400 font-medium">OR</span>
+                      <div className="flex-1 h-px bg-slate-200" />
+                    </div>
+                    <Input
+                      value={referenceImageUrl}
+                      onChange={(e) => {
+                        setReferenceImageUrl(e.target.value);
+                        setReferencePreview(e.target.value);
+                      }}
+                      onBlur={(e) => {
+                        const url = e.target.value.trim();
+                        if (url && url.startsWith('http')) {
+                          describeCharacter(url);
+                        }
+                      }}
+                      placeholder="https://... paste a reference image URL"
+                      className="bg-white text-sm"
+                    />
                   </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Empty state */}
-          {!generating && !sheetImageUrl && (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-300">
-              <RotateCcw className="w-12 h-12 mb-3" />
-              <p className="text-sm text-slate-400">Describe your character and hit Generate</p>
-              <p className="text-xs text-slate-300 mt-1">One image, 24 poses — consistent character design</p>
-            </div>
-          )}
-        </div>
+              {/* Model & Style side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
+                  <Select value={selectedModel} onValueChange={setSelectedModel}>
+                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      {MODEL_OPTIONS.map((m) => (
+                        <SelectItem key={m.value} value={m.value} className="text-sm">
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600 mb-1 block">Style</Label>
+                  <Input
+                    value={styleText}
+                    onChange={(e) => setStyleText(e.target.value)}
+                    placeholder="e.g. dark gothic ink..."
+                    className="bg-white text-sm h-9"
+                  />
+                </div>
+              </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
-          <div className="text-xs text-slate-500">
-            {generating ? (
-              <span className="text-[#2C666E] font-medium flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Generating...
-              </span>
-            ) : sheetImageUrl ? (
-              <span className="text-green-600 font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Sheet ready
-              </span>
-            ) : (
-              <span>4 cols x 6 rows = 24 poses in one image</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {sheetImageUrl && selectedCells.size > 0 && (
-              <Button
-                onClick={handleSaveForLora}
-                disabled={savingForLora}
-                variant="outline"
-                className="text-sm gap-1"
-              >
-                {savingForLora ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
-                {savingForLora ? 'Slicing...' : `Save ${selectedCells.size} for LoRA`}
-              </Button>
-            )}
-            {sheetImageUrl && (
-              <Button onClick={handleDownload} variant="outline" className="text-sm gap-1">
-                <Download className="w-4 h-4" /> Download
-              </Button>
-            )}
-            <Button variant="outline" onClick={onClose} disabled={generating}>
-              {sheetImageUrl ? 'Close' : 'Cancel'}
-            </Button>
-            <Button
-              onClick={handleGenerate}
-              disabled={generating || !characterDescription.trim() || (!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef)}
-              className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60"
-            >
-              {generating ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
-              ) : sheetImageUrl ? (
-                <><RotateCcw className="w-4 h-4 mr-2" /> Regenerate</>
-              ) : (
-                <><RotateCcw className="w-4 h-4 mr-2" /> Generate Sheet</>
+              {/* Style chips */}
+              <div>
+                <div className="flex flex-wrap gap-1.5">
+                  {STYLE_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setStyleText(chip)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
+                        styleText === chip
+                          ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                      }`}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  Pick a preset or type any style you want — it's injected directly into the generation prompt.
+                </p>
+              </div>
+
+              {/* Model requires a reference but none provided */}
+              {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800">
+                    <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image. Upload one above or switch to Nano Banana 2.
+                  </p>
+                </div>
               )}
-            </Button>
-          </div>
-        </div>
+            </div>
+
+            {/* Configure Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <span className="text-xs text-slate-400">4 cols x 6 rows = 24 poses in one image</span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!canGenerate || analyzingRef || uploadingRef}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60 gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Generate Sheet
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ─── STEP 2: RESULTS ───────────────────────────────────────────── */}
+        {step === 'results' && (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              {/* Loading state — full height centered */}
+              {generating && !sheetImageUrl && (
+                <div className="flex flex-col items-center justify-center h-full min-h-[500px] px-8">
+                  {/* Animated loader */}
+                  <div className="relative mb-8">
+                    <div className="w-24 h-24 rounded-full border-4 border-slate-200" />
+                    <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-transparent border-t-[#2C666E] animate-spin" />
+                    <RotateCcw className="absolute inset-0 m-auto w-8 h-8 text-[#2C666E]" />
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                    Generating Your Turnaround Sheet
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-6 text-center max-w-md">
+                    Creating a single image with 24 character poses across different angles and actions. This can take 30–90 seconds.
+                  </p>
+
+                  {/* Timer */}
+                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
+                    <span className="text-sm font-mono font-medium text-slate-600">
+                      {formatTime(elapsedSeconds)}
+                    </span>
+                  </div>
+
+                  {/* Summary of what's generating */}
+                  <div className="mt-8 w-full max-w-sm space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Model</span>
+                      <span className="text-slate-600 font-medium">
+                        {MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Style</span>
+                      <span className="text-slate-600 font-medium">{styleText}</span>
+                    </div>
+                    {referenceImageUrl && (
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>Reference</span>
+                        <span className="text-green-600 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Included
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Result image with grid overlay */}
+              {sheetImageUrl && (
+                <div className="p-5">
+                  {/* Toolbar */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowGrid(prev => !prev)}
+                        className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+                          showGrid ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        <Grid3X3 className="w-3.5 h-3.5" />
+                        {showGrid ? 'Grid On' : 'Grid Off'}
+                      </button>
+                      {showGrid && (
+                        <>
+                          <button onClick={selectAll} className="text-xs text-[#2C666E] hover:underline font-medium px-2 py-1">
+                            Select All
+                          </button>
+                          <button onClick={selectNone} className="text-xs text-slate-400 hover:underline font-medium px-2 py-1">
+                            Clear
+                          </button>
+                          {selectedCells.size > 0 && (
+                            <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">
+                              {selectedCells.size} selected
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400">Click cells to select for LoRA training</p>
+                  </div>
+
+                  {/* Sheet image */}
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                    <img
+                      src={sheetImageUrl}
+                      alt="Character turnaround sheet"
+                      className="w-full h-auto block"
+                      crossOrigin="anonymous"
+                    />
+
+                    {/* Grid overlay */}
+                    {showGrid && (
+                      <div
+                        className="absolute inset-0 grid"
+                        style={{
+                          gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+                          gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
+                        }}
+                      >
+                        {Array.from({ length: TOTAL_CELLS }).map((_, i) => (
+                          <div
+                            key={i}
+                            onClick={() => toggleCell(i)}
+                            className={`border cursor-pointer transition-all flex items-end justify-center pb-1 ${
+                              selectedCells.has(i)
+                                ? 'border-[#2C666E] bg-[#2C666E]/20 border-2'
+                                : 'border-white/30 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                              selectedCells.has(i)
+                                ? 'bg-[#2C666E] text-white'
+                                : 'bg-black/50 text-white/80'
+                            }`}>
+                              {CELL_LABELS[i]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Error / empty fallback */}
+              {!generating && !sheetImageUrl && (
+                <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-slate-400">
+                  <AlertCircle className="w-12 h-12 mb-3 text-slate-300" />
+                  <p className="text-sm">Generation didn't return a result.</p>
+                  <button
+                    onClick={() => setStep('configure')}
+                    className="mt-3 text-sm text-[#2C666E] hover:underline font-medium flex items-center gap-1"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Go back and try again
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Results Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setStep('configure'); setGenerating(false); setRequestId(null); }}
+                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
+                </button>
+                {generating && (
+                  <span className="text-xs text-[#2C666E] font-medium flex items-center gap-1 ml-2">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Generating... {formatTime(elapsedSeconds)}
+                  </span>
+                )}
+                {sheetImageUrl && !generating && (
+                  <span className="text-xs text-green-600 font-medium flex items-center gap-1 ml-2">
+                    <CheckCircle2 className="w-3 h-3" /> Sheet ready
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {sheetImageUrl && selectedCells.size > 0 && (
+                  <Button
+                    onClick={handleSaveForLora}
+                    disabled={savingForLora}
+                    variant="outline"
+                    className="text-sm gap-1"
+                  >
+                    {savingForLora ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
+                    {savingForLora ? 'Slicing...' : `Save ${selectedCells.size} for LoRA`}
+                  </Button>
+                )}
+                {sheetImageUrl && (
+                  <Button onClick={handleDownload} variant="outline" className="text-sm gap-1">
+                    <Download className="w-4 h-4" /> Download
+                  </Button>
+                )}
+                {sheetImageUrl && (
+                  <Button
+                    onClick={handleGenerate}
+                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Regenerate
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </SlideOverPanel>
   );
