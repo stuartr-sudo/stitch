@@ -24,7 +24,8 @@ import {
   VolumeX,
   Search,
   Globe,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
@@ -512,8 +513,17 @@ export default function JumpStartModal({
   
   const fileInputRef = useRef(null);
   const endFrameInputRef = useRef(null);
+  const referenceFileInputRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const contentRef = useRef(null);
+
+  // Reference images library browser
+  const [showRefLibrary, setShowRefLibrary] = useState(false);
+  const [refLibraryItems, setRefLibraryItems] = useState([]);
+  const [refLibraryFolders, setRefLibraryFolders] = useState([]);
+  const [refSelectedFolder, setRefSelectedFolder] = useState(null);
+  const [refSelectedIds, setRefSelectedIds] = useState(new Set());
+  const [refLibraryLoading, setRefLibraryLoading] = useState(false);
 
   // Helper to save media to library
   const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
@@ -635,17 +645,19 @@ export default function JumpStartModal({
   const handleFileUpload = async (e, target = 'start') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       const dataUrl = event.target.result;
       if (target === 'start') {
         setUploadedImage(dataUrl);
-        // Save uploaded image to library
         saveToLibrary(dataUrl, 'image', `JumpStart Upload - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else if (target === 'additional') {
         setAdditionalImages(prev => [...prev, dataUrl]);
         saveToLibrary(dataUrl, 'image', `JumpStart Reference - ${new Date().toLocaleString()}`, 'jumpstart-upload');
+      } else if (target === 'reference') {
+        setReferenceImages(prev => [...prev, dataUrl]);
+        saveToLibrary(dataUrl, 'image', `JumpStart Character Ref - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else {
         setEndFrameImage(dataUrl);
         saveToLibrary(dataUrl, 'image', `JumpStart End Frame - ${new Date().toLocaleString()}`, 'jumpstart-upload');
@@ -681,16 +693,76 @@ export default function JumpStartModal({
       setUploadedImage(url);
     } else if (libraryTarget === 'additional') {
       setAdditionalImages(prev => [...prev, url]);
+    } else if (libraryTarget === 'reference') {
+      setReferenceImages(prev => [...prev, url]);
     } else {
       setEndFrameImage(url);
     }
     setShowLibrary(false);
-    // No need to save - already in library
   };
   
   const removeAdditionalImage = (index) => {
     setAdditionalImages(prev => prev.filter((_, i) => i !== index));
   };
+
+  // ─── Reference Images Library Browser ─────────────────────────────────
+  const loadRefLibrary = async () => {
+    setRefLibraryLoading(true);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: images } = await supabase
+        .from('image_library_items')
+        .select('id, url, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (images) {
+        setRefLibraryItems(images);
+        const folders = new Set();
+        images.forEach(img => {
+          const match = img.title?.match(/^\[([^\]]+)\]/);
+          if (match) folders.add(match[1]);
+        });
+        setRefLibraryFolders(Array.from(folders).sort());
+      }
+    } catch (err) {
+      console.error('Failed to load library:', err);
+    } finally {
+      setRefLibraryLoading(false);
+    }
+  };
+
+  const openRefLibrary = () => {
+    setShowRefLibrary(true);
+    setRefSelectedIds(new Set());
+    setRefSelectedFolder(null);
+    loadRefLibrary();
+  };
+
+  const toggleRefLibraryItem = (id) => {
+    setRefSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllRefInFolder = (folder) => {
+    const items = folder === null ? refLibraryItems : refLibraryItems.filter(i => i.title?.startsWith(`[${folder}]`));
+    setRefSelectedIds(new Set(items.map(i => i.id)));
+  };
+
+  const importRefFromLibrary = () => {
+    const selected = refLibraryItems.filter(i => refSelectedIds.has(i.id));
+    if (selected.length === 0) return;
+    setReferenceImages(prev => [...prev, ...selected.map(i => i.url)]);
+    setShowRefLibrary(false);
+    setRefSelectedIds(new Set());
+    toast.success(`Added ${selected.length} reference images`);
+  };
+
+  const filteredRefLibraryItems = refSelectedFolder === null
+    ? refLibraryItems
+    : refLibraryItems.filter(i => i.title?.startsWith(`[${refSelectedFolder}]`));
 
   // Web image search
   const handleWebSearch = async () => {
@@ -1603,6 +1675,8 @@ export default function JumpStartModal({
                             <strong>Important:</strong> Write <code className="bg-amber-100 px-1 rounded font-mono">@Element</code> in your prompt where the character should appear, e.g. <em>"@Element dances on stage under spotlights"</em>
                           </p>
                         </div>
+
+                        {/* Existing reference image thumbnails */}
                         {referenceImages.length > 0 && (
                           <div className="flex gap-2 flex-wrap">
                             {referenceImages.map((url, i) => (
@@ -1618,17 +1692,137 @@ export default function JumpStartModal({
                             ))}
                           </div>
                         )}
-                        <input
-                          type="text"
-                          placeholder="Paste image URL and press Enter..."
-                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.target.value.trim()) {
-                              setReferenceImages([...referenceImages, e.target.value.trim()]);
+
+                        {/* Upload / Library / URL buttons */}
+                        <div className="flex gap-2">
+                          <input
+                            ref={referenceFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              files.forEach(file => {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  setReferenceImages(prev => [...prev, ev.target.result]);
+                                  saveToLibrary(ev.target.result, 'image', `JumpStart Character Ref - ${new Date().toLocaleString()}`, 'jumpstart-upload');
+                                };
+                                reader.readAsDataURL(file);
+                              });
                               e.target.value = '';
-                            }
-                          }}
-                        />
+                            }}
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-xs"
+                            onClick={() => referenceFileInputRef.current?.click()}
+                          >
+                            <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-xs"
+                            onClick={openRefLibrary}
+                          >
+                            <FolderOpen className="w-3.5 h-3.5 mr-1.5" /> Library
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-xs"
+                            onClick={() => { setLibraryTarget('reference'); setShowLibrary(true); }}
+                          >
+                            <Globe className="w-3.5 h-3.5 mr-1.5" /> Single Pick
+                          </Button>
+                        </div>
+
+                        {/* Inline folder library browser */}
+                        {showRefLibrary && (
+                          <div className="border border-[#2C666E]/30 rounded-lg bg-white overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+                              <span className="text-xs font-semibold text-gray-700">Select from Library</span>
+                              <div className="flex items-center gap-2">
+                                {refSelectedIds.size > 0 && (
+                                  <span className="text-[10px] bg-[#2C666E] text-white px-1.5 py-0.5 rounded-full">{refSelectedIds.size} selected</span>
+                                )}
+                                <button onClick={() => setShowRefLibrary(false)} className="text-gray-400 hover:text-gray-600">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Folder tabs */}
+                            {refLibraryFolders.length > 0 && (
+                              <div className="flex items-center gap-1 px-3 py-1.5 border-b overflow-x-auto">
+                                <button
+                                  onClick={() => setRefSelectedFolder(null)}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${refSelectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                  All
+                                </button>
+                                {refLibraryFolders.map(f => (
+                                  <button
+                                    key={f}
+                                    onClick={() => setRefSelectedFolder(f)}
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${refSelectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                  >
+                                    {f}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Image grid */}
+                            <div className="max-h-48 overflow-y-auto p-2">
+                              {refLibraryLoading ? (
+                                <div className="flex items-center justify-center py-6">
+                                  <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
+                                  <span className="ml-2 text-xs text-gray-500">Loading...</span>
+                                </div>
+                              ) : filteredRefLibraryItems.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-6">No images found</p>
+                              ) : (
+                                <>
+                                  {refSelectedFolder !== null && (
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                      <span className="text-[10px] text-gray-500">{filteredRefLibraryItems.length} images</span>
+                                      <button onClick={() => selectAllRefInFolder(refSelectedFolder)} className="text-[10px] text-[#2C666E] hover:underline font-medium">Select all</button>
+                                    </div>
+                                  )}
+                                  <div className="grid grid-cols-5 gap-1.5">
+                                    {filteredRefLibraryItems.map(item => (
+                                      <button
+                                        key={item.id}
+                                        onClick={() => toggleRefLibraryItem(item.id)}
+                                        className={`relative rounded overflow-hidden border-2 transition-all ${refSelectedIds.has(item.id) ? 'border-[#2C666E] ring-1 ring-[#2C666E]/20' : 'border-transparent hover:border-gray-300'}`}
+                                      >
+                                        <img src={item.url} alt="" className="w-full aspect-square object-cover" />
+                                        {refSelectedIds.has(item.id) && (
+                                          <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#2C666E] flex items-center justify-center">
+                                            <CheckCircle2 className="w-3 h-3 text-white" />
+                                          </div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Import button */}
+                            <div className="flex justify-end px-3 py-2 border-t bg-gray-50">
+                              <Button size="sm" disabled={refSelectedIds.size === 0} onClick={importRefFromLibrary} className="bg-[#2C666E] hover:bg-[#07393C] text-white text-xs px-4">
+                                Import {refSelectedIds.size > 0 ? `${refSelectedIds.size} Images` : ''}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-[10px] text-gray-400">{referenceImages.length} reference image{referenceImages.length !== 1 ? 's' : ''} added</p>
                       </div>
                     )}
 
