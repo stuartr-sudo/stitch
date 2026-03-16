@@ -201,7 +201,8 @@ const VIDEO_MODELS = [
     id: 'kling-r2v-pro',
     label: '🎭 Kling O3 Pro — Reference-to-Video',
     shortLabel: 'Kling R2V Pro',
-    description: 'Character-consistent video from reference images (Pro)',
+    description: 'Keep your character looking the same across videos — best quality (Pro tier)',
+    tip: 'Upload a front-facing photo of your character plus extra angles. Write "@Element" in your prompt where you want the character to appear, e.g. "@Element walks through a forest". The AI uses the reference photos to keep the character\'s face, outfit, and proportions consistent.',
     provider: 'fal',
     durationOptions: [5, 10],
     resolutions: ['720p'],
@@ -217,7 +218,8 @@ const VIDEO_MODELS = [
     id: 'kling-r2v-standard',
     label: '🎭 Kling O3 Standard — Reference-to-Video',
     shortLabel: 'Kling R2V Std',
-    description: 'Character-consistent video from reference images (Standard)',
+    description: 'Keep your character consistent across videos — faster, lower cost',
+    tip: 'Same as R2V Pro but faster and cheaper. Great for testing ideas before committing to Pro quality. Upload character reference photos and use "@Element" in your prompt.',
     provider: 'fal',
     durationOptions: [5, 10],
     resolutions: ['720p'],
@@ -233,7 +235,8 @@ const VIDEO_MODELS = [
     id: 'ltx-iclora',
     label: '🧬 LTX ICLoRA — Subject-Consistent Video',
     shortLabel: 'LTX ICLoRA',
-    description: 'In-context LoRA: pose/depth/canny control for consistent characters',
+    description: 'Uses your start image to control character pose, depth, or edges in video',
+    tip: 'Choose a control type (Pose, Depth, Canny Edge, or Detailer) to tell the AI how to use your start image. "Pose" copies body position, "Depth" preserves 3D layout, "Canny Edge" follows outlines, and "Detailer" refines fine details. Best for keeping a character\'s shape and movement style consistent.',
     provider: 'fal',
     durationOptions: [3, 4, 5],
     resolutions: ['720p'],
@@ -1096,6 +1099,14 @@ export default function JumpStartModal({
                       <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded">🚫 Negative Prompt</span>
                     )}
                   </div>
+                  {currentModel.tip && (
+                    <div className="mt-3 p-3 bg-[#90DDF0]/15 border border-[#2C666E]/20 rounded-lg">
+                      <p className="text-xs text-[#07393C] leading-relaxed">
+                        <span className="font-semibold">How to use: </span>
+                        {currentModel.tip}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Start Image Upload */}
@@ -1581,12 +1592,17 @@ export default function JumpStartModal({
                     {/* Reference Images for Kling R2V */}
                     {currentModel.supportsReferenceImages && (
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-gray-500 block">
-                          Character Reference Images (optional)
+                        <label className="text-xs font-medium text-[#2C666E] block">
+                          Character Reference Images (optional but recommended)
                         </label>
-                        <p className="text-[10px] text-gray-400">
-                          Add extra angles/poses of your character for better consistency. Use @Element in your prompt to reference the character.
-                        </p>
+                        <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            <strong>Tip:</strong> Upload photos of your character from different angles (front, side, 3/4 view). The more angles you provide, the better the AI can keep your character looking consistent. Your <strong>start image</strong> above is used as the main frontal reference — these extra images help with other views.
+                          </p>
+                          <p className="text-[11px] text-amber-800 mt-1.5 leading-relaxed">
+                            <strong>Important:</strong> Write <code className="bg-amber-100 px-1 rounded font-mono">@Element</code> in your prompt where the character should appear, e.g. <em>"@Element dances on stage under spotlights"</em>
+                          </p>
+                        </div>
                         {referenceImages.length > 0 && (
                           <div className="flex gap-2 flex-wrap">
                             {referenceImages.map((url, i) => (

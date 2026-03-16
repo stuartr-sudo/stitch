@@ -80,21 +80,24 @@ const EDIT_MODELS = [
   {
     id: 'wavespeed',
     label: 'Wavespeed WAN 2.2',
-    description: 'Standard video editing with text prompts',
+    description: 'Re-style or transform your video using a text description',
+    tip: 'Describe what the full scene should look like after editing. The AI will re-render your video to match your description while keeping the motion. Good for style changes, colour grading, or scene transformations.',
     resolutions: ['480p', '720p'],
     promptPlaceholder: "Describe the full scene after editing. e.g., 'A person in a red jacket walking through a snowy forest, soft natural lighting'",
   },
   {
     id: 'grok-edit',
     label: 'xAI Grok Imagine',
-    description: 'Advanced editing, max 854x480 input, 8s limit',
+    description: 'Make targeted changes to your video — swap colours, add weather, change clothing',
+    tip: 'Describe specific changes you want. Unlike Wavespeed (which re-renders the whole scene), Grok makes targeted edits while preserving everything else. Input video must be max 854x480 resolution and 8 seconds.',
     resolutions: ['auto', '480p', '720p'],
     promptPlaceholder: "Describe specific changes to make. e.g., 'Change the shirt colour to blue and add rain falling in the background'",
   },
   {
     id: 'bria-erase',
     label: 'Bria Video Erase',
-    description: 'Remove objects from video using a text prompt (max 5s)',
+    description: 'Remove unwanted objects from your video by describing them — the AI erases them cleanly (max 5s video)',
+    tip: 'Just describe what you want removed — watermarks, background people, logos, or any object. The AI will erase it and fill in the gap naturally. Your video must be 5 seconds or shorter. Audio can be preserved.',
     resolutions: ['auto'],
     promptPlaceholder: "Describe what to remove. e.g., 'the watermark in the top right corner' or 'the person in the background'",
     isErase: true,
@@ -613,6 +616,14 @@ export default function JumpStartVideoStudioModal({
                     ))}
                   </select>
                   <p className="text-xs text-slate-500">{currentEditModel.description}</p>
+                  {currentEditModel.tip && (
+                    <div className="mt-2 p-3 bg-[#90DDF0]/15 border border-[#2C666E]/20 rounded-lg">
+                      <p className="text-xs text-[#07393C] leading-relaxed">
+                        <span className="font-semibold">How to use: </span>
+                        {currentEditModel.tip}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
