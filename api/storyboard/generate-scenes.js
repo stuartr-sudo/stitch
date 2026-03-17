@@ -80,7 +80,6 @@ CRITICAL RULES:
         { role: 'user', content: userPrompt },
       ],
       response_format: zodResponseFormat(StoryboardSchema, 'storyboard'),
-      temperature: 0.8,
     });
 
     const result = completion.choices[0].message.parsed;
