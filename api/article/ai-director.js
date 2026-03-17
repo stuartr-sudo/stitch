@@ -261,7 +261,7 @@ async function runAiDirectorPipeline({
   if (!wf.hasCompleted('analyze_article')) {
     await updateJob({ current_step: 'analysing_article', completed_steps: 1 });
 
-    const analysisCompletion = await openai.beta.chat.completions.parse({
+    const analysisCompletion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: 'Analyze this article and return structured metadata about its type, tone, and key content signals.' },
@@ -291,7 +291,7 @@ async function runAiDirectorPipeline({
     const brandContext = buildBrandContext(brandKit);
     const platformList = platforms.join(', ');
 
-    const storyboardCompletion = await openai.beta.chat.completions.parse({
+    const storyboardCompletion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         {
@@ -347,7 +347,7 @@ ${truncated}`,
     }
 
     // ── Quality gate ─────────────────────────────────────────────────────
-    const gateCompletion = await openai.beta.chat.completions.parse({
+    const gateCompletion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         {
@@ -377,7 +377,7 @@ ${JSON.stringify(storyboard, null, 2)}`,
     if (!gate.pass && gate.feedback) {
       console.log(`[ai-director] Quality gate failed (avg ${gate.average_score}). Regenerating with feedback.`);
 
-      const retryCompletion = await openai.beta.chat.completions.parse({
+      const retryCompletion = await openai.chat.completions.parse({
         model: 'gpt-5-mini',
         messages: [
           {

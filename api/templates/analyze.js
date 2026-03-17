@@ -169,7 +169,7 @@ export default async function handler(req, res) {
           : `Create a video template based on this style description:\n\n${description}${name ? `\n\nSuggested name: "${name}"` : ''}`,
       }];
 
-      const completion = await openai.beta.chat.completions.parse({
+      const completion = await openai.chat.completions.parse({
         model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
@@ -253,7 +253,7 @@ export default async function handler(req, res) {
       text: `\n${contextNote}\n\nBased on all of the above evidence, reverse-engineer this video into a reusable short-form video template. Be precise about scene count, durations, overlay positions, and which writing structures this style suits.`,
     });
 
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },

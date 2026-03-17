@@ -77,7 +77,7 @@ export default async function handler(req, res) {
     const openaiKey = userKeys?.openai_key || process.env.OPENAI_API_KEY;
     const openai = new OpenAI({ apiKey: openaiKey });
 
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-4o-mini',
       messages: [
         {

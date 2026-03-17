@@ -257,7 +257,7 @@ async function runPipeline({ job, userId, brandKit, keys, url, rawContent, artic
     if (!keys.openaiKey) throw new Error('OpenAI API key required');
     const openai = new OpenAI({ apiKey: keys.openaiKey });
 
-    const analysisCompletion = await openai.beta.chat.completions.parse({
+    const analysisCompletion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: 'Analyze this article and return structured metadata about its type, tone, and key content signals.' },
@@ -556,7 +556,7 @@ Write visual_prompts that strictly follow this style. Do not deviate.`
     : '';
 
   // Generate storyboard for this template
-  const storyboardCompletion = await openai.beta.chat.completions.parse({
+  const storyboardCompletion = await openai.chat.completions.parse({
     model: 'gpt-5-mini',
     messages: [
       {

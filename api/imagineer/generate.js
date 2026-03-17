@@ -117,6 +117,9 @@ export default async function handler(req, res) {
     if (model === 'fal-flux') {
       return handleFalFlux(req, res, enhancedPrompt, dimensions, req.body.loraUrl);
     }
+    if (model === 'seedream') {
+      return handleSeedream(req, res, enhancedPrompt, dimensions);
+    }
     return handleNanoBanana2(req, res, enhancedPrompt, dimensions);
   } catch (error) {
     console.error('[Imagineer] Server Error:', error);
@@ -176,6 +179,65 @@ async function handleNanoBanana2(req, res, enhancedPrompt, dimensions) {
   }
 
   return res.status(500).json({ error: 'Unexpected Nano Banana 2 response format' });
+}
+
+async function handleSeedream(req, res, enhancedPrompt, dimensions) {
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'Fal.ai API key not configured. Please add it in API Keys settings.' });
+  }
+
+  // Map aspect ratio to pixel dimensions
+  const sizeMap = {
+    '16:9': { width: 1344, height: 768 },
+    '9:16': { width: 768, height: 1344 },
+    '1:1': { width: 1024, height: 1024 },
+    '4:3': { width: 1152, height: 896 },
+    '3:4': { width: 896, height: 1152 },
+  };
+  const size = sizeMap[dimensions] || sizeMap['16:9'];
+
+  const response = await fetch('https://queue.fal.run/fal-ai/bytedance/seedream/v4/text-to-image', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: enhancedPrompt,
+      num_images: 1,
+      width: size.width,
+      height: size.height,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Imagineer/Seedream] API Error:', errorText);
+    return res.status(response.status).json({ error: 'Seedream API error', details: errorText });
+  }
+
+  const data = await response.json();
+  console.log('[Imagineer/Seedream] Queue response:', JSON.stringify(data).substring(0, 300));
+
+  if (data.images?.[0]?.url) {
+    return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+  }
+
+  const requestId = data.request_id;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId,
+      model: 'seedream',
+      status: data.status || 'IN_QUEUE',
+      statusUrl: data.status_url || null,
+      responseUrl: data.response_url || null,
+      pollEndpoint: '/api/imagineer/result',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected Seedream response format' });
 }
 
 async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {

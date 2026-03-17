@@ -42,44 +42,134 @@ const STORYBOARD_MODELS = [
   { id: 'wavespeed-wan', label: 'Wavespeed WAN 2.2', description: 'Fast generation' },
 ];
 
-const STYLES = [
-  // Core cinematic
-  'cinematic', 'cinematic noir', 'cinematic epic', 'cinematic intimate',
-  // Animation
-  'anime', '3D animation', '2D animation', 'stop motion', 'claymation', 'pixel art',
-  'studio ghibli', 'disney pixar', 'cel-shaded',
-  // Realistic
-  'realistic', 'hyper-realistic', 'documentary', 'mockumentary', 'found footage',
-  'handheld verité', 'IMAX nature',
-  // Art styles
-  'watercolor', 'oil painting', 'charcoal sketch', 'pencil drawing', 'ink wash',
-  'impressionist', 'expressionist', 'art deco', 'art nouveau', 'pop art',
-  'surrealist', 'abstract', 'cubist', 'ukiyo-e', 'stained glass',
-  // Genre styles
-  'noir', 'gothic', 'cyberpunk', 'steampunk', 'solarpunk', 'dieselpunk',
-  'vaporwave', 'synthwave', 'retrowave', 'lo-fi',
-  'fantasy', 'dark fantasy', 'high fantasy', 'fairy tale',
-  'sci-fi', 'hard sci-fi', 'space opera',
-  'horror', 'psychological horror', 'folk horror',
-  'western', 'samurai',
-  // Period / aesthetic
-  'vintage', 'vintage 8mm film', '1970s grindhouse', '1980s VHS',
-  '1990s camcorder', 'silent film era', 'technicolor classic',
-  'neon', 'neon noir', 'neon tokyo',
-  'pastel dreamcore', 'cottagecore', 'dark academia',
-  // Visual techniques
-  'minimalist', 'maximalist', 'monochrome', 'duotone',
-  'tilt-shift miniature', 'long exposure', 'double exposure',
-  'glitch art', 'datamosh', 'kaleidoscope',
-  // Comics & illustration
-  'comic', 'comic book', 'manga', 'graphic novel', 'pulp illustration',
-  'children\'s storybook', 'editorial illustration',
-  // Photography styles
-  'fashion editorial', 'street photography', 'drone aerial',
-  'golden hour', 'blue hour', 'infrared',
-  // Commercial
-  'luxury brand', 'tech product', 'food commercial', 'sports broadcast',
-  'music video', 'travel vlog', 'social media reel',
+// Thumbnail URLs for style preview grid (generated via Seedream v4)
+const T = {
+  cinematic: 'https://v3b.fal.media/files/b/0a928438/3YmB8mqvPYXjLkVcJu5_C_7e184560008c472ca9b8779f641c909b.png',
+  anime: 'https://v3b.fal.media/files/b/0a928439/4DYodY5XDUMZFlwPDjTAp_91ceab72c33a4a13980e1f32da25fd95.png',
+  '3d_animation': 'https://v3b.fal.media/files/b/0a92843a/zNOOlG6yv3o14LJMiq1gR_1d710032d61a429d81ae3f062320c083.png',
+  realistic: 'https://v3b.fal.media/files/b/0a92843b/sokoJe-Z5sBzj6R0Xbcci_cb99387fbddb43e498fcb1bbdcc6274e.png',
+  noir: 'https://v3b.fal.media/files/b/0a92843c/AsbEaRIhkVOkwgpUN7LjR_bb8957ec20e14abcbbb60223967f9dd3.png',
+  watercolor: 'https://v3b.fal.media/files/b/0a92843d/06p5thnNZXJV8PulOdcMx_2b168931d7b7411faa0bed68735ebbbf.png',
+  cyberpunk: 'https://v3b.fal.media/files/b/0a92843d/BGZq8m5MkQa_B-bCqk-yB_77404753663a4c3db5712405039e9337.png',
+  fantasy: 'https://v3b.fal.media/files/b/0a92843e/tYCcnoZvup8i7oI03Oh2w_de384dd1f94f44d887da737949cbaa4f.png',
+  stop_motion: 'https://v3b.fal.media/files/b/0a928443/EK22qFgeprmc7Z_FW6fx9_e273324adb3b4664a560934dbc352a0a.png',
+  pixel_art: 'https://v3b.fal.media/files/b/0a928444/e2rvrwLA3ZBUdYISs9eQi_cc566ac0e51f478680a6949952ba8527.png',
+  ghibli: 'https://v3b.fal.media/files/b/0a928445/rmzPbRr_VDDrosSAjCFRf_a30a20bb6b204c7fac0a22126049abe4.png',
+  oil_painting: 'https://v3b.fal.media/files/b/0a928446/-q1oMZax5mm4VbHm8qRRW_efb561ff83794291a123cd62fa18a5ca.png',
+  steampunk: 'https://v3b.fal.media/files/b/0a928447/8eUWStccbwz6a04WVKksC_ee170e46a1cb42fea8957e15c186432c.png',
+  vaporwave: 'https://v3b.fal.media/files/b/0a928448/KePW6j40_CMuiu8IYN-04_22ddfd4be24f433d81ce74172775b3b6.png',
+  vintage: 'https://v3b.fal.media/files/b/0a928449/RIYKsEPgvqx5Jlc9v1770_260a9b58c0144311babb3818437dc3b9.png',
+  comic: 'https://v3b.fal.media/files/b/0a92844a/qazFLaQYdvhv9Os33VQRB_4f9fd64f503944ef8e4b99cb4641c684.png',
+  gothic: 'https://v3b.fal.media/files/b/0a92844b/LcyqV5FImljARPnCcJ-YS_edc8019fd35b49c281eab0da97daf68c.png',
+  impressionist: 'https://v3b.fal.media/files/b/0a92844c/nORbLMVZAm4fXs79XMHnB_fd9b85ff8e994ea4933c957261832da6.png',
+  pop_art: 'https://v3b.fal.media/files/b/0a92844e/pO-wO633aX9zjIex4b_8f_9a5f31c9c34b4dda9443f79818a983f0.png',
+  minimalist: 'https://v3b.fal.media/files/b/0a92844e/T2w643BVfV2tH1ciHBIYb_66c3b346bd064731827684357d9dd9a7.png',
+  sci_fi: 'https://v3b.fal.media/files/b/0a928450/J11ZEP9YumVVx3p1rbZcK_0f57e510b7c7401497d1cb688ff09d1f.png',
+  horror: 'https://v3b.fal.media/files/b/0a928451/vgn1H3EQl73p9VwV7nH_k_d4e8f4a2823a46b88561ce1554d6099f.png',
+  neon: 'https://v3b.fal.media/files/b/0a928452/MphHaGCNpHGX7RPNfS5rm_2579fee652dd41dd85ad9da58eab761c.png',
+  manga: 'https://v3b.fal.media/files/b/0a928453/RJ4gRxOgZu6swcYCjMGsF_219ef0a8edc049c1af56a577613f1db6.png',
+  charcoal: 'https://v3b.fal.media/files/b/0a92845b/l8Ud9mSQlmh9va4Kxzy_s_080cc79165be476d9567fe62dab96180.png',
+  art_deco: 'https://v3b.fal.media/files/b/0a92845c/MfwyuQWkKsfi1hTBW8sfr_06411bf6999643eda8c6fefbaca370cd.png',
+  surrealist: 'https://v3b.fal.media/files/b/0a92845d/F0cufWrYYVmTBbrWnq6nW_411fa7e6309f4574ae08de92a10e1e2f.png',
+  ukiyo_e: 'https://v3b.fal.media/files/b/0a92845f/V5vE1u5tz9JV6Ln1EQLbT_a5032a9062504fc191fbffc742e8584d.png',
+  synthwave: 'https://v3b.fal.media/files/b/0a92845f/BQpwMgqtcEJ09j8IBwQMK_e73d86e815eb40c081459b14d6d58727.png',
+  cottagecore: 'https://v3b.fal.media/files/b/0a928460/GVEh1hgghm1RlCNppYaXx_44ce9ad0302d4deabc54a1700930e4b2.png',
+  tilt_shift: 'https://v3b.fal.media/files/b/0a928461/KlUp2yqcIzZSfsuI-1MLb_7892b1f22baf4d3fbb65a53ec8e44204.png',
+  glitch: 'https://v3b.fal.media/files/b/0a928463/VsDPro3E6bYt99VTc_Y0K_1e476cb7b5b64cce97d04764ff7ee6a3.png',
+  western: 'https://v3b.fal.media/files/b/0a928467/fPFb_kAs_JSio9wRSKmsa_5cbc69338dd448d9af0b6e89676dbdbc.png',
+  golden_hour: 'https://v3b.fal.media/files/b/0a928467/Wb9FY71CF85b3cdZnnxk3_8ad097fb3ef64bc394028d47cc8920d8.png',
+  storybook: 'https://v3b.fal.media/files/b/0a928468/JagKbZnYj0sJXkVEINhpk_34a53f9d5f1d4900bf3d26764bea3b90.png',
+  drone: 'https://v3b.fal.media/files/b/0a928469/1sPw-Jqv4i9KTCVFJyMOO_e12f137dda274027924320186bbf5493.png',
+  dark_academia: 'https://v3b.fal.media/files/b/0a92846b/qlhdh9pHKuSN6BY5X61pk_0dc0438c7816453d880ff40030cb6e94.png',
+  solarpunk: 'https://v3b.fal.media/files/b/0a92846c/qb9e1noRXHPyEKeNKKF-M_f92e9c3ceea34d64b73a88db787980db.png',
+  fairy_tale: 'https://v3b.fal.media/files/b/0a92846d/Q3ulCHaePSizsulbwO2uw_2921d7025c3c40b29bff562159c18d3d.png',
+  lo_fi: 'https://v3b.fal.media/files/b/0a92846d/i1VOXdQHVAeEEbYhAudwJ_551e6896f3d84983a20c88f6e9eb190e.png',
+  '2d_animation': 'https://v3b.fal.media/files/b/0a928470/DsFoYkOitNGyEv9OZFqGt_1a1fa5860dfa47198c0881be7a1413f0.png',
+  claymation: 'https://v3b.fal.media/files/b/0a928470/8kHaQHQ2qlHNZ1YH1jWdc_b4657450edc041b0a433a766a8f298fb.png',
+  pencil: 'https://v3b.fal.media/files/b/0a928471/6mi5OCTTANf3JSyuTMCjP_19fe0968c61c4c3ab3eb4296ab57e275.png',
+  stained_glass: 'https://v3b.fal.media/files/b/0a928472/SOy4ICI7j0Y2oSntwUUdl_9b65dacc6303401cacaa00eb2337a3e6.png',
+  vhs: 'https://v3b.fal.media/files/b/0a928474/fVVkWqt4iNzplL3UjXLK5_e5232b6b8bd94f238758e0f72d3a4848.png',
+  dreamcore: 'https://v3b.fal.media/files/b/0a928475/NkcdrNQFormwSq9qVUAvl_5cc8d778132c43469fb38fb3bc033b1e.png',
+  space_opera: 'https://v3b.fal.media/files/b/0a928476/32Sd90me_LyAVh8PicAKi_1c57ce6d1e6b419b93a3c8c9082aaed4.png',
+  fashion: 'https://v3b.fal.media/files/b/0a928477/cjpXmPuXgkvJYR120msMW_b383b32b948a488880cd9961df40c4bf.png',
+};
+
+// Style categories with thumbnail mappings
+const STYLE_CATEGORIES = [
+  { label: 'Cinematic', styles: [
+    { id: 'cinematic', label: 'Cinematic', thumb: T.cinematic },
+    { id: 'cinematic noir', label: 'Cinematic Noir', thumb: T.noir },
+    { id: 'cinematic epic', label: 'Cinematic Epic', thumb: T.cinematic },
+    { id: 'cinematic intimate', label: 'Cinematic Intimate', thumb: T.lo_fi },
+  ]},
+  { label: 'Animation', styles: [
+    { id: 'anime', label: 'Anime', thumb: T.anime },
+    { id: '3D animation', label: '3D Animation', thumb: T['3d_animation'] },
+    { id: '2D animation', label: '2D Animation', thumb: T['2d_animation'] },
+    { id: 'stop motion', label: 'Stop Motion', thumb: T.stop_motion },
+    { id: 'claymation', label: 'Claymation', thumb: T.claymation },
+    { id: 'pixel art', label: 'Pixel Art', thumb: T.pixel_art },
+    { id: 'studio ghibli', label: 'Studio Ghibli', thumb: T.ghibli },
+    { id: 'disney pixar', label: 'Disney Pixar', thumb: T['3d_animation'] },
+    { id: 'cel-shaded', label: 'Cel-Shaded', thumb: T.anime },
+  ]},
+  { label: 'Realistic', styles: [
+    { id: 'realistic', label: 'Realistic', thumb: T.realistic },
+    { id: 'hyper-realistic', label: 'Hyper-Realistic', thumb: T.realistic },
+    { id: 'documentary', label: 'Documentary', thumb: T.realistic },
+    { id: 'golden hour', label: 'Golden Hour', thumb: T.golden_hour },
+    { id: 'drone aerial', label: 'Drone Aerial', thumb: T.drone },
+    { id: 'fashion editorial', label: 'Fashion Editorial', thumb: T.fashion },
+  ]},
+  { label: 'Art Styles', styles: [
+    { id: 'watercolor', label: 'Watercolor', thumb: T.watercolor },
+    { id: 'oil painting', label: 'Oil Painting', thumb: T.oil_painting },
+    { id: 'charcoal sketch', label: 'Charcoal Sketch', thumb: T.charcoal },
+    { id: 'pencil drawing', label: 'Pencil Drawing', thumb: T.pencil },
+    { id: 'impressionist', label: 'Impressionist', thumb: T.impressionist },
+    { id: 'art deco', label: 'Art Deco', thumb: T.art_deco },
+    { id: 'pop art', label: 'Pop Art', thumb: T.pop_art },
+    { id: 'surrealist', label: 'Surrealist', thumb: T.surrealist },
+    { id: 'ukiyo-e', label: 'Ukiyo-e', thumb: T.ukiyo_e },
+    { id: 'stained glass', label: 'Stained Glass', thumb: T.stained_glass },
+  ]},
+  { label: 'Genre', styles: [
+    { id: 'noir', label: 'Noir', thumb: T.noir },
+    { id: 'gothic', label: 'Gothic', thumb: T.gothic },
+    { id: 'cyberpunk', label: 'Cyberpunk', thumb: T.cyberpunk },
+    { id: 'steampunk', label: 'Steampunk', thumb: T.steampunk },
+    { id: 'solarpunk', label: 'Solarpunk', thumb: T.solarpunk },
+    { id: 'vaporwave', label: 'Vaporwave', thumb: T.vaporwave },
+    { id: 'synthwave', label: 'Synthwave', thumb: T.synthwave },
+    { id: 'lo-fi', label: 'Lo-Fi', thumb: T.lo_fi },
+    { id: 'fantasy', label: 'Fantasy', thumb: T.fantasy },
+    { id: 'dark fantasy', label: 'Dark Fantasy', thumb: T.gothic },
+    { id: 'fairy tale', label: 'Fairy Tale', thumb: T.fairy_tale },
+    { id: 'sci-fi', label: 'Sci-Fi', thumb: T.sci_fi },
+    { id: 'space opera', label: 'Space Opera', thumb: T.space_opera },
+    { id: 'horror', label: 'Horror', thumb: T.horror },
+    { id: 'western', label: 'Western', thumb: T.western },
+  ]},
+  { label: 'Period / Aesthetic', styles: [
+    { id: 'vintage', label: 'Vintage', thumb: T.vintage },
+    { id: 'vintage 8mm film', label: 'Vintage 8mm', thumb: T.vintage },
+    { id: '1980s VHS', label: '1980s VHS', thumb: T.vhs },
+    { id: 'neon', label: 'Neon', thumb: T.neon },
+    { id: 'neon noir', label: 'Neon Noir', thumb: T.neon },
+    { id: 'pastel dreamcore', label: 'Pastel Dreamcore', thumb: T.dreamcore },
+    { id: 'cottagecore', label: 'Cottagecore', thumb: T.cottagecore },
+    { id: 'dark academia', label: 'Dark Academia', thumb: T.dark_academia },
+  ]},
+  { label: 'Techniques', styles: [
+    { id: 'minimalist', label: 'Minimalist', thumb: T.minimalist },
+    { id: 'tilt-shift miniature', label: 'Tilt-Shift', thumb: T.tilt_shift },
+    { id: 'glitch art', label: 'Glitch Art', thumb: T.glitch },
+  ]},
+  { label: 'Comics', styles: [
+    { id: 'comic book', label: 'Comic Book', thumb: T.comic },
+    { id: 'manga', label: 'Manga', thumb: T.manga },
+    { id: "children's storybook", label: 'Storybook', thumb: T.storybook },
+  ]},
 ];
 
 const CAMERA_ANGLES = [
@@ -558,7 +648,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Number of Scenes</label>
                 <select
@@ -568,19 +658,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 >
                   {[2, 3, 4, 5, 6, 7, 8].map(n => (
                     <option key={n} value={n}>{n} scenes</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Style</label>
-                <select
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {STYLES.map(s => (
-                    <option key={s} value={s}>{s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</option>
                   ))}
                 </select>
               </div>
@@ -609,6 +686,51 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* Style visual grid */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Style</label>
+              <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 space-y-3">
+                {STYLE_CATEGORIES.map(cat => (
+                  <div key={cat.label}>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 px-0.5">{cat.label}</p>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                      {cat.styles.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setStyle(s.id)}
+                          className={`relative group rounded-lg overflow-hidden border-2 transition-all ${
+                            style === s.id
+                              ? 'border-[#2C666E] ring-1 ring-[#2C666E] scale-[1.02]'
+                              : 'border-transparent hover:border-gray-300'
+                          }`}
+                        >
+                          <img
+                            src={s.thumb}
+                            alt={s.label}
+                            className="w-full aspect-square object-cover"
+                            loading="lazy"
+                          />
+                          <div className={`absolute inset-x-0 bottom-0 px-1 py-0.5 text-[9px] font-medium text-center leading-tight ${
+                            style === s.id
+                              ? 'bg-[#2C666E] text-white'
+                              : 'bg-black/60 text-white'
+                          }`}>
+                            {s.label}
+                          </div>
+                          {style === s.id && (
+                            <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

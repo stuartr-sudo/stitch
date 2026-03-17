@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       ? pdf_base64
       : `data:application/pdf;base64,${pdf_base64}`;
 
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },

@@ -16,9 +16,10 @@ const ENDPOINT_MAP = {
   'seedream-edit':         'fal-ai/bytedance/seedream/v4.5/edit',
   'fal-flux':              'fal-ai/flux-2/lora',
   'fal-flux-edit':         'fal-ai/flux-2/lora/edit',
+  'seedream':              'fal-ai/bytedance/seedream/v4/text-to-image',
+  'seedream-generate':     'fal-ai/bytedance/seedream/v4/text-to-image',
   // Legacy aliases
   'nano-banana-pro':       'fal-ai/nano-banana-pro/edit',
-  'seedream':              'fal-ai/bytedance/seedream/v4.5/edit',
 };
 
 export default async function handler(req, res) {

@@ -73,7 +73,7 @@ CRITICAL RULES:
 
     const userPrompt = `Create a ${numScenes}-scene storyboard for: ${description}`;
 
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemPrompt },

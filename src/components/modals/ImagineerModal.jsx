@@ -13,6 +13,7 @@ import LoRAPicker from "@/components/LoRAPicker";
 
 const IMAGE_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
+  { value: "seedream", label: "Seedream v4 (ByteDance)", description: "Excellent prompt adherence & detail" },
   { value: "fal-flux", label: "Flux 2 Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
 ];
 

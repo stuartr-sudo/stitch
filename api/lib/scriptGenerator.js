@@ -72,7 +72,7 @@ CRITICAL RULES:
     ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}`
     : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.`;
 
-  const completion = await openai.beta.chat.completions.parse({
+  const completion = await openai.chat.completions.parse({
     model: 'gpt-5-mini',
     messages: [
       { role: 'system', content: systemPrompt },
@@ -129,7 +129,7 @@ export async function generateTopics({ niche, nicheName, count = 10, excludeTopi
     ? `\nAVOID these already-used topics:\n${excludeTopics.map(t => `- ${t}`).join('\n')}`
     : '';
 
-  const completion = await openai.beta.chat.completions.parse({
+  const completion = await openai.chat.completions.parse({
     model: 'gpt-5-mini',
     messages: [
       {

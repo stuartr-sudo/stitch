@@ -25,6 +25,7 @@ const MODEL_OPTIONS = [
   { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
   { value: "nano-banana-pro", label: "Nano Banana Pro Edit", needsRef: true, tag: "Premium" },
   { value: "seedream", label: "Seedream v4.5 Edit", needsRef: true },
+  { value: "seedream-generate", label: "Seedream v4 (No Ref)", needsRef: false, tag: "Generate" },
   { value: "nano-banana-2", label: "Nano Banana 2 (No Ref)", needsRef: false, tag: "Generate" },
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];

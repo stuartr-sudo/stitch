@@ -94,6 +94,16 @@ const MODELS = {
       safety_tolerance: '4',
     }),
   },
+  'seedream-generate': {
+    endpoint: 'fal-ai/bytedance/seedream/v4/text-to-image',
+    type: 'generate',
+    buildPayload: (prompt) => ({
+      prompt,
+      num_images: 1,
+      width: 1024,
+      height: 1536,
+    }),
+  },
   'fal-flux': {
     endpoint: 'fal-ai/flux-2/lora',
     editEndpoint: 'fal-ai/flux-2/lora/edit',
