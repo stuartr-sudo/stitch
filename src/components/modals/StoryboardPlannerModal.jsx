@@ -43,8 +43,43 @@ const STORYBOARD_MODELS = [
 ];
 
 const STYLES = [
-  'cinematic', 'anime', 'realistic', 'noir', 'fantasy', 'sci-fi',
-  'documentary', 'vintage', 'neon', 'minimalist', 'watercolor', 'comic',
+  // Core cinematic
+  'cinematic', 'cinematic noir', 'cinematic epic', 'cinematic intimate',
+  // Animation
+  'anime', '3D animation', '2D animation', 'stop motion', 'claymation', 'pixel art',
+  'studio ghibli', 'disney pixar', 'cel-shaded',
+  // Realistic
+  'realistic', 'hyper-realistic', 'documentary', 'mockumentary', 'found footage',
+  'handheld verité', 'IMAX nature',
+  // Art styles
+  'watercolor', 'oil painting', 'charcoal sketch', 'pencil drawing', 'ink wash',
+  'impressionist', 'expressionist', 'art deco', 'art nouveau', 'pop art',
+  'surrealist', 'abstract', 'cubist', 'ukiyo-e', 'stained glass',
+  // Genre styles
+  'noir', 'gothic', 'cyberpunk', 'steampunk', 'solarpunk', 'dieselpunk',
+  'vaporwave', 'synthwave', 'retrowave', 'lo-fi',
+  'fantasy', 'dark fantasy', 'high fantasy', 'fairy tale',
+  'sci-fi', 'hard sci-fi', 'space opera',
+  'horror', 'psychological horror', 'folk horror',
+  'western', 'samurai',
+  // Period / aesthetic
+  'vintage', 'vintage 8mm film', '1970s grindhouse', '1980s VHS',
+  '1990s camcorder', 'silent film era', 'technicolor classic',
+  'neon', 'neon noir', 'neon tokyo',
+  'pastel dreamcore', 'cottagecore', 'dark academia',
+  // Visual techniques
+  'minimalist', 'maximalist', 'monochrome', 'duotone',
+  'tilt-shift miniature', 'long exposure', 'double exposure',
+  'glitch art', 'datamosh', 'kaleidoscope',
+  // Comics & illustration
+  'comic', 'comic book', 'manga', 'graphic novel', 'pulp illustration',
+  'children\'s storybook', 'editorial illustration',
+  // Photography styles
+  'fashion editorial', 'street photography', 'drone aerial',
+  'golden hour', 'blue hour', 'infrared',
+  // Commercial
+  'luxury brand', 'tech product', 'food commercial', 'sports broadcast',
+  'music video', 'travel vlog', 'social media reel',
 ];
 
 const CAMERA_ANGLES = [
@@ -67,6 +102,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [characterDescription, setCharacterDescription] = useState('');
   const [characterRefs, setCharacterRefs] = useState([]); // URLs
+
+  const [analyzingCharacter, setAnalyzingCharacter] = useState(false);
 
   // Library browser for character refs
   const [showLibrary, setShowLibrary] = useState(false);
@@ -100,6 +137,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setDefaultDuration(5);
       setCharacterDescription('');
       setCharacterRefs([]);
+      setAnalyzingCharacter(false);
       setScenes([]);
       setStoryboardTitle('');
       setGenerating(false);
@@ -137,22 +175,59 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     loadLibrary();
   };
 
+  // Auto-describe character from image (same as turnaround)
+  const describeCharacterFromImage = async (imageUrl) => {
+    if (!imageUrl || analyzingCharacter) return;
+    setAnalyzingCharacter(true);
+    try {
+      const res = await apiFetch('/api/imagineer/describe-character', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl }),
+      });
+      const data = await res.json();
+      if (data.success && data.description) {
+        setCharacterDescription(data.description);
+        toast.success('Character description generated from image');
+      } else {
+        toast.error(data.error || 'Could not describe character');
+      }
+    } catch (err) {
+      toast.error('Character analysis failed: ' + err.message);
+    } finally {
+      setAnalyzingCharacter(false);
+    }
+  };
+
   const importFromLibrary = () => {
     const selected = libraryItems.filter(i => selectedIds.has(i.id));
     const urls = selected.map(i => i.url);
+    const isFirstRef = characterRefs.length === 0;
     setCharacterRefs(prev => [...prev, ...urls]);
     setShowLibrary(false);
     toast.success(`Added ${urls.length} reference image(s)`);
+    // Auto-describe from first imported image if no description yet
+    if (isFirstRef && urls.length > 0 && !characterDescription) {
+      describeCharacterFromImage(urls[0]);
+    }
   };
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
+    const isFirstRef = characterRefs.length === 0;
     for (const file of files) {
       const reader = new FileReader();
       reader.onload = () => {
-        setCharacterRefs(prev => [...prev, reader.result]);
+        setCharacterRefs(prev => {
+          const updated = [...prev, reader.result];
+          // Auto-describe from the first image if no description yet
+          if (isFirstRef && prev.length === 0 && !characterDescription) {
+            describeCharacterFromImage(reader.result);
+          }
+          return updated;
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -505,7 +580,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 >
                   {STYLES.map(s => (
-                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                    <option key={s} value={s}>{s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</option>
                   ))}
                 </select>
               </div>
@@ -552,14 +627,27 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
             {/* Character description for @Element */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Character Description <span className="text-gray-400">(optional — used as @Element in prompts)</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-700">
+                  Character Description <span className="text-gray-400">(optional — used as @Element in prompts)</span>
+                </label>
+                {characterRefs.length > 0 && (
+                  <button
+                    onClick={() => describeCharacterFromImage(characterRefs[0])}
+                    disabled={analyzingCharacter}
+                    className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                  >
+                    {analyzingCharacter
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                      : <><Sparkles className="w-3 h-3" /> Describe from image</>}
+                  </button>
+                )}
+              </div>
               <textarea
                 value={characterDescription}
                 onChange={(e) => setCharacterDescription(e.target.value)}
-                placeholder="e.g., 'A young woman with red hair, green eyes, wearing a brown leather jacket and hiking boots'"
-                className="w-full h-16 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent"
+                placeholder={analyzingCharacter ? 'Analyzing character from image...' : "e.g., 'A young woman with red hair, green eyes, wearing a brown leather jacket and hiking boots'"}
+                className={`w-full h-16 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent ${analyzingCharacter ? 'bg-gray-50 animate-pulse' : ''}`}
               />
             </div>
 
