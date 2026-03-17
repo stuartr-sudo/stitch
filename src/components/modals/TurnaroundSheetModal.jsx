@@ -19,6 +19,10 @@ const STYLE_CHIPS = [
   "Realistic", "Studio Ghibli", "Game Art", "Watercolor", "Pixel Art",
   "Chibi", "Dark Fantasy", "Cyberpunk", "Storybook", "Flat Vector",
   "Ink & Wash", "Low Poly", "Claymation",
+  "Bluey Style", "Puffin Rock", "Preschool Cartoon", "Kids Educational",
+  "3D Kids Pixar", "Simpsons Style", "Adult Sitcom Cartoon",
+  "Candy City 3D", "3D Character Art", "Puppet Show", "Paper Craft",
+  "Whiteboard Animation", "Motion Graphics",
 ];
 
 const MODEL_OPTIONS = [
