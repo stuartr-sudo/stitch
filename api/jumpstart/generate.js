@@ -794,25 +794,19 @@ async function handleKlingR2V(req, res, params) {
 
   const requestBody = {
     prompt,
-    duration: String(Math.min(Math.max(duration, 5), 10)),
+    duration: String(Math.min(Math.max(duration, 3), 15)),
     aspect_ratio: aspectRatio || '16:9',
-    negative_prompt: negativePrompt || 'blur, distort, and low quality',
-    cfg_scale: cfgScale || 0.5,
     generate_audio: enableAudio,
+    start_image_url: imageUrl,
   };
 
   // Build elements array — frontal image is the main uploaded image,
-  // reference_image_urls are additional angle/pose references
-  const element = { frontal_image_url: imageUrl };
-  if (referenceImages?.length > 0) {
-    element.reference_image_urls = referenceImages;
-  }
+  // reference_image_urls are additional angle/pose references (required field, max 4 total)
+  const element = {
+    frontal_image_url: imageUrl,
+    reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],
+  };
   requestBody.elements = [element];
-
-  // Start image (first frame) — use same as frontal if not separately provided
-  if (imageUrl) {
-    requestBody.start_image_url = imageUrl;
-  }
 
   // End frame
   if (endImageUrl) {
