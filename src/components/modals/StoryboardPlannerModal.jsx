@@ -108,6 +108,10 @@ const T = {
   kids_tea_party: 'https://v3b.fal.media/files/b/0a92905d/D5g2lhOFT4-hoP_o3Zfr3_87aa54698f544eb688bcf694cc81ca42.png',
   kids_maker: 'https://v3b.fal.media/files/b/0a92905d/1XtzR43bVpx82g4_gVOZL_3edfaafd9acf48b8a9074b7110955ae4.png',
   kids_space: 'https://v3b.fal.media/files/b/0a92905e/nmKmls__ismQketK_Vca7_41d50d339b21482090bc5d19ca81ae48.png',
+  puffin_island: 'https://v3b.fal.media/files/b/0a929076/dFPveIpLLDrkNYYXile3q_a183311198cd4f379b17a1c5083057bb.png',
+  woodland_nature: 'https://v3b.fal.media/files/b/0a929077/p5HFcjwpI6Mppw5azC5qo_cb295f7ba9454ea3a26ab1028a4cce74.png',
+  meadow_gentle: 'https://v3b.fal.media/files/b/0a929078/0Wn5__4-QkMJteUNBhJx8_c8dd34b108434d529434319d22ac8db7.png',
+  ocean_gentle: 'https://v3b.fal.media/files/b/0a929079/jTd9vpR21wpz_aNqRrbdP_aedc025c4db44453a71aeac5a8f0a90e.png',
 };
 
 // Style categories with thumbnail mappings
@@ -203,6 +207,10 @@ const STYLE_CATEGORIES = [
     { id: 'paper craft collage', label: 'Paper Craft', thumb: T.paper_craft },
     { id: 'kawaii', label: 'Kawaii', thumb: T.kawaii },
     { id: 'kids action cartoon', label: 'Kids Action', thumb: T.kids_action },
+    { id: 'soft textured nature illustration, muted warm earthy tones, gentle organic shapes, wildflowers, Puffin Rock animation style, delicate 2D', label: 'Puffin Rock', thumb: T.puffin_island },
+    { id: 'woodland nature illustration, soft textured 2D, muted warm colors, gentle brushstroke textures, organic shapes, autumn leaves and mushrooms', label: 'Woodland Nature', thumb: T.woodland_nature },
+    { id: 'gentle meadow illustration, soft muted watercolor textures, warm golden light, delicate thin lines, nature illustration, calming earthy palette', label: 'Gentle Meadow', thumb: T.meadow_gentle },
+    { id: 'soft textured underwater illustration, muted pastel ocean colors, gentle organic shapes, coral reef, calming children\'s nature animation', label: 'Gentle Ocean', thumb: T.ocean_gentle },
   ]},
 ];
 
