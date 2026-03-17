@@ -112,6 +112,11 @@ const T = {
   woodland_nature: 'https://v3b.fal.media/files/b/0a929077/p5HFcjwpI6Mppw5azC5qo_cb295f7ba9454ea3a26ab1028a4cce74.png',
   meadow_gentle: 'https://v3b.fal.media/files/b/0a929078/0Wn5__4-QkMJteUNBhJx8_c8dd34b108434d529434319d22ac8db7.png',
   ocean_gentle: 'https://v3b.fal.media/files/b/0a929079/jTd9vpR21wpz_aNqRrbdP_aedc025c4db44453a71aeac5a8f0a90e.png',
+  kids_3d_pixar: 'https://v3b.fal.media/files/b/0a9290c4/w2WmoFGOgZYx5kbMgr8vA_c2a30d742bcc48a093321bb26c67826c.png',
+  simpsons: 'https://v3b.fal.media/files/b/0a9290c5/ZBcLaNjaM6VXzzq3qQuI8_b053fa9bafe64b6da6adb23f0da42b22.png',
+  kids_3d_characters: 'https://v3b.fal.media/files/b/0a9290c5/ITX1keaknR0RKAWKO90ES_46be17d7478f48f9865f4aac59de0a7c.png',
+  candy_city_3d: 'https://v3b.fal.media/files/b/0a9290c6/KGeampOKE6t3m5OyNCXZj_11b1f5115eaf48d2a220b0ba5e5fc6f0.png',
+  family_guy: 'https://v3b.fal.media/files/b/0a9290c7/5F7xKxEzNdenvCpnEL_tF_ae49d255affc4cb48eb95c7702b8034b.png',
 };
 
 // Style categories with thumbnail mappings
@@ -211,6 +216,11 @@ const STYLE_CATEGORIES = [
     { id: 'woodland nature illustration, soft textured 2D, muted warm colors, gentle brushstroke textures, organic shapes, autumn leaves and mushrooms', label: 'Woodland Nature', thumb: T.woodland_nature },
     { id: 'gentle meadow illustration, soft muted watercolor textures, warm golden light, delicate thin lines, nature illustration, calming earthy palette', label: 'Gentle Meadow', thumb: T.meadow_gentle },
     { id: 'soft textured underwater illustration, muted pastel ocean colors, gentle organic shapes, coral reef, calming children\'s nature animation', label: 'Gentle Ocean', thumb: T.ocean_gentle },
+    { id: '3D rendered kids animation, soft warm lighting, cute rounded characters, Pixar Cocomelon style, smooth subsurface shading', label: '3D Kids Pixar', thumb: T.kids_3d_pixar },
+    { id: 'classic American adult animated sitcom, yellow skin characters, simple flat colors, Simpsons style animation', label: 'Simpsons Style', thumb: T.simpsons },
+    { id: 'stylized 3D character design, big expressive eyes, detailed outfits, colorful panel backgrounds, modern 3D kids character art', label: '3D Character Art', thumb: T.kids_3d_characters },
+    { id: 'whimsical 3D candy-colored city, pastel buildings, pink puffy clouds, toylike vibrant world, playful 3D animation', label: 'Candy City 3D', thumb: T.candy_city_3d },
+    { id: 'adult animated sitcom style, round heads, simple outlines, flat muted colors, Family Guy style comedic cartoon', label: 'Adult Sitcom', thumb: T.family_guy },
   ]},
 ];
 

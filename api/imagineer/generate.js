@@ -86,6 +86,20 @@ const STYLE_PROMPTS = {
   'propaganda-poster': 'Soviet-style propaganda poster, bold flat colors, heroic worker figure, strong geometric composition, political message style, constructivist design',
   'ukiyo-e': 'Japanese ukiyo-e woodblock print, flat color areas, bold outlines, wave and nature motifs, Hokusai-inspired, Edo period aesthetic, traditional printing technique',
   'chinese-ink': 'traditional Chinese ink painting, flowing calligraphic brushwork, mountain and water landscapes, philosophical emptiness, Shanshui aesthetic, meditative harmony',
+  // Kids & Cartoon
+  'bluey-style': 'soft 2D kids cartoon animation, thin clean outlines, pastel flat colors, rounded friendly characters, warm suburban setting, Bluey animation style, gentle and cheerful',
+  'puffin-rock': 'soft textured nature illustration, muted warm earthy tones, gentle organic shapes, wildflowers and natural settings, Puffin Rock animation style, delicate 2D illustration',
+  'preschool-cartoon': 'bright colorful preschool cartoon, chunky rounded characters, simple shapes, vibrant primary colors, friendly and educational, Peppa Pig style 2D animation',
+  'kids-educational': 'colorful kids educational cartoon, bright classroom setting, friendly characters, simple clean 2D animation, engaging and cheerful, warm inviting colors',
+  'kids-3d-pixar': '3D rendered kids animation, soft warm lighting, cute rounded characters with big eyes, smooth subsurface shading, Pixar Cocomelon style, adorable and heartwarming',
+  'simpsons-style': 'classic American adult animated sitcom style, yellow skin characters, overbite expressions, simple flat colors, clean outlines, The Simpsons aesthetic, satirical cartoon',
+  'family-guy-style': 'adult animated sitcom style, round heads, big chins, simple outlines, flat muted colors, comedic exaggerated expressions, Family Guy aesthetic',
+  'candy-city-3d': 'whimsical 3D candy-colored world, pastel buildings, pink puffy clouds, vibrant saturated toylike aesthetic, playful 3D animation, fantastical colorful environment',
+  '3d-character-art': 'stylized 3D character design, big expressive eyes, detailed unique outfits, colorful backgrounds, modern 3D kids character art, vibrant personality',
+  'puppet-show': 'puppet show style, felt textures, handcrafted look, warm lighting, Sesame Street inspired aesthetic, tactile and cozy',
+  'paper-craft': 'paper craft collage style, layered construction paper textures, handmade cut-out aesthetic, Eric Carle inspired, colorful and tactile children\'s illustration',
+  'whiteboard-animation': 'whiteboard animation style, hand-drawn marker illustrations, clean white background, educational explainer aesthetic, simple and clear',
+  'motion-graphics': 'motion graphics style, flat design, bold geometric shapes, bright pop colors, clean 2D vector illustration, animated infographic aesthetic',
 };
 
 // Nano Banana 2 valid aspect ratios
