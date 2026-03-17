@@ -639,6 +639,35 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                     ))}
                   </div>
                 )}
+                {!libraryLoading && filteredLibrary.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        const allIds = filteredLibrary.map(i => i.id);
+                        const allSelected = allIds.every(id => selectedIds.has(id));
+                        if (allSelected) {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            allIds.forEach(id => next.delete(id));
+                            return next;
+                          });
+                        } else {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            allIds.forEach(id => next.add(id));
+                            return next;
+                          });
+                        }
+                      }}
+                      className="text-xs text-[#2C666E] hover:underline font-medium"
+                    >
+                      {filteredLibrary.every(i => selectedIds.has(i.id)) ? 'Deselect All' : `Select All (${filteredLibrary.length})`}
+                    </button>
+                    {selectedIds.size > 0 && (
+                      <span className="text-xs text-gray-400">{selectedIds.size} selected</span>
+                    )}
+                  </div>
+                )}
                 {libraryLoading ? (
                   <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
                 ) : (
