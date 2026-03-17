@@ -92,6 +92,14 @@ const T = {
   dreamcore: 'https://v3b.fal.media/files/b/0a928475/NkcdrNQFormwSq9qVUAvl_5cc8d778132c43469fb38fb3bc033b1e.png',
   space_opera: 'https://v3b.fal.media/files/b/0a928476/32Sd90me_LyAVh8PicAKi_1c57ce6d1e6b419b93a3c8c9082aaed4.png',
   fashion: 'https://v3b.fal.media/files/b/0a928477/cjpXmPuXgkvJYR120msMW_b383b32b948a488880cd9961df40c4bf.png',
+  kids_educational: 'https://v3b.fal.media/files/b/0a929018/ZArkWRP0IyTCSVkAUo9jH_94e598bc38e34fc4a43ae6d6670836b9.png',
+  flat_vector_kids: 'https://v3b.fal.media/files/b/0a929019/XKUeY0F_asadSw7wMm7lq_b5cff714fe274b4a9a9cd3437b262cef.png',
+  puppet_show: 'https://v3b.fal.media/files/b/0a92901a/F8bC9ZGuqw-yBJcHdRPJS_c262cc51ae86430b9283381d51b8de34.png',
+  whiteboard: 'https://v3b.fal.media/files/b/0a92901b/ubTRBU1HaMVBTLUjUJo-n_cfd13a3c79574eeb98ce1cd2f2e8f2a2.png',
+  preschool_cartoon: 'https://v3b.fal.media/files/b/0a92901d/KAP0PAAJwcr6_rkQwsBVG_9f42dc5333a04de6bfc78357aacf450d.png',
+  paper_craft: 'https://v3b.fal.media/files/b/0a92901e/Oc-ZCsF0lqnSp41qUDU8D_06abc59a57964188b366cc5c106075ba.png',
+  kawaii: 'https://v3b.fal.media/files/b/0a92901f/h_4paBuko6GNU-aQld2pp_16345c8f85844c54a43c059d1bfe21f2.png',
+  kids_action: 'https://v3b.fal.media/files/b/0a929020/ZauLYSoSezyq6RS4jw1FV_5c3957fee62a45068895c1f56e7c1950.png',
 };
 
 // Style categories with thumbnail mappings
@@ -169,6 +177,16 @@ const STYLE_CATEGORIES = [
     { id: 'comic book', label: 'Comic Book', thumb: T.comic },
     { id: 'manga', label: 'Manga', thumb: T.manga },
     { id: "children's storybook", label: 'Storybook', thumb: T.storybook },
+  ]},
+  { label: 'Kids & Education', styles: [
+    { id: 'kids educational cartoon', label: 'Kids Educational', thumb: T.kids_educational },
+    { id: 'flat vector kids illustration', label: 'Flat Vector Kids', thumb: T.flat_vector_kids },
+    { id: 'preschool cartoon', label: 'Preschool Cartoon', thumb: T.preschool_cartoon },
+    { id: 'puppet show', label: 'Puppet Show', thumb: T.puppet_show },
+    { id: 'whiteboard animation', label: 'Whiteboard', thumb: T.whiteboard },
+    { id: 'paper craft collage', label: 'Paper Craft', thumb: T.paper_craft },
+    { id: 'kawaii', label: 'Kawaii', thumb: T.kawaii },
+    { id: 'kids action cartoon', label: 'Kids Action', thumb: T.kids_action },
   ]},
 ];
 
