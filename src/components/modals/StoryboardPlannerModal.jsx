@@ -486,7 +486,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   return (
     <SlideOverPanel
       open={isOpen}
-      onClose={onClose}
+      onOpenChange={(open) => !open && onClose()}
       title="Storyboard Planner"
       description="Create multi-scene video sequences with AI"
       size="xl"

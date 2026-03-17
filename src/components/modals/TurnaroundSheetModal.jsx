@@ -127,7 +127,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     if (isOpen) {
       setStep('configure');
       setCharacterDescription(DEFAULT_PROMPT);
-      setStyleText("Concept Art");
+      setStyleValue("concept-art");
       setSelectedModel("nano-banana-2-edit");
       setGenerating(false);
       setSheetImageUrl(null);
