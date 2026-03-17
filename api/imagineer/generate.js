@@ -93,7 +93,7 @@ const STYLE_PROMPTS = {
   'kids-educational': 'colorful kids educational cartoon, bright classroom setting, friendly characters, simple clean 2D animation, engaging and cheerful, warm inviting colors',
   'kids-3d-pixar': '3D rendered kids animation, soft warm lighting, cute rounded characters with big eyes, smooth subsurface shading, Pixar Cocomelon style, adorable and heartwarming',
   'simpsons-style': 'classic American adult animated sitcom style, yellow skin characters, overbite expressions, simple flat colors, clean outlines, The Simpsons aesthetic, satirical cartoon',
-  'family-guy-style': 'adult animated sitcom style, round heads, big chins, simple outlines, flat muted colors, comedic exaggerated expressions, Family Guy aesthetic',
+  'family-guy-style': 'adult animated sitcom style, thin clean outlines, flat simple colors, round soft character design, casual everyday scene, muted warm palette, American cartoon comedy aesthetic',
   'candy-city-3d': 'whimsical 3D candy-colored world, pastel buildings, pink puffy clouds, vibrant saturated toylike aesthetic, playful 3D animation, fantastical colorful environment',
   '3d-character-art': 'stylized 3D character design, big expressive eyes, detailed unique outfits, colorful backgrounds, modern 3D kids character art, vibrant personality',
   'puppet-show': 'puppet show style, felt textures, handcrafted look, warm lighting, Sesame Street inspired aesthetic, tactile and cozy',

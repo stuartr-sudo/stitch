@@ -3,8 +3,9 @@ import { SlideOverPanel, SlideOverBody, SlideOverFooter } from "@/components/ui/
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import StyleGrid from "@/components/ui/StyleGrid";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,111 +33,6 @@ const SUBJECT_TYPE = [
   { value: "vehicle", label: "Vehicle" },
   { value: "food", label: "Food" },
   { value: "abstract-concept", label: "Abstract Concept" },
-];
-
-const ARTISTIC_STYLE_GROUPS = [
-  { group: 'UGC & Social Media', styles: [
-    { value: "iphone-selfie", label: "📱 iPhone Selfie (Raw)" },
-    { value: "ugc-testimonial", label: "🎤 UGC Testimonial" },
-    { value: "tiktok-style", label: "📲 TikTok/Reels Photo" },
-    { value: "instagram-candid", label: "📸 Instagram Candid" },
-    { value: "facetime-screenshot", label: "📞 FaceTime Screenshot" },
-    { value: "mirror-selfie", label: "🪞 Mirror Selfie" },
-    { value: "car-selfie", label: "🚗 Car Selfie" },
-    { value: "gym-selfie", label: "💪 Gym Selfie" },
-    { value: "golden-hour-selfie", label: "🌅 Golden Hour Selfie" },
-    { value: "casual-snapshot", label: "📷 Casual Snapshot" },
-  ]},
-  { group: 'Photography', styles: [
-    { value: "photorealistic", label: "Photorealistic" },
-    { value: "hyperrealistic", label: "Hyperrealistic" },
-    { value: "cinematic", label: "Cinematic" },
-    { value: "documentary", label: "Documentary" },
-    { value: "fashion-photography", label: "Fashion Photography" },
-    { value: "portrait-photography", label: "Portrait Photography" },
-    { value: "product-photography", label: "Product Photography" },
-    { value: "street-photography", label: "Street Photography" },
-    { value: "macro-photography", label: "Macro Photography" },
-    { value: "film-grain", label: "Film Grain/Analog" },
-    { value: "polaroid", label: "Polaroid" },
-  ]},
-  { group: 'Painting', styles: [
-    { value: "oil-painting", label: "Oil Painting" },
-    { value: "watercolor", label: "Watercolor" },
-    { value: "acrylic", label: "Acrylic Painting" },
-    { value: "gouache", label: "Gouache" },
-    { value: "pastel", label: "Pastel Drawing" },
-    { value: "charcoal", label: "Charcoal Drawing" },
-    { value: "pencil-sketch", label: "Pencil Sketch" },
-    { value: "ink-wash", label: "Ink Wash" },
-    { value: "impasto", label: "Impasto (Thick Paint)" },
-  ]},
-  { group: 'Art Movements', styles: [
-    { value: "impressionism", label: "Impressionism" },
-    { value: "expressionism", label: "Expressionism" },
-    { value: "surrealism", label: "Surrealism" },
-    { value: "cubism", label: "Cubism" },
-    { value: "art-nouveau", label: "Art Nouveau" },
-    { value: "art-deco", label: "Art Deco" },
-    { value: "baroque", label: "Baroque" },
-    { value: "renaissance", label: "Renaissance" },
-    { value: "pop-art", label: "Pop Art" },
-    { value: "abstract", label: "Abstract" },
-    { value: "minimalist", label: "Minimalist" },
-    { value: "brutalist", label: "Brutalist" },
-  ]},
-  { group: 'Digital & Modern', styles: [
-    { value: "digital-art", label: "Digital Art" },
-    { value: "3d-render", label: "3D Render" },
-    { value: "cgi", label: "CGI/VFX" },
-    { value: "concept-art", label: "Concept Art" },
-    { value: "matte-painting", label: "Matte Painting" },
-    { value: "vaporwave", label: "Vaporwave" },
-    { value: "synthwave", label: "Synthwave/Retrowave" },
-    { value: "cyberpunk", label: "Cyberpunk" },
-    { value: "steampunk", label: "Steampunk" },
-    { value: "dieselpunk", label: "Dieselpunk" },
-    { value: "glitch-art", label: "Glitch Art" },
-    { value: "low-poly", label: "Low Poly" },
-    { value: "isometric", label: "Isometric" },
-  ]},
-  { group: 'Animation', styles: [
-    { value: "anime", label: "Anime" },
-    { value: "manga", label: "Manga" },
-    { value: "cartoon", label: "Cartoon" },
-    { value: "comic-book", label: "Comic Book" },
-    { value: "pixel-art", label: "Pixel Art" },
-    { value: "8-bit", label: "8-bit Retro" },
-    { value: "disney", label: "Disney Style" },
-    { value: "pixar", label: "Pixar 3D" },
-    { value: "ghibli", label: "Studio Ghibli" },
-    { value: "claymation", label: "Claymation" },
-  ]},
-  { group: 'Kids & Cartoon', styles: [
-    { value: "bluey-style", label: "Bluey Style" },
-    { value: "puffin-rock", label: "Puffin Rock" },
-    { value: "preschool-cartoon", label: "Preschool Cartoon" },
-    { value: "kids-educational", label: "Kids Educational" },
-    { value: "kids-3d-pixar", label: "3D Kids (Pixar/Cocomelon)" },
-    { value: "simpsons-style", label: "Simpsons Style" },
-    { value: "family-guy-style", label: "Adult Sitcom Cartoon" },
-    { value: "candy-city-3d", label: "Candy City 3D" },
-    { value: "3d-character-art", label: "3D Character Art" },
-    { value: "puppet-show", label: "Puppet Show" },
-    { value: "paper-craft", label: "Paper Craft Collage" },
-    { value: "whiteboard-animation", label: "Whiteboard Animation" },
-    { value: "motion-graphics", label: "Motion Graphics" },
-  ]},
-  { group: 'Specialized', styles: [
-    { value: "fantasy-art", label: "Fantasy Art" },
-    { value: "sci-fi-art", label: "Sci-Fi Art" },
-    { value: "horror", label: "Horror/Dark Art" },
-    { value: "storybook", label: "Storybook Illustration" },
-    { value: "vintage-poster", label: "Vintage Poster" },
-    { value: "propaganda-poster", label: "Propaganda Poster" },
-    { value: "ukiyo-e", label: "Ukiyo-e (Japanese Woodblock)" },
-    { value: "chinese-ink", label: "Chinese Ink Painting" },
-  ]},
 ];
 
 const LIGHTING = [
@@ -461,29 +357,8 @@ export default function ImagineerModal({
                   options={SUBJECT_TYPE}
                   required
                 />
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">
-                    Artistic Style <span className="text-red-500">*</span>
-                  </label>
-                  <Select value={artisticStyle} onValueChange={setArtisticStyle}>
-                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                      <SelectValue placeholder="Select style..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900 max-h-[300px]">
-                      {ARTISTIC_STYLE_GROUPS.map((g) => (
-                        <SelectGroup key={g.group}>
-                          <SelectLabel className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 py-1.5">{g.group}</SelectLabel>
-                          {g.styles.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-sm pl-4">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
+              <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="14rem" />
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">
                   Description (what/who is the subject?)

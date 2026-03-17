@@ -13,17 +13,8 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
-
-const STYLE_CHIPS = [
-  "Concept Art", "Anime", "3D Render", "Comic Book", "Pixar 3D",
-  "Realistic", "Studio Ghibli", "Game Art", "Watercolor", "Pixel Art",
-  "Chibi", "Dark Fantasy", "Cyberpunk", "Storybook", "Flat Vector",
-  "Ink & Wash", "Low Poly", "Claymation",
-  "Bluey Style", "Puffin Rock", "Preschool Cartoon", "Kids Educational",
-  "3D Kids Pixar", "Simpsons Style", "Adult Sitcom Cartoon",
-  "Candy City 3D", "3D Character Art", "Puppet Show", "Paper Craft",
-  "Whiteboard Animation", "Motion Graphics",
-];
+import StyleGrid from "@/components/ui/StyleGrid";
+import { getPromptText } from "@/lib/stylePresets";
 
 const MODEL_OPTIONS = [
   { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
@@ -66,7 +57,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referencePreview, setReferencePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
-  const [styleText, setStyleText] = useState("Concept Art");
+  const [styleValue, setStyleValue] = useState("concept-art");
+  const styleText = getPromptText(styleValue);
   const [selectedModel, setSelectedModel] = useState("nano-banana-2-edit");
 
   // AI analysis
@@ -687,22 +679,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label className="text-xs font-semibold text-slate-600 mb-1 block">Style</Label>
-                  <Input value={styleText} onChange={(e) => setStyleText(e.target.value)} placeholder="e.g. dark gothic ink..." className="bg-white text-sm h-9" />
-                </div>
               </div>
-              <div>
-                <div className="flex flex-wrap gap-1.5">
-                  {STYLE_CHIPS.map((chip) => (
-                    <button key={chip} type="button" onClick={() => setStyleText(chip)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
-                        styleText === chip ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
-                      }`}>{chip}</button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1.5">Pick a preset or type any style.</p>
-              </div>
+              <StyleGrid value={styleValue} onChange={setStyleValue} maxHeight="14rem" />
 
               {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
                 <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
