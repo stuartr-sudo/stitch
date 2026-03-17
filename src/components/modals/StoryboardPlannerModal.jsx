@@ -450,7 +450,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       description="Create multi-scene video sequences with AI"
       size="xl"
     >
-      <SlideOverBody>
+      <SlideOverBody className="p-6 bg-gray-50">
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-6 px-1">
           {STEPS.map((s, i) => (
