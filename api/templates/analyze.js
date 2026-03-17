@@ -7,7 +7,7 @@
  * When a video_url is provided the pipeline does real analysis:
  *   1. Extract 4 frames at 0%, 33%, 66%, 95% through the video (fal-ai/ffmpeg-api/extract-frame)
  *   2. Transcribe audio via Whisper (fal-ai/whisper)
- *   3. Send all frames + transcript to GPT-5-mini vision for deep scene analysis
+ *   3. Send all frames + transcript to GPT-4o-mini vision for deep scene analysis
  *   4. Build a reusable template from the comprehensive understanding
  *
  * Body:
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
       }];
 
       const completion = await openai.beta.chat.completions.parse({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent },
@@ -211,7 +211,7 @@ export default async function handler(req, res) {
       console.warn(`[templates/analyze] Whisper failed (non-fatal): ${whisperErr.message}`);
     }
 
-    // Build the GPT-5-mini vision message with all evidence
+    // Build the GPT-4o-mini vision message with all evidence
     const visionContent = [];
 
     // Add frames as image_url blocks
@@ -254,7 +254,7 @@ export default async function handler(req, res) {
     });
 
     const completion = await openai.beta.chat.completions.parse({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: visionContent },

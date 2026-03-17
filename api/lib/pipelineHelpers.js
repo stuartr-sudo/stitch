@@ -821,7 +821,7 @@ export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
  */
 export async function analyzeFrameContinuity(imageUrl, openai) {
   const response = await openai.chat.completions.create({
-    model: 'gpt-5-mini',
+    model: 'gpt-4o-mini',
     messages: [{
       role: 'user',
       content: [
