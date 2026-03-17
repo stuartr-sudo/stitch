@@ -362,6 +362,13 @@ app.get('/api/audio/result', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Storyboard routes (with auth)
+app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/generate-scenes.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Shorts Factory routes (with auth)
 app.post('/api/shorts/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('shorts/generate.js');

@@ -62,6 +62,7 @@ import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
 import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetModal';
+import StoryboardPlannerModal from '@/components/modals/StoryboardPlannerModal';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -648,6 +649,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => setActiveModal('storyboard')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clapperboard className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Storyboard</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Multi-scene sequences</p>
+                  </div>
+
+                  <div
                     onClick={() => setActiveModal('library')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -1067,6 +1079,17 @@ export default function VideoAdvertCreator() {
         onClose={() => { setActiveModal(null); setPendingImage(null); }}
         initialImage={pendingImage}
         onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet')}
+      />
+
+      <StoryboardPlannerModal
+        isOpen={activeModal === 'storyboard'}
+        onClose={() => setActiveModal(null)}
+        onScenesComplete={async (completedScenes) => {
+          for (const scene of completedScenes) {
+            const actualDuration = scene.durationSeconds || 5;
+            handleVideoCreated(scene.videoUrl, scene.title, 'storyboard', actualDuration);
+          }
+        }}
       />
 
       <ApiKeysModal
