@@ -800,10 +800,12 @@ async function handleKlingR2V(req, res, params) {
     start_image_url: imageUrl,
   };
 
-  // Build elements array — frontal image is the main uploaded image,
-  // reference_image_urls are additional angle/pose references (required field, max 4 total)
+  // Build elements array — use character reference images for consistency
+  // frontal_image_url should be the high-res character ref, NOT the start frame
+  // (start frames extracted from video may be low resolution)
+  const frontalUrl = referenceImages?.length > 0 ? referenceImages[0] : imageUrl;
   const element = {
-    frontal_image_url: imageUrl,
+    frontal_image_url: frontalUrl,
     reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],
   };
   requestBody.elements = [element];
