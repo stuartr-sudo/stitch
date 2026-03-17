@@ -74,7 +74,7 @@ CRITICAL RULES:
     const userPrompt = `Create a ${numScenes}-scene storyboard for: ${description}`;
 
     const completion = await openai.beta.chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -90,7 +90,7 @@ CRITICAL RULES:
         username: req.user.email.split('@')[0],
         category: 'openai',
         operation: 'storyboard_scene_generation',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         input_tokens: completion.usage.prompt_tokens,
         output_tokens: completion.usage.completion_tokens,
       });

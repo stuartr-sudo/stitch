@@ -262,7 +262,7 @@ async function runAiDirectorPipeline({
     await updateJob({ current_step: 'analysing_article', completed_steps: 1 });
 
     const analysisCompletion = await openai.beta.chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: 'Analyze this article and return structured metadata about its type, tone, and key content signals.' },
         { role: 'user', content: `Article content:\n\n${truncated}` },
@@ -273,7 +273,7 @@ async function runAiDirectorPipeline({
     analysis = analysisCompletion.choices[0].message.parsed;
 
     if (analysisCompletion.usage) {
-      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_analysis', model: 'gpt-4o-mini', input_tokens: analysisCompletion.usage.prompt_tokens, output_tokens: analysisCompletion.usage.completion_tokens });
+      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_analysis', model: 'gpt-5-mini', input_tokens: analysisCompletion.usage.prompt_tokens, output_tokens: analysisCompletion.usage.completion_tokens });
     }
 
     await wf.transition('analyze_article', { analysis });
@@ -292,7 +292,7 @@ async function runAiDirectorPipeline({
     const platformList = platforms.join(', ');
 
     const storyboardCompletion = await openai.beta.chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -343,12 +343,12 @@ ${truncated}`,
     storyboard = storyboardCompletion.choices[0].message.parsed;
 
     if (storyboardCompletion.usage) {
-      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_storyboard', model: 'gpt-4o-mini', input_tokens: storyboardCompletion.usage.prompt_tokens, output_tokens: storyboardCompletion.usage.completion_tokens });
+      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_storyboard', model: 'gpt-5-mini', input_tokens: storyboardCompletion.usage.prompt_tokens, output_tokens: storyboardCompletion.usage.completion_tokens });
     }
 
     // ── Quality gate ─────────────────────────────────────────────────────
     const gateCompletion = await openai.beta.chat.completions.parse({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -370,7 +370,7 @@ ${JSON.stringify(storyboard, null, 2)}`,
     const gate = gateCompletion.choices[0].message.parsed;
 
     if (gateCompletion.usage) {
-      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_quality_gate', model: 'gpt-4o-mini', input_tokens: gateCompletion.usage.prompt_tokens, output_tokens: gateCompletion.usage.completion_tokens });
+      logCost({ username: brand_username, category: 'openai', operation: 'ai_director_quality_gate', model: 'gpt-5-mini', input_tokens: gateCompletion.usage.prompt_tokens, output_tokens: gateCompletion.usage.completion_tokens });
     }
 
     // If quality gate fails, regenerate once with feedback
@@ -378,7 +378,7 @@ ${JSON.stringify(storyboard, null, 2)}`,
       console.log(`[ai-director] Quality gate failed (avg ${gate.average_score}). Regenerating with feedback.`);
 
       const retryCompletion = await openai.beta.chat.completions.parse({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages: [
           {
             role: 'system',
@@ -411,7 +411,7 @@ ${JSON.stringify(storyboard, null, 2)}`,
       storyboard = retryCompletion.choices[0].message.parsed;
 
       if (retryCompletion.usage) {
-        logCost({ username: brand_username, category: 'openai', operation: 'ai_director_storyboard_retry', model: 'gpt-4o-mini', input_tokens: retryCompletion.usage.prompt_tokens, output_tokens: retryCompletion.usage.completion_tokens });
+        logCost({ username: brand_username, category: 'openai', operation: 'ai_director_storyboard_retry', model: 'gpt-5-mini', input_tokens: retryCompletion.usage.prompt_tokens, output_tokens: retryCompletion.usage.completion_tokens });
       }
     }
 

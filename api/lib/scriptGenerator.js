@@ -73,7 +73,7 @@ CRITICAL RULES:
     : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.`;
 
   const completion = await openai.beta.chat.completions.parse({
-    model: 'gpt-4o-mini',
+    model: 'gpt-5-mini',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -90,7 +90,7 @@ CRITICAL RULES:
       username: brandUsername,
       category: 'openai',
       operation: 'shorts_script_generation',
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       input_tokens: completion.usage.prompt_tokens,
       output_tokens: completion.usage.completion_tokens,
     });
@@ -130,7 +130,7 @@ export async function generateTopics({ niche, nicheName, count = 10, excludeTopi
     : '';
 
   const completion = await openai.beta.chat.completions.parse({
-    model: 'gpt-4o-mini',
+    model: 'gpt-5-mini',
     messages: [
       {
         role: 'system',
@@ -155,7 +155,7 @@ ${excludeBlock}`,
       username: brandUsername,
       category: 'openai',
       operation: 'shorts_topic_generation',
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       input_tokens: completion.usage.prompt_tokens,
       output_tokens: completion.usage.completion_tokens,
     });
