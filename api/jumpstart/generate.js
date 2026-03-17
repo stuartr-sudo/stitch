@@ -59,6 +59,7 @@ export default async function handler(req, res) {
     // Veo Fast / Kling specific
     const negativePrompt = fields.negativePrompt?.[0] || '';
     const cfgScale = parseFloat(fields.cfgScale?.[0] || '0.5');
+    const frontalImageUrl = fields.frontalImageUrl?.[0] || null;
     
     // Multi-image support for Veo 3.1
     let additionalImages = [];
@@ -157,7 +158,7 @@ export default async function handler(req, res) {
       }
       return await handleKlingR2V(req, res, {
         imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl,
-        referenceImages, enableAudio, model, FAL_KEY
+        referenceImages, enableAudio, model, frontalImageUrl, FAL_KEY
       });
     } else if (model === 'ltx-iclora') {
       // LTX-Video ICLoRA — in-context LoRA for subject-consistent video
@@ -782,7 +783,7 @@ async function handleLtxAudioVideo(req, res, params) {
  * Uses elements array for character-consistent video generation
  */
 async function handleKlingR2V(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, enableAudio, model, FAL_KEY } = params;
+  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
 
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
@@ -801,9 +802,8 @@ async function handleKlingR2V(req, res, params) {
   };
 
   // Build elements array — use character reference images for consistency
-  // frontal_image_url should be the high-res character ref, NOT the start frame
-  // (start frames extracted from video may be low resolution)
-  const frontalUrl = referenceImages?.length > 0 ? referenceImages[0] : imageUrl;
+  // frontal_image_url should be the high-res character ref selected by the user
+  const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
   const element = {
     frontal_image_url: frontalUrl,
     reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],

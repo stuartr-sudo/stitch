@@ -192,6 +192,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [characterDescription, setCharacterDescription] = useState('');
   const [characterRefs, setCharacterRefs] = useState([]); // URLs
+  const [frontalIndex, setFrontalIndex] = useState(0); // which ref is the frontal image for R2V
 
   const [analyzingCharacter, setAnalyzingCharacter] = useState(false);
 
@@ -459,9 +460,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
     formData.append('image', imageBlob, 'frame.jpg');
 
-    // R2V: pass reference images
+    // R2V: pass reference images and frontal image URL
     if (isR2V && characterRefs.length > 0) {
       formData.append('referenceImages', JSON.stringify(characterRefs));
+      formData.append('frontalImageUrl', characterRefs[frontalIndex] || characterRefs[0]);
     }
 
     // End frame not used for storyboard chaining (start frame is sufficient)
@@ -808,15 +810,35 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 <div className="flex flex-wrap gap-2">
                   {characterRefs.map((url, i) => (
                     <div key={i} className="relative group">
-                      <img src={url} alt={`ref ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border" />
+                      <img
+                        src={url}
+                        alt={`ref ${i + 1}`}
+                        onClick={() => setFrontalIndex(i)}
+                        title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
+                        className={`w-16 h-16 rounded-lg object-cover cursor-pointer transition-all ${
+                          i === frontalIndex
+                            ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
+                            : 'border border-gray-200 hover:border-gray-400'
+                        }`}
+                      />
+                      {i === frontalIndex && (
+                        <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
+                      )}
                       <button
-                        onClick={() => setCharacterRefs(prev => prev.filter((_, j) => j !== i))}
+                        onClick={() => {
+                          setCharacterRefs(prev => prev.filter((_, j) => j !== i));
+                          if (frontalIndex >= characterRefs.length - 1) setFrontalIndex(0);
+                          else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
+                        }}
                         className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   ))}
+                  {characterRefs.length > 1 && (
+                    <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
+                  )}
                 </div>
               )}
             </div>

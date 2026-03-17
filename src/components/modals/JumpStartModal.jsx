@@ -502,6 +502,7 @@ export default function JumpStartModal({
 
   // Kling R2V — character reference images
   const [referenceImages, setReferenceImages] = useState([]);
+  const [frontalIndex, setFrontalIndex] = useState(0);
 
   // LTX ICLoRA controls
   const [icLoraType, setIcLoraType] = useState('pose');
@@ -1027,6 +1028,7 @@ export default function JumpStartModal({
       // Reference images for Kling R2V
       if (currentModel.supportsReferenceImages && referenceImages.length > 0) {
         formData.append('referenceImages', JSON.stringify(referenceImages));
+        formData.append('frontalImageUrl', referenceImages[frontalIndex] || referenceImages[0]);
       }
 
       // ICLoRA controls for LTX
@@ -1680,16 +1682,36 @@ export default function JumpStartModal({
                         {referenceImages.length > 0 && (
                           <div className="flex gap-2 flex-wrap">
                             {referenceImages.map((url, i) => (
-                              <div key={i} className="relative w-16 h-16">
-                                <img src={url} alt={`Ref ${i+1}`} className="w-full h-full object-cover rounded-lg border" />
+                              <div key={i} className="relative w-16 h-16 group">
+                                <img
+                                  src={url}
+                                  alt={`Ref ${i+1}`}
+                                  onClick={() => setFrontalIndex(i)}
+                                  title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
+                                  className={`w-full h-full object-cover rounded-lg cursor-pointer transition-all ${
+                                    i === frontalIndex
+                                      ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
+                                      : 'border border-gray-200 hover:border-gray-400'
+                                  }`}
+                                />
+                                {i === frontalIndex && (
+                                  <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
+                                )}
                                 <button
-                                  onClick={() => setReferenceImages(referenceImages.filter((_, j) => j !== i))}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px]"
+                                  onClick={() => {
+                                    setReferenceImages(referenceImages.filter((_, j) => j !== i));
+                                    if (frontalIndex >= referenceImages.length - 1) setFrontalIndex(0);
+                                    else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
+                                  }}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   &times;
                                 </button>
                               </div>
                             ))}
+                            {referenceImages.length > 1 && (
+                              <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
+                            )}
                           </div>
                         )}
 
