@@ -513,9 +513,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
         {/* ── STEP 1: Setup ── */}
         {step === 'setup' && (
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             {/* Left column — form fields */}
-            <div className="flex-1 min-w-0 space-y-4">
+            <div className="w-1/2 min-w-0 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Story Concept</label>
                 <textarea
@@ -767,8 +767,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             </div>
 
             {/* Right column — Style cards with scrolling */}
-            <div className="w-72 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
-              <StyleGrid value={style} onChange={setStyle} />
+            <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+              <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" />
             </div>
           </div>
         )}

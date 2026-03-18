@@ -11,7 +11,7 @@ import { STYLE_CATEGORIES } from '@/lib/stylePresets';
  *   maxHeight – CSS max-height for the scrollable container (default "16rem")
  *   categories – optional override for STYLE_CATEGORIES (defaults to shared preset)
  */
-export default function StyleGrid({ value, onChange, maxHeight = '16rem', categories }) {
+export default function StyleGrid({ value, onChange, maxHeight = '16rem', categories, columns }) {
   const cats = categories || STYLE_CATEGORIES;
 
   return (
@@ -26,7 +26,7 @@ export default function StyleGrid({ value, onChange, maxHeight = '16rem', catego
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 px-0.5">
               {cat.label}
             </p>
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+            <div className={`grid ${columns || 'grid-cols-4 sm:grid-cols-5'} gap-2`}>
               {cat.styles.map(s => (
                 <button
                   key={s.value}
