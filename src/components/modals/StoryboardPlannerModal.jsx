@@ -513,258 +513,263 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
         {/* ── STEP 1: Setup ── */}
         {step === 'setup' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Story Concept</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your story... e.g., 'A young explorer discovers a hidden portal in an ancient forest, steps through, and finds herself in a floating city above the clouds'"
-                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
+          <div className="flex gap-4">
+            {/* Left column — form fields */}
+            <div className="flex-1 min-w-0 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Number of Scenes</label>
-                <select
-                  value={numScenes}
-                  onChange={(e) => setNumScenes(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {[2, 3, 4, 5, 6, 7, 8].map(n => (
-                    <option key={n} value={n}>{n} scenes</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Story Concept</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your story... e.g., 'A young explorer discovers a hidden portal in an ancient forest, steps through, and finds herself in a floating city above the clouds'"
+                  className="w-full h-28 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent"
+                />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Duration per Scene</label>
-                <select
-                  value={defaultDuration}
-                  onChange={(e) => setDefaultDuration(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {[3, 4, 5, 6, 8, 10].map(n => (
-                    <option key={n} value={n}>{n} seconds</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Aspect Ratio</label>
-                <select
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {['16:9', '9:16', '1:1', '4:3'].map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Style visual grid */}
-            <StyleGrid value={style} onChange={setStyle} />
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Video Model</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                {STORYBOARD_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>{m.label} — {m.description}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Character description for @Element */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-gray-700">
-                  Character Description <span className="text-gray-400">(optional — used as @Element in prompts)</span>
-                </label>
-                {characterRefs.length > 0 && (
-                  <button
-                    onClick={() => describeCharacterFromImage(characterRefs[0])}
-                    disabled={analyzingCharacter}
-                    className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Number of Scenes</label>
+                  <select
+                    value={numScenes}
+                    onChange={(e) => setNumScenes(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    {analyzingCharacter
-                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
-                      : <><Sparkles className="w-3 h-3" /> Describe from image</>}
-                  </button>
+                    {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                      <option key={n} value={n}>{n} scenes</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Duration per Scene</label>
+                  <select
+                    value={defaultDuration}
+                    onChange={(e) => setDefaultDuration(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    {[3, 4, 5, 6, 8, 10].map(n => (
+                      <option key={n} value={n}>{n} seconds</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Aspect Ratio</label>
+                  <select
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    {['16:9', '9:16', '1:1', '4:3'].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Video Model</label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  {STORYBOARD_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.label} — {m.description}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Character description for @Element */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-gray-700">
+                    Character Description <span className="text-gray-400">(optional)</span>
+                  </label>
+                  {characterRefs.length > 0 && (
+                    <button
+                      onClick={() => describeCharacterFromImage(characterRefs[0])}
+                      disabled={analyzingCharacter}
+                      className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                    >
+                      {analyzingCharacter
+                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                        : <><Sparkles className="w-3 h-3" /> Describe from image</>}
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={characterDescription}
+                  onChange={(e) => setCharacterDescription(e.target.value)}
+                  placeholder={analyzingCharacter ? 'Analyzing character from image...' : "e.g., 'A young woman with red hair, green eyes, wearing a brown leather jacket'"}
+                  className={`w-full h-16 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent ${analyzingCharacter ? 'bg-gray-50 animate-pulse' : ''}`}
+                />
+              </div>
+
+              {/* Character reference images */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Character Reference Images <span className="text-gray-400">(for R2V models)</span>
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs"
+                  >
+                    <Upload className="w-3 h-3 mr-1" /> Upload
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openLibrary}
+                    className="text-xs"
+                  >
+                    <FolderOpen className="w-3 h-3 mr-1" /> Library
+                  </Button>
+                </div>
+                {characterRefs.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {characterRefs.map((url, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={url}
+                          alt={`ref ${i + 1}`}
+                          onClick={() => setFrontalIndex(i)}
+                          title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
+                          className={`w-16 h-16 rounded-lg object-cover cursor-pointer transition-all ${
+                            i === frontalIndex
+                              ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
+                              : 'border border-gray-200 hover:border-gray-400'
+                          }`}
+                        />
+                        {i === frontalIndex && (
+                          <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
+                        )}
+                        <button
+                          onClick={() => {
+                            setCharacterRefs(prev => prev.filter((_, j) => j !== i));
+                            if (frontalIndex >= characterRefs.length - 1) setFrontalIndex(0);
+                            else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
+                          }}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {characterRefs.length > 1 && (
+                      <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
+                    )}
+                  </div>
                 )}
               </div>
-              <textarea
-                value={characterDescription}
-                onChange={(e) => setCharacterDescription(e.target.value)}
-                placeholder={analyzingCharacter ? 'Analyzing character from image...' : "e.g., 'A young woman with red hair, green eyes, wearing a brown leather jacket and hiking boots'"}
-                className={`w-full h-16 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent ${analyzingCharacter ? 'bg-gray-50 animate-pulse' : ''}`}
-              />
-            </div>
 
-            {/* Character reference images */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Character Reference Images <span className="text-gray-400">(for R2V models)</span>
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-xs"
-                >
-                  <Upload className="w-3 h-3 mr-1" /> Upload
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openLibrary}
-                  className="text-xs"
-                >
-                  <FolderOpen className="w-3 h-3 mr-1" /> Library
-                </Button>
-              </div>
-              {characterRefs.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {characterRefs.map((url, i) => (
-                    <div key={i} className="relative group">
-                      <img
-                        src={url}
-                        alt={`ref ${i + 1}`}
-                        onClick={() => setFrontalIndex(i)}
-                        title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
-                        className={`w-16 h-16 rounded-lg object-cover cursor-pointer transition-all ${
-                          i === frontalIndex
-                            ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
-                            : 'border border-gray-200 hover:border-gray-400'
-                        }`}
-                      />
-                      {i === frontalIndex && (
-                        <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
-                      )}
+              {/* Library browser overlay */}
+              {showLibrary && (
+                <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium">Select from Library</span>
+                    <button onClick={() => setShowLibrary(false)} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {libraryFolders.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      <button
+                        onClick={() => setSelectedFolder(null)}
+                        className={`px-2 py-0.5 rounded text-xs ${selectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
+                      >
+                        All
+                      </button>
+                      {libraryFolders.map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setSelectedFolder(f)}
+                          className={`px-2 py-0.5 rounded text-xs ${selectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!libraryLoading && filteredLibrary.length > 0 && (
+                    <div className="flex items-center justify-between">
                       <button
                         onClick={() => {
-                          setCharacterRefs(prev => prev.filter((_, j) => j !== i));
-                          if (frontalIndex >= characterRefs.length - 1) setFrontalIndex(0);
-                          else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
+                          const allIds = filteredLibrary.map(i => i.id);
+                          const allSelected = allIds.every(id => selectedIds.has(id));
+                          if (allSelected) {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              allIds.forEach(id => next.delete(id));
+                              return next;
+                            });
+                          } else {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              allIds.forEach(id => next.add(id));
+                              return next;
+                            });
+                          }
                         }}
-                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-xs text-[#2C666E] hover:underline font-medium"
                       >
-                        <X className="w-2.5 h-2.5" />
+                        {filteredLibrary.every(i => selectedIds.has(i.id)) ? 'Deselect All' : `Select All (${filteredLibrary.length})`}
                       </button>
+                      {selectedIds.size > 0 && (
+                        <span className="text-xs text-gray-400">{selectedIds.size} selected</span>
+                      )}
                     </div>
-                  ))}
-                  {characterRefs.length > 1 && (
-                    <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
+                  )}
+                  {libraryLoading ? (
+                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+                  ) : (
+                    <div className="grid grid-cols-6 gap-1.5 max-h-40 overflow-y-auto">
+                      {filteredLibrary.map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                            return next;
+                          })}
+                          className={`relative cursor-pointer rounded border-2 overflow-hidden ${
+                            selectedIds.has(item.id) ? 'border-[#2C666E]' : 'border-transparent'
+                          }`}
+                        >
+                          <img src={item.url} alt="" className="w-full aspect-square object-cover" />
+                          {selectedIds.has(item.id) && (
+                            <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedIds.size > 0 && (
+                    <Button size="sm" onClick={importFromLibrary} className="w-full text-xs bg-[#2C666E] text-white">
+                      Import {selectedIds.size} image(s)
+                    </Button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Library browser overlay */}
-            {showLibrary && (
-              <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Select from Library</span>
-                  <button onClick={() => setShowLibrary(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                {libraryFolders.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    <button
-                      onClick={() => setSelectedFolder(null)}
-                      className={`px-2 py-0.5 rounded text-xs ${selectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
-                    >
-                      All
-                    </button>
-                    {libraryFolders.map(f => (
-                      <button
-                        key={f}
-                        onClick={() => setSelectedFolder(f)}
-                        className={`px-2 py-0.5 rounded text-xs ${selectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!libraryLoading && filteredLibrary.length > 0 && (
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => {
-                        const allIds = filteredLibrary.map(i => i.id);
-                        const allSelected = allIds.every(id => selectedIds.has(id));
-                        if (allSelected) {
-                          setSelectedIds(prev => {
-                            const next = new Set(prev);
-                            allIds.forEach(id => next.delete(id));
-                            return next;
-                          });
-                        } else {
-                          setSelectedIds(prev => {
-                            const next = new Set(prev);
-                            allIds.forEach(id => next.add(id));
-                            return next;
-                          });
-                        }
-                      }}
-                      className="text-xs text-[#2C666E] hover:underline font-medium"
-                    >
-                      {filteredLibrary.every(i => selectedIds.has(i.id)) ? 'Deselect All' : `Select All (${filteredLibrary.length})`}
-                    </button>
-                    {selectedIds.size > 0 && (
-                      <span className="text-xs text-gray-400">{selectedIds.size} selected</span>
-                    )}
-                  </div>
-                )}
-                {libraryLoading ? (
-                  <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-                ) : (
-                  <div className="grid grid-cols-6 gap-1.5 max-h-40 overflow-y-auto">
-                    {filteredLibrary.map(item => (
-                      <div
-                        key={item.id}
-                        onClick={() => setSelectedIds(prev => {
-                          const next = new Set(prev);
-                          next.has(item.id) ? next.delete(item.id) : next.add(item.id);
-                          return next;
-                        })}
-                        className={`relative cursor-pointer rounded border-2 overflow-hidden ${
-                          selectedIds.has(item.id) ? 'border-[#2C666E]' : 'border-transparent'
-                        }`}
-                      >
-                        <img src={item.url} alt="" className="w-full aspect-square object-cover" />
-                        {selectedIds.has(item.id) && (
-                          <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
-                            <Check className="w-2.5 h-2.5 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedIds.size > 0 && (
-                  <Button size="sm" onClick={importFromLibrary} className="w-full text-xs bg-[#2C666E] text-white">
-                    Import {selectedIds.size} image(s)
-                  </Button>
-                )}
-              </div>
-            )}
+            {/* Right column — Style cards with scrolling */}
+            <div className="w-72 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+              <StyleGrid value={style} onChange={setStyle} />
+            </div>
           </div>
         )}
 
