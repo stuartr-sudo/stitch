@@ -25,16 +25,9 @@ export default async function handler(req, res) {
     '3:4': 'portrait_4_3',
   };
 
-  // Model routing — supports multiple image-to-image models
-  const modelEndpoints = {
-    'fal-flux': 'fal-ai/flux-2/lora/edit',
-    'nano-banana-2': 'fal-ai/flux-2/lora/edit',  // Nano Banana uses same edit endpoint
-    'seedream': 'fal-ai/flux-2/lora/edit',        // Seedream uses same edit endpoint
-  };
-  const selectedModel = model || 'fal-flux';
-  const endpoint = modelEndpoints[selectedModel] || 'fal-ai/flux-2/lora/edit';
-
-  console.log(`[imagineer/edit] Model: ${selectedModel}, endpoint: ${endpoint}`);
+  // Only FLUX 2 supports image editing — all edit requests use this endpoint
+  const endpoint = 'fal-ai/flux-2/lora/edit';
+  console.log(`[imagineer/edit] Using FLUX 2 edit endpoint (model param: ${model || 'default'})`);
 
   const payload = {
     image_url,
