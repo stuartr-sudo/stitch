@@ -815,14 +815,14 @@ async function handleKlingR2V(req, res, params) {
     // New multi-element format from Storyboard
     requestBody.elements = r2vElements.slice(0, 4).map(el => ({
       frontal_image_url: el.frontalImageUrl || el.referenceImageUrls?.[0],
-      reference_image_urls: (el.referenceImageUrls || []).slice(0, 4),
+      reference_image_urls: (el.referenceImageUrls || []).slice(0, 3),
     }));
   } else {
     // Legacy single-element format (JumpStart, etc.)
     const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
     requestBody.elements = [{
       frontal_image_url: frontalUrl,
-      reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 4) : [imageUrl],
+      reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],
     }];
   }
 

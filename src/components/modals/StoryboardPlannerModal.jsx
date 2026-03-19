@@ -218,7 +218,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     const urls = selected.map(i => i.url);
     const el = elements[activeElementIndex];
     const isFirstRef = el.refs.length === 0;
-    const capped = urls.slice(0, 4 - el.refs.length); // Max 4 refs per element
+    const capped = urls.slice(0, 3 - el.refs.length); // Max 3 refs per element
     updateElement(activeElementIndex, { refs: [...el.refs, ...capped] });
     setShowLibrary(false);
     toast.success(`Added ${capped.length} reference image(s) to @Element${activeElementIndex + 1}`);
@@ -328,7 +328,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
     const el = elements[activeElementIndex];
     const isFirstRef = el.refs.length === 0;
-    const remaining = 4 - el.refs.length; // Max 4 refs per element
+    const remaining = 3 - el.refs.length; // Max 3 refs per element
     const filesToProcess = files.slice(0, remaining);
 
     for (const file of filesToProcess) {
@@ -347,7 +347,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       reader.readAsDataURL(file);
     }
     if (filesToProcess.length < files.length) {
-      toast.info(`Only ${filesToProcess.length} of ${files.length} images added (max 4 per element)`);
+      toast.info(`Only ${filesToProcess.length} of ${files.length} images added (max 3 per element)`);
     }
     e.target.value = '';
   };
@@ -490,7 +490,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     if (isR2V) {
       const r2vElements = elementsWithRefs.map(el => ({
         frontalImageUrl: el.refs[el.frontalIndex] || el.refs[0],
-        referenceImageUrls: el.refs.slice(0, 4),
+        referenceImageUrls: el.refs.slice(0, 3),
       }));
       formData.append('r2vElements', JSON.stringify(r2vElements));
       // Legacy single-element fields for backward compat
@@ -905,7 +905,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   )}
                 </div>
                 <p className="text-[10px] text-gray-400 mb-2">
-                  Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 4 reference images each.
+                  Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 3 reference images each.
                 </p>
 
                 {/* Element tabs */}
@@ -967,7 +967,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                       {/* Reference images */}
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">
-                          Reference Images ({el.refs.length}/4)
+                          Reference Images ({el.refs.length}/3)
                         </label>
                         <div className="flex gap-2 mb-1.5">
                           <input
@@ -982,7 +982,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                             variant="outline"
                             size="sm"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={el.refs.length >= 4}
+                            disabled={el.refs.length >= 3}
                             className="text-xs"
                           >
                             <Upload className="w-3 h-3 mr-1" /> Upload
@@ -991,7 +991,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                             variant="outline"
                             size="sm"
                             onClick={openLibrary}
-                            disabled={el.refs.length >= 4}
+                            disabled={el.refs.length >= 3}
                             className="text-xs"
                           >
                             <FolderOpen className="w-3 h-3 mr-1" /> Library
