@@ -114,6 +114,59 @@ const PROP_CATEGORIES = [
 // Flat list for lookup
 const ALL_PROPS = PROP_CATEGORIES.flatMap(c => c.props);
 
+const NEG_PROMPT_CATEGORIES = [
+  { label: 'Quality Issues', prompts: [
+    { value: 'blurry', label: 'Blurry' },
+    { value: 'low-quality', label: 'Low Quality' },
+    { value: 'pixelated', label: 'Pixelated' },
+    { value: 'noise', label: 'Noise/Grain' },
+    { value: 'jpeg-artifacts', label: 'JPEG Artifacts' },
+    { value: 'watermark', label: 'Watermark' },
+    { value: 'text', label: 'Text/Letters' },
+    { value: 'signature', label: 'Signature' },
+  ]},
+  { label: 'Anatomy & Body', prompts: [
+    { value: 'extra-limbs', label: 'Extra Limbs' },
+    { value: 'deformed-hands', label: 'Deformed Hands' },
+    { value: 'extra-fingers', label: 'Extra Fingers' },
+    { value: 'missing-fingers', label: 'Missing Fingers' },
+    { value: 'bad-anatomy', label: 'Bad Anatomy' },
+    { value: 'disproportionate', label: 'Disproportionate' },
+    { value: 'fused-limbs', label: 'Fused Limbs' },
+    { value: 'duplicate-body-parts', label: 'Duplicate Body Parts' },
+  ]},
+  { label: 'Face & Expression', prompts: [
+    { value: 'angry-emotions', label: 'Angry Emotions' },
+    { value: 'sad-emotions', label: 'Sad Emotions' },
+    { value: 'scared-emotions', label: 'Scared Emotions' },
+    { value: 'crying', label: 'Crying' },
+    { value: 'cross-eyed', label: 'Cross-Eyed' },
+    { value: 'asymmetric-face', label: 'Asymmetric Face' },
+    { value: 'ugly-face', label: 'Ugly/Distorted Face' },
+    { value: 'dead-eyes', label: 'Dead/Lifeless Eyes' },
+  ]},
+  { label: 'Style & Composition', prompts: [
+    { value: 'photorealistic', label: 'Photorealistic' },
+    { value: 'cartoon', label: 'Cartoon' },
+    { value: 'anime', label: 'Anime' },
+    { value: 'nsfw', label: 'NSFW' },
+    { value: 'violence', label: 'Violence/Gore' },
+    { value: 'dark-theme', label: 'Dark/Horror Theme' },
+    { value: 'cluttered-bg', label: 'Cluttered Background' },
+    { value: 'cropped', label: 'Cropped/Cut Off' },
+  ]},
+  { label: 'Consistency', prompts: [
+    { value: 'inconsistent-outfit', label: 'Outfit Changes' },
+    { value: 'color-shifts', label: 'Color Shifts' },
+    { value: 'inconsistent-proportions', label: 'Proportion Changes' },
+    { value: 'style-mixing', label: 'Mixed Art Styles' },
+    { value: 'different-characters', label: 'Different Characters' },
+    { value: 'age-changes', label: 'Age Variations' },
+  ]},
+];
+
+const ALL_NEG_PROMPTS = NEG_PROMPT_CATEGORIES.flatMap(c => c.prompts);
+
 const DEFAULT_CHARACTER_DESC = '';
 
 const GRID_COLS = 4;
@@ -144,6 +197,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [selectedStyles, setSelectedStyles] = useState([]);
   const [selectedModel, setSelectedModel] = useState("nano-banana-2-edit");
   const [selectedProps, setSelectedProps] = useState([]);
+  const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
 
   // AI analysis
@@ -203,6 +257,19 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
 
   const propsLabels = selectedProps.map(p => ALL_PROPS.find(o => o.value === p)?.label || p);
 
+  // Combine neg pills + freetext into one string sent to API
+  const negPillLabels = selectedNegPills.map(v => ALL_NEG_PROMPTS.find(o => o.value === v)?.label || v);
+  const combinedNegativePrompt = [
+    ...negPillLabels,
+    ...(negativePrompt.trim() ? [negativePrompt.trim()] : []),
+  ].join(', ') || undefined;
+
+  const toggleNegPill = (val) => {
+    setSelectedNegPills(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
+  };
+
   const canGenerate = characterDescription.trim() && selectedStyles.length > 0 && !(
     !referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
   );
@@ -216,6 +283,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       setSelectedStyles([]);
       setSelectedModel("nano-banana-2-edit");
       setSelectedProps([]);
+      setSelectedNegPills([]);
       setNegativePrompt("");
       setSheets([]);
       setActiveSheetId(null);
@@ -384,7 +452,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
               style: sheet.styleText.trim(),
               props: propsLabels.length > 0 ? propsLabels : undefined,
               model: selectedModel,
-              negativePrompt: negativePrompt.trim() || undefined,
+              negativePrompt: combinedNegativePrompt,
             }),
           });
 
@@ -846,12 +914,39 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                     )}
                   </div>
 
-                  {/* Negative Prompt */}
+                  {/* Negative Prompt — pills + freetext */}
                   <div>
-                    <Label className="text-xs font-semibold text-slate-600 mb-1 block">Negative Prompt (optional)</Label>
+                    <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Negative Prompt (optional)</Label>
+                    <div className="overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 space-y-2" style={{ maxHeight: '8rem' }}>
+                      {NEG_PROMPT_CATEGORIES.map(cat => (
+                        <div key={cat.label}>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 px-0.5">{cat.label}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {cat.prompts.map(np => (
+                              <button key={np.value} type="button"
+                                onClick={() => toggleNegPill(np.value)}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded-full border transition-all ${
+                                  selectedNegPills.includes(np.value)
+                                    ? 'bg-red-500 text-white border-red-500'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-red-400 hover:text-red-500'
+                                }`}>
+                                {np.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedNegPills.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-red-500 font-medium">{selectedNegPills.length} selected</span>
+                        <button onClick={() => setSelectedNegPills([])}
+                          className="text-[10px] text-slate-400 hover:text-slate-600">Clear all</button>
+                      </div>
+                    )}
                     <Textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)}
-                      placeholder="e.g., blurry, low quality, extra limbs, deformed hands, text, watermark..."
-                      rows={2} className="bg-white text-sm" />
+                      placeholder="Additional things to avoid..."
+                      rows={1} className="bg-white text-sm mt-2" />
                   </div>
 
                   {/* Model */}
