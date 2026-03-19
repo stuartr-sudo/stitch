@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil } from "lucide-react";
+import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import LoRAPicker from "@/components/LoRAPicker";
 import { findStyleByValue } from "@/lib/stylePresets";
+import LibraryModal from "@/components/modals/LibraryModal";
 
 const IMAGE_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
@@ -161,6 +162,7 @@ export default function ImagineerModal({
   const [generateLoras, setGenerateLoras] = useState([]);
 
   // Edit tab state
+  const [showEditLibrary, setShowEditLibrary] = useState(false);
   const [editSourceUrl, setEditSourceUrl] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [editStrength, setEditStrength] = useState(0.75);
@@ -477,13 +479,26 @@ export default function ImagineerModal({
               </p>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image URL</label>
-                <Input
-                  value={editSourceUrl}
-                  onChange={(e) => setEditSourceUrl(e.target.value)}
-                  placeholder="https://... (paste the image URL to edit)"
-                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-                />
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={editSourceUrl}
+                    onChange={(e) => setEditSourceUrl(e.target.value)}
+                    placeholder="https://... (paste URL or pick from library)"
+                    className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEditLibrary(true)}
+                    className="shrink-0"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
+                  </Button>
+                </div>
+                {editSourceUrl && (
+                  <img src={editSourceUrl} alt="Source" className="w-full h-24 object-cover rounded-lg mt-2 border border-slate-200" />
+                )}
               </div>
 
               <div>
@@ -591,14 +606,25 @@ export default function ImagineerModal({
   }
 
   return (
-    <SlideOverPanel
-      open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      title="Imagineer"
-      subtitle="Build your perfect image by selecting options below"
-      icon={<Sparkles className="w-5 h-5" />}
-    >
-      {content}
-    </SlideOverPanel>
+    <>
+      <SlideOverPanel
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        title="Imagineer"
+        subtitle="Build your perfect image by selecting options below"
+        icon={<Sparkles className="w-5 h-5" />}
+      >
+        {content}
+      </SlideOverPanel>
+      <LibraryModal
+        isOpen={showEditLibrary}
+        onClose={() => setShowEditLibrary(false)}
+        onSelect={(item) => {
+          setEditSourceUrl(item.url);
+          setShowEditLibrary(false);
+        }}
+        mediaType="images"
+      />
+    </>
   );
 }
