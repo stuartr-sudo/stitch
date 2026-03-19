@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import LoRAPicker from "@/components/LoRAPicker";
+import { findStyleByValue } from "@/lib/stylePresets";
 
 const IMAGE_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
@@ -226,6 +227,15 @@ export default function ImagineerModal({
     if (mood) {
       const moodLabel = MOOD.find(m => m.value === mood)?.label || mood;
       parts.push(`${moodLabel.toLowerCase()} atmosphere`);
+    }
+
+    if (artisticStyle) {
+      const styleInfo = findStyleByValue(artisticStyle);
+      if (styleInfo?.promptText) {
+        parts.push(styleInfo.promptText);
+      } else {
+        parts.push(`${artisticStyle} style`);
+      }
     }
 
     return parts.join(", ");
