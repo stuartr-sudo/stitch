@@ -1,68 +1,79 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
+import { SlideOverPanel, SlideOverBody } from '@/components/ui/slide-over-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import StyleGrid from '@/components/ui/StyleGrid';
 import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
+import { findStyleByValue } from '@/lib/stylePresets';
+import PropsPillSelector from '@/components/ui/PropsPillSelector';
+import NegPromptPillSelector from '@/components/ui/NegPromptPillSelector';
+import BrandStyleGuideSelector, { extractBrandStyleData } from '@/components/ui/BrandStyleGuideSelector';
+import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
 import {
-  Edit3,
-  Upload,
-  Link2,
-  Loader2,
-  Plus,
-  X,
-  Sparkles,
-  Image as ImageIcon,
-  CheckCircle2,
-  Download,
-  ExternalLink,
-  FolderOpen
+  Edit3, Upload, Link2, Loader2, Plus, X, Sparkles,
+  CheckCircle2, Download, ExternalLink, FolderOpen,
+  ChevronLeft, ChevronRight, Cpu,
 } from 'lucide-react';
 
 const MODELS = [
-  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', endpoint: 'nano-banana-pro/edit-ultra', provider: 'wavespeed' },
-  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', endpoint: 'qwen-image/edit-2511', provider: 'wavespeed' },
-  { id: 'fal-flux', label: 'Flux 2 Pro', endpoint: 'fal-flux-2-pro', provider: 'fal' },
+  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', description: 'Multi-image blending, high resolution', multiImage: true },
+  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', description: 'Multi-image blending, great detail', multiImage: true },
+  { id: 'fal-flux', label: 'Flux 2 Pro', description: 'Premium single-image editing', multiImage: false },
 ];
 
 const OUTPUT_SIZES = [
-  // Square
-  { id: '1024x1024', label: '1024x1024', ratio: '1:1 Square' },
-  { id: '2048x2048', label: '2048x2048', ratio: '1:1 Square HD' },
-  // Landscape 16:9
   { id: '1920x1080', label: '1920x1080', ratio: '16:9 Landscape' },
   { id: '2560x1440', label: '2560x1440', ratio: '16:9 2K' },
   { id: '3840x2160', label: '3840x2160', ratio: '16:9 4K' },
-  // Portrait 9:16
+  { id: '1024x1024', label: '1024x1024', ratio: '1:1 Square' },
+  { id: '2048x2048', label: '2048x2048', ratio: '1:1 Square HD' },
   { id: '1080x1920', label: '1080x1920', ratio: '9:16 Portrait' },
   { id: '1440x2560', label: '1440x2560', ratio: '9:16 2K' },
-  // Standard 4:3
   { id: '1600x1200', label: '1600x1200', ratio: '4:3 Standard' },
   { id: '2048x1536', label: '2048x1536', ratio: '4:3 HD' },
-  // Portrait 3:4
   { id: '1200x1600', label: '1200x1600', ratio: '3:4 Portrait' },
-  // Wide 21:9
   { id: '2560x1080', label: '2560x1080', ratio: '21:9 Ultrawide' },
-  // Social Media
   { id: '1200x628', label: '1200x628', ratio: 'Facebook Ad' },
   { id: '1080x1350', label: '1080x1350', ratio: '4:5 Instagram' },
 ];
 
-/**
- * EditImageModal - AI Image Editing with multiple models
- */
+const STEPS = ['Images', 'Instructions & Style', 'Enhance', 'Model & Output'];
+
+function StepIndicator({ steps, current }) {
+  return (
+    <div className="flex items-center gap-1 px-5 py-2.5 border-b bg-slate-50/80">
+      {steps.map((label, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <div className={`flex-1 h-px ${i <= current ? 'bg-[#2C666E]' : 'bg-slate-200'}`} />}
+          <div className="flex items-center gap-1.5">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+              i < current ? 'bg-[#2C666E] text-white'
+              : i === current ? 'bg-[#2C666E] text-white ring-2 ring-[#90DDF0]'
+              : 'bg-slate-200 text-slate-500'
+            }`}>
+              {i < current ? '\u2713' : i + 1}
+            </div>
+            <span className={`text-[11px] font-medium hidden sm:inline ${i === current ? 'text-[#07393C]' : 'text-slate-400'}`}>
+              {label}
+            </span>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 export default function EditImageModal({
-  isOpen,
-  onClose,
-  onImageEdited,
-  initialImage = null,
-  isEmbedded = false
+  isOpen, onClose, onImageEdited, initialImage = null, isEmbedded = false
 }) {
+  const [step, setStep] = useState(0);
   const [images, setImages] = useState([]);
   const [prompt, setPrompt] = useState('');
+  const [style, setStyle] = useState('');
   const [model, setModel] = useState('wavespeed-nano-ultra');
   const [outputSize, setOutputSize] = useState('1920x1080');
   const [isLoading, setIsLoading] = useState(false);
@@ -72,43 +83,35 @@ export default function EditImageModal({
   const [showLibrary, setShowLibrary] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Reset modal state when opened
+  // Enhancements
+  const [selectedProps, setSelectedProps] = useState([]);
+  const [selectedNegPills, setSelectedNegPills] = useState([]);
+  const [negFreetext, setNegFreetext] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState(null);
+
   useEffect(() => {
     if (isOpen) {
+      setStep(0);
       setImages(initialImage ? [initialImage] : []);
-      setPrompt('');
-      setModel('wavespeed-nano-ultra');
-      setOutputSize('1920x1080');
-      setIsLoading(false);
-      setResultImage(null);
-      setShowUrlInput(false);
-      setUrlInput('');
+      setPrompt(''); setStyle('');
+      setModel('wavespeed-nano-ultra'); setOutputSize('1920x1080');
+      setIsLoading(false); setResultImage(null);
+      setShowUrlInput(false); setUrlInput('');
+      setSelectedProps([]); setSelectedNegPills([]);
+      setNegFreetext(''); setSelectedBrand(null);
     }
   }, [isOpen, initialImage]);
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
-    if (url) {
-      setImages(prev => [...prev, {
-        id: Date.now(),
-        url: url,
-        name: item.title || 'Library Image',
-        isBase: prev.length === 0
-      }]);
-    }
+    if (url) setImages(prev => [...prev, { id: Date.now(), url, name: item.title || 'Library Image', isBase: prev.length === 0 }]);
   };
 
   const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
+    Array.from(e.target.files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setImages(prev => [...prev, {
-          id: Date.now() + Math.random(),
-          url: event.target.result,
-          name: file.name,
-          isBase: prev.length === 0
-        }]);
+        setImages(prev => [...prev, { id: Date.now() + Math.random(), url: event.target.result, name: file.name, isBase: prev.length === 0 }]);
       };
       reader.readAsDataURL(file);
     });
@@ -118,331 +121,121 @@ export default function EditImageModal({
     if (!urlInput.trim()) return;
     try {
       new URL(urlInput);
-      setImages(prev => [...prev, {
-        id: Date.now(),
-        url: urlInput.trim(),
-        name: 'URL Image',
-        isBase: prev.length === 0
-      }]);
-      setUrlInput('');
-      setShowUrlInput(false);
-    } catch {
-      toast.error('Please enter a valid URL');
-    }
+      setImages(prev => [...prev, { id: Date.now(), url: urlInput.trim(), name: 'URL Image', isBase: prev.length === 0 }]);
+      setUrlInput(''); setShowUrlInput(false);
+    } catch { toast.error('Please enter a valid URL'); }
   };
 
   const handleRemoveImage = (id) => {
     setImages(prev => {
       const filtered = prev.filter(img => img.id !== id);
-      if (filtered.length > 0 && !filtered.some(img => img.isBase)) {
-        filtered[0].isBase = true;
-      }
+      if (filtered.length > 0 && !filtered.some(img => img.isBase)) filtered[0].isBase = true;
       return filtered;
     });
   };
 
-  const handleSetAsBase = (id) => {
-    setImages(prev => prev.map(img => ({ ...img, isBase: img.id === id })));
-  };
+  const handleSetAsBase = (id) => { setImages(prev => prev.map(img => ({ ...img, isBase: img.id === id }))); };
 
   const saveToLibrary = (url) => {
     apiFetch('/api/library/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.saved) toast.success('Saved to library!');
-      })
-      .catch(err => console.warn('[EditImage] Failed to save to library:', err));
+    }).then(r => r.json()).then(data => { if (data.saved) toast.success('Saved to library!'); })
+      .catch(() => {});
+  };
+
+  const buildCohesivePrompt = async () => {
+    const styleInfo = findStyleByValue(style);
+    const styleText = styleInfo?.promptText || style || '';
+    const body = {
+      tool: 'edit',
+      description: prompt.trim(),
+      style: styleText,
+      props: getPropsLabels(selectedProps),
+      negativePrompt: getCombinedNegativePrompt(selectedNegPills, negFreetext),
+      brandStyleGuide: extractBrandStyleData(selectedBrand),
+    };
+    const res = await apiFetch('/api/prompt/build-cohesive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to build prompt');
+    return data.prompt;
   };
 
   const handleEdit = async () => {
-    if (images.length === 0) {
-      toast.error('Please add at least one image');
-      return;
-    }
-    if (!prompt.trim()) {
-      toast.error('Please enter edit instructions');
-      return;
-    }
+    if (images.length === 0) { toast.error('Add at least one image'); return; }
+    if (!prompt.trim()) { toast.error('Add edit instructions'); return; }
 
     setIsLoading(true);
     try {
-      const response = await apiFetch('/api/images/edit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: images.map(img => img.url),
-          prompt: prompt.trim(),
-          model,
-          outputSize,
-        }),
-      });
+      toast.info('Building cohesive prompt...');
+      const cohesivePrompt = await buildCohesivePrompt();
 
+      const response = await apiFetch('/api/images/edit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Edit failed');
 
       if (data.imageUrl) {
-        setResultImage(data.imageUrl);
-        toast.success('Image edited successfully!');
-        saveToLibrary(data.imageUrl);
+        setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
       } else if (data.requestId) {
-        toast.info('Processing... This may take a moment.');
-        pollForResult(data.requestId);
+        toast.info('Processing...'); pollForResult(data.requestId);
       }
-    } catch (error) {
-      console.error('Edit error:', error);
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error) { toast.error(error.message); }
+    finally { setIsLoading(false); }
   };
 
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
         const response = await apiFetch('/api/jumpstart/result', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestId }),
         });
         const data = await response.json();
-
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
-          const resultUrl = data.imageUrl || data.videoUrl;
-          setResultImage(resultUrl);
-          toast.success('Image edited successfully!');
-          saveToLibrary(resultUrl);
+          const url = data.imageUrl || data.videoUrl;
+          setResultImage(url); toast.success('Image edited!'); saveToLibrary(url);
         } else if (data.status === 'failed') {
           toast.error('Edit failed: ' + (data.error || 'Unknown error'));
-        } else {
-          setTimeout(poll, 3000);
-        }
-      } catch (error) {
-        console.error('Poll error:', error);
-      }
+        } else { setTimeout(poll, 3000); }
+      } catch (error) { console.error('Poll error:', error); }
     };
     poll();
   };
 
-  const handleUseResult = () => {
-    if (onImageEdited && resultImage) {
-      onImageEdited(resultImage);
-    }
-    onClose();
-  };
+  const handleUseResult = () => { if (onImageEdited && resultImage) onImageEdited(resultImage); onClose(); };
 
-  const handleReset = () => {
-    setResultImage(null);
-  };
+  const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
 
   const content = (
     <div className="flex flex-col h-full">
-      <SlideOverBody>
-        {!resultImage ? (
-          <div className="max-w-3xl mx-auto space-y-6 p-6">
-            {/* Image Upload */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">
-                Images (first = base, others = references)
-              </Label>
+      <StepIndicator steps={STEPS} current={step} />
 
-              <div className="grid grid-cols-4 gap-3 mb-3">
-                {images.map((img) => (
-                  <div
-                    key={img.id}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
-                      img.isBase ? 'border-[#2C666E] ring-2 ring-[#90DDF0]/50' : 'border-slate-200'
-                    }`}
-                  >
-                    <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                      {!img.isBase && (
-                        <button
-                          onClick={() => handleSetAsBase(img.id)}
-                          className="p-1 bg-white rounded text-xs"
-                        >
-                          Set Base
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleRemoveImage(img.id)}
-                        className="p-1 bg-red-500 text-white rounded"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                    {img.isBase && (
-                      <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-[#2C666E] text-white text-[10px] rounded">
-                        BASE
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {images.length < 10 && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-[#2C666E] transition-colors flex flex-col items-center justify-center text-slate-400 hover:text-[#2C666E]"
-                  >
-                    <Plus className="w-6 h-6 mb-1" />
-                    <span className="text-xs">Add</span>
-                  </button>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="w-4 h-4 mr-2" /> Upload
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)}>
-                  <Link2 className="w-4 h-4 mr-2" /> From URL
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)}>
-                  <FolderOpen className="w-4 h-4 mr-2" /> Library
-                </Button>
-              </div>
-
-              {showUrlInput && (
-                <div className="mt-3 flex gap-2">
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleAddUrl}>Add</Button>
-                </div>
-              )}
-            </div>
-
-            {/* Edit Prompt */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Edit Instructions</Label>
-              <Textarea
-                placeholder="Describe what changes you want to make..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-
-            {/* Model Selection */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Model</Label>
-                <div className="space-y-2">
-                  {MODELS.map((m) => (
-                    <label
-                      key={m.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        model === m.id ? 'border-[#2C666E] bg-[#90DDF0]/10' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="model"
-                        value={m.id}
-                        checked={model === m.id}
-                        onChange={(e) => setModel(e.target.value)}
-                        className="accent-[#2C666E]"
-                      />
-                      <span className="text-sm">{m.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Output Size & Aspect Ratio</Label>
-                <select
-                  value={outputSize}
-                  onChange={(e) => setOutputSize(e.target.value)}
-                  className="w-full p-3 border rounded-lg text-sm bg-white"
-                >
-                  <optgroup label="Square (1:1)">
-                    {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map((s) => (
-                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Landscape (16:9)">
-                    {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map((s) => (
-                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Portrait (9:16)">
-                    {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map((s) => (
-                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Standard (4:3 / 3:4)">
-                    {OUTPUT_SIZES.filter(s => s.ratio.includes('4:3') || s.ratio.includes('3:4')).map((s) => (
-                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Social Media">
-                    {OUTPUT_SIZES.filter(s => s.ratio.includes('Facebook') || s.ratio.includes('Instagram') || s.ratio.includes('Ultrawide')).map((s) => (
-                      <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            {/* Generate Button */}
-            <Button
-              onClick={handleEdit}
-              disabled={isLoading || images.length === 0 || !prompt.trim()}
-              className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white h-12"
-            >
-              {isLoading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-              ) : (
-                <><Sparkles className="w-4 h-4 mr-2" /> Edit Image</>
-              )}
-            </Button>
-          </div>
-        ) : (
-          /* Result View */
-          <div className="max-w-3xl mx-auto p-6">
-            <div className="text-center mb-6">
+      <div className="flex-1 overflow-y-auto">
+        {/* Result view */}
+        {resultImage && (
+          <div className="max-w-3xl mx-auto p-6 space-y-4">
+            <div className="text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                 <CheckCircle2 className="w-4 h-4" /> Edit Complete!
               </div>
             </div>
-
-            <div className="aspect-video bg-slate-100 rounded-xl overflow-hidden mb-6">
-              <img src={resultImage} alt="Edited" className="w-full h-full object-contain" />
+            <div className="bg-slate-100 rounded-xl overflow-hidden">
+              <img src={resultImage} alt="Edited" className="w-full object-contain max-h-[500px]" />
             </div>
-
             <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" onClick={handleReset}>
-                Edit Again
-              </Button>
-              <a
-                href={resultImage}
-                download="edited-image.png"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-              >
-                <Download className="w-4 h-4" /> Download to Device
+              <Button variant="outline" onClick={() => setResultImage(null)}>Edit Again</Button>
+              <a href={resultImage} download="edited-image.png"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
+                <Download className="w-4 h-4" /> Download
               </a>
-              <a
-                href={resultImage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-              >
+              <a href={resultImage} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
                 <ExternalLink className="w-4 h-4" /> Open
               </a>
               <Button onClick={handleUseResult} className="bg-[#2C666E] hover:bg-[#07393C]">
@@ -451,32 +244,214 @@ export default function EditImageModal({
             </div>
           </div>
         )}
-      </SlideOverBody>
+
+        {/* Step 0: Images */}
+        {step === 0 && !resultImage && (
+          <div className="max-w-2xl p-6 space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-1 block">
+                Images <span className="text-slate-400 font-normal">(first = base, others = references)</span>
+              </Label>
+              <p className="text-xs text-slate-400 mb-3">
+                Add your base image and optional references. Multi-image models blend them together — great for placing characters into scenes.
+              </p>
+
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                {images.map(img => (
+                  <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                    img.isBase ? 'border-[#2C666E] ring-2 ring-[#90DDF0]/50' : 'border-slate-200'
+                  }`}>
+                    <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      {!img.isBase && <button onClick={() => handleSetAsBase(img.id)} className="p-1 bg-white rounded text-xs">Set Base</button>}
+                      <button onClick={() => handleRemoveImage(img.id)} className="p-1 bg-red-500 text-white rounded"><X className="w-3 h-3" /></button>
+                    </div>
+                    {img.isBase && <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-[#2C666E] text-white text-[10px] rounded font-bold">BASE</div>}
+                  </div>
+                ))}
+                {images.length < 10 && (
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-[#2C666E] transition-colors flex flex-col items-center justify-center text-slate-400 hover:text-[#2C666E]">
+                    <Plus className="w-6 h-6 mb-1" /><span className="text-xs">Add</span>
+                  </button>
+                )}
+              </div>
+
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Upload</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowUrlInput(!showUrlInput)}><Link2 className="w-4 h-4 mr-2" /> From URL</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)}><FolderOpen className="w-4 h-4 mr-2" /> Library</Button>
+              </div>
+
+              {showUrlInput && (
+                <div className="mt-3 flex gap-2">
+                  <Input placeholder="https://example.com/image.jpg" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} className="flex-1" />
+                  <Button onClick={handleAddUrl}>Add</Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Instructions & Style */}
+        {step === 1 && !resultImage && (
+          <div className="p-6">
+            <div className="flex gap-6">
+              <div className="w-1/2 min-w-0 space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Edit Instructions</Label>
+                  <Textarea placeholder="Describe what you want to create or change...&#10;&#10;e.g., 'Place the character in a sunset beach scene'&#10;e.g., 'Blend these images into a cinematic composition'"
+                    value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-[140px]" />
+                </div>
+                {images.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-slate-500 mb-2">Your Images ({images.length})</p>
+                    <div className="flex gap-2 overflow-x-auto">
+                      {images.map(img => (
+                        <div key={img.id} className="relative flex-shrink-0">
+                          <img src={img.url} alt="" className="w-12 h-12 object-cover rounded border border-slate-200" />
+                          {img.isBase && <div className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[8px] font-bold">B</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+                <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
+                <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Enhance */}
+        {step === 2 && !resultImage && (
+          <div className="p-6 space-y-5 max-w-2xl">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
+            <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
+            <NegPromptPillSelector selectedPills={selectedNegPills} onPillsChange={setSelectedNegPills}
+              freetext={negFreetext} onFreetextChange={setNegFreetext} />
+            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
+          </div>
+        )}
+
+        {/* Step 3: Model & Output */}
+        {step === 3 && !resultImage && (
+          <div className="p-6 space-y-5 max-w-2xl">
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" /> Model
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {MODELS.map(m => (
+                  <button key={m.id} type="button" onClick={() => setModel(m.id)}
+                    className={`text-left rounded-lg border-2 p-3 transition-all ${
+                      model === m.id ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-sm text-slate-900">{m.label}</div>
+                      {m.multiImage && <span className="px-1.5 py-0.5 bg-[#90DDF0]/30 text-[#07393C] text-[10px] font-bold rounded">MULTI-IMAGE</span>}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
+                    {!m.multiImage && images.length > 1 && (
+                      <div className="text-[10px] text-amber-600 mt-1">Only uses first image — {images.length - 1} reference(s) ignored</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium text-slate-600 mb-1 block">Output Size & Aspect Ratio</Label>
+              <select value={outputSize} onChange={(e) => setOutputSize(e.target.value)}
+                className="w-full p-2.5 border rounded-lg text-sm bg-white">
+                <optgroup label="Landscape (16:9)">
+                  {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                </optgroup>
+                <optgroup label="Square (1:1)">
+                  {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                </optgroup>
+                <optgroup label="Portrait (9:16)">
+                  {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                </optgroup>
+                <optgroup label="Other">
+                  {OUTPUT_SIZES.filter(s => !['16:9', '1:1', '9:16'].some(r => s.ratio.includes(r))).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div><span className="text-slate-400">Images:</span> <span className="font-medium">{images.length}</span></div>
+                <div><span className="text-slate-400">Model:</span> <span className="font-medium">{modelDef.label}</span></div>
+                {style && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{style}</span></div>}
+                {selectedBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{selectedBrand.brand_name}</span></div>}
+              </div>
+              {images.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pt-1">
+                  {images.map(img => (
+                    <div key={img.id} className="relative flex-shrink-0">
+                      <img src={img.url} alt="" className="w-10 h-10 object-cover rounded border border-slate-200" />
+                      {img.isBase && <div className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[7px] font-bold">B</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      {!resultImage && (
+        <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+          <div className="text-xs text-slate-500">
+            {step === 0 && images.length === 0 && <span>Add at least one image</span>}
+            {step === 0 && images.length > 0 && <span className="text-green-600 font-medium">{images.length} image{images.length !== 1 ? 's' : ''} ready</span>}
+            {step === 1 && !prompt.trim() && <span>Add edit instructions</span>}
+            {step === 1 && prompt.trim() && <span className="text-green-600 font-medium">Instructions set</span>}
+            {step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
+            {step === 3 && <span className="text-green-600 font-medium">Ready to edit</span>}
+          </div>
+          <div className="flex gap-2">
+            {step > 0 && <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={isLoading}><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>}
+            {step === 0 && !isEmbedded && <Button variant="outline" onClick={onClose}>Cancel</Button>}
+            {step < 3 && (
+              <Button onClick={() => setStep(s => s + 1)}
+                disabled={(step === 0 && images.length === 0) || (step === 1 && !prompt.trim())}
+                className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
+            {step === 3 && (
+              <Button onClick={handleEdit} disabled={isLoading || images.length === 0 || !prompt.trim()}
+                className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
+                  : <><Sparkles className="w-4 h-4 mr-2" /> Edit Image</>}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  if (isEmbedded) {
-    return <div className="h-full bg-white">{content}</div>;
-  }
+  if (isEmbedded) return <div className="h-full bg-white">{content}</div>;
 
   return (
     <>
-      <SlideOverPanel
-        open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
-        title="Edit Image"
-        subtitle="AI-powered image editing"
-        icon={<Edit3 className="w-5 h-5" />}
-      >
+      <SlideOverPanel open={isOpen} onOpenChange={(open) => !open && onClose()}
+        title="Edit Image" subtitle="AI-powered image editing"
+        icon={<Edit3 className="w-5 h-5" />}>
         {content}
       </SlideOverPanel>
-
-      <LibraryModal
-        isOpen={showLibrary}
-        onClose={() => setShowLibrary(false)}
-        onSelect={handleLibrarySelect}
-        mediaType="images"
-      />
+      <LibraryModal isOpen={showLibrary} onClose={() => setShowLibrary(false)}
+        onSelect={handleLibrarySelect} mediaType="images" />
     </>
   );
 }

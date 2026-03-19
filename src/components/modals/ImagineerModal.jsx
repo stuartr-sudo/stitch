@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { SlideOverPanel, SlideOverBody, SlideOverFooter } from "@/components/ui/slide-over-panel";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SlideOverPanel, SlideOverBody } from "@/components/ui/slide-over-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen, Upload, X, ImageIcon } from "lucide-react";
+import {
+  Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil,
+  FolderOpen, Upload, X, Plus, Link2, ChevronLeft, ChevronRight,
+  Layers, CheckCircle2, ImageIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -19,13 +22,23 @@ import NegPromptPillSelector from "@/components/ui/NegPromptPillSelector";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import { getPropsLabels, getCombinedNegativePrompt } from "@/lib/creativePresets";
 
-const IMAGE_MODELS = [
+// ─── Text-to-Image Models ────────────────────────────────────────────────────
+const T2I_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
   { value: "seedream", label: "Seedream v4 (ByteDance)", description: "Excellent prompt adherence & detail" },
   { value: "fal-flux", label: "Flux 2 Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
 ];
 
-// Dropdown options
+// ─── Image-to-Image Models ───────────────────────────────────────────────────
+const I2I_MODELS = [
+  { value: "wavespeed-nano-ultra", label: "Nano Banana Pro Ultra (4K/8K)", description: "Multi-image blending, high resolution", multiImage: true },
+  { value: "wavespeed-qwen", label: "Qwen Image Edit", description: "Multi-image blending, great detail", multiImage: true },
+  { value: "fal-flux", label: "Flux 2 Dev (LoRA)", description: "Brand Kits & custom products", multiImage: false, supportsLora: true },
+  { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, reliable editing", multiImage: false },
+  { value: "seedream", label: "Seedream v4.5", description: "High detail editing", multiImage: false },
+];
+
+// ─── Dropdown Options ────────────────────────────────────────────────────────
 const SUBJECT_TYPE = [
   { value: "", label: "Select subject..." },
   { value: "person", label: "Person" },
@@ -109,7 +122,22 @@ const COLOR_PALETTE = [
   { value: "cinematic-orange-teal", label: "Cinematic (Orange & Teal)" },
 ];
 
-// SelectField component
+const OUTPUT_SIZES = [
+  { id: "1920x1080", label: "1920x1080", ratio: "16:9 Landscape" },
+  { id: "2560x1440", label: "2560x1440", ratio: "16:9 2K" },
+  { id: "3840x2160", label: "3840x2160", ratio: "16:9 4K" },
+  { id: "1024x1024", label: "1024x1024", ratio: "1:1 Square" },
+  { id: "2048x2048", label: "2048x2048", ratio: "1:1 Square HD" },
+  { id: "1080x1920", label: "1080x1920", ratio: "9:16 Portrait" },
+  { id: "1440x2560", label: "1440x2560", ratio: "9:16 2K" },
+  { id: "1600x1200", label: "1600x1200", ratio: "4:3 Standard" },
+  { id: "1200x1600", label: "1200x1600", ratio: "3:4 Portrait" },
+  { id: "1080x1350", label: "1080x1350", ratio: "4:5 Instagram" },
+  { id: "2560x1080", label: "2560x1080", ratio: "21:9 Ultrawide" },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 const SelectField = ({ label, value, onChange, options, required }) => (
   <div>
     <label className="text-xs font-medium text-slate-600 mb-1 block">
@@ -121,18 +149,37 @@ const SelectField = ({ label, value, onChange, options, required }) => (
       </SelectTrigger>
       <SelectContent className="bg-white border-slate-200 text-slate-900 max-h-[250px]">
         {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value || "_empty_"} className="text-sm">
-            {opt.label}
-          </SelectItem>
+          <SelectItem key={opt.value} value={opt.value || "_empty_"} className="text-sm">{opt.label}</SelectItem>
         ))}
       </SelectContent>
     </Select>
   </div>
 );
 
-/**
- * Reusable action buttons shown below any generated/edited image result
- */
+function StepIndicator({ steps, current }) {
+  return (
+    <div className="flex items-center gap-1 px-5 py-2.5 border-b bg-slate-50/80">
+      {steps.map((label, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <div className={`flex-1 h-px ${i <= current ? 'bg-[#2C666E]' : 'bg-slate-200'}`} />}
+          <div className="flex items-center gap-1.5">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+              i < current ? 'bg-[#2C666E] text-white'
+              : i === current ? 'bg-[#2C666E] text-white ring-2 ring-[#90DDF0]'
+              : 'bg-slate-200 text-slate-500'
+            }`}>
+              {i < current ? '\u2713' : i + 1}
+            </div>
+            <span className={`text-[11px] font-medium hidden sm:inline ${i === current ? 'text-[#07393C]' : 'text-slate-400'}`}>
+              {label}
+            </span>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -141,42 +188,24 @@ function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
           <Pencil className="w-3 h-3 mr-1" /> Edit Again
         </Button>
       )}
-      <Button
-        variant="outline" size="sm" className="text-xs"
+      <Button variant="outline" size="sm" className="text-xs"
         onClick={() => {
           apiFetch('/api/library/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: imageUrl, type: 'image', title: '[Imagineer] Image', source: 'imagineer' }),
           }).then(() => toast.success('Saved to library')).catch(() => toast.error('Save failed'));
         }}
       >
         <FolderOpen className="w-3 h-3 mr-1" /> Save to Library
       </Button>
-      <Button
-        variant="outline" size="sm" className="text-xs"
-        onClick={() => {
-          onClose();
-          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'inpaint', imageUrl } }));
-        }}
-      >
-        Inpaint
-      </Button>
-      <Button
-        variant="outline" size="sm" className="text-xs"
-        onClick={() => {
-          onClose();
-          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl } }));
-        }}
-      >
-        Turnaround
-      </Button>
-      <Button
-        variant="outline" size="sm" className="text-xs"
-        onClick={() => {
-          if (onGenerate) onGenerate({ editedImageUrl: imageUrl });
-          onClose();
-        }}
+      <Button variant="outline" size="sm" className="text-xs"
+        onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'inpaint', imageUrl } })); }}
+      >Inpaint</Button>
+      <Button variant="outline" size="sm" className="text-xs"
+        onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl } })); }}
+      >Turnaround</Button>
+      <Button variant="outline" size="sm" className="text-xs"
+        onClick={() => { if (onGenerate) onGenerate({ editedImageUrl: imageUrl }); onClose(); }}
       >
         <Sparkles className="w-3 h-3 mr-1" /> Use in Storyboard
       </Button>
@@ -184,130 +213,115 @@ function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
   );
 }
 
-/**
- * ImagineerModal - AI Image Generation with form-based prompt builder
- * Now with: Props, Negative Prompts, Brand Style Guide, Reference Image Analysis,
- * and LLM cohesive prompt generation before image generation.
- */
-export default function ImagineerModal({
-  isOpen,
-  onClose,
-  onGenerate,
-  isEmbedded = false
-}) {
-  // Model selection
-  const [selectedModel, setSelectedModel] = useState("nano-banana-2");
+// ═══════════════════════════════════════════════════════════════════════════════
+// Main Component
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  // Core subject
+const T2I_STEPS = ["Subject", "Style", "Enhance", "Output"];
+const I2I_STEPS = ["Images", "Instructions & Style", "Enhance", "Model & Output"];
+
+export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded = false }) {
+  const { user } = useAuth();
+
+  // ─── Mode & Navigation ──────────────────────────────────────────────
+  const [mode, setMode] = useState("t2i");
+  const [step, setStep] = useState(0);
+
+  // ─── T2I State ──────────────────────────────────────────────────────
+  const [selectedModel, setSelectedModel] = useState("nano-banana-2");
   const [subjectDescription, setSubjectDescription] = useState("");
   const [subjectType, setSubjectType] = useState("");
-
-  // Visual style
   const [artisticStyle, setArtisticStyle] = useState("");
   const [colorPalette, setColorPalette] = useState("");
-
-  // Technical
   const [lighting, setLighting] = useState("");
   const [cameraAngle, setCameraAngle] = useState("");
   const [dimensions, setDimensions] = useState("16:9");
-
-  // Context
   const [mood, setMood] = useState("");
   const [elementsToInclude, setElementsToInclude] = useState("");
-
-  // Props, Neg Prompts, Brand Style — Generate tab
   const [selectedProps, setSelectedProps] = useState([]);
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
   const [selectedBrand, setSelectedBrand] = useState(null);
-
-  // Reference image — Generate tab
   const [refImageUrl, setRefImageUrl] = useState("");
   const [refPreview, setRefPreview] = useState("");
   const [refDescription, setRefDescription] = useState("");
   const [analyzingRef, setAnalyzingRef] = useState(false);
-  const [showRefLibrary, setShowRefLibrary] = useState(false);
-  const refFileInputRef = useRef(null);
-
-  // UI state
+  const [generateLoras, setGenerateLoras] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState("subject");
+  const refFileInputRef = useRef(null);
 
-  const [generateLoras, setGenerateLoras] = useState([]);
+  // ─── I2I State ──────────────────────────────────────────────────────
+  const [i2iImages, setI2iImages] = useState([]);
+  const [i2iPrompt, setI2iPrompt] = useState("");
+  const [i2iStyle, setI2iStyle] = useState("");
+  const [i2iModel, setI2iModel] = useState("wavespeed-nano-ultra");
+  const [i2iStrength, setI2iStrength] = useState(0.75);
+  const [i2iDimensions, setI2iDimensions] = useState("1:1");
+  const [i2iOutputSize, setI2iOutputSize] = useState("1920x1080");
+  const [i2iLoras, setI2iLoras] = useState([]);
+  const [i2iProps, setI2iProps] = useState([]);
+  const [i2iNegPills, setI2iNegPills] = useState([]);
+  const [i2iNegFreetext, setI2iNegFreetext] = useState("");
+  const [i2iBrand, setI2iBrand] = useState(null);
+  const [i2iEditing, setI2iEditing] = useState(false);
+  const [i2iResultUrl, setI2iResultUrl] = useState("");
+  const [i2iShowUrlInput, setI2iShowUrlInput] = useState(false);
+  const [i2iUrlInput, setI2iUrlInput] = useState("");
+  const i2iFileInputRef = useRef(null);
 
-  // Edit tab state
-  const [showEditLibrary, setShowEditLibrary] = useState(false);
-  const [editModel, setEditModel] = useState("fal-flux");
-  const [editStyle, setEditStyle] = useState("");
-  const [editResultUrl, setEditResultUrl] = useState("");
-  const [editSourceUrl, setEditSourceUrl] = useState("");
-  const editFileInputRef = useRef(null);
-  const [editPrompt, setEditPrompt] = useState("");
-  const [editStrength, setEditStrength] = useState(0.75);
-  const [editLoras, setEditLoras] = useState([]);
-  const [editDimensions, setEditDimensions] = useState("1:1");
-  const [isEditing, setIsEditing] = useState(false);
+  // ─── Library modals ─────────────────────────────────────────────────
+  const [showRefLibrary, setShowRefLibrary] = useState(false);
+  const [showI2iLibrary, setShowI2iLibrary] = useState(false);
 
-  // Props, Neg Prompts, Brand Style — Edit tab
-  const [editSelectedProps, setEditSelectedProps] = useState([]);
-  const [editSelectedNegPills, setEditSelectedNegPills] = useState([]);
-  const [editNegativePrompt, setEditNegativePrompt] = useState("");
-  const [editSelectedBrand, setEditSelectedBrand] = useState(null);
+  const i2iModelDef = I2I_MODELS.find(m => m.value === i2iModel) || I2I_MODELS[0];
+  const isWavespeed = i2iModelDef.multiImage;
 
-  const { user } = useAuth();
+  const steps = mode === "t2i" ? T2I_STEPS : I2I_STEPS;
+  const maxStep = steps.length - 1;
 
-  // Reset when modal opens
+  // ─── Reset on open ──────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
+      setMode("t2i"); setStep(0);
       setSelectedModel("nano-banana-2");
-      setSubjectDescription("");
-      setSubjectType("");
-      setArtisticStyle("");
-      setColorPalette("");
-      setLighting("");
-      setCameraAngle("");
-      setDimensions("16:9");
-      setMood("");
-      setElementsToInclude("");
-      setSelectedProps([]);
-      setSelectedNegPills([]);
-      setNegativePrompt("");
-      setSelectedBrand(null);
-      setRefImageUrl("");
-      setRefPreview("");
-      setRefDescription("");
-      setAnalyzingRef(false);
-      setGenerating(false);
-      setShowPreview(false);
-      setActiveTab("subject");
-      setGenerateLoras([]);
+      setSubjectDescription(""); setSubjectType(""); setArtisticStyle("");
+      setColorPalette(""); setLighting(""); setCameraAngle("");
+      setDimensions("16:9"); setMood(""); setElementsToInclude("");
+      setSelectedProps([]); setSelectedNegPills([]); setNegativePrompt("");
+      setSelectedBrand(null); setRefImageUrl(""); setRefPreview("");
+      setRefDescription(""); setAnalyzingRef(false); setGenerateLoras([]);
+      setGenerating(false); setShowPreview(false);
+      setI2iImages([]); setI2iPrompt(""); setI2iStyle("");
+      setI2iModel("wavespeed-nano-ultra"); setI2iStrength(0.75);
+      setI2iDimensions("1:1"); setI2iOutputSize("1920x1080");
+      setI2iLoras([]); setI2iProps([]); setI2iNegPills([]);
+      setI2iNegFreetext(""); setI2iBrand(null);
+      setI2iEditing(false); setI2iResultUrl("");
+      setI2iShowUrlInput(false); setI2iUrlInput("");
     }
   }, [isOpen]);
 
-  // --- Reference image handlers (Generate tab) ---
+  const handleModeChange = (newMode) => { setMode(newMode); setStep(0); };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // T2I Handlers
+  // ═══════════════════════════════════════════════════════════════════════
+
   const handleRefFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result;
-      setRefPreview(dataUrl);
-      setRefImageUrl(dataUrl);
-      // Upload to get a real URL, then analyze
+      setRefPreview(dataUrl); setRefImageUrl(dataUrl);
       try {
         const formData = new FormData();
         formData.append('file', file);
         const uploadRes = await apiFetch('/api/library/upload', { method: 'POST', body: formData });
         const uploadData = await uploadRes.json();
-        if (uploadData.url) {
-          setRefImageUrl(uploadData.url);
-          analyzeRefImage(uploadData.url);
-        }
-      } catch (err) {
-        console.error('Upload failed, using data URL for analysis');
-        analyzeRefImage(dataUrl);
-      }
+        if (uploadData.url) { setRefImageUrl(uploadData.url); analyzeRefImage(uploadData.url); }
+      } catch { analyzeRefImage(dataUrl); }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -318,46 +332,30 @@ export default function ImagineerModal({
     setAnalyzingRef(true);
     try {
       const res = await apiFetch('/api/imagineer/describe-character', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: url }),
       });
       const data = await res.json();
       if (data.description) {
         setRefDescription(data.description);
-        if (!subjectDescription.trim()) {
-          setSubjectDescription(data.description);
-        }
+        if (!subjectDescription.trim()) setSubjectDescription(data.description);
         toast.success('Image analyzed — description added');
       }
-    } catch (err) {
-      console.error('Analyze failed:', err);
-      toast.error('Failed to analyze image');
-    } finally {
-      setAnalyzingRef(false);
-    }
+    } catch { toast.error('Failed to analyze image'); }
+    finally { setAnalyzingRef(false); }
   };
 
-  const clearRefImage = () => {
-    setRefImageUrl("");
-    setRefPreview("");
-    setRefDescription("");
-  };
+  const clearRefImage = () => { setRefImageUrl(""); setRefPreview(""); setRefDescription(""); };
 
-  // --- Build cohesive prompt via LLM ---
   const buildCohesivePrompt = async (tool, extraData = {}) => {
     const styleInfo = findStyleByValue(extraData.style || artisticStyle);
     const styleText = styleInfo?.promptText || extraData.style || artisticStyle || '';
-
     const body = {
       tool,
       description: extraData.description || subjectDescription.trim(),
       style: styleText,
       props: getPropsLabels(extraData.props || selectedProps),
-      negativePrompt: getCombinedNegativePrompt(
-        extraData.negPills || selectedNegPills,
-        extraData.negFreetext || negativePrompt
-      ),
+      negativePrompt: getCombinedNegativePrompt(extraData.negPills || selectedNegPills, extraData.negFreetext || negativePrompt),
       brandStyleGuide: extractBrandStyleData(extraData.brand || selectedBrand),
       referenceDescription: extraData.refDescription || refDescription || undefined,
       subjectType: extraData.subjectType || subjectType || undefined,
@@ -368,10 +366,8 @@ export default function ImagineerModal({
       elementsToInclude: elementsToInclude.trim() || undefined,
       ...(extraData.editStrength != null ? { editStrength: extraData.editStrength } : {}),
     };
-
     const res = await apiFetch('/api/prompt/build-cohesive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -379,311 +375,272 @@ export default function ImagineerModal({
     return data.prompt;
   };
 
-  // --- Legacy local prompt builder (fallback preview) ---
-  const buildPrompt = () => {
+  const buildPromptPreview = () => {
     const parts = [];
     const subjectLabel = SUBJECT_TYPE.find(s => s.value === subjectType)?.label;
     const desc = subjectDescription.trim();
     if (subjectLabel && desc) parts.push(`A ${subjectLabel.toLowerCase()}: ${desc}`);
     else if (desc) parts.push(desc);
-    else if (subjectLabel) parts.push(`A ${subjectLabel.toLowerCase()}`);
     if (elementsToInclude.trim()) parts.push(`featuring ${elementsToInclude.trim()}`);
-    if (lighting) {
-      const lightingLabel = LIGHTING.find(l => l.value === lighting)?.label || lighting;
-      parts.push(`${lightingLabel.toLowerCase()} lighting`);
-    }
-    if (cameraAngle) {
-      const angleLabel = CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label || cameraAngle;
-      parts.push(`shot from ${angleLabel.toLowerCase()}`);
-    }
-    if (colorPalette) {
-      const colorLabel = COLOR_PALETTE.find(c => c.value === colorPalette)?.label || colorPalette;
-      parts.push(`${colorLabel.toLowerCase()} color palette`);
-    }
-    if (mood) {
-      const moodLabel = MOOD.find(m => m.value === mood)?.label || mood;
-      parts.push(`${moodLabel.toLowerCase()} atmosphere`);
-    }
-    if (artisticStyle) {
-      const styleInfo = findStyleByValue(artisticStyle);
-      if (styleInfo?.promptText) parts.push(styleInfo.promptText);
-      else parts.push(`${artisticStyle} style`);
-    }
+    if (lighting) parts.push(`${LIGHTING.find(l => l.value === lighting)?.label} lighting`);
+    if (cameraAngle) parts.push(`${CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label} angle`);
+    if (colorPalette) parts.push(`${COLOR_PALETTE.find(c => c.value === colorPalette)?.label} palette`);
+    if (mood) parts.push(`${MOOD.find(m => m.value === mood)?.label} mood`);
+    if (artisticStyle) { const si = findStyleByValue(artisticStyle); parts.push(si?.promptText || `${artisticStyle} style`); }
     return parts.join(", ");
   };
 
-  const generatedPrompt = buildPrompt();
-  const canImagine = !!(subjectType && artisticStyle && (subjectDescription.trim() || subjectType !== ""));
+  const canImagine = !!(subjectType && artisticStyle && subjectDescription.trim());
 
   const handleImagine = async () => {
-    if (!canImagine) {
-      toast.error("Please select at least a subject type and artistic style.");
-      return;
-    }
-
+    if (!canImagine) { toast.error("Fill in subject, description, and style first."); return; }
     setGenerating(true);
-
     try {
-      // Build loras array from LoRAPicker selections
-      const loras = generateLoras
-        .filter(l => l.url)
-        .map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
-
-      // Build cohesive prompt via LLM
+      const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
       toast.info('Building cohesive prompt...');
       const cohesivePrompt = await buildCohesivePrompt('imagineer');
-
       await onGenerate({
-        prompt: cohesivePrompt,
-        style: artisticStyle,
-        dimensions,
+        prompt: cohesivePrompt, style: artisticStyle, dimensions,
         model: loras.length > 0 ? 'fal-flux' : selectedModel,
         loras: loras.length > 0 ? loras : undefined,
       });
       onClose();
-    } catch (error) {
-      console.error('Imagineer generation error:', error);
-      toast.error(error.message || 'Failed to generate image');
-    } finally {
-      setGenerating(false);
-    }
+    } catch (error) { toast.error(error.message || 'Failed to generate image'); }
+    finally { setGenerating(false); }
   };
 
-  const handleEditFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setEditSourceUrl(reader.result);
-    reader.readAsDataURL(file);
+  // ═══════════════════════════════════════════════════════════════════════
+  // I2I Handlers
+  // ═══════════════════════════════════════════════════════════════════════
+
+  const handleI2iFileUpload = (e) => {
+    Array.from(e.target.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setI2iImages(prev => [...prev, { id: Date.now() + Math.random(), url: event.target.result, name: file.name, isBase: prev.length === 0 }]);
+      };
+      reader.readAsDataURL(file);
+    });
     e.target.value = '';
   };
 
-  const handleEdit = async () => {
-    if (!editSourceUrl.trim() || !editPrompt.trim()) {
-      toast.error("Source image URL and edit prompt are required.");
-      return;
-    }
-    setIsEditing(true);
+  const handleI2iAddUrl = () => {
+    if (!i2iUrlInput.trim()) return;
     try {
-      // Build cohesive edit prompt via LLM
+      new URL(i2iUrlInput);
+      setI2iImages(prev => [...prev, { id: Date.now(), url: i2iUrlInput.trim(), name: 'URL Image', isBase: prev.length === 0 }]);
+      setI2iUrlInput(''); setI2iShowUrlInput(false);
+    } catch { toast.error('Please enter a valid URL'); }
+  };
+
+  const handleI2iRemoveImage = (id) => {
+    setI2iImages(prev => {
+      const filtered = prev.filter(img => img.id !== id);
+      if (filtered.length > 0 && !filtered.some(img => img.isBase)) filtered[0].isBase = true;
+      return filtered;
+    });
+  };
+
+  const handleI2iSetBase = (id) => { setI2iImages(prev => prev.map(img => ({ ...img, isBase: img.id === id }))); };
+
+  const handleI2iLibrarySelect = (item) => {
+    const url = item.url || item.image_url;
+    if (url) setI2iImages(prev => [...prev, { id: Date.now(), url, name: item.title || 'Library Image', isBase: prev.length === 0 }]);
+    setShowI2iLibrary(false);
+  };
+
+  const handleImageEdit = async () => {
+    if (i2iImages.length === 0) { toast.error('Add at least one image'); return; }
+    if (!i2iPrompt.trim()) { toast.error('Add edit instructions'); return; }
+    setI2iEditing(true);
+    try {
       toast.info('Building cohesive prompt...');
-      const styleInfo = findStyleByValue(editStyle);
       const cohesivePrompt = await buildCohesivePrompt('edit', {
-        description: editPrompt.trim(),
-        style: editStyle,
-        props: editSelectedProps,
-        negPills: editSelectedNegPills,
-        negFreetext: editNegativePrompt,
-        brand: editSelectedBrand,
-        editStrength: editStrength,
+        description: i2iPrompt.trim(), style: i2iStyle,
+        props: i2iProps, negPills: i2iNegPills, negFreetext: i2iNegFreetext,
+        brand: i2iBrand, editStrength: i2iStrength,
       });
+      const baseImage = i2iImages.find(img => img.isBase) || i2iImages[0];
 
-      const res = await apiFetch('/api/imagineer/edit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_url: editSourceUrl.trim(),
-          prompt: cohesivePrompt,
-          model: editModel,
-          strength: editStrength,
-          dimensions: editDimensions,
-          loras: editLoras.map(l => ({ url: l.url, scale: l.scale })),
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Edit failed');
-
-      if (data.imageUrl) {
-        toast.success('Image edited successfully');
-        setEditResultUrl(data.imageUrl);
-      } else if (data.requestId) {
-        // Poll for async result
-        toast.info('Edit processing...');
-        for (let i = 0; i < 120; i++) {
-          await new Promise(r => setTimeout(r, 3000));
-          try {
-            const pollRes = await apiFetch('/api/imagineer/result', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ requestId: data.requestId, model: data.model || editModel }),
-            });
-            const pollData = await pollRes.json();
-            if (pollData.imageUrl) {
-              toast.success('Image edited successfully');
-              setEditResultUrl(pollData.imageUrl);
-              break;
-            }
-            if (pollData.status === 'failed' || pollData.error) {
-              throw new Error(pollData.error || 'Edit failed');
-            }
-          } catch (pollErr) {
-            if (pollErr.message === 'Edit failed') throw pollErr;
-          }
-        }
+      if (isWavespeed) {
+        const res = await apiFetch('/api/images/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: i2iImages.map(img => img.url), prompt: cohesivePrompt, model: i2iModel, outputSize: i2iOutputSize }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); }
+        else if (data.requestId) { toast.info('Processing...'); await pollJumpstartResult(data.requestId); }
+      } else {
+        const loras = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const res = await apiFetch('/api/imagineer/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model: i2iModel, strength: i2iStrength, dimensions: i2iDimensions, loras }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); }
+        else if (data.requestId) { toast.info('Processing...'); await pollImagineerResult(data.requestId, data.model || i2iModel); }
       }
-    } catch (err) {
-      toast.error(err.message || 'Failed to edit image');
-    } finally {
-      setIsEditing(false);
+    } catch (err) { toast.error(err.message || 'Failed to edit image'); }
+    finally { setI2iEditing(false); }
+  };
+
+  const saveToLibrary = (url) => {
+    apiFetch('/api/library/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, type: 'image', title: '[Imagineer] Edited Image', source: 'imagineer-i2i' }),
+    }).catch(() => {});
+  };
+
+  const pollJumpstartResult = async (requestId) => {
+    for (let i = 0; i < 120; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await apiFetch('/api/jumpstart/result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId }) });
+        const data = await res.json();
+        if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) { const url = data.imageUrl || data.videoUrl; setI2iResultUrl(url); toast.success('Image edited!'); saveToLibrary(url); return; }
+        if (data.status === 'failed') throw new Error(data.error || 'Edit failed');
+      } catch (err) { if (err.message.includes('failed')) throw err; }
     }
   };
 
+  const pollImagineerResult = async (requestId, model) => {
+    for (let i = 0; i < 120; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await apiFetch('/api/imagineer/result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, model }) });
+        const data = await res.json();
+        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); return; }
+        if (data.status === 'failed' || data.error) throw new Error(data.error || 'Edit failed');
+      } catch (err) { if (err.message.includes('failed')) throw err; }
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Render
+  // ═══════════════════════════════════════════════════════════════════════
+
   const content = (
     <div className="flex flex-col h-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 px-5 pt-3 pb-0 border-b bg-white">
-          <TabsList className="w-full justify-start bg-transparent p-0 h-auto gap-0">
-            <TabsTrigger value="subject" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
-              Subject
-            </TabsTrigger>
-            <TabsTrigger value="style" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
-              Style & Atmosphere
-            </TabsTrigger>
-            <TabsTrigger value="output" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
-              Output
-            </TabsTrigger>
-            <TabsTrigger value="edit" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#2C666E] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 text-sm">
-              Edit
-            </TabsTrigger>
-          </TabsList>
+      {/* Mode tabs */}
+      <div className="flex-shrink-0 px-5 pt-3 pb-0 border-b bg-white">
+        <div className="flex gap-0">
+          <button onClick={() => handleModeChange("t2i")}
+            className={`px-5 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
+              mode === "t2i" ? "border-[#2C666E] text-[#07393C]" : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}>
+            <Sparkles className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" /> Text to Image
+          </button>
+          <button onClick={() => handleModeChange("i2i")}
+            className={`px-5 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
+              mode === "i2i" ? "border-[#2C666E] text-[#07393C]" : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}>
+            <Layers className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" /> Image to Image
+          </button>
         </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* ═══════════════ SUBJECT TAB ═══════════════ */}
-          <TabsContent value="subject" className="mt-0 p-5">
-            <div className="flex gap-6">
-              {/* Left column — form fields */}
-              <div className="w-1/2 min-w-0 space-y-4">
-                {/* Model */}
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5" /> Model
-                  </h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {IMAGE_MODELS.map((m) => (
-                      <button
-                        key={m.value}
-                        type="button"
-                        onClick={() => setSelectedModel(m.value)}
-                        className={`text-left rounded-lg border-2 p-2 transition-all ${
-                          selectedModel === m.value
-                            ? 'border-[#2C666E] bg-[#2C666E]/5'
-                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                        }`}
-                      >
-                        <div className="font-medium text-xs text-slate-900">{m.label}</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{m.description}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+      {/* Step indicator */}
+      <StepIndicator steps={steps} current={step} />
 
-                {/* Subject */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject</h3>
-                  <SelectField
-                    label="Subject Type"
-                    value={subjectType}
-                    onChange={setSubjectType}
-                    options={SUBJECT_TYPE}
-                    required
-                  />
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1 block">
-                      Description (what/who is the subject?)
-                    </label>
-                    <Textarea
-                      value={subjectDescription}
-                      onChange={(e) => setSubjectDescription(e.target.value)}
-                      placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
-                      className="bg-white text-sm"
-                      rows={2}
-                    />
-                    {analyzingRef && (
-                      <p className="text-[10px] text-[#2C666E] mt-0.5 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" /> AI is analyzing your reference image...
-                      </p>
-                    )}
-                  </div>
-                </div>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
 
-                {/* Reference Image (for AI analysis) */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Reference Image (optional — AI will analyze)</Label>
-                  {(refPreview || refImageUrl) ? (
-                    <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      <div className="relative flex-shrink-0">
-                        <img src={refPreview || refImageUrl} alt="Reference"
-                          className="w-20 h-20 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
-                        {analyzingRef && (
-                          <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-600 font-medium mb-1">
-                          {analyzingRef ? 'Analyzing...' : refDescription ? 'Description generated' : 'Reference loaded'}
-                        </p>
-                        {refDescription && (
-                          <p className="text-[10px] text-slate-400 line-clamp-2">{refDescription}</p>
-                        )}
-                        <button onClick={clearRefImage}
-                          className="mt-1 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5">
-                          <X className="w-3 h-3" /> Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <div onClick={() => refFileInputRef.current?.click()}
-                          className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                          <Upload className="w-4 h-4 text-slate-400" />
-                          <span className="text-xs text-slate-500">Upload</span>
-                        </div>
-                        <div onClick={() => setShowRefLibrary(true)}
-                          className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                          <FolderOpen className="w-4 h-4 text-slate-400" />
-                          <span className="text-xs text-slate-500">Library</span>
-                        </div>
-                      </div>
-                      <input ref={refFileInputRef} type="file" accept="image/*" onChange={handleRefFileUpload} className="hidden" />
-                      <Input value={refImageUrl}
-                        onChange={(e) => { setRefImageUrl(e.target.value); setRefPreview(e.target.value); }}
-                        onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) analyzeRefImage(url); }}
-                        placeholder="https://... paste a reference image URL" className="bg-white text-xs h-8" />
-                    </div>
-                  )}
-                  <p className="text-[10px] text-slate-400 mt-1">AI vision will describe this image to seed your subject description.</p>
-                </div>
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* TEXT TO IMAGE                                                 */}
+        {/* ══════════════════════════════════════════════════════════════ */}
 
-                {/* Props */}
-                <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
-
-                {/* Brand Style Guide */}
-                <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
-
-                {/* LoRA Models */}
-                <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
-                  <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
-                  <p className="text-xs text-slate-500 -mt-2">Select LoRAs to use FLUX 2 Dev with your trained models.</p>
-                  <LoRAPicker value={generateLoras} onChange={setGenerateLoras} />
-                </div>
-              </div>
-
-              {/* Right column — Style grid */}
-              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
-                <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="none" columns="grid-cols-3" />
+        {/* T2I Step 0: Subject */}
+        {mode === "t2i" && step === 0 && (
+          <div className="p-5 space-y-4 max-w-2xl">
+            {/* Model */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" /> Model
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {T2I_MODELS.map(m => (
+                  <button key={m.value} type="button" onClick={() => setSelectedModel(m.value)}
+                    className={`text-left rounded-lg border-2 p-2 transition-all ${
+                      selectedModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}>
+                    <div className="font-medium text-xs text-slate-900">{m.label}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{m.description}</div>
+                  </button>
+                ))}
               </div>
             </div>
-          </TabsContent>
 
-          {/* ═══════════════ STYLE & ATMOSPHERE TAB ═══════════════ */}
-          <TabsContent value="style" className="mt-0 p-5 space-y-5">
+            {/* Subject Type & Description */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject</h3>
+              <SelectField label="Subject Type" value={subjectType} onChange={setSubjectType} options={SUBJECT_TYPE} required />
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Description (what/who is the subject?)</label>
+                <Textarea value={subjectDescription} onChange={(e) => setSubjectDescription(e.target.value)}
+                  placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..." className="bg-white text-sm" rows={3} />
+                {analyzingRef && (
+                  <p className="text-[10px] text-[#2C666E] mt-0.5 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> AI is analyzing your reference image...
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Reference Image */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Reference Image (optional — AI will analyze)</Label>
+              {(refPreview || refImageUrl) ? (
+                <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="relative flex-shrink-0">
+                    <img src={refPreview || refImageUrl} alt="Reference" className="w-20 h-20 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
+                    {analyzingRef && <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" /></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-600 font-medium mb-1">{analyzingRef ? 'Analyzing...' : refDescription ? 'Description generated' : 'Reference loaded'}</p>
+                    {refDescription && <p className="text-[10px] text-slate-400 line-clamp-3">{refDescription}</p>}
+                    <button onClick={clearRefImage} className="mt-1 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"><X className="w-3 h-3" /> Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div onClick={() => refFileInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                      <Upload className="w-4 h-4 text-slate-400" /><span className="text-xs text-slate-500">Upload</span>
+                    </div>
+                    <div onClick={() => setShowRefLibrary(true)}
+                      className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                      <FolderOpen className="w-4 h-4 text-slate-400" /><span className="text-xs text-slate-500">Library</span>
+                    </div>
+                  </div>
+                  <input ref={refFileInputRef} type="file" accept="image/*" onChange={handleRefFileUpload} className="hidden" />
+                  <Input value={refImageUrl}
+                    onChange={(e) => { setRefImageUrl(e.target.value); setRefPreview(e.target.value); }}
+                    onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) analyzeRefImage(url); }}
+                    placeholder="https://... paste a reference image URL" className="bg-white text-xs h-8" />
+                </div>
+              )}
+              <p className="text-[10px] text-slate-400 mt-1">AI vision will describe this image to seed your subject description.</p>
+            </div>
+          </div>
+        )}
+
+        {/* T2I Step 1: Style */}
+        {mode === "t2i" && step === 1 && (
+          <div className="p-5">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Choose an Artistic Style</h3>
+            <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="none" columns="grid-cols-4" />
+          </div>
+        )}
+
+        {/* T2I Step 2: Enhance */}
+        {mode === "t2i" && step === 2 && (
+          <div className="p-5 space-y-5 max-w-2xl">
+            {/* Atmosphere */}
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5" /> Visual Settings
+                <Palette className="w-3.5 h-3.5" /> Atmosphere
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <SelectField label="Lighting" value={lighting} onChange={setLighting} options={LIGHTING} />
@@ -691,323 +648,386 @@ export default function ImagineerModal({
                 <SelectField label="Color Palette" value={colorPalette} onChange={setColorPalette} options={COLOR_PALETTE} />
                 <SelectField label="Mood" value={mood} onChange={setMood} options={MOOD} />
               </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Elements to Include (optional)</label>
+                <Input value={elementsToInclude} onChange={(e) => setElementsToInclude(e.target.value)}
+                  placeholder="e.g., flowers, rain, neon signs, smoke, books..." className="bg-white" />
+              </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-slate-600 mb-1 block">
-                Elements to Include (optional)
-              </label>
-              <Input
-                value={elementsToInclude}
-                onChange={(e) => setElementsToInclude(e.target.value)}
-                placeholder="e.g., flowers, rain, neon signs, smoke, books..."
-                className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-              />
-            </div>
+            {/* Props */}
+            <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
 
             {/* Negative Prompts */}
-            <NegPromptPillSelector
-              selectedPills={selectedNegPills}
-              onPillsChange={setSelectedNegPills}
-              freetext={negativePrompt}
-              onFreetextChange={setNegativePrompt}
-            />
-          </TabsContent>
+            <NegPromptPillSelector selectedPills={selectedNegPills} onPillsChange={setSelectedNegPills}
+              freetext={negativePrompt} onFreetextChange={setNegativePrompt} />
 
-          {/* ═══════════════ OUTPUT TAB ═══════════════ */}
-          <TabsContent value="output" className="mt-0 p-5 space-y-5">
+            {/* Brand Style Guide */}
+            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
+
+            {/* LoRA */}
+            <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+              <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
+              <p className="text-xs text-slate-500 -mt-2">Select LoRAs to use FLUX 2 Dev with your trained models.</p>
+              <LoRAPicker value={generateLoras} onChange={setGenerateLoras} />
+            </div>
+          </div>
+        )}
+
+        {/* T2I Step 3: Output */}
+        {mode === "t2i" && step === 3 && (
+          <div className="p-5 space-y-5 max-w-2xl">
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5" /> Output Settings
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
-                  <Select value={dimensions} onValueChange={setDimensions}>
-                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {DIMENSIONS.map((d) => (
-                        <SelectItem key={d.value} value={d.value} className="text-sm">
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="w-1/2">
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                <Select value={dimensions} onValueChange={setDimensions}>
+                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    {DIMENSIONS.map(d => <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-slate-400">Model:</span> <span className="font-medium">{T2I_MODELS.find(m => m.value === selectedModel)?.label}</span></div>
+                <div><span className="text-slate-400">Style:</span> <span className="font-medium">{artisticStyle || 'None'}</span></div>
+                <div><span className="text-slate-400">Subject:</span> <span className="font-medium">{SUBJECT_TYPE.find(s => s.value === subjectType)?.label || 'None'}</span></div>
+                <div><span className="text-slate-400">Dimensions:</span> <span className="font-medium">{DIMENSIONS.find(d => d.value === dimensions)?.label}</span></div>
+                {selectedProps.length > 0 && <div className="col-span-2"><span className="text-slate-400">Props:</span> <span className="font-medium">{selectedProps.length} selected</span></div>}
+                {selectedBrand && <div className="col-span-2"><span className="text-slate-400">Brand Guide:</span> <span className="font-medium">{selectedBrand.brand_name}</span></div>}
               </div>
             </div>
 
             {/* Prompt Preview */}
             <div className="space-y-2">
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setShowPreview(prev => !prev)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setShowPreview(prev => !prev);
-                  }
-                }}
-                className="flex items-center gap-2 text-sm font-medium text-[#2C666E] hover:text-[#07393C] cursor-pointer"
-              >
-                <Eye className="w-4 h-4" />
-                {showPreview ? "Hide" : "Preview"} Prompt (local preview — LLM builds final)
+              <div role="button" tabIndex={0} onClick={() => setShowPreview(p => !p)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowPreview(p => !p); }}
+                className="flex items-center gap-2 text-sm font-medium text-[#2C666E] hover:text-[#07393C] cursor-pointer">
+                <Eye className="w-4 h-4" /> {showPreview ? "Hide" : "Show"} Prompt Preview
               </div>
-
               {showPreview && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="bg-white border border-slate-200 rounded-lg p-3">
                   <p className="text-sm text-slate-700 leading-relaxed">
-                    {generatedPrompt || <span className="text-slate-400 italic">Start selecting options to build your prompt...</span>}
+                    {buildPromptPreview() || <span className="text-slate-400 italic">Fill in options to preview...</span>}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-2">The actual prompt will be built by the LLM using all your inputs (props, neg prompts, brand guide, etc.)</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Final prompt is built by the LLM using all your inputs.</p>
                 </div>
               )}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ═══════════════ EDIT TAB ═══════════════ */}
-          <TabsContent value="edit" className="mt-0 p-5">
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* IMAGE TO IMAGE                                                */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+
+        {/* I2I Result View (shown on any step when result exists) */}
+        {mode === "i2i" && i2iResultUrl && (
+          <div className="p-5 space-y-4">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                <CheckCircle2 className="w-4 h-4" /> Edit Complete!
+              </div>
+            </div>
+            <div className="bg-slate-100 rounded-xl overflow-hidden">
+              <img src={i2iResultUrl} alt="Edited" className="w-full object-contain max-h-[500px]" />
+            </div>
+            <ResultActions imageUrl={i2iResultUrl} onEditAgain={() => setI2iResultUrl("")} onClose={onClose} onGenerate={onGenerate} />
+          </div>
+        )}
+
+        {/* I2I Step 0: Images */}
+        {mode === "i2i" && step === 0 && !i2iResultUrl && (
+          <div className="p-5 space-y-4 max-w-2xl">
+            <div>
+              <Label className="text-sm font-medium mb-1 block">
+                Images <span className="text-slate-400 font-normal">(first = base, others = references)</span>
+              </Label>
+              <p className="text-xs text-slate-400 mb-3">
+                Add your base image and optional reference images. Multi-image models can blend them together — perfect for placing a character into a scene.
+              </p>
+
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                {i2iImages.map(img => (
+                  <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                    img.isBase ? 'border-[#2C666E] ring-2 ring-[#90DDF0]/50' : 'border-slate-200'
+                  }`}>
+                    <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      {!img.isBase && <button onClick={() => handleI2iSetBase(img.id)} className="p-1 bg-white rounded text-xs">Set Base</button>}
+                      <button onClick={() => handleI2iRemoveImage(img.id)} className="p-1 bg-red-500 text-white rounded"><X className="w-3 h-3" /></button>
+                    </div>
+                    {img.isBase && <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-[#2C666E] text-white text-[10px] rounded font-bold">BASE</div>}
+                  </div>
+                ))}
+                {i2iImages.length < 10 && (
+                  <button onClick={() => i2iFileInputRef.current?.click()}
+                    className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-[#2C666E] transition-colors flex flex-col items-center justify-center text-slate-400 hover:text-[#2C666E]">
+                    <Plus className="w-6 h-6 mb-1" /><span className="text-xs">Add</span>
+                  </button>
+                )}
+              </div>
+
+              <input ref={i2iFileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleI2iFileUpload} />
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => i2iFileInputRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Upload</Button>
+                <Button variant="outline" size="sm" onClick={() => setI2iShowUrlInput(!i2iShowUrlInput)}><Link2 className="w-4 h-4 mr-2" /> From URL</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowI2iLibrary(true)}><FolderOpen className="w-4 h-4 mr-2" /> Library</Button>
+              </div>
+
+              {i2iShowUrlInput && (
+                <div className="mt-3 flex gap-2">
+                  <Input placeholder="https://example.com/image.jpg" value={i2iUrlInput} onChange={(e) => setI2iUrlInput(e.target.value)} className="flex-1" />
+                  <Button onClick={handleI2iAddUrl}>Add</Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* I2I Step 1: Instructions & Style */}
+        {mode === "i2i" && step === 1 && !i2iResultUrl && (
+          <div className="p-5">
             <div className="flex gap-6">
-              {/* Left column — edit form */}
-              <div className="w-1/2 min-w-0 space-y-3">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Pencil className="w-3.5 h-3.5" /> Edit Image
-                </h3>
-
-                {/* Model selector */}
-                <div className="grid grid-cols-3 gap-2">
-                  {IMAGE_MODELS.map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setEditModel(m.value)}
-                      className={`text-left rounded-lg border-2 p-2 transition-all ${
-                        editModel === m.value
-                          ? 'border-[#2C666E] bg-[#2C666E]/5'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
-                      }`}
-                    >
-                      <div className="font-medium text-xs text-slate-900">{m.label}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{m.description}</div>
-                    </button>
-                  ))}
-                </div>
-
+              <div className="w-1/2 min-w-0 space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image</label>
-                  <div className="flex gap-1.5">
-                    <Input
-                      value={editSourceUrl}
-                      onChange={(e) => setEditSourceUrl(e.target.value)}
-                      placeholder="Paste URL, upload, or pick from library"
-                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1 text-xs"
-                    />
-                    <input
-                      ref={editFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleEditFileUpload}
-                      className="hidden"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => editFileInputRef.current?.click()}
-                      className="shrink-0 px-2"
-                      title="Upload image"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEditLibrary(true)}
-                      className="shrink-0 px-2"
-                      title="Pick from library"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                  {editSourceUrl && (
-                    <img src={editSourceUrl} alt="Source" className="w-full rounded-lg mt-2 border border-slate-200" />
-                  )}
+                  <Label className="text-sm font-medium mb-2 block">Edit Instructions</Label>
+                  <Textarea placeholder="Describe what you want to create or change...&#10;&#10;e.g., 'Place the character in a sunset beach scene'&#10;e.g., 'Blend these images into a cinematic composition'"
+                    value={i2iPrompt} onChange={(e) => setI2iPrompt(e.target.value)} className="min-h-[140px]" />
                 </div>
 
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">Edit Prompt</label>
-                  <Input
-                    value={editPrompt}
-                    onChange={(e) => setEditPrompt(e.target.value)}
-                    placeholder="e.g., change the background to a beach sunset, add a hat..."
-                    className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1 block">
-                      Strength: {editStrength.toFixed(2)}
-                    </label>
-                    <input
-                      type="range" min="0.1" max="1.0" step="0.05"
-                      value={editStrength}
-                      onChange={(e) => setEditStrength(parseFloat(e.target.value))}
-                      className="w-full h-2 accent-[#2C666E]"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle, Higher = creative</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
-                    <Select value={editDimensions} onValueChange={setEditDimensions}>
-                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200 text-slate-900">
-                        {DIMENSIONS.map((d) => (
-                          <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Props for Edit */}
-                <PropsPillSelector selected={editSelectedProps} onChange={setEditSelectedProps} />
-
-                {/* Negative Prompts for Edit */}
-                <NegPromptPillSelector
-                  selectedPills={editSelectedNegPills}
-                  onPillsChange={setEditSelectedNegPills}
-                  freetext={editNegativePrompt}
-                  onFreetextChange={setEditNegativePrompt}
-                />
-
-                {/* Brand Style Guide for Edit */}
-                <BrandStyleGuideSelector value={editSelectedBrand} onChange={setEditSelectedBrand} />
-
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <label className="text-xs font-semibold text-slate-600">LoRA Models (optional)</label>
-                  <LoRAPicker value={editLoras} onChange={setEditLoras} />
-                </div>
-
-                <Button
-                  onClick={handleEdit}
-                  disabled={isEditing || !editSourceUrl.trim() || !editPrompt.trim()}
-                  className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white"
-                >
-                  {isEditing ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
-                  ) : (
-                    <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>
-                  )}
-                </Button>
-
-                {/* Result image */}
-                {editResultUrl && (
-                  <div className="mt-3">
-                    <label className="text-xs font-medium text-slate-600 mb-1 block">Result</label>
-                    <img src={editResultUrl} alt="Edited result" className="w-full rounded-lg border border-slate-200" />
-                    <ResultActions
-                      imageUrl={editResultUrl}
-                      onEditAgain={() => {
-                        setEditSourceUrl(editResultUrl);
-                        toast.success('Result loaded as source — edit again');
-                      }}
-                      onClose={onClose}
-                      onGenerate={onGenerate}
-                    />
+                {/* Thumbnail summary of images */}
+                {i2iImages.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-slate-500 mb-2">Your Images ({i2iImages.length})</p>
+                    <div className="flex gap-2 overflow-x-auto">
+                      {i2iImages.map(img => (
+                        <div key={img.id} className="relative flex-shrink-0">
+                          <img src={img.url} alt="" className="w-12 h-12 object-cover rounded border border-slate-200" />
+                          {img.isBase && <div className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[8px] font-bold">B</div>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Right column — Style grid */}
-              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
                 <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
-                <StyleGrid value={editStyle} onChange={setEditStyle} maxHeight="none" columns="grid-cols-3" />
+                <StyleGrid value={i2iStyle} onChange={setI2iStyle} maxHeight="none" columns="grid-cols-3" />
               </div>
             </div>
-          </TabsContent>
-        </div>
-      </Tabs>
+          </div>
+        )}
 
-      {/* Footer */}
+        {/* I2I Step 2: Enhance */}
+        {mode === "i2i" && step === 2 && !i2iResultUrl && (
+          <div className="p-5 space-y-5 max-w-2xl">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
+
+            <PropsPillSelector selected={i2iProps} onChange={setI2iProps} />
+
+            <NegPromptPillSelector selectedPills={i2iNegPills} onPillsChange={setI2iNegPills}
+              freetext={i2iNegFreetext} onFreetextChange={setI2iNegFreetext} />
+
+            <BrandStyleGuideSelector value={i2iBrand} onChange={setI2iBrand} />
+          </div>
+        )}
+
+        {/* I2I Step 3: Model & Output */}
+        {mode === "i2i" && step === 3 && !i2iResultUrl && (
+          <div className="p-5 space-y-5 max-w-2xl">
+            {/* Model selector */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" /> Model
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {I2I_MODELS.map(m => (
+                  <button key={m.value} type="button" onClick={() => setI2iModel(m.value)}
+                    className={`text-left rounded-lg border-2 p-3 transition-all ${
+                      i2iModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-sm text-slate-900">{m.label}</div>
+                      {m.multiImage && <span className="px-1.5 py-0.5 bg-[#90DDF0]/30 text-[#07393C] text-[10px] font-bold rounded">MULTI-IMAGE</span>}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
+                    {!m.multiImage && i2iImages.length > 1 && (
+                      <div className="text-[10px] text-amber-600 mt-1">Only uses base image — {i2iImages.length - 1} reference(s) ignored</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="grid grid-cols-2 gap-4">
+              {isWavespeed ? (
+                <div>
+                  <Label className="text-xs font-medium text-slate-600 mb-1 block">Output Size</Label>
+                  <select value={i2iOutputSize} onChange={(e) => setI2iOutputSize(e.target.value)}
+                    className="w-full p-2.5 border rounded-lg text-sm bg-white">
+                    <optgroup label="Landscape (16:9)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Square (1:1)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Portrait (9:16)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Other">
+                      {OUTPUT_SIZES.filter(s => !s.ratio.includes('16:9') && !s.ratio.includes('1:1') && !s.ratio.includes('9:16')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Strength: {i2iStrength.toFixed(2)}</label>
+                    <input type="range" min="0.1" max="1.0" step="0.05" value={i2iStrength}
+                      onChange={(e) => setI2iStrength(parseFloat(e.target.value))} className="w-full h-2 accent-[#2C666E]" />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle, Higher = creative</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                    <Select value={i2iDimensions} onValueChange={setI2iDimensions}>
+                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        {DIMENSIONS.map(d => <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* LoRA */}
+            {i2iModelDef.supportsLora && (
+              <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+                <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
+                <LoRAPicker value={i2iLoras} onChange={setI2iLoras} />
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div><span className="text-slate-400">Images:</span> <span className="font-medium">{i2iImages.length}</span></div>
+                <div><span className="text-slate-400">Model:</span> <span className="font-medium">{i2iModelDef.label}</span></div>
+                {i2iStyle && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{i2iStyle}</span></div>}
+                {i2iBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{i2iBrand.brand_name}</span></div>}
+              </div>
+              {i2iImages.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pt-1">
+                  {i2iImages.map(img => (
+                    <div key={img.id} className="relative flex-shrink-0">
+                      <img src={img.url} alt="" className="w-10 h-10 object-cover rounded border border-slate-200" />
+                      {img.isBase && <div className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[7px] font-bold">B</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ═══════════ Footer ═══════════ */}
       <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+        {/* Status text */}
         <div className="text-xs text-slate-500">
-          {canImagine ? (
-            <span className="text-green-600 font-medium">Ready to generate</span>
-          ) : (
-            <span>Select subject type and artistic style to continue</span>
-          )}
+          {mode === "t2i" && step === 0 && !subjectType && <span>Select a subject type to begin</span>}
+          {mode === "t2i" && step === 0 && subjectType && !subjectDescription.trim() && <span>Add a description</span>}
+          {mode === "t2i" && step === 0 && subjectType && subjectDescription.trim() && <span className="text-green-600 font-medium">Subject ready</span>}
+          {mode === "t2i" && step === 1 && !artisticStyle && <span>Choose an artistic style</span>}
+          {mode === "t2i" && step === 1 && artisticStyle && <span className="text-green-600 font-medium">Style selected</span>}
+          {mode === "t2i" && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
+          {mode === "t2i" && step === 3 && canImagine && <span className="text-green-600 font-medium">Ready to generate</span>}
+          {mode === "t2i" && step === 3 && !canImagine && <span className="text-amber-600">Go back and fill in subject type, description, and style</span>}
+          {mode === "i2i" && step === 0 && i2iImages.length === 0 && <span>Add at least one image</span>}
+          {mode === "i2i" && step === 0 && i2iImages.length > 0 && <span className="text-green-600 font-medium">{i2iImages.length} image{i2iImages.length !== 1 ? 's' : ''} ready</span>}
+          {mode === "i2i" && step === 1 && !i2iPrompt.trim() && <span>Add edit instructions</span>}
+          {mode === "i2i" && step === 1 && i2iPrompt.trim() && <span className="text-green-600 font-medium">Instructions set</span>}
+          {mode === "i2i" && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
+          {mode === "i2i" && step === 3 && <span className="text-green-600 font-medium">Ready to edit</span>}
         </div>
-        <div className="flex gap-3">
-          {!isEmbedded && (
-            <Button variant="outline" onClick={onClose} disabled={generating}>
-              Cancel
+
+        {/* Navigation buttons */}
+        <div className="flex gap-2">
+          {/* Back button (all steps > 0) */}
+          {step > 0 && !i2iResultUrl && (
+            <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={generating || i2iEditing}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           )}
-          <Button
-            onClick={handleImagine}
-            disabled={generating || !canImagine}
-            className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Building Prompt...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Imagine
-              </>
-            )}
-          </Button>
+          {/* Cancel on step 0 */}
+          {step === 0 && !isEmbedded && !i2iResultUrl && (
+            <Button variant="outline" onClick={onClose} disabled={generating || i2iEditing}>Cancel</Button>
+          )}
+
+          {/* ─── T2I Navigation ─── */}
+          {mode === "t2i" && step < 3 && (
+            <Button onClick={() => setStep(s => s + 1)}
+              disabled={
+                (step === 0 && (!subjectType || !subjectDescription.trim())) ||
+                (step === 1 && !artisticStyle)
+              }
+              className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
+          {mode === "t2i" && step === 3 && (
+            <Button onClick={handleImagine} disabled={generating || !canImagine}
+              className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+              {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Building Prompt...</>
+                : <><Sparkles className="w-4 h-4 mr-2" /> Imagine</>}
+            </Button>
+          )}
+
+          {/* ─── I2I Navigation ─── */}
+          {mode === "i2i" && step < 3 && !i2iResultUrl && (
+            <Button onClick={() => setStep(s => s + 1)}
+              disabled={(step === 0 && i2iImages.length === 0) || (step === 1 && !i2iPrompt.trim())}
+              className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+              {step === 2 ? 'Next' : 'Next'} <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
+          {mode === "i2i" && step === 3 && !i2iResultUrl && (
+            <Button onClick={handleImageEdit} disabled={i2iEditing || i2iImages.length === 0 || !i2iPrompt.trim()}
+              className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+              {i2iEditing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
+                : <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>}
+            </Button>
+          )}
         </div>
       </div>
     </div>
   );
 
-  if (isEmbedded) {
-    return (
-      <div className="flex flex-col h-full bg-white overflow-hidden">
-        {content}
-      </div>
-    );
-  }
+  if (isEmbedded) return <div className="flex flex-col h-full bg-white overflow-hidden">{content}</div>;
 
   return (
     <>
-      <SlideOverPanel
-        open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
-        title="Imagineer"
-        subtitle="Build your perfect image by selecting options below"
-        icon={<Sparkles className="w-5 h-5" />}
-      >
+      <SlideOverPanel open={isOpen} onOpenChange={(open) => !open && onClose()}
+        title="Imagineer" subtitle="Create and edit images with AI"
+        icon={<Sparkles className="w-5 h-5" />}>
         {content}
       </SlideOverPanel>
-      <LibraryModal
-        isOpen={showEditLibrary}
-        onClose={() => setShowEditLibrary(false)}
-        onSelect={(item) => {
-          setEditSourceUrl(item.url);
-          setShowEditLibrary(false);
-        }}
-        mediaType="images"
-      />
-      <LibraryModal
-        isOpen={showRefLibrary}
-        onClose={() => setShowRefLibrary(false)}
-        onSelect={(item) => {
-          setRefImageUrl(item.url);
-          setRefPreview(item.url);
-          setShowRefLibrary(false);
-          analyzeRefImage(item.url);
-        }}
-        mediaType="images"
-      />
+      <LibraryModal isOpen={showRefLibrary} onClose={() => setShowRefLibrary(false)}
+        onSelect={(item) => { setRefImageUrl(item.url); setRefPreview(item.url); setShowRefLibrary(false); analyzeRefImage(item.url); }} mediaType="images" />
+      <LibraryModal isOpen={showI2iLibrary} onClose={() => setShowI2iLibrary(false)}
+        onSelect={handleI2iLibrarySelect} mediaType="images" />
     </>
   );
 }
