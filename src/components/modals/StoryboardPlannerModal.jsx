@@ -26,12 +26,15 @@ import {
   RefreshCw,
   X,
   Check,
+  Link,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { extractLastFrame } from '@/lib/frameExtractor';
 import { supabase } from '@/lib/supabase';
 import { getPromptText } from '@/lib/stylePresets';
 import StyleGrid from '@/components/ui/StyleGrid';
+import ImagineerModal from '@/components/modals/ImagineerModal';
+import LibraryModal from '@/components/modals/LibraryModal';
 
 // Reuse model list from JumpStart — subset that supports image-to-video
 const STORYBOARD_MODELS = [
@@ -70,6 +73,16 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
   const [analyzingCharacter, setAnalyzingCharacter] = useState(false);
 
+  // Starting scene image state
+  const [startFrameUrl, setStartFrameUrl] = useState(null);
+  const [showImagineerForStartFrame, setShowImagineerForStartFrame] = useState(false);
+  const [showLibraryForStartFrame, setShowLibraryForStartFrame] = useState(false);
+  const [showUrlImport, setShowUrlImport] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
+  const [generatingStartFrame, setGeneratingStartFrame] = useState(false);
+  const [pollingStartFrame, setPollingStartFrame] = useState(false);
+
   // Library browser for character refs
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryItems, setLibraryItems] = useState([]);
@@ -103,6 +116,14 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setCharacterDescription('');
       setCharacterRefs([]);
       setAnalyzingCharacter(false);
+      setStartFrameUrl(null);
+      setShowImagineerForStartFrame(false);
+      setShowLibraryForStartFrame(false);
+      setShowUrlImport(false);
+      setImportUrl('');
+      setImportingUrl(false);
+      setGeneratingStartFrame(false);
+      setPollingStartFrame(false);
       setScenes([]);
       setStoryboardTitle('');
       setGenerating(false);
@@ -177,6 +198,101 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   };
 
+  // ── Start Frame handlers ──
+  const handleStartFrameGenerate = async (params) => {
+    setGeneratingStartFrame(true);
+    try {
+      const res = await apiFetch('/api/imagineer/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const data = await res.json();
+
+      if (data.imageUrl) {
+        setStartFrameUrl(data.imageUrl);
+        toast.success('Starting scene image generated');
+        // Auto-save to library
+        apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: data.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard' }),
+        }).catch(() => {});
+      } else if (data.requestId) {
+        // Poll for async result
+        setPollingStartFrame(true);
+        const maxAttempts = 120;
+        for (let i = 0; i < maxAttempts; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const pollRes = await apiFetch('/api/imagineer/result', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: data.requestId, model: data.model || params.model }),
+            });
+            const pollData = await pollRes.json();
+            if (pollData.imageUrl) {
+              setStartFrameUrl(pollData.imageUrl);
+              toast.success('Starting scene image generated');
+              apiFetch('/api/library/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: pollData.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard' }),
+              }).catch(() => {});
+              break;
+            }
+            if (pollData.status === 'failed' || pollData.error) {
+              throw new Error(pollData.error || 'Generation failed');
+            }
+          } catch (err) {
+            if (err.message !== 'Generation failed') continue;
+            throw err;
+          }
+        }
+        setPollingStartFrame(false);
+      } else {
+        throw new Error(data.error || 'Generation failed');
+      }
+    } catch (err) {
+      toast.error('Start frame generation failed: ' + err.message);
+    } finally {
+      setGeneratingStartFrame(false);
+      setPollingStartFrame(false);
+    }
+  };
+
+  const handleStartFrameFromLibrary = (item) => {
+    setStartFrameUrl(item.url);
+    setShowLibraryForStartFrame(false);
+    toast.success('Starting scene image selected from library');
+  };
+
+  const handleImportUrl = async () => {
+    const url = importUrl.trim();
+    if (!url) return;
+    setImportingUrl(true);
+    try {
+      const res = await apiFetch('/api/images/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url }),
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setStartFrameUrl(data.url);
+        setShowUrlImport(false);
+        setImportUrl('');
+        toast.success('Image imported successfully');
+      } else {
+        throw new Error(data.error || 'Import failed');
+      }
+    } catch (err) {
+      toast.error('URL import failed: ' + err.message);
+    } finally {
+      setImportingUrl(false);
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -216,6 +332,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           style,
           defaultDuration,
           characterDescription,
+          hasStartFrame: !!startFrameUrl,
         }),
       });
       const data = await res.json();
@@ -366,7 +483,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     cancelRef.current = false;
     setGenerationCancelled(false);
 
-    let previousFrameUrl = null;
+    // Use the start frame image for Scene 1; subsequent scenes chain from previous scene's last frame
+    let previousFrameUrl = startFrameUrl || null;
 
     for (let i = 0; i < scenes.length; i++) {
       if (cancelRef.current) {
@@ -433,11 +551,13 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     updateScene(sceneId, { status: 'generating' });
 
     try {
-      // Use previous scene's last frame as start frame
+      // Use previous scene's last frame as start frame, or the start frame image for Scene 1
       let startFrame = null;
       if (sceneIndex > 0) {
         const prev = scenes[sceneIndex - 1];
         startFrame = prev.lastFrameUrl || null;
+      } else {
+        startFrame = startFrameUrl || null;
       }
 
       const videoUrl = await generateSingleScene(scene, startFrame);
@@ -578,6 +698,84 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                     <option key={m.id} value={m.id}>{m.label} — {m.description}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Starting Scene Image */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-0.5">Starting Scene Image</label>
+                <p className="text-[10px] text-gray-400 mb-2">Sets the visual environment for Scene 1. Subsequent scenes chain from the previous scene's last frame.</p>
+
+                {startFrameUrl ? (
+                  <div className="relative group">
+                    <img
+                      src={startFrameUrl}
+                      alt="Starting scene"
+                      className="w-full h-36 rounded-lg object-cover border border-gray-200"
+                    />
+                    <button
+                      onClick={() => setStartFrameUrl(null)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">Start Frame</span>
+                  </div>
+                ) : (generatingStartFrame || pollingStartFrame) ? (
+                  <div className="w-full h-36 rounded-lg border-2 border-dashed border-[#2C666E]/30 bg-[#2C666E]/5 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                    <span className="text-xs text-[#2C666E]">
+                      {pollingStartFrame ? 'Generating image...' : 'Processing...'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowImagineerForStartFrame(true)}
+                        className="text-xs flex-1"
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" /> Generate
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowLibraryForStartFrame(true)}
+                        className="text-xs flex-1"
+                      >
+                        <FolderOpen className="w-3 h-3 mr-1" /> Library
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowUrlImport(!showUrlImport)}
+                        className="text-xs flex-1"
+                      >
+                        <Link className="w-3 h-3 mr-1" /> URL
+                      </Button>
+                    </div>
+                    {showUrlImport && (
+                      <div className="flex gap-2">
+                        <Input
+                          value={importUrl}
+                          onChange={(e) => setImportUrl(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="text-xs flex-1"
+                          onKeyDown={(e) => e.key === 'Enter' && handleImportUrl()}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={handleImportUrl}
+                          disabled={importingUrl || !importUrl.trim()}
+                          className="text-xs bg-[#2C666E] text-white"
+                        >
+                          {importingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Import'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Character description for @Element */}
@@ -1047,6 +1245,23 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           </div>
         </div>
       </SlideOverFooter>
+      {/* Imagineer modal for generating start frame */}
+      <ImagineerModal
+        isOpen={showImagineerForStartFrame}
+        onClose={() => setShowImagineerForStartFrame(false)}
+        onGenerate={(params) => {
+          setShowImagineerForStartFrame(false);
+          handleStartFrameGenerate(params);
+        }}
+      />
+
+      {/* Library modal for selecting start frame */}
+      <LibraryModal
+        isOpen={showLibraryForStartFrame}
+        onClose={() => setShowLibraryForStartFrame(false)}
+        onSelect={handleStartFrameFromLibrary}
+        mediaType="images"
+      />
     </SlideOverPanel>
   );
 }
