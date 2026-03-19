@@ -67,11 +67,18 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [defaultDuration, setDefaultDuration] = useState(5);
   const [model, setModel] = useState('kling-r2v-pro');
   const [aspectRatio, setAspectRatio] = useState('16:9');
-  const [characterDescription, setCharacterDescription] = useState('');
-  const [characterRefs, setCharacterRefs] = useState([]); // URLs
-  const [frontalIndex, setFrontalIndex] = useState(0); // which ref is the frontal image for R2V
-
-  const [analyzingCharacter, setAnalyzingCharacter] = useState(false);
+  // Elements — up to 4 characters/objects, each referenced as @Element1, @Element2, etc.
+  // Each element: { id, label, description, refs: [url, ...], frontalIndex: 0, analyzing: false }
+  const createEmptyElement = (index) => ({
+    id: `el-${Date.now()}-${index}`,
+    label: `Element ${index + 1}`,
+    description: '',
+    refs: [],
+    frontalIndex: 0,
+    analyzing: false,
+  });
+  const [elements, setElements] = useState([createEmptyElement(0)]);
+  const [activeElementIndex, setActiveElementIndex] = useState(0);
 
   // Starting scene image state
   const [startFrameUrl, setStartFrameUrl] = useState(null);
@@ -113,9 +120,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setNumScenes(4);
       setStyle('cinematic');
       setDefaultDuration(5);
-      setCharacterDescription('');
-      setCharacterRefs([]);
-      setAnalyzingCharacter(false);
+      setElements([createEmptyElement(0)]);
+      setActiveElementIndex(0);
       setStartFrameUrl(null);
       setShowImagineerForStartFrame(false);
       setShowLibraryForStartFrame(false);
@@ -161,10 +167,32 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     loadLibrary();
   };
 
-  // Auto-describe character from image (same as turnaround)
-  const describeCharacterFromImage = async (imageUrl) => {
-    if (!imageUrl || analyzingCharacter) return;
-    setAnalyzingCharacter(true);
+  // ── Element helpers ──
+  const updateElement = (index, updates) => {
+    setElements(prev => prev.map((el, i) => i === index ? { ...el, ...updates } : el));
+  };
+
+  const addElement = () => {
+    if (elements.length >= 4) {
+      toast.error('Maximum 4 elements allowed');
+      return;
+    }
+    setElements(prev => [...prev, createEmptyElement(prev.length)]);
+    setActiveElementIndex(elements.length);
+  };
+
+  const removeElement = (index) => {
+    if (elements.length <= 1) return;
+    setElements(prev => prev.filter((_, i) => i !== index));
+    if (activeElementIndex >= elements.length - 1) {
+      setActiveElementIndex(Math.max(0, elements.length - 2));
+    }
+  };
+
+  // Auto-describe character from image for a specific element
+  const describeCharacterFromImage = async (imageUrl, elementIndex) => {
+    if (!imageUrl) return;
+    updateElement(elementIndex, { analyzing: true });
     try {
       const res = await apiFetch('/api/imagineer/describe-character', {
         method: 'POST',
@@ -173,28 +201,29 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       });
       const data = await res.json();
       if (data.success && data.description) {
-        setCharacterDescription(data.description);
-        toast.success('Character description generated from image');
+        updateElement(elementIndex, { description: data.description });
+        toast.success(`@Element${elementIndex + 1} description generated`);
       } else {
         toast.error(data.error || 'Could not describe character');
       }
     } catch (err) {
       toast.error('Character analysis failed: ' + err.message);
     } finally {
-      setAnalyzingCharacter(false);
+      updateElement(elementIndex, { analyzing: false });
     }
   };
 
   const importFromLibrary = () => {
     const selected = libraryItems.filter(i => selectedIds.has(i.id));
     const urls = selected.map(i => i.url);
-    const isFirstRef = characterRefs.length === 0;
-    setCharacterRefs(prev => [...prev, ...urls]);
+    const el = elements[activeElementIndex];
+    const isFirstRef = el.refs.length === 0;
+    const capped = urls.slice(0, 4 - el.refs.length); // Max 4 refs per element
+    updateElement(activeElementIndex, { refs: [...el.refs, ...capped] });
     setShowLibrary(false);
-    toast.success(`Added ${urls.length} reference image(s)`);
-    // Auto-describe from first imported image if no description yet
-    if (isFirstRef && urls.length > 0 && !characterDescription) {
-      describeCharacterFromImage(urls[0]);
+    toast.success(`Added ${capped.length} reference image(s) to @Element${activeElementIndex + 1}`);
+    if (isFirstRef && capped.length > 0 && !el.description) {
+      describeCharacterFromImage(capped[0], activeElementIndex);
     }
   };
 
@@ -297,20 +326,28 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    const isFirstRef = characterRefs.length === 0;
-    for (const file of files) {
+    const el = elements[activeElementIndex];
+    const isFirstRef = el.refs.length === 0;
+    const remaining = 4 - el.refs.length; // Max 4 refs per element
+    const filesToProcess = files.slice(0, remaining);
+
+    for (const file of filesToProcess) {
       const reader = new FileReader();
       reader.onload = () => {
-        setCharacterRefs(prev => {
-          const updated = [...prev, reader.result];
+        setElements(prev => prev.map((prevEl, i) => {
+          if (i !== activeElementIndex) return prevEl;
+          const updated = { ...prevEl, refs: [...prevEl.refs, reader.result] };
           // Auto-describe from the first image if no description yet
-          if (isFirstRef && prev.length === 0 && !characterDescription) {
-            describeCharacterFromImage(reader.result);
+          if (isFirstRef && prevEl.refs.length === 0 && !prevEl.description) {
+            describeCharacterFromImage(reader.result, activeElementIndex);
           }
           return updated;
-        });
+        }));
       };
       reader.readAsDataURL(file);
+    }
+    if (filesToProcess.length < files.length) {
+      toast.info(`Only ${filesToProcess.length} of ${files.length} images added (max 4 per element)`);
     }
     e.target.value = '';
   };
@@ -331,7 +368,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           numScenes,
           style,
           defaultDuration,
-          characterDescription,
+          // Send all element descriptions so AI uses @Element1, @Element2, etc.
+          elements: elements
+            .filter(el => el.refs.length > 0 || el.description)
+            .map((el, i) => ({ index: i + 1, description: el.description })),
           hasStartFrame: !!startFrameUrl,
         }),
       });
@@ -415,9 +455,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
   const generateSingleScene = async (scene, startFrameUrl) => {
     const selectedModel = STORYBOARD_MODELS.find(m => m.id === model);
-    const isR2V = selectedModel?.supportsRefs && characterRefs.length > 0;
+    const elementsWithRefs = elements.filter(el => el.refs.length > 0);
+    const isR2V = selectedModel?.supportsRefs && elementsWithRefs.length > 0;
 
-    // Build prompt — insert @Element for R2V if character refs exist
+    // Build prompt
     let prompt = scene.visualPrompt;
     if (scene.motionPrompt) {
       prompt += `. Camera: ${scene.motionPrompt}`;
@@ -434,30 +475,29 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     formData.append('aspectRatio', aspectRatio);
     formData.append('resolution', '720p');
 
-    // We need an image file — use start frame or first character ref
-    const imageUrl = startFrameUrl || characterRefs[0] || null;
+    // We need an image file — use start frame or first element's first ref
+    const imageUrl = startFrameUrl || elementsWithRefs[0]?.refs[0] || null;
     if (!imageUrl) {
-      throw new Error('No start image available. Add a character reference image or generate from the first scene.');
+      throw new Error('No start image available. Add a starting scene image or character reference images.');
     }
 
     // Convert URL/dataURL to a blob for the image field
-    let imageBlob;
-    if (imageUrl.startsWith('data:')) {
-      const resp = await fetch(imageUrl);
-      imageBlob = await resp.blob();
-    } else {
-      const resp = await fetch(imageUrl);
-      imageBlob = await resp.blob();
-    }
+    const resp = await fetch(imageUrl);
+    const imageBlob = await resp.blob();
     formData.append('image', imageBlob, 'frame.jpg');
 
-    // R2V: pass reference images and frontal image URL
-    if (isR2V && characterRefs.length > 0) {
-      formData.append('referenceImages', JSON.stringify(characterRefs));
-      formData.append('frontalImageUrl', characterRefs[frontalIndex] || characterRefs[0]);
+    // R2V: pass structured elements array (up to 4 elements, each with up to 4 refs)
+    if (isR2V) {
+      const r2vElements = elementsWithRefs.map(el => ({
+        frontalImageUrl: el.refs[el.frontalIndex] || el.refs[0],
+        referenceImageUrls: el.refs.slice(0, 4),
+      }));
+      formData.append('r2vElements', JSON.stringify(r2vElements));
+      // Legacy single-element fields for backward compat
+      formData.append('referenceImages', JSON.stringify(elementsWithRefs[0].refs));
+      formData.append('frontalImageUrl', elementsWithRefs[0].refs[elementsWithRefs[0].frontalIndex] || elementsWithRefs[0].refs[0]);
     }
 
-    // End frame not used for storyboard chaining (start frame is sufficient)
     formData.append('negativePrompt', 'blur, distort, low quality, text, watermark');
 
     const res = await apiFetch('/api/jumpstart/generate', {
@@ -778,98 +818,150 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 )}
               </div>
 
-              {/* Character description for @Element */}
+              {/* Character Elements (@Element1, @Element2, etc.) for R2V models */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-medium text-gray-700">
-                    Character Description <span className="text-gray-400">(optional)</span>
+                    Character Elements <span className="text-gray-400">(R2V — up to 4)</span>
                   </label>
-                  {characterRefs.length > 0 && (
-                    <button
-                      onClick={() => describeCharacterFromImage(characterRefs[0])}
-                      disabled={analyzingCharacter}
-                      className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
-                    >
-                      {analyzingCharacter
-                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
-                        : <><Sparkles className="w-3 h-3" /> Describe from image</>}
+                  {elements.length < 4 && (
+                    <button onClick={addElement} className="flex items-center gap-0.5 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C]">
+                      <Plus className="w-3 h-3" /> Add Element
                     </button>
                   )}
                 </div>
-                <textarea
-                  value={characterDescription}
-                  onChange={(e) => setCharacterDescription(e.target.value)}
-                  placeholder={analyzingCharacter ? 'Analyzing character from image...' : "e.g., 'A young woman with red hair, green eyes, wearing a brown leather jacket'"}
-                  className={`w-full h-16 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent ${analyzingCharacter ? 'bg-gray-50 animate-pulse' : ''}`}
-                />
-              </div>
+                <p className="text-[10px] text-gray-400 mb-2">
+                  Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 4 reference images each.
+                </p>
 
-              {/* Character reference images */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Character Reference Images <span className="text-gray-400">(for R2V models)</span>
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs"
-                  >
-                    <Upload className="w-3 h-3 mr-1" /> Upload
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openLibrary}
-                    className="text-xs"
-                  >
-                    <FolderOpen className="w-3 h-3 mr-1" /> Library
-                  </Button>
-                </div>
-                {characterRefs.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {characterRefs.map((url, i) => (
-                      <div key={i} className="relative group">
-                        <img
-                          src={url}
-                          alt={`ref ${i + 1}`}
-                          onClick={() => setFrontalIndex(i)}
-                          title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
-                          className={`w-16 h-16 rounded-lg object-cover cursor-pointer transition-all ${
-                            i === frontalIndex
-                              ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
-                              : 'border border-gray-200 hover:border-gray-400'
-                          }`}
-                        />
-                        {i === frontalIndex && (
-                          <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
-                        )}
-                        <button
-                          onClick={() => {
-                            setCharacterRefs(prev => prev.filter((_, j) => j !== i));
-                            if (frontalIndex >= characterRefs.length - 1) setFrontalIndex(0);
-                            else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
-                          }}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                {/* Element tabs */}
+                <div className="flex gap-1 mb-2">
+                  {elements.map((el, i) => (
+                    <button
+                      key={el.id}
+                      onClick={() => setActiveElementIndex(i)}
+                      className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                        i === activeElementIndex
+                          ? 'bg-[#2C666E] text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      @Element{i + 1}
+                      {el.refs.length > 0 && <span className="text-[9px] opacity-70">({el.refs.length})</span>}
+                      {elements.length > 1 && (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); removeElement(i); }}
+                          className="ml-0.5 hover:text-red-300"
                         >
                           <X className="w-2.5 h-2.5" />
-                        </button>
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active element content */}
+                {elements[activeElementIndex] && (() => {
+                  const el = elements[activeElementIndex];
+                  const elIdx = activeElementIndex;
+                  return (
+                    <div className="border rounded-lg p-2.5 bg-white space-y-2">
+                      {/* Description */}
+                      <div>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wide">Description</label>
+                          {el.refs.length > 0 && (
+                            <button
+                              onClick={() => describeCharacterFromImage(el.refs[0], elIdx)}
+                              disabled={el.analyzing}
+                              className="flex items-center gap-0.5 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                            >
+                              {el.analyzing
+                                ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Analyzing...</>
+                                : <><Sparkles className="w-2.5 h-2.5" /> Auto-describe</>}
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          value={el.description}
+                          onChange={(e) => updateElement(elIdx, { description: e.target.value })}
+                          placeholder={el.analyzing ? 'Analyzing...' : "e.g., 'Young woman, red hair, green eyes, brown leather jacket'"}
+                          className={`w-full h-12 px-2 py-1 border border-gray-200 rounded text-xs resize-none ${el.analyzing ? 'bg-gray-50 animate-pulse' : ''}`}
+                        />
                       </div>
-                    ))}
-                    {characterRefs.length > 1 && (
-                      <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
-                    )}
-                  </div>
-                )}
+
+                      {/* Reference images */}
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">
+                          Reference Images ({el.refs.length}/4)
+                        </label>
+                        <div className="flex gap-2 mb-1.5">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={el.refs.length >= 4}
+                            className="text-xs"
+                          >
+                            <Upload className="w-3 h-3 mr-1" /> Upload
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={openLibrary}
+                            disabled={el.refs.length >= 4}
+                            className="text-xs"
+                          >
+                            <FolderOpen className="w-3 h-3 mr-1" /> Library
+                          </Button>
+                        </div>
+                        {el.refs.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {el.refs.map((url, i) => (
+                              <div key={i} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`ref ${i + 1}`}
+                                  onClick={() => updateElement(elIdx, { frontalIndex: i })}
+                                  title={i === el.frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
+                                  className={`w-14 h-14 rounded-lg object-cover cursor-pointer transition-all ${
+                                    i === el.frontalIndex
+                                      ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
+                                      : 'border border-gray-200 hover:border-gray-400'
+                                  }`}
+                                />
+                                {i === el.frontalIndex && (
+                                  <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    const newRefs = el.refs.filter((_, j) => j !== i);
+                                    const newFrontal = el.frontalIndex >= newRefs.length ? 0 : (i < el.frontalIndex ? el.frontalIndex - 1 : el.frontalIndex);
+                                    updateElement(elIdx, { refs: newRefs, frontalIndex: newFrontal });
+                                  }}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            ))}
+                            {el.refs.length > 1 && (
+                              <p className="w-full text-[10px] text-gray-400 mt-0.5">Click to set frontal ref (F)</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Library browser overlay */}

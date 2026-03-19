@@ -42,27 +42,42 @@ export default async function handler(req, res) {
       style = 'cinematic',
       defaultDuration = 5,
       cameraPreferences = '',
-      characterDescription = '',
+      characterDescription = '', // Legacy single character
+      elements = [],             // New multi-element format: [{ index: 1, description: '...' }, ...]
+      hasStartFrame = false,
     } = req.body;
 
     if (!description) {
       return res.status(400).json({ error: 'Missing story description' });
     }
 
-    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..."`);
+    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements)`);
 
     const openai = new OpenAI({ apiKey: openaiKey });
+
+    // Build element descriptions for the prompt
+    let elementInstructions = '';
+    const activeElements = elements.filter(el => el.description);
+    if (activeElements.length > 0) {
+      elementInstructions = activeElements.map(el =>
+        `@Element${el.index}: ${el.description}`
+      ).join('\n');
+    } else if (characterDescription) {
+      // Legacy single-character fallback
+      elementInstructions = `@Element1: ${characterDescription}`;
+    }
 
     const systemPrompt = `You are a professional storyboard artist and video director. Break down the user's concept into a sequence of ${numScenes} scenes for AI video generation.
 
 STYLE: ${style}
 DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
 ${cameraPreferences ? `CAMERA PREFERENCES: ${cameraPreferences}` : ''}
-${characterDescription ? `CHARACTER DESCRIPTION (use @Element as placeholder in visual prompts when referring to this character): ${characterDescription}` : ''}
+${elementInstructions ? `CHARACTER/OBJECT ELEMENTS (use the exact @ElementN placeholders in visual prompts to refer to these):\n${elementInstructions}` : ''}
+${hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe the continuation of that visual context.' : ''}
 
 CRITICAL RULES:
 - Each scene's visualPrompt must be a vivid, specific AI video generation prompt
-- If a character description was provided, reference the character as @Element in visual prompts
+- If elements are listed above, reference them using @Element1, @Element2, etc. in visual prompts — use the EXACT placeholder names
 - Visual prompts should describe the scene as if directing a cinematographer — include lighting, mood, environment, actions
 - Motion prompts should describe camera movements and on-screen motion
 - Scenes should flow naturally — the end of one scene should connect visually to the start of the next

@@ -149,6 +149,7 @@ export default async function handler(req, res) {
     } else if (model === 'kling-r2v-pro' || model === 'kling-r2v-standard') {
       // Kling O3 Reference-to-Video — character-consistent video from reference images
       let referenceImages = [];
+      let r2vElements = [];
       try {
         if (fields.referenceImages?.[0]) {
           referenceImages = JSON.parse(fields.referenceImages[0]);
@@ -156,9 +157,16 @@ export default async function handler(req, res) {
       } catch (e) {
         console.warn('[JumpStart] Failed to parse referenceImages:', e);
       }
+      try {
+        if (fields.r2vElements?.[0]) {
+          r2vElements = JSON.parse(fields.r2vElements[0]);
+        }
+      } catch (e) {
+        console.warn('[JumpStart] Failed to parse r2vElements:', e);
+      }
       return await handleKlingR2V(req, res, {
         imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl,
-        referenceImages, enableAudio, model, frontalImageUrl, FAL_KEY
+        referenceImages, r2vElements, enableAudio, model, frontalImageUrl, FAL_KEY
       });
     } else if (model === 'ltx-iclora') {
       // LTX-Video ICLoRA — in-context LoRA for subject-consistent video
@@ -783,7 +791,7 @@ async function handleLtxAudioVideo(req, res, params) {
  * Uses elements array for character-consistent video generation
  */
 async function handleKlingR2V(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
+  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, r2vElements, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
 
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
@@ -791,7 +799,7 @@ async function handleKlingR2V(req, res, params) {
 
   const tier = model === 'kling-r2v-pro' ? 'pro' : 'standard';
   console.log(`[JumpStart/KlingR2V] Submitting to Kling O3 ${tier} R2V...`);
-  console.log(`[JumpStart/KlingR2V] Settings:`, { duration, aspectRatio, enableAudio, refImages: referenceImages?.length || 0, hasEndFrame: !!endImageUrl });
+  console.log(`[JumpStart/KlingR2V] Settings:`, { duration, aspectRatio, enableAudio, r2vElements: r2vElements?.length || 0, refImages: referenceImages?.length || 0, hasEndFrame: !!endImageUrl });
 
   const requestBody = {
     prompt,
@@ -801,14 +809,22 @@ async function handleKlingR2V(req, res, params) {
     start_image_url: imageUrl,
   };
 
-  // Build elements array — use character reference images for consistency
-  // frontal_image_url should be the high-res character ref selected by the user
-  const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
-  const element = {
-    frontal_image_url: frontalUrl,
-    reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],
-  };
-  requestBody.elements = [element];
+  // Build elements array — supports up to 4 elements (@Element1, @Element2, etc.)
+  // Each element has a frontal_image_url and up to 4 reference_image_urls
+  if (r2vElements && r2vElements.length > 0) {
+    // New multi-element format from Storyboard
+    requestBody.elements = r2vElements.slice(0, 4).map(el => ({
+      frontal_image_url: el.frontalImageUrl || el.referenceImageUrls?.[0],
+      reference_image_urls: (el.referenceImageUrls || []).slice(0, 4),
+    }));
+  } else {
+    // Legacy single-element format (JumpStart, etc.)
+    const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
+    requestBody.elements = [{
+      frontal_image_url: frontalUrl,
+      reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 4) : [imageUrl],
+    }];
+  }
 
   // End frame
   if (endImageUrl) {
