@@ -366,7 +366,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         body: JSON.stringify({
           description,
           numScenes,
-          style,
+          style: getPromptText(style) || style,
           defaultDuration,
           // Send all element descriptions so AI uses @Element1, @Element2, etc.
           elements: elements
@@ -458,13 +458,14 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
     const isR2V = selectedModel?.supportsRefs && elementsWithRefs.length > 0;
 
-    // Build prompt
+    // Build prompt — include full style description from presets
+    const styleText = getPromptText(style);
     let prompt = scene.visualPrompt;
     if (scene.motionPrompt) {
       prompt += `. Camera: ${scene.motionPrompt}`;
     }
-    if (style && style !== 'cinematic') {
-      prompt += `. Style: ${style}`;
+    if (styleText) {
+      prompt += `. Style: ${styleText}`;
     }
 
     // Build FormData matching JumpStart's expected format
