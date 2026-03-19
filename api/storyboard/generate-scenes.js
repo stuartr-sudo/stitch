@@ -67,26 +67,41 @@ export default async function handler(req, res) {
       elementInstructions = `@Element1: ${characterDescription}`;
     }
 
-    const systemPrompt = `You are a professional storyboard artist and video director. Break down the user's concept into a sequence of ${numScenes} scenes for AI video generation.
+    const systemPrompt = `You are an expert AI video prompt engineer. Your job is to write extremely detailed, hyper-specific visual prompts that AI video generation models can render into beautiful footage.
 
-STYLE: ${style}
+VISUAL STYLE TO APPLY TO EVERY SCENE: ${style}
 DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
 ${cameraPreferences ? `CAMERA PREFERENCES: ${cameraPreferences}` : ''}
-${elementInstructions ? `CHARACTER/OBJECT ELEMENTS (use the exact @ElementN placeholders in visual prompts to refer to these):\n${elementInstructions}` : ''}
-${hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe the continuation of that visual context.' : ''}
+${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt where that character/object appears:\n${elementInstructions}` : ''}
+${hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe what happens NEXT from that exact visual — same environment, same lighting, same composition continuing forward.' : ''}
 
-CRITICAL RULES:
-- Each scene's visualPrompt must be a vivid, specific AI video generation prompt
-- If elements are listed above, reference them using @Element1, @Element2, etc. in visual prompts — use the EXACT placeholder names
-- Visual prompts should describe the scene as if directing a cinematographer — include lighting, mood, environment, actions
-- Motion prompts should describe camera movements and on-screen motion
-- Scenes should flow naturally — the end of one scene should connect visually to the start of the next
-- Vary camera angles for visual interest unless the user specified preferences
-- Each scene duration should be between 3 and 10 seconds
-- Total sequence should tell a cohesive visual story
-- Do NOT include text, words, or typography in visual prompts`;
+PROMPT ENGINEERING RULES — follow these exactly:
 
-    const userPrompt = `Create a ${numScenes}-scene storyboard for: ${description}`;
+1. VISUAL PROMPT FORMAT: Each visualPrompt must read like a cinematographer's shot description. Include ALL of these in every prompt:
+   - SUBJECT: Exactly what/who is in frame, their appearance, pose, expression, clothing, position in frame
+   - ACTION: Precisely what is happening — specific body movements, gestures, interactions
+   - ENVIRONMENT: Detailed setting — ground surface, surroundings, background elements, weather, time of day
+   - LIGHTING: Specific lighting setup — direction, quality, color temperature, shadows (e.g., "warm golden-hour sunlight from camera-left casting long shadows", not just "nice lighting")
+   - COLOR PALETTE: Dominant colors in the scene
+   - DEPTH & COMPOSITION: Foreground/midground/background layers, depth of field, framing
+
+2. MOTION PROMPT: Be specific about camera movement with technical terms:
+   - BAD: "camera follows character"
+   - GOOD: "smooth tracking shot at waist height, dollying left-to-right at walking pace, slight parallax on background buildings"
+
+3. STYLE ENFORCEMENT: Weave the visual style description naturally into every visualPrompt. Don't just append it — describe the scene AS IF it exists in that style. For example, if the style is "3D rendered kids animation", describe "smooth rounded 3D character with large expressive eyes and soft subsurface skin shading" not just "a character".
+
+4. SCENE CONTINUITY: The final frame of scene N must match the opening frame of scene N+1. Describe the same environment, lighting, and character position at transition points.
+
+5. PROMPT LENGTH: Each visualPrompt should be 80-150 words. Short prompts produce generic results. Be lavish with visual detail.
+
+6. NEVER include: text, words, typography, watermarks, logos, UI elements, or letterboxing in visual prompts.
+
+7. If @Element placeholders are listed above, you MUST use them (e.g., "@Element1 rides a green scooter") — never replace them with generic descriptions.`;
+
+    const userPrompt = `Write ${numScenes} hyper-detailed AI video generation prompts for this story concept: ${description}
+
+Remember: each visualPrompt must be 80-150 words of pure visual description — describe exactly what the camera sees, the lighting, textures, colors, depth, and motion. These prompts will be fed directly to an AI video model, so vague or narrative descriptions will produce terrible results.`;
 
     const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
