@@ -467,8 +467,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     if (styleText) {
       prompt += `. Style: ${styleText}`;
     }
-    // Quality boosters — push for maximum detail and refinement
-    prompt += '. Highly detailed, intricate textures, fine surface detail, professional cinematic rendering, sharp focus, rich color depth, volumetric lighting, ambient occlusion, 4K quality';
 
     // Build FormData matching JumpStart's expected format
     const formData = new FormData();

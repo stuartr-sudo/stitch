@@ -75,37 +75,27 @@ ${cameraPreferences ? `CAMERA PREFERENCES: ${cameraPreferences}` : ''}
 ${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt where that character/object appears:\n${elementInstructions}` : ''}
 ${hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe what happens NEXT from that exact visual — same environment, same lighting, same composition continuing forward.' : ''}
 
-PROMPT ENGINEERING RULES — follow these exactly:
+PROMPT WRITING RULES:
 
-1. VISUAL PROMPT FORMAT: Each visualPrompt must read like a cinematographer's shot description. Include ALL of these in every prompt:
-   - SUBJECT: Exactly what/who is in frame, their appearance, pose, expression, clothing, position in frame
-   - ACTION: Precisely what is happening — specific body movements, gestures, interactions
-   - ENVIRONMENT: Detailed setting — ground surface, surroundings, background elements, weather, time of day
-   - LIGHTING: Specific lighting setup — direction, quality, color temperature, shadows (e.g., "warm golden-hour sunlight from camera-left casting long shadows", not just "nice lighting")
-   - COLOR PALETTE: Dominant colors in the scene
-   - DEPTH & COMPOSITION: Foreground/midground/background layers, depth of field, framing
+1. Write each visualPrompt as a single flowing paragraph — NOT with labeled sections like "SUBJECT:" or "ACTION:". Write naturally as if describing a shot to a cinematographer. Example: "@Element1 rides a blue skateboard along a sunlit suburban sidewalk, golden-hour light from camera-left casting warm shadows, picket fences and pastel houses softly blurred in the background, leaves scattered on the concrete path."
 
-2. MOTION PROMPT: Be specific about camera movement with technical terms:
-   - BAD: "camera follows character"
-   - GOOD: "smooth tracking shot at waist height, dollying left-to-right at walking pace, slight parallax on background buildings"
+2. Each visualPrompt should be 60-100 words. Concise but specific — include the subject, what they're doing, the environment, and the lighting/mood. Don't pad with technical jargon.
 
-3. STYLE ENFORCEMENT: Weave the visual style description naturally into every visualPrompt. Don't just append it — describe the scene AS IF it exists in that style. For example, if the style is "3D rendered kids animation", describe "smooth rounded 3D character with large expressive eyes and soft subsurface skin shading" not just "a character".
+3. CAMERA/MOTION: Be specific — "smooth tracking shot at waist height following the subject" not "camera follows character".
 
-4. SCENE CONTINUITY: The final frame of scene N must match the opening frame of scene N+1. Describe the same environment, lighting, and character position at transition points.
+4. STYLE: Weave the visual style naturally into the description. For 3D animation styles, describe characters as "smooth rounded 3D character with large expressive eyes" not just "a character".
 
-5. PROMPT LENGTH: Each visualPrompt should be 100-200 words. Short prompts produce generic, flat results. Be extremely lavish with visual detail.
+5. SCENE CONTINUITY: The end of scene N must match the start of scene N+1 — same environment, same lighting, same character position.
 
-6. MATERIAL & TEXTURE DETAIL: Always describe surface qualities — fur texture, fabric weave, skin shading, ground surface material, reflection qualities, translucency. For 3D styles describe: subsurface scattering, ambient occlusion, rim lighting, specular highlights on surfaces. For realistic styles describe: skin pores, fabric threads, dust particles, lens characteristics.
+6. @Element placeholders: You MUST use them exactly as listed above. Describe what the character is doing, their expression, and body language.
 
-7. DEPTH & ATMOSPHERE: Describe atmospheric perspective — haze, dust motes in light beams, bokeh in background, heat shimmer, fog layers. Describe at least 3 depth layers (foreground detail, midground subject, background environment).
+7. NEVER include: text, words, typography, watermarks, logos, or UI elements.
 
-8. NEVER include: text, words, typography, watermarks, logos, UI elements, or letterboxing in visual prompts.
+8. CRITICAL: The start_image_url provides the scene environment. Your prompt must describe the character WITHIN that same environment — do not describe a different location.`;
 
-9. If @Element placeholders are listed above, you MUST use them (e.g., "@Element1 rides a green scooter") — never replace them with generic descriptions. When referencing @Element characters, still describe their pose, expression, and what they're physically doing in rich detail.`;
+    const userPrompt = `Write ${numScenes} scene prompts for: ${description}
 
-    const userPrompt = `Write ${numScenes} hyper-detailed AI video generation prompts for this story concept: ${description}
-
-CRITICAL: Each visualPrompt must be 100-200 words of pure visual description. Describe exactly what the camera sees: the lighting direction and color temperature, surface textures and materials, atmospheric effects, depth layers, character expressions and body language, environmental details like ground surface, sky conditions, and background elements. These prompts are fed directly to an AI video model — vague or narrative descriptions produce flat, lifeless, generic output. The more specific visual detail you provide, the better the result.`;
+Each visualPrompt should be a natural flowing paragraph of 60-100 words describing what the camera sees. Keep it concise and direct — describe the character, their action, the environment, and the lighting. Do NOT use labeled sections like "SUBJECT:" or "ACTION:". These prompts go to an AI video model that works best with natural descriptions, not structured templates.`;
 
     const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',
