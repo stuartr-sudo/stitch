@@ -93,15 +93,19 @@ PROMPT ENGINEERING RULES — follow these exactly:
 
 4. SCENE CONTINUITY: The final frame of scene N must match the opening frame of scene N+1. Describe the same environment, lighting, and character position at transition points.
 
-5. PROMPT LENGTH: Each visualPrompt should be 80-150 words. Short prompts produce generic results. Be lavish with visual detail.
+5. PROMPT LENGTH: Each visualPrompt should be 100-200 words. Short prompts produce generic, flat results. Be extremely lavish with visual detail.
 
-6. NEVER include: text, words, typography, watermarks, logos, UI elements, or letterboxing in visual prompts.
+6. MATERIAL & TEXTURE DETAIL: Always describe surface qualities — fur texture, fabric weave, skin shading, ground surface material, reflection qualities, translucency. For 3D styles describe: subsurface scattering, ambient occlusion, rim lighting, specular highlights on surfaces. For realistic styles describe: skin pores, fabric threads, dust particles, lens characteristics.
 
-7. If @Element placeholders are listed above, you MUST use them (e.g., "@Element1 rides a green scooter") — never replace them with generic descriptions.`;
+7. DEPTH & ATMOSPHERE: Describe atmospheric perspective — haze, dust motes in light beams, bokeh in background, heat shimmer, fog layers. Describe at least 3 depth layers (foreground detail, midground subject, background environment).
+
+8. NEVER include: text, words, typography, watermarks, logos, UI elements, or letterboxing in visual prompts.
+
+9. If @Element placeholders are listed above, you MUST use them (e.g., "@Element1 rides a green scooter") — never replace them with generic descriptions. When referencing @Element characters, still describe their pose, expression, and what they're physically doing in rich detail.`;
 
     const userPrompt = `Write ${numScenes} hyper-detailed AI video generation prompts for this story concept: ${description}
 
-Remember: each visualPrompt must be 80-150 words of pure visual description — describe exactly what the camera sees, the lighting, textures, colors, depth, and motion. These prompts will be fed directly to an AI video model, so vague or narrative descriptions will produce terrible results.`;
+CRITICAL: Each visualPrompt must be 100-200 words of pure visual description. Describe exactly what the camera sees: the lighting direction and color temperature, surface textures and materials, atmospheric effects, depth layers, character expressions and body language, environmental details like ground surface, sky conditions, and background elements. These prompts are fed directly to an AI video model — vague or narrative descriptions produce flat, lifeless, generic output. The more specific visual detail you provide, the better the result.`;
 
     const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',

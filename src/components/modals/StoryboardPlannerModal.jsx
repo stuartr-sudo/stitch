@@ -458,7 +458,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
     const isR2V = selectedModel?.supportsRefs && elementsWithRefs.length > 0;
 
-    // Build prompt — include full style description from presets
+    // Build prompt — include full style description + quality boosters
     const styleText = getPromptText(style);
     let prompt = scene.visualPrompt;
     if (scene.motionPrompt) {
@@ -467,6 +467,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     if (styleText) {
       prompt += `. Style: ${styleText}`;
     }
+    // Quality boosters — push for maximum detail and refinement
+    prompt += '. Highly detailed, intricate textures, fine surface detail, professional cinematic rendering, sharp focus, rich color depth, volumetric lighting, ambient occlusion, 4K quality';
 
     // Build FormData matching JumpStart's expected format
     const formData = new FormData();
@@ -499,7 +501,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       formData.append('frontalImageUrl', elementsWithRefs[0].refs[elementsWithRefs[0].frontalIndex] || elementsWithRefs[0].refs[0]);
     }
 
-    formData.append('negativePrompt', 'blur, distort, low quality, text, watermark');
+    formData.append('negativePrompt', 'blur, blurry, out of focus, distorted, deformed, disfigured, low quality, low resolution, pixelated, blocky, flat shading, flat lighting, overexposed, underexposed, text, words, watermark, logo, letterbox, black bars, ugly, amateur, draft quality, rough edges, jagged lines, artifacts, noise, grain');
 
     const res = await apiFetch('/api/jumpstart/generate', {
       method: 'POST',
