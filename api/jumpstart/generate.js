@@ -805,8 +805,8 @@ async function upscaleImage(imageUrl, FAL_KEY) {
       },
       body: JSON.stringify({
         image_url: imageUrl,
-        upscale_mode: 'target',
-        target_resolution: '720p',
+        upscale_mode: 'factor',
+        upscale_factor: 2,
         output_format: 'jpg',
       }),
     });
