@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle,
   X, Grid3X3, Scissors, Sparkles, ArrowLeft, ChevronRight,
-  Pencil, Trash2, Eye, Save, RotateCw, Check, XCircle
+  Pencil, Trash2, Eye, Save, RotateCw, Check, XCircle, FolderOpen
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { getPromptText } from "@/lib/stylePresets";
+import LibraryModal from "@/components/modals/LibraryModal";
 
 const MODEL_OPTIONS = [
   { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
@@ -56,6 +57,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [characterDescription, setCharacterDescription] = useState(DEFAULT_PROMPT);
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referencePreview, setReferencePreview] = useState("");
+  const [showLibrary, setShowLibrary] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
   const [styleValue, setStyleValue] = useState("concept-art");
   const styleText = getPromptText(styleValue);
@@ -572,6 +574,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   // ─── RENDER ───────────────────────────────────────────────────────────────
 
   return (
+    <>
     <SlideOverPanel
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
@@ -649,10 +652,17 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                      <Upload className="w-5 h-5 text-slate-400" />
-                      <span className="text-sm text-slate-500">Click to upload a reference image</span>
+                    <div className="flex gap-2">
+                      <div onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                        <Upload className="w-5 h-5 text-slate-400" />
+                        <span className="text-sm text-slate-500">Upload</span>
+                      </div>
+                      <div onClick={() => setShowLibrary(true)}
+                        className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                        <FolderOpen className="w-5 h-5 text-slate-400" />
+                        <span className="text-sm text-slate-500">Library</span>
+                      </div>
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                     <div className="flex items-center gap-2">
@@ -1021,5 +1031,19 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
         )}
       </div>
     </SlideOverPanel>
+
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={(item) => {
+          setReferenceImageUrl(item.url);
+          setReferencePreview(item.url);
+          setShowLibrary(false);
+          toast.success('Reference image selected — analyzing character...');
+          describeCharacter(item.url);
+        }}
+        mediaType="images"
+      />
+    </>
   );
 }
