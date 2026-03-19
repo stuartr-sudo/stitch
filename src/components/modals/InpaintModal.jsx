@@ -478,18 +478,58 @@ export default function InpaintModal({
               </div>
             </div>
             <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
-              Edit Again
+              Inpaint Again
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                apiFetch('/api/library/save', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: resultImage, type: 'image', title: '[Inpaint] Result', source: 'inpaint' }),
+                }).then(() => toast.success('Saved to library')).catch(() => toast.error('Save failed'));
+              }}
+            >
+              <FolderOpen className="w-4 h-4 mr-2" /> Save to Library
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'imagineer-edit', imageUrl: resultImage } }));
+              }}
+            >
+              Edit Image
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl: resultImage } }));
+              }}
+            >
+              Turnaround
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'storyboard', imageUrl: resultImage } }));
+              }}
+            >
+              <Sparkles className="w-4 h-4 mr-2" /> Use in Storyboard
             </Button>
             <a
               href={resultImage}
               download="inpainted-image.png"
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
             >
-              <Download className="w-4 h-4" /> Download to Device
+              <Download className="w-4 h-4" /> Download
             </a>
-            <Button onClick={handleUseResult} className="w-full bg-[#2C666E] hover:bg-[#07393C]">
-              Use This Image
-            </Button>
           </div>
         )}
 
