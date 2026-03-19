@@ -19,7 +19,7 @@ import { logCost } from '../lib/costLogger.js';
  * Builds a single cohesive prompt from all structured inputs.
  * This is the ONLY place prompt text is assembled — the frontend sends raw data.
  */
-function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt }) {
+function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide }) {
   // Style rendering instructions
   const stylePrompt = (style && style.trim())
     ? `Rendered in ${style.trim()} style with high quality, detailed ${style.trim()} aesthetic throughout every cell`
@@ -56,6 +56,19 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
   ];
 
   if (avoidNote) parts.push(avoidNote);
+
+  // Brand style guide context
+  if (brandStyleGuide) {
+    const bsg = [];
+    if (brandStyleGuide.visual_style_notes) bsg.push(`Visual style: ${brandStyleGuide.visual_style_notes}`);
+    if (brandStyleGuide.mood_atmosphere) bsg.push(`Mood: ${brandStyleGuide.mood_atmosphere}`);
+    if (brandStyleGuide.lighting_prefs) bsg.push(`Lighting: ${brandStyleGuide.lighting_prefs}`);
+    if (brandStyleGuide.composition_style) bsg.push(`Composition: ${brandStyleGuide.composition_style}`);
+    if (brandStyleGuide.ai_prompt_rules) bsg.push(`Rules: ${brandStyleGuide.ai_prompt_rules}`);
+    if (brandStyleGuide.preferred_elements) bsg.push(`Include: ${brandStyleGuide.preferred_elements}`);
+    if (brandStyleGuide.prohibited_elements) bsg.push(`Exclude: ${brandStyleGuide.prohibited_elements}`);
+    if (bsg.length > 0) parts.push(`Brand style guide (${brandStyleGuide.brand_name || 'unnamed'}): ${bsg.join('. ')}`);
+  }
 
   return parts.join('. ');
 }
@@ -174,6 +187,7 @@ export default async function handler(req, res) {
     loras,
     negativePrompt,
     props,
+    brandStyleGuide,
   } = req.body;
 
   if (!characterDescription) {
@@ -196,6 +210,7 @@ export default async function handler(req, res) {
     hasReference: hasRef,
     props: Array.isArray(props) ? props : undefined,
     negativePrompt: negPrompt,
+    brandStyleGuide: brandStyleGuide || undefined,
   });
 
   // Validate: edit models REQUIRE a reference image

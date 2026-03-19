@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/api";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { getPromptText } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
+import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 
 const MODEL_OPTIONS = [
   { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
@@ -111,8 +112,7 @@ const PROP_CATEGORIES = [
   ]},
 ];
 
-// Flat list for lookup
-const ALL_PROPS = PROP_CATEGORIES.flatMap(c => c.props);
+const ALL_PROPS_LOCAL = PROP_CATEGORIES.flatMap(c => c.props);
 
 const NEG_PROMPT_CATEGORIES = [
   { label: 'Quality Issues', prompts: [
@@ -165,7 +165,7 @@ const NEG_PROMPT_CATEGORIES = [
   ]},
 ];
 
-const ALL_NEG_PROMPTS = NEG_PROMPT_CATEGORIES.flatMap(c => c.prompts);
+const ALL_NEG_PROMPTS_LOCAL = NEG_PROMPT_CATEGORIES.flatMap(c => c.prompts);
 
 const DEFAULT_CHARACTER_DESC = '';
 
@@ -199,6 +199,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [selectedProps, setSelectedProps] = useState([]);
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState(null);
 
   // AI analysis
   const [analyzingRef, setAnalyzingRef] = useState(false);
@@ -255,10 +256,10 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     return m > 0 ? `${m}:${sec.toString().padStart(2, '0')}` : `${sec}s`;
   };
 
-  const propsLabels = selectedProps.map(p => ALL_PROPS.find(o => o.value === p)?.label || p);
+  const propsLabels = selectedProps.map(p => ALL_PROPS_LOCAL.find(o => o.value === p)?.label || p);
 
   // Combine neg pills + freetext into one string sent to API
-  const negPillLabels = selectedNegPills.map(v => ALL_NEG_PROMPTS.find(o => o.value === v)?.label || v);
+  const negPillLabels = selectedNegPills.map(v => ALL_NEG_PROMPTS_LOCAL.find(o => o.value === v)?.label || v);
   const combinedNegativePrompt = [
     ...negPillLabels,
     ...(negativePrompt.trim() ? [negativePrompt.trim()] : []),
@@ -285,6 +286,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       setSelectedProps([]);
       setSelectedNegPills([]);
       setNegativePrompt("");
+      setSelectedBrand(null);
       setSheets([]);
       setActiveSheetId(null);
       setShowGrid(true);
@@ -294,6 +296,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       setSavingForLora(false);
       setSlicing(false);
       setLoraFolderName('');
+      setReassembledUrl(null);
+      setReassembling(false);
       setElapsedSeconds(0);
       // Clear all polling intervals
       Object.values(pollingIntervalsRef.current).forEach(clearInterval);
@@ -453,6 +457,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
               props: propsLabels.length > 0 ? propsLabels : undefined,
               model: selectedModel,
               negativePrompt: combinedNegativePrompt,
+              brandStyleGuide: extractBrandStyleData(selectedBrand),
             }),
           });
 
@@ -684,6 +689,104 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       toast.error('Save failed: ' + err.message);
     } finally {
       setSavingForLora(false);
+    }
+  };
+
+  // ─── Reassemble active cells into a composite turnaround sheet ──────────
+
+  const [reassembledUrl, setReassembledUrl] = useState(null);
+  const [reassembling, setReassembling] = useState(false);
+
+  const handleReassembleAndSave = async () => {
+    const keepCells = cellImages.filter(c => !c.deleted);
+    if (keepCells.length === 0) { toast.error('No cells to reassemble.'); return; }
+
+    setReassembling(true);
+    const folder = loraFolderName.trim();
+    const titlePrefix = folder ? `[${folder}] Turnaround` : 'Turnaround';
+
+    try {
+      // 1. Figure out grid dimensions for reassembled sheet
+      //    Try to keep aspect close to original 4 cols. Use as many cols as needed.
+      const cols = Math.min(keepCells.length, GRID_COLS);
+      const rows = Math.ceil(keepCells.length / cols);
+
+      // Load all cell images
+      const loadImg = (src) => new Promise((resolve, reject) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load cell'));
+        img.src = src;
+      });
+
+      const imgs = await Promise.all(keepCells.map(c => loadImg(c.url)));
+      const cellW = imgs[0].width;
+      const cellH = imgs[0].height;
+
+      // 2. Stitch into one composite image
+      const canvas = document.createElement('canvas');
+      canvas.width = cols * cellW;
+      canvas.height = rows * cellH;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      imgs.forEach((img, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        ctx.drawImage(img, col * cellW, row * cellH, cellW, cellH);
+      });
+
+      const compositeDataUrl = canvas.toDataURL('image/png');
+
+      // 3. Save individual cells to library
+      let savedCells = 0;
+      for (const cell of keepCells) {
+        try {
+          const res = await apiFetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: cell.url,
+              type: 'image',
+              title: `${titlePrefix} — ${cell.label}`,
+              prompt: characterDescription,
+              source: 'turnaround-cell',
+            }),
+          });
+          const data = await res.json();
+          if (data.saved || data.duplicate || data.url) savedCells++;
+        } catch {}
+      }
+
+      // 4. Save the reassembled composite to library
+      const compRes = await apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: compositeDataUrl,
+          type: 'image',
+          title: `${titlePrefix} — Reassembled Sheet (${keepCells.length} cells)`,
+          prompt: characterDescription,
+          source: 'turnaround-sheet',
+        }),
+      });
+      const compData = await compRes.json();
+      const hostedUrl = compData.url || compositeDataUrl;
+
+      setReassembledUrl(hostedUrl);
+      toast.success(`Saved ${savedCells} cells + reassembled sheet to library!`);
+
+      // Notify parent if callback exists
+      if (onImageCreated) {
+        onImageCreated({ imageUrl: hostedUrl, type: 'turnaround-sheet', description: characterDescription });
+      }
+    } catch (err) {
+      console.error('[Turnaround] Reassemble error:', err);
+      toast.error('Reassemble failed: ' + err.message);
+    } finally {
+      setReassembling(false);
     }
   };
 
@@ -948,6 +1051,9 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                       placeholder="Additional things to avoid..."
                       rows={1} className="bg-white text-sm mt-2" />
                   </div>
+
+                  {/* Brand Style Guide */}
+                  <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
 
                   {/* Model */}
                   <div>
@@ -1323,6 +1429,26 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
               </div>
             </div>
 
+            {/* Reassembled Sheet Preview */}
+            {reassembledUrl && (
+              <div className="px-5 py-3 border-t border-b bg-green-50">
+                <div className="flex items-start gap-3">
+                  <img src={reassembledUrl} alt="Reassembled turnaround sheet"
+                    className="w-32 h-auto rounded-lg border border-green-200 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-green-700 mb-1">Reassembled Turnaround Sheet</p>
+                    <p className="text-[10px] text-green-600">{activeCells.length} cells stitched into a single reference image. Saved to library.</p>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => handleDownload(reassembledUrl)}
+                        className="text-[10px] text-green-700 hover:underline flex items-center gap-0.5">
+                        <Download className="w-3 h-3" /> Download
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Cells Footer */}
             <div className="px-5 py-3 border-t bg-slate-50 flex-shrink-0 space-y-3">
               <div className="flex items-center gap-2">
@@ -1347,11 +1473,17 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={onClose}>Close</Button>
-                  <Button onClick={handleSaveCellsForLora} disabled={savingForLora || activeCells.length === 0}
-                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                  <Button onClick={handleSaveCellsForLora} disabled={savingForLora || reassembling || activeCells.length === 0}
+                    variant="outline" className="gap-1 text-[#2C666E] border-[#2C666E]">
                     {savingForLora
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                      : <><Save className="w-4 h-4" /> Save {activeCells.length} Cells for LoRA</>}
+                      : <><Save className="w-4 h-4" /> Save Cells Only</>}
+                  </Button>
+                  <Button onClick={handleReassembleAndSave} disabled={reassembling || savingForLora || activeCells.length === 0}
+                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                    {reassembling
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Reassembling...</>
+                      : <><Grid3X3 className="w-4 h-4" /> Reassemble & Save ({activeCells.length})</>}
                   </Button>
                 </div>
               </div>

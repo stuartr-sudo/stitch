@@ -35,6 +35,10 @@ import { getPromptText } from '@/lib/stylePresets';
 import StyleGrid from '@/components/ui/StyleGrid';
 import ImagineerModal from '@/components/modals/ImagineerModal';
 import LibraryModal from '@/components/modals/LibraryModal';
+import PropsPillSelector from '@/components/ui/PropsPillSelector';
+import NegPromptPillSelector from '@/components/ui/NegPromptPillSelector';
+import BrandStyleGuideSelector, { extractBrandStyleData } from '@/components/ui/BrandStyleGuideSelector';
+import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
 
 // Reuse model list from JumpStart — subset that supports image-to-video
 const STORYBOARD_MODELS = [
@@ -117,6 +121,11 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [defaultDuration, setDefaultDuration] = useState(5);
   const [model, setModel] = useState('kling-r2v-pro');
   const [aspectRatio, setAspectRatio] = useState('16:9');
+  // Props, neg prompts, brand style
+  const [selectedProps, setSelectedProps] = useState([]);
+  const [selectedNegPills, setSelectedNegPills] = useState([]);
+  const [negFreetext, setNegFreetext] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState(null);
   // Elements — up to 4 characters/objects, each referenced as @Element1, @Element2, etc.
   // Each element: { id, label, description, refs: [url, ...], frontalIndex: 0, analyzing: false }
   const createEmptyElement = (index) => ({
@@ -202,6 +211,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setImportingUrl(false);
       setGeneratingStartFrame(false);
       setPollingStartFrame(false);
+      setSelectedProps([]);
+      setSelectedNegPills([]);
+      setNegFreetext('');
+      setSelectedBrand(null);
       setScenes([]);
       setStoryboardTitle('');
       setGenerating(false);
@@ -474,6 +487,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             .map((el, i) => ({ index: i + 1, description: el.description })),
           hasStartFrame: !!startFrameUrl,
           startFrameDescription: startFrameDescription || '',
+          props: getPropsLabels(selectedProps),
+          negativePrompt: getCombinedNegativePrompt(selectedNegPills, negFreetext),
+          brandStyleGuide: extractBrandStyleData(selectedBrand),
         }),
       });
       const data = await res.json();
@@ -1288,6 +1304,20 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   )}
                 </div>
               )}
+
+              {/* Props & Accessories */}
+              <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
+
+              {/* Negative Prompts */}
+              <NegPromptPillSelector
+                selectedPills={selectedNegPills}
+                onPillsChange={setSelectedNegPills}
+                freetext={negFreetext}
+                onFreetextChange={setNegFreetext}
+              />
+
+              {/* Brand Style Guide */}
+              <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
             </div>
 
             {/* Right column — Style cards with scrolling */}

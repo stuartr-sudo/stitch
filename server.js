@@ -192,6 +192,20 @@ app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
   }
 });
 
+// Prompt builder (with auth)
+app.post('/api/prompt/build-cohesive', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('prompt/build-cohesive.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/prompt/build-cohesive] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
 // Image utilities (with auth)
 app.post('/api/images/search', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('images/search.js');

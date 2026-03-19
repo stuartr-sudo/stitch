@@ -19,14 +19,18 @@ import {
   VolumeX,
   Music as MusicIcon,
   LayoutGrid,
+  Grid3X3,
+  Layers,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
 
 /**
  * MediaCard - Individual media item with video playback support
  * Displays media in their natural aspect ratios
  */
-function MediaCard({ item, isSelected, onSelect, onDelete }) {
+function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMultiSelected }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -104,9 +108,11 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
   return (
     <div
       className={`group relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-        isSelected
+        isMultiSelected
           ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30'
-          : 'border-transparent hover:border-[#2C666E]/50 hover:shadow-md'
+          : isSelected
+            ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/30'
+            : 'border-transparent hover:border-[#2C666E]/50 hover:shadow-md'
       }`}
       onClick={handleItemSelect}
       onMouseEnter={() => setShowControls(true)}
@@ -212,13 +218,23 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
           </>
         )}
 
-        {/* Type Badge */}
+        {/* Multi-select checkbox or Type Badge */}
         <div className="absolute top-2 left-2">
-          <div className={`p-1.5 rounded-lg ${
-            isAudio ? 'bg-purple-500' : isVideo ? 'bg-blue-500' : 'bg-green-500'
-          } text-white shadow-lg`}>
-            {isAudio ? <MusicIcon className="w-3.5 h-3.5" /> : isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
-          </div>
+          {multiSelectMode ? (
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-lg transition-all ${
+              isMultiSelected
+                ? 'bg-[#2C666E] border-[#2C666E] text-white'
+                : 'bg-white/80 border-slate-300'
+            }`}>
+              {isMultiSelected && <CheckCircle2 className="w-4 h-4" />}
+            </div>
+          ) : (
+            <div className={`p-1.5 rounded-lg ${
+              isAudio ? 'bg-purple-500' : isVideo ? 'bg-blue-500' : 'bg-green-500'
+            } text-white shadow-lg`}>
+              {isAudio ? <MusicIcon className="w-3.5 h-3.5" /> : isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            </div>
+          )}
         </div>
 
         {/* Dimensions Badge */}
@@ -269,7 +285,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete }) {
 /**
  * MediaGrid — renders the filtered grid of items
  */
-function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoading, canLoadMore, isLoadingMore, onLoadMore }) {
+function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoading, canLoadMore, isLoadingMore, onLoadMore, multiSelectMode, multiSelectedIds }) {
   const filtered = items.filter(item => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -307,6 +323,8 @@ function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoa
             isSelected={selectedItem?.id === item.id}
             onSelect={onSelect}
             onDelete={onDelete}
+            multiSelectMode={multiSelectMode}
+            isMultiSelected={multiSelectedIds?.has(item.id)}
           />
         ))}
       </div>
@@ -349,6 +367,11 @@ export default function LibraryModal({
   const [selectedItem, setSelectedItem] = useState(null);
   const [hasMore, setHasMore] = useState({ images: true, videos: true, audio: true });
   const [offsets, setOffsets] = useState({ images: 0, videos: 0, audio: 0 });
+
+  // Multi-select mode for creating turnaround sheets
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
+  const [creatingSheet, setCreatingSheet] = useState(false);
 
   useEffect(() => {
     if (isOpen || isEmbedded) {
@@ -458,10 +481,108 @@ export default function LibraryModal({
   };
 
   const handleSelect = (item) => {
+    if (multiSelectMode) {
+      // In multi-select mode, toggle the item
+      setMultiSelectedIds(prev => {
+        const next = new Set(prev);
+        next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+        return next;
+      });
+      return;
+    }
     setSelectedItem(item);
     if (onSelect) {
       onSelect(item);
       onClose();
+    }
+  };
+
+  const toggleMultiSelect = () => {
+    setMultiSelectMode(prev => !prev);
+    setMultiSelectedIds(new Set());
+  };
+
+  const multiSelectedItems = items.filter(i => multiSelectedIds.has(i.id) && i.type === 'image');
+
+  // ─── Create Turnaround Sheet from selected images ──────────────────────
+  const handleCreateTurnaroundSheet = async () => {
+    const selectedImages = multiSelectedItems;
+    if (selectedImages.length < 2) {
+      toast.error('Select at least 2 images to create a turnaround sheet');
+      return;
+    }
+
+    setCreatingSheet(true);
+    try {
+      // Load all selected images
+      const loadImg = (src) => new Promise((resolve, reject) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = src;
+      });
+
+      const urls = selectedImages.map(i => i.url || i.image_url);
+      const imgs = await Promise.all(urls.map(u => loadImg(u)));
+
+      // Calculate grid dimensions — prefer 4 columns like a standard turnaround
+      const cols = Math.min(selectedImages.length, 4);
+      const rows = Math.ceil(selectedImages.length / cols);
+
+      // Use the max cell dimensions across all images
+      const cellW = Math.max(...imgs.map(i => i.width));
+      const cellH = Math.max(...imgs.map(i => i.height));
+
+      // Create composite canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = cols * cellW;
+      canvas.height = rows * cellH;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      imgs.forEach((img, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        // Center each image within its cell
+        const x = col * cellW + (cellW - img.width) / 2;
+        const y = row * cellH + (cellH - img.height) / 2;
+        ctx.drawImage(img, x, y, img.width, img.height);
+      });
+
+      const compositeDataUrl = canvas.toDataURL('image/png');
+
+      // Save to library
+      const res = await apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: compositeDataUrl,
+          type: 'image',
+          title: `Custom Turnaround Sheet (${selectedImages.length} images)`,
+          source: 'turnaround-sheet-custom',
+        }),
+      });
+      const data = await res.json();
+
+      if (data.url || data.saved) {
+        toast.success(`Turnaround sheet created from ${selectedImages.length} images!`);
+        // Refresh library to show new item
+        setItems([]);
+        setOffsets({ images: 0, videos: 0, audio: 0 });
+        setHasMore({ images: true, videos: true, audio: true });
+        loadLibrary(true);
+        setMultiSelectMode(false);
+        setMultiSelectedIds(new Set());
+      } else {
+        throw new Error(data.error || 'Save failed');
+      }
+    } catch (err) {
+      console.error('[Library] Create turnaround sheet error:', err);
+      toast.error('Failed to create sheet: ' + err.message);
+    } finally {
+      setCreatingSheet(false);
     }
   };
 
@@ -510,6 +631,16 @@ export default function LibraryModal({
               className="pl-9"
             />
           </div>
+          <Button
+            variant={multiSelectMode ? "default" : "outline"}
+            size="sm"
+            onClick={toggleMultiSelect}
+            className={multiSelectMode ? "bg-[#2C666E] text-white hover:bg-[#07393C]" : ""}
+            title="Multi-select to create turnaround sheet"
+          >
+            <Layers className="w-3.5 h-3.5 mr-1" />
+            {multiSelectMode ? 'Cancel' : 'Multi-Select'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setItems([]); setOffsets({ images: 0, videos: 0, audio: 0 }); setHasMore({ images: true, videos: true, audio: true }); loadLibrary(true); }} disabled={isLoading}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
           </Button>
@@ -553,10 +684,39 @@ export default function LibraryModal({
               canLoadMore={canLoadMore}
               isLoadingMore={isLoadingMore}
               onLoadMore={() => loadLibrary(false)}
+              multiSelectMode={multiSelectMode}
+              multiSelectedIds={multiSelectedIds}
             />
           </TabsContent>
         ))}
       </SlideOverBody>
+
+      {/* Floating action bar for multi-select */}
+      {multiSelectMode && multiSelectedIds.size > 0 && (
+        <div className="flex-shrink-0 border-t bg-white px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <CheckCircle2 className="w-4 h-4 text-[#2C666E]" />
+            <span><strong>{multiSelectedIds.size}</strong> image{multiSelectedIds.size !== 1 ? 's' : ''} selected</span>
+            <button
+              onClick={() => setMultiSelectedIds(new Set())}
+              className="ml-1 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <Button
+            onClick={handleCreateTurnaroundSheet}
+            disabled={creatingSheet || multiSelectedItems.length < 2}
+            className="bg-[#2C666E] hover:bg-[#07393C] text-white"
+          >
+            {creatingSheet ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
+            ) : (
+              <><Grid3X3 className="w-4 h-4 mr-2" /> Create Turnaround Sheet</>
+            )}
+          </Button>
+        </div>
+      )}
     </Tabs>
   );
 

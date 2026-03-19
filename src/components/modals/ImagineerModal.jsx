@@ -3,16 +3,21 @@ import { SlideOverPanel, SlideOverBody, SlideOverFooter } from "@/components/ui/
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen, Upload } from "lucide-react";
+import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen, Upload, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import LoRAPicker from "@/components/LoRAPicker";
 import { findStyleByValue } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
+import PropsPillSelector from "@/components/ui/PropsPillSelector";
+import NegPromptPillSelector from "@/components/ui/NegPromptPillSelector";
+import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
+import { getPropsLabels, getCombinedNegativePrompt } from "@/lib/creativePresets";
 
 const IMAGE_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
@@ -181,6 +186,8 @@ function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
 
 /**
  * ImagineerModal - AI Image Generation with form-based prompt builder
+ * Now with: Props, Negative Prompts, Brand Style Guide, Reference Image Analysis,
+ * and LLM cohesive prompt generation before image generation.
  */
 export default function ImagineerModal({
   isOpen,
@@ -208,6 +215,20 @@ export default function ImagineerModal({
   const [mood, setMood] = useState("");
   const [elementsToInclude, setElementsToInclude] = useState("");
 
+  // Props, Neg Prompts, Brand Style — Generate tab
+  const [selectedProps, setSelectedProps] = useState([]);
+  const [selectedNegPills, setSelectedNegPills] = useState([]);
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState(null);
+
+  // Reference image — Generate tab
+  const [refImageUrl, setRefImageUrl] = useState("");
+  const [refPreview, setRefPreview] = useState("");
+  const [refDescription, setRefDescription] = useState("");
+  const [analyzingRef, setAnalyzingRef] = useState(false);
+  const [showRefLibrary, setShowRefLibrary] = useState(false);
+  const refFileInputRef = useRef(null);
+
   // UI state
   const [generating, setGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -228,8 +249,13 @@ export default function ImagineerModal({
   const [editDimensions, setEditDimensions] = useState("1:1");
   const [isEditing, setIsEditing] = useState(false);
 
-  const { user } = useAuth();
+  // Props, Neg Prompts, Brand Style — Edit tab
+  const [editSelectedProps, setEditSelectedProps] = useState([]);
+  const [editSelectedNegPills, setEditSelectedNegPills] = useState([]);
+  const [editNegativePrompt, setEditNegativePrompt] = useState("");
+  const [editSelectedBrand, setEditSelectedBrand] = useState(null);
 
+  const { user } = useAuth();
 
   // Reset when modal opens
   useEffect(() => {
@@ -244,6 +270,14 @@ export default function ImagineerModal({
       setDimensions("16:9");
       setMood("");
       setElementsToInclude("");
+      setSelectedProps([]);
+      setSelectedNegPills([]);
+      setNegativePrompt("");
+      setSelectedBrand(null);
+      setRefImageUrl("");
+      setRefPreview("");
+      setRefDescription("");
+      setAnalyzingRef(false);
       setGenerating(false);
       setShowPreview(false);
       setActiveTab("subject");
@@ -251,53 +285,130 @@ export default function ImagineerModal({
     }
   }, [isOpen]);
 
+  // --- Reference image handlers (Generate tab) ---
+  const handleRefFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result;
+      setRefPreview(dataUrl);
+      setRefImageUrl(dataUrl);
+      // Upload to get a real URL, then analyze
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await apiFetch('/api/library/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) {
+          setRefImageUrl(uploadData.url);
+          analyzeRefImage(uploadData.url);
+        }
+      } catch (err) {
+        console.error('Upload failed, using data URL for analysis');
+        analyzeRefImage(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const analyzeRefImage = async (url) => {
+    if (!url) return;
+    setAnalyzingRef(true);
+    try {
+      const res = await apiFetch('/api/imagineer/describe-character', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url }),
+      });
+      const data = await res.json();
+      if (data.description) {
+        setRefDescription(data.description);
+        if (!subjectDescription.trim()) {
+          setSubjectDescription(data.description);
+        }
+        toast.success('Image analyzed — description added');
+      }
+    } catch (err) {
+      console.error('Analyze failed:', err);
+      toast.error('Failed to analyze image');
+    } finally {
+      setAnalyzingRef(false);
+    }
+  };
+
+  const clearRefImage = () => {
+    setRefImageUrl("");
+    setRefPreview("");
+    setRefDescription("");
+  };
+
+  // --- Build cohesive prompt via LLM ---
+  const buildCohesivePrompt = async (tool, extraData = {}) => {
+    const styleInfo = findStyleByValue(extraData.style || artisticStyle);
+    const styleText = styleInfo?.promptText || extraData.style || artisticStyle || '';
+
+    const body = {
+      tool,
+      description: extraData.description || subjectDescription.trim(),
+      style: styleText,
+      props: getPropsLabels(extraData.props || selectedProps),
+      negativePrompt: getCombinedNegativePrompt(
+        extraData.negPills || selectedNegPills,
+        extraData.negFreetext || negativePrompt
+      ),
+      brandStyleGuide: extractBrandStyleData(extraData.brand || selectedBrand),
+      referenceDescription: extraData.refDescription || refDescription || undefined,
+      subjectType: extraData.subjectType || subjectType || undefined,
+      lighting: LIGHTING.find(l => l.value === lighting)?.label || undefined,
+      cameraAngle: CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label || undefined,
+      colorPalette: COLOR_PALETTE.find(c => c.value === colorPalette)?.label || undefined,
+      mood: MOOD.find(m => m.value === mood)?.label || undefined,
+      elementsToInclude: elementsToInclude.trim() || undefined,
+      ...(extraData.editStrength != null ? { editStrength: extraData.editStrength } : {}),
+    };
+
+    const res = await apiFetch('/api/prompt/build-cohesive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to build prompt');
+    return data.prompt;
+  };
+
+  // --- Legacy local prompt builder (fallback preview) ---
   const buildPrompt = () => {
     const parts = [];
-
     const subjectLabel = SUBJECT_TYPE.find(s => s.value === subjectType)?.label;
     const desc = subjectDescription.trim();
-
-    if (subjectLabel && desc) {
-      parts.push(`A ${subjectLabel.toLowerCase()}: ${desc}`);
-    } else if (desc) {
-      parts.push(desc);
-    } else if (subjectLabel) {
-      parts.push(`A ${subjectLabel.toLowerCase()}`);
-    }
-
-    if (elementsToInclude.trim()) {
-      parts.push(`featuring ${elementsToInclude.trim()}`);
-    }
-
+    if (subjectLabel && desc) parts.push(`A ${subjectLabel.toLowerCase()}: ${desc}`);
+    else if (desc) parts.push(desc);
+    else if (subjectLabel) parts.push(`A ${subjectLabel.toLowerCase()}`);
+    if (elementsToInclude.trim()) parts.push(`featuring ${elementsToInclude.trim()}`);
     if (lighting) {
       const lightingLabel = LIGHTING.find(l => l.value === lighting)?.label || lighting;
       parts.push(`${lightingLabel.toLowerCase()} lighting`);
     }
-
     if (cameraAngle) {
       const angleLabel = CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label || cameraAngle;
       parts.push(`shot from ${angleLabel.toLowerCase()}`);
     }
-
     if (colorPalette) {
       const colorLabel = COLOR_PALETTE.find(c => c.value === colorPalette)?.label || colorPalette;
       parts.push(`${colorLabel.toLowerCase()} color palette`);
     }
-
     if (mood) {
       const moodLabel = MOOD.find(m => m.value === mood)?.label || mood;
       parts.push(`${moodLabel.toLowerCase()} atmosphere`);
     }
-
     if (artisticStyle) {
       const styleInfo = findStyleByValue(artisticStyle);
-      if (styleInfo?.promptText) {
-        parts.push(styleInfo.promptText);
-      } else {
-        parts.push(`${artisticStyle} style`);
-      }
+      if (styleInfo?.promptText) parts.push(styleInfo.promptText);
+      else parts.push(`${artisticStyle} style`);
     }
-
     return parts.join(", ");
   };
 
@@ -318,8 +429,12 @@ export default function ImagineerModal({
         .filter(l => l.url)
         .map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
 
+      // Build cohesive prompt via LLM
+      toast.info('Building cohesive prompt...');
+      const cohesivePrompt = await buildCohesivePrompt('imagineer');
+
       await onGenerate({
-        prompt: generatedPrompt,
+        prompt: cohesivePrompt,
         style: artisticStyle,
         dimensions,
         model: loras.length > 0 ? 'fal-flux' : selectedModel,
@@ -350,21 +465,25 @@ export default function ImagineerModal({
     }
     setIsEditing(true);
     try {
-      // Build edit prompt with full style description
-      let fullEditPrompt = editPrompt.trim();
-      if (editStyle) {
-        const styleInfo = findStyleByValue(editStyle);
-        if (styleInfo?.promptText) {
-          fullEditPrompt += `. Style: ${styleInfo.promptText}`;
-        }
-      }
+      // Build cohesive edit prompt via LLM
+      toast.info('Building cohesive prompt...');
+      const styleInfo = findStyleByValue(editStyle);
+      const cohesivePrompt = await buildCohesivePrompt('edit', {
+        description: editPrompt.trim(),
+        style: editStyle,
+        props: editSelectedProps,
+        negPills: editSelectedNegPills,
+        negFreetext: editNegativePrompt,
+        brand: editSelectedBrand,
+        editStrength: editStrength,
+      });
 
       const res = await apiFetch('/api/imagineer/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image_url: editSourceUrl.trim(),
-          prompt: fullEditPrompt,
+          prompt: cohesivePrompt,
           model: editModel,
           strength: editStrength,
           dimensions: editDimensions,
@@ -430,6 +549,7 @@ export default function ImagineerModal({
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {/* ═══════════════ SUBJECT TAB ═══════════════ */}
           <TabsContent value="subject" className="mt-0 p-5">
             <div className="flex gap-6">
               {/* Left column — form fields */}
@@ -472,14 +592,77 @@ export default function ImagineerModal({
                     <label className="text-xs font-medium text-slate-600 mb-1 block">
                       Description (what/who is the subject?)
                     </label>
-                    <Input
+                    <Textarea
                       value={subjectDescription}
                       onChange={(e) => setSubjectDescription(e.target.value)}
                       placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
-                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
+                      className="bg-white text-sm"
+                      rows={2}
                     />
+                    {analyzingRef && (
+                      <p className="text-[10px] text-[#2C666E] mt-0.5 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> AI is analyzing your reference image...
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {/* Reference Image (for AI analysis) */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Reference Image (optional — AI will analyze)</Label>
+                  {(refPreview || refImageUrl) ? (
+                    <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                      <div className="relative flex-shrink-0">
+                        <img src={refPreview || refImageUrl} alt="Reference"
+                          className="w-20 h-20 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
+                        {analyzingRef && (
+                          <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-slate-600 font-medium mb-1">
+                          {analyzingRef ? 'Analyzing...' : refDescription ? 'Description generated' : 'Reference loaded'}
+                        </p>
+                        {refDescription && (
+                          <p className="text-[10px] text-slate-400 line-clamp-2">{refDescription}</p>
+                        )}
+                        <button onClick={clearRefImage}
+                          className="mt-1 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5">
+                          <X className="w-3 h-3" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <div onClick={() => refFileInputRef.current?.click()}
+                          className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                          <Upload className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs text-slate-500">Upload</span>
+                        </div>
+                        <div onClick={() => setShowRefLibrary(true)}
+                          className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                          <FolderOpen className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs text-slate-500">Library</span>
+                        </div>
+                      </div>
+                      <input ref={refFileInputRef} type="file" accept="image/*" onChange={handleRefFileUpload} className="hidden" />
+                      <Input value={refImageUrl}
+                        onChange={(e) => { setRefImageUrl(e.target.value); setRefPreview(e.target.value); }}
+                        onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) analyzeRefImage(url); }}
+                        placeholder="https://... paste a reference image URL" className="bg-white text-xs h-8" />
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-400 mt-1">AI vision will describe this image to seed your subject description.</p>
+                </div>
+
+                {/* Props */}
+                <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
+
+                {/* Brand Style Guide */}
+                <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
 
                 {/* LoRA Models */}
                 <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
@@ -496,6 +679,7 @@ export default function ImagineerModal({
             </div>
           </TabsContent>
 
+          {/* ═══════════════ STYLE & ATMOSPHERE TAB ═══════════════ */}
           <TabsContent value="style" className="mt-0 p-5 space-y-5">
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -520,8 +704,17 @@ export default function ImagineerModal({
                 className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
               />
             </div>
+
+            {/* Negative Prompts */}
+            <NegPromptPillSelector
+              selectedPills={selectedNegPills}
+              onPillsChange={setSelectedNegPills}
+              freetext={negativePrompt}
+              onFreetextChange={setNegativePrompt}
+            />
           </TabsContent>
 
+          {/* ═══════════════ OUTPUT TAB ═══════════════ */}
           <TabsContent value="output" className="mt-0 p-5 space-y-5">
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -560,7 +753,7 @@ export default function ImagineerModal({
                 className="flex items-center gap-2 text-sm font-medium text-[#2C666E] hover:text-[#07393C] cursor-pointer"
               >
                 <Eye className="w-4 h-4" />
-                {showPreview ? "Hide" : "Preview"} Generated Prompt
+                {showPreview ? "Hide" : "Preview"} Prompt (local preview — LLM builds final)
               </div>
 
               {showPreview && (
@@ -568,11 +761,13 @@ export default function ImagineerModal({
                   <p className="text-sm text-slate-700 leading-relaxed">
                     {generatedPrompt || <span className="text-slate-400 italic">Start selecting options to build your prompt...</span>}
                   </p>
+                  <p className="text-[10px] text-slate-400 mt-2">The actual prompt will be built by the LLM using all your inputs (props, neg prompts, brand guide, etc.)</p>
                 </div>
               )}
             </div>
           </TabsContent>
 
+          {/* ═══════════════ EDIT TAB ═══════════════ */}
           <TabsContent value="edit" className="mt-0 p-5">
             <div className="flex gap-6">
               {/* Left column — edit form */}
@@ -678,6 +873,20 @@ export default function ImagineerModal({
                   </div>
                 </div>
 
+                {/* Props for Edit */}
+                <PropsPillSelector selected={editSelectedProps} onChange={setEditSelectedProps} />
+
+                {/* Negative Prompts for Edit */}
+                <NegPromptPillSelector
+                  selectedPills={editSelectedNegPills}
+                  onPillsChange={setEditSelectedNegPills}
+                  freetext={editNegativePrompt}
+                  onFreetextChange={setEditNegativePrompt}
+                />
+
+                {/* Brand Style Guide for Edit */}
+                <BrandStyleGuideSelector value={editSelectedBrand} onChange={setEditSelectedBrand} />
+
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <label className="text-xs font-semibold text-slate-600">LoRA Models (optional)</label>
                   <LoRAPicker value={editLoras} onChange={setEditLoras} />
@@ -746,7 +955,7 @@ export default function ImagineerModal({
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Starting...
+                Building Prompt...
               </>
             ) : (
               <>
@@ -785,6 +994,17 @@ export default function ImagineerModal({
         onSelect={(item) => {
           setEditSourceUrl(item.url);
           setShowEditLibrary(false);
+        }}
+        mediaType="images"
+      />
+      <LibraryModal
+        isOpen={showRefLibrary}
+        onClose={() => setShowRefLibrary(false)}
+        onSelect={(item) => {
+          setRefImageUrl(item.url);
+          setRefPreview(item.url);
+          setShowRefLibrary(false);
+          analyzeRefImage(item.url);
         }}
         mediaType="images"
       />

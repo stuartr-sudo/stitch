@@ -10,6 +10,21 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
+function buildBrandStyleContext(bsg) {
+  if (!bsg) return '';
+  const parts = [];
+  if (bsg.brand_name) parts.push(`Brand: ${bsg.brand_name}`);
+  if (bsg.visual_style_notes) parts.push(`Visual Style: ${bsg.visual_style_notes}`);
+  if (bsg.mood_atmosphere) parts.push(`Mood/Atmosphere: ${bsg.mood_atmosphere}`);
+  if (bsg.lighting_prefs) parts.push(`Lighting: ${bsg.lighting_prefs}`);
+  if (bsg.composition_style) parts.push(`Composition: ${bsg.composition_style}`);
+  if (bsg.ai_prompt_rules) parts.push(`AI Prompt Rules: ${bsg.ai_prompt_rules}`);
+  if (bsg.preferred_elements) parts.push(`Include: ${bsg.preferred_elements}`);
+  if (bsg.prohibited_elements) parts.push(`Exclude: ${bsg.prohibited_elements}`);
+  if (parts.length === 0) return '';
+  return `\nBRAND STYLE GUIDE — ensure visual consistency with these brand guidelines:\n${parts.join('\n')}`;
+}
+
 const StoryboardSceneSchema = z.object({
   sceneNumber: z.number().describe('Sequential scene number starting from 1'),
   visualPrompt: z.string().describe('Detailed AI video generation prompt describing exactly what to show — environment, characters, actions, lighting, mood'),
@@ -46,6 +61,9 @@ export default async function handler(req, res) {
       elements = [],
       hasStartFrame = false,
       startFrameDescription = '',
+      props = [],
+      negativePrompt = '',
+      brandStyleGuide = null,
     } = req.body;
 
     if (!description) {
@@ -92,6 +110,9 @@ DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
 ${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt:\n${elementInstructions}` : ''}
 ${hasStartFrame && startFrameDescription ? `STARTING SCENE IMAGE ANALYSIS — ALL scenes must take place in this exact environment:\n${startFrameDescription}` : ''}
 ${sceneGuideInstructions ? `\nPER-SCENE DIRECTIONS FROM THE USER — follow these exactly for each scene:\n${sceneGuideInstructions}` : ''}
+${props?.length > 0 ? `\nPROPS & ACCESSORIES to include naturally in scenes: ${props.join(', ')}` : ''}
+${negativePrompt ? `\nTHINGS TO AVOID in all scenes: ${negativePrompt}` : ''}
+${brandStyleGuide ? buildBrandStyleContext(brandStyleGuide) : ''}
 
 PROMPT WRITING RULES:
 
