@@ -450,12 +450,13 @@ const DESCRIPTION_PRESETS = [
 /**
  * JumpStartModal - Image to Video Generation (Simplified)
  */
-export default function JumpStartModal({ 
-  isOpen, 
-  onClose, 
+export default function JumpStartModal({
+  isOpen,
+  onClose,
   username = 'default',
   onVideoGenerated,
-  isEmbedded = false
+  isEmbedded = false,
+  initialImage = null
 }) {
   const [activeTab, setActiveTab] = useState('upload');
   
@@ -591,8 +592,14 @@ export default function JumpStartModal({
       setPresetFilter('all');
       setGeneratedVideoUrl(null);
       setHasAddedToEditor(false);
+
+      // Pre-populate from initialImage (e.g., turnaround sheet)
+      if (initialImage) {
+        setUploadedImage(initialImage);
+        setActiveTab('settings');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialImage]);
 
   // Stop polling on unmount
   useEffect(() => {

@@ -1438,10 +1438,22 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-green-700 mb-1">Reassembled Turnaround Sheet</p>
                     <p className="text-[10px] text-green-600">{activeCells.length} cells stitched into a single reference image. Saved to library.</p>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       <button onClick={() => handleDownload(reassembledUrl)}
                         className="text-[10px] text-green-700 hover:underline flex items-center gap-0.5">
                         <Download className="w-3 h-3" /> Download
+                      </button>
+                      <button onClick={() => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'jumpstart', imageUrl: reassembledUrl } }));
+                      }} className="text-[10px] text-[#2C666E] hover:underline flex items-center gap-0.5">
+                        <Sparkles className="w-3 h-3" /> Use in JumpStart
+                      </button>
+                      <button onClick={() => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'storyboard', imageUrl: reassembledUrl } }));
+                      }} className="text-[10px] text-[#2C666E] hover:underline flex items-center gap-0.5">
+                        <Sparkles className="w-3 h-3" /> Use as Storyboard Element
                       </button>
                     </div>
                   </div>

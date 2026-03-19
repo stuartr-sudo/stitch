@@ -914,10 +914,11 @@ export default function VideoAdvertCreator() {
         onGenerate={handleImageCreated}
       />
       
-      <JumpStartModal 
-        isOpen={activeModal === 'jumpstart'} 
-        onClose={() => setActiveModal(null)}
+      <JumpStartModal
+        isOpen={activeModal === 'jumpstart'}
+        onClose={() => { setActiveModal(null); setPendingImage(null); }}
         onVideoGenerated={handleVideoCreated}
+        initialImage={pendingImage}
       />
       
       <JumpStartVideoStudioModal 
@@ -1096,7 +1097,8 @@ export default function VideoAdvertCreator() {
 
       <StoryboardPlannerModal
         isOpen={activeModal === 'storyboard'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        initialImage={pendingImage}
         onScenesComplete={async (completedScenes) => {
           for (const scene of completedScenes) {
             const actualDuration = scene.durationSeconds || 5;

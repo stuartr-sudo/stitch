@@ -103,7 +103,7 @@ const EMPTY_SCENE_GUIDE = {
   cameraMovement: '',
 };
 
-export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComplete }) {
+export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComplete, initialImage = null }) {
   // Step state
   const [step, setStep] = useState('setup');
 
@@ -222,6 +222,14 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       cancelRef.current = false;
     }
   }, [isOpen]);
+
+  // Pre-populate start frame from initialImage (e.g., turnaround sheet or blended image)
+  useEffect(() => {
+    if (isOpen && initialImage) {
+      setStartFrameUrl(initialImage);
+      analyzeStartFrame(initialImage);
+    }
+  }, [isOpen, initialImage]);
 
   // ── Library browser ──
   const loadLibrary = async () => {
