@@ -78,7 +78,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [referencePreview, setReferencePreview] = useState("");
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
-  const [selectedStyles, setSelectedStyles] = useState(["concept-art"]);
+  const [selectedStyles, setSelectedStyles] = useState([]);
   const [selectedModel, setSelectedModel] = useState("nano-banana-2-edit");
   const [selectedProps, setSelectedProps] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
@@ -152,7 +152,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     if (isOpen) {
       setStep('configure');
       setCharacterDescription(DEFAULT_PROMPT);
-      setSelectedStyles(["concept-art"]);
+      setSelectedStyles([]);
       setSelectedModel("nano-banana-2-edit");
       setSelectedProps([]);
       setNegativePrompt("");
