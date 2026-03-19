@@ -126,6 +126,60 @@ const SelectField = ({ label, value, onChange, options, required }) => (
 );
 
 /**
+ * Reusable action buttons shown below any generated/edited image result
+ */
+function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {onEditAgain && (
+        <Button variant="outline" size="sm" className="text-xs" onClick={onEditAgain}>
+          <Pencil className="w-3 h-3 mr-1" /> Edit Again
+        </Button>
+      )}
+      <Button
+        variant="outline" size="sm" className="text-xs"
+        onClick={() => {
+          apiFetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: imageUrl, type: 'image', title: '[Imagineer] Image', source: 'imagineer' }),
+          }).then(() => toast.success('Saved to library')).catch(() => toast.error('Save failed'));
+        }}
+      >
+        <FolderOpen className="w-3 h-3 mr-1" /> Save to Library
+      </Button>
+      <Button
+        variant="outline" size="sm" className="text-xs"
+        onClick={() => {
+          onClose();
+          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'inpaint', imageUrl } }));
+        }}
+      >
+        Inpaint
+      </Button>
+      <Button
+        variant="outline" size="sm" className="text-xs"
+        onClick={() => {
+          onClose();
+          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl } }));
+        }}
+      >
+        Turnaround
+      </Button>
+      <Button
+        variant="outline" size="sm" className="text-xs"
+        onClick={() => {
+          if (onGenerate) onGenerate({ editedImageUrl: imageUrl });
+          onClose();
+        }}
+      >
+        <Sparkles className="w-3 h-3 mr-1" /> Use in Storyboard
+      </Button>
+    </div>
+  );
+}
+
+/**
  * ImagineerModal - AI Image Generation with form-based prompt builder
  */
 export default function ImagineerModal({
@@ -648,67 +702,15 @@ export default function ImagineerModal({
                   <div className="mt-3">
                     <label className="text-xs font-medium text-slate-600 mb-1 block">Result</label>
                     <img src={editResultUrl} alt="Edited result" className="w-full rounded-lg border border-slate-200" />
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          setEditSourceUrl(editResultUrl);
-                          setEditResultUrl('');
-                          toast.success('Result loaded as new source — edit again');
-                        }}
-                      >
-                        <Pencil className="w-3 h-3 mr-1" /> Edit Again
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          apiFetch('/api/library/save', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: editResultUrl, type: 'image', title: '[Imagineer] Edited Image', source: 'imagineer-edit' }),
-                          }).then(() => toast.success('Saved to library')).catch(() => toast.error('Save failed'));
-                        }}
-                      >
-                        <FolderOpen className="w-3 h-3 mr-1" /> Save to Library
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          if (onGenerate) onGenerate({ editedImageUrl: editResultUrl });
-                          onClose();
-                        }}
-                      >
-                        <Sparkles className="w-3 h-3 mr-1" /> Use in Storyboard
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          onClose();
-                          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'inpaint', imageUrl: editResultUrl } }));
-                        }}
-                      >
-                        Inpaint
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          onClose();
-                          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl: editResultUrl } }));
-                        }}
-                      >
-                        Turnaround
-                      </Button>
-                    </div>
+                    <ResultActions
+                      imageUrl={editResultUrl}
+                      onEditAgain={() => {
+                        setEditSourceUrl(editResultUrl);
+                        toast.success('Result loaded as source — edit again');
+                      }}
+                      onClose={onClose}
+                      onGenerate={onGenerate}
+                    />
                   </div>
                 )}
               </div>
