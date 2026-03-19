@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import StyleGrid from "@/components/ui/StyleGrid";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen } from "lucide-react";
+import { Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil, FolderOpen, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -165,6 +165,7 @@ export default function ImagineerModal({
   const [showEditLibrary, setShowEditLibrary] = useState(false);
   const [editStyle, setEditStyle] = useState("");
   const [editSourceUrl, setEditSourceUrl] = useState("");
+  const editFileInputRef = useRef(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editStrength, setEditStrength] = useState(0.75);
   const [editLoras, setEditLoras] = useState([]);
@@ -275,6 +276,15 @@ export default function ImagineerModal({
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleEditFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setEditSourceUrl(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleEdit = async () => {
@@ -490,30 +500,50 @@ export default function ImagineerModal({
             <div className="flex gap-6">
               {/* Left column — edit form */}
               <div className="w-1/2 min-w-0 space-y-3">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Pencil className="w-3.5 h-3.5" /> Edit Image
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Pencil className="w-3.5 h-3.5" /> Edit Image
+                  </h3>
+                  <span className="text-[10px] text-slate-400">Model: FLUX 2 Dev</span>
+                </div>
 
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Input
                       value={editSourceUrl}
                       onChange={(e) => setEditSourceUrl(e.target.value)}
-                      placeholder="https://... (paste URL or pick from library)"
-                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1"
+                      placeholder="Paste URL, upload, or pick from library"
+                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1 text-xs"
+                    />
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditFileUpload}
+                      className="hidden"
                     />
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowEditLibrary(true)}
-                      className="shrink-0"
+                      onClick={() => editFileInputRef.current?.click()}
+                      className="shrink-0 px-2"
+                      title="Upload image"
                     >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
+                      <Upload className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditLibrary(true)}
+                      className="shrink-0 px-2"
+                      title="Pick from library"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                   {editSourceUrl && (
-                    <img src={editSourceUrl} alt="Source" className="w-full h-32 object-cover rounded-lg mt-2 border border-slate-200" />
+                    <img src={editSourceUrl} alt="Source" className="w-full rounded-lg mt-2 border border-slate-200" />
                   )}
                 </div>
 
