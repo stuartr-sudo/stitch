@@ -26,32 +26,95 @@ const MODEL_OPTIONS = [
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
-const PROP_OPTIONS = [
-  { value: 'bicycle', label: 'Bicycle' },
-  { value: 'sword', label: 'Sword' },
-  { value: 'shield', label: 'Shield' },
-  { value: 'backpack', label: 'Backpack' },
-  { value: 'staff', label: 'Staff' },
-  { value: 'bow', label: 'Bow & Arrow' },
-  { value: 'guitar', label: 'Guitar' },
-  { value: 'skateboard', label: 'Skateboard' },
-  { value: 'umbrella', label: 'Umbrella' },
-  { value: 'camera', label: 'Camera' },
-  { value: 'book', label: 'Book' },
-  { value: 'wand', label: 'Wand' },
-  { value: 'pet-dog', label: 'Pet Dog' },
-  { value: 'pet-cat', label: 'Pet Cat' },
-  { value: 'helmet', label: 'Helmet' },
-  { value: 'cape', label: 'Cape' },
+const PROP_CATEGORIES = [
+  { label: 'Vehicles & Transport', props: [
+    { value: 'bicycle', label: 'Bicycle' },
+    { value: 'skateboard', label: 'Skateboard' },
+    { value: 'scooter', label: 'Scooter' },
+    { value: 'surfboard', label: 'Surfboard' },
+    { value: 'horse', label: 'Horse' },
+    { value: 'motorcycle', label: 'Motorcycle' },
+  ]},
+  { label: 'Weapons & Combat', props: [
+    { value: 'sword', label: 'Sword' },
+    { value: 'shield', label: 'Shield' },
+    { value: 'bow', label: 'Bow & Arrow' },
+    { value: 'staff', label: 'Staff' },
+    { value: 'axe', label: 'Axe' },
+    { value: 'spear', label: 'Spear' },
+    { value: 'dagger', label: 'Dagger' },
+    { value: 'hammer', label: 'War Hammer' },
+  ]},
+  { label: 'Musical Instruments', props: [
+    { value: 'guitar', label: 'Guitar' },
+    { value: 'violin', label: 'Violin' },
+    { value: 'drums', label: 'Drums' },
+    { value: 'trumpet', label: 'Trumpet' },
+    { value: 'piano-keyboard', label: 'Keyboard' },
+    { value: 'microphone', label: 'Microphone' },
+  ]},
+  { label: 'Sports & Outdoor', props: [
+    { value: 'basketball', label: 'Basketball' },
+    { value: 'soccer-ball', label: 'Soccer Ball' },
+    { value: 'tennis-racket', label: 'Tennis Racket' },
+    { value: 'baseball-bat', label: 'Baseball Bat' },
+    { value: 'fishing-rod', label: 'Fishing Rod' },
+    { value: 'climbing-gear', label: 'Climbing Gear' },
+    { value: 'ski-poles', label: 'Ski Poles' },
+  ]},
+  { label: 'Tools & Equipment', props: [
+    { value: 'camera', label: 'Camera' },
+    { value: 'laptop', label: 'Laptop' },
+    { value: 'toolbox', label: 'Toolbox' },
+    { value: 'paintbrush', label: 'Paintbrush & Palette' },
+    { value: 'magnifying-glass', label: 'Magnifying Glass' },
+    { value: 'telescope', label: 'Telescope' },
+    { value: 'binoculars', label: 'Binoculars' },
+  ]},
+  { label: 'Fantasy & Magic', props: [
+    { value: 'wand', label: 'Magic Wand' },
+    { value: 'spell-book', label: 'Spell Book' },
+    { value: 'crystal-ball', label: 'Crystal Ball' },
+    { value: 'potion', label: 'Potion Bottle' },
+    { value: 'magic-orb', label: 'Magic Orb' },
+    { value: 'fairy-wings', label: 'Fairy Wings' },
+    { value: 'lantern', label: 'Lantern' },
+  ]},
+  { label: 'Everyday Items', props: [
+    { value: 'backpack', label: 'Backpack' },
+    { value: 'umbrella', label: 'Umbrella' },
+    { value: 'book', label: 'Book' },
+    { value: 'phone', label: 'Phone' },
+    { value: 'coffee-cup', label: 'Coffee Cup' },
+    { value: 'bag', label: 'Shopping Bag' },
+    { value: 'suitcase', label: 'Suitcase' },
+    { value: 'newspaper', label: 'Newspaper' },
+  ]},
+  { label: 'Accessories & Wearable', props: [
+    { value: 'helmet', label: 'Helmet' },
+    { value: 'cape', label: 'Cape' },
+    { value: 'crown', label: 'Crown' },
+    { value: 'mask', label: 'Mask' },
+    { value: 'goggles', label: 'Goggles' },
+    { value: 'wings', label: 'Wings' },
+    { value: 'armor', label: 'Armor' },
+    { value: 'jetpack', label: 'Jetpack' },
+  ]},
+  { label: 'Companions', props: [
+    { value: 'pet-dog', label: 'Pet Dog' },
+    { value: 'pet-cat', label: 'Pet Cat' },
+    { value: 'parrot', label: 'Parrot' },
+    { value: 'dragon', label: 'Baby Dragon' },
+    { value: 'robot-companion', label: 'Robot Buddy' },
+    { value: 'owl', label: 'Owl' },
+    { value: 'fairy', label: 'Fairy Companion' },
+  ]},
 ];
 
-const PROMPT_PREFIX = `Full-body character turnaround reference sheet. 4 columns, 6 rows grid on a clean white background. Each cell shows the SAME character in a different pose or angle. Consistent proportions, outfit, colors, and features across every cell. No background elements, no props unless specified. Clean line separation between cells.
+// Flat list for lookup
+const ALL_PROPS = PROP_CATEGORIES.flatMap(c => c.props);
 
-Character: `;
-
-const PLACEHOLDER_DESC = `[describe your character here — e.g., a young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build]`;
-
-const DEFAULT_PROMPT = PROMPT_PREFIX + PLACEHOLDER_DESC;
+const DEFAULT_CHARACTER_DESC = '';
 
 const GRID_COLS = 4;
 const GRID_ROWS = 6;
@@ -73,7 +136,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [step, setStep] = useState('configure');
 
   // Form
-  const [characterDescription, setCharacterDescription] = useState(DEFAULT_PROMPT);
+  const [characterDescription, setCharacterDescription] = useState(DEFAULT_CHARACTER_DESC);
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referencePreview, setReferencePreview] = useState("");
   const [showLibrary, setShowLibrary] = useState(false);
@@ -119,7 +182,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       });
       const data = await res.json();
       if (data.description) {
-        setCharacterDescription(PROMPT_PREFIX + data.description);
+        setCharacterDescription(data.description);
         toast.success('Character analyzed! Description auto-filled.');
       } else if (data.error) {
         toast.error('Could not analyze character: ' + data.error);
@@ -138,9 +201,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     return m > 0 ? `${m}:${sec.toString().padStart(2, '0')}` : `${sec}s`;
   };
 
-  const propsText = selectedProps.length > 0
-    ? `\nProps/accessories: ${selectedProps.map(p => PROP_OPTIONS.find(o => o.value === p)?.label || p).join(', ')}. Show these props naturally with the character in relevant poses.`
-    : '';
+  const propsLabels = selectedProps.map(p => ALL_PROPS.find(o => o.value === p)?.label || p);
 
   const canGenerate = characterDescription.trim() && selectedStyles.length > 0 && !(
     !referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
@@ -151,7 +212,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   useEffect(() => {
     if (isOpen) {
       setStep('configure');
-      setCharacterDescription(DEFAULT_PROMPT);
+      setCharacterDescription(DEFAULT_CHARACTER_DESC);
       setSelectedStyles([]);
       setSelectedModel("nano-banana-2-edit");
       setSelectedProps([]);
@@ -291,9 +352,6 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     if (!characterDescription.trim()) { toast.error("Please describe your character."); return; }
     if (selectedStyles.length === 0) { toast.error("Select at least one style."); return; }
 
-    // Build the full prompt with props
-    const fullDescription = characterDescription.trim() + propsText;
-
     // Create sheet entries for each selected style
     const newSheets = selectedStyles.map((style, i) => ({
       id: `${Date.now()}-${i}`,
@@ -313,7 +371,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     setCellImages([]);
     setEditingCellIndex(null);
 
-    // Fire all requests in parallel
+    // Fire all requests in parallel — send structured data, API builds cohesive prompt
     for (const sheet of newSheets) {
       (async () => {
         try {
@@ -321,9 +379,10 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              characterDescription: fullDescription,
+              characterDescription: characterDescription.trim(),
               referenceImageUrl: referenceImageUrl.trim() || undefined,
               style: sheet.styleText.trim(),
+              props: propsLabels.length > 0 ? propsLabels : undefined,
               model: selectedModel,
               negativePrompt: negativePrompt.trim() || undefined,
             }),
@@ -664,155 +723,163 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
         {/* ═══ STEP 1: CONFIGURE ═══════════════════════════════════════════ */}
         {step === 'configure' && (
           <>
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="flex gap-6">
+                {/* ── Left column: form fields ── */}
+                <div className="w-1/2 min-w-0 space-y-4">
 
-              {/* Props Pills */}
-              <div>
-                <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Props & Accessories (optional)</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {PROP_OPTIONS.map(prop => (
-                    <button key={prop.value} type="button"
-                      onClick={() => setSelectedProps(prev =>
-                        prev.includes(prop.value) ? prev.filter(p => p !== prop.value) : [...prev, prop.value]
+                  {/* Character Description */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-xs font-semibold text-slate-600">
+                        Character Description <span className="text-red-500">*</span>
+                      </Label>
+                      {referenceImageUrl && (
+                        <button onClick={() => describeCharacter(referenceImageUrl)} disabled={analyzingRef}
+                          className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50">
+                          {analyzingRef
+                            ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                            : <><Sparkles className="w-3 h-3" /> Re-analyze reference</>}
+                        </button>
                       )}
-                      className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all ${
-                        selectedProps.includes(prop.value)
-                          ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                          : 'bg-white text-slate-600 border-slate-300 hover:border-[#2C666E] hover:text-[#2C666E]'
-                      }`}>
-                      {prop.label}
-                    </button>
-                  ))}
-                </div>
-                {selectedProps.length > 0 && (
-                  <button onClick={() => setSelectedProps([])}
-                    className="text-[10px] text-slate-400 hover:text-slate-600 mt-1">Clear all</button>
-                )}
-              </div>
-
-              {/* Character Description */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs font-semibold text-slate-600">
-                    Character Description <span className="text-red-500">*</span>
-                  </Label>
-                  {referenceImageUrl && (
-                    <button onClick={() => describeCharacter(referenceImageUrl)} disabled={analyzingRef}
-                      className="flex items-center gap-1 text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50">
-                      {analyzingRef
-                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
-                        : <><Sparkles className="w-3 h-3" /> Re-analyze reference</>}
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Textarea value={characterDescription} onChange={(e) => setCharacterDescription(e.target.value)}
-                    placeholder="Describe your character..." rows={6}
-                    className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`} disabled={analyzingRef} />
-                  {analyzingRef && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
-                      <div className="flex items-center gap-2 text-[#2C666E]">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="text-sm font-medium">Analyzing character...</span>
-                      </div>
                     </div>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  {analyzingRef ? 'AI vision is describing your character...'
-                    : referenceImageUrl ? 'Auto-filled from reference. Edit freely.'
-                    : 'Replace the bracketed section with your character details.'}
-                </p>
-              </div>
-
-              {/* Reference Image */}
-              <div>
-                <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Reference Image (optional)</Label>
-                {(referencePreview || referenceImageUrl) ? (
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="relative flex-shrink-0">
-                      <img src={referencePreview || referenceImageUrl} alt="Reference"
-                        className="w-24 h-24 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
-                      {uploadingRef && (
-                        <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
-                          <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                    <div className="relative">
+                      <Textarea value={characterDescription} onChange={(e) => setCharacterDescription(e.target.value)}
+                        placeholder="e.g., A young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build"
+                        rows={5}
+                        className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`} disabled={analyzingRef} />
+                      {analyzingRef && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
+                          <div className="flex items-center gap-2 text-[#2C666E]">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="text-sm font-medium">Analyzing character...</span>
+                          </div>
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-600 font-medium mb-1">
-                        {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing...' : 'Reference loaded'}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {analyzingRef ? 'AI is describing your character...' : 'Description auto-filled.'}
-                      </p>
-                      <button onClick={clearReferenceImage}
-                        className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5">
-                        <X className="w-3 h-3" /> Remove
-                      </button>
-                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {analyzingRef ? 'AI vision is describing your character...'
+                        : referenceImageUrl ? 'Auto-filled from reference. Edit freely.'
+                        : 'Describe the character only — the turnaround prompt is built automatically.'}
+                    </p>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <div onClick={() => fileInputRef.current?.click()}
-                        className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                        <Upload className="w-5 h-5 text-slate-400" />
-                        <span className="text-sm text-slate-500">Upload</span>
-                      </div>
-                      <div onClick={() => setShowLibrary(true)}
-                        className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                        <FolderOpen className="w-5 h-5 text-slate-400" />
-                        <span className="text-sm text-slate-500">Library</span>
-                      </div>
+
+                  {/* Props Pills — grouped */}
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Props & Accessories (optional)</Label>
+                    <div className="overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 space-y-2" style={{ maxHeight: '10rem' }}>
+                      {PROP_CATEGORIES.map(cat => (
+                        <div key={cat.label}>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 px-0.5">{cat.label}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {cat.props.map(prop => (
+                              <button key={prop.value} type="button"
+                                onClick={() => toggleProp(prop.value)}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded-full border transition-all ${
+                                  selectedProps.includes(prop.value)
+                                    ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                                }`}>
+                                {prop.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-px bg-slate-200" />
-                      <span className="text-[10px] text-slate-400 font-medium">OR</span>
-                      <div className="flex-1 h-px bg-slate-200" />
-                    </div>
-                    <Input value={referenceImageUrl}
-                      onChange={(e) => { setReferenceImageUrl(e.target.value); setReferencePreview(e.target.value); }}
-                      onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) describeCharacter(url); }}
-                      placeholder="https://... paste a reference image URL" className="bg-white text-sm" />
+                    {selectedProps.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-[#2C666E] font-medium">{selectedProps.length} selected</span>
+                        <button onClick={() => setSelectedProps([])}
+                          className="text-[10px] text-slate-400 hover:text-slate-600">Clear all</button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Negative Prompt */}
-              <div>
-                <Label className="text-xs font-semibold text-slate-600 mb-1 block">Negative Prompt (optional)</Label>
-                <Textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)}
-                  placeholder="e.g., blurry, low quality, extra limbs, deformed hands, text, watermark..."
-                  rows={2} className="bg-white text-sm" />
-                <p className="text-[10px] text-slate-400 mt-1">Things to avoid in the generated sheet.</p>
-              </div>
+                  {/* Reference Image */}
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Reference Image (optional)</Label>
+                    {(referencePreview || referenceImageUrl) ? (
+                      <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="relative flex-shrink-0">
+                          <img src={referencePreview || referenceImageUrl} alt="Reference"
+                            className="w-20 h-20 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
+                          {uploadingRef && (
+                            <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-[#2C666E]" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-slate-600 font-medium mb-1">
+                            {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing...' : 'Reference loaded'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {analyzingRef ? 'AI is describing your character...' : 'Description auto-filled.'}
+                          </p>
+                          <button onClick={clearReferenceImage}
+                            className="mt-1 text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5">
+                            <X className="w-3 h-3" /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <div onClick={() => fileInputRef.current?.click()}
+                            className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                            <Upload className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs text-slate-500">Upload</span>
+                          </div>
+                          <div onClick={() => setShowLibrary(true)}
+                            className="flex-1 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                            <FolderOpen className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs text-slate-500">Library</span>
+                          </div>
+                        </div>
+                        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                        <Input value={referenceImageUrl}
+                          onChange={(e) => { setReferenceImageUrl(e.target.value); setReferencePreview(e.target.value); }}
+                          onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) describeCharacter(url); }}
+                          placeholder="https://... paste a reference image URL" className="bg-white text-xs h-8" />
+                      </div>
+                    )}
+                  </div>
 
-              {/* Model */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
-                  <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {MODEL_OPTIONS.map((m) => <SelectItem key={m.value} value={m.value} className="text-sm">{m.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {/* Negative Prompt */}
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-600 mb-1 block">Negative Prompt (optional)</Label>
+                    <Textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)}
+                      placeholder="e.g., blurry, low quality, extra limbs, deformed hands, text, watermark..."
+                      rows={2} className="bg-white text-sm" />
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-600 mb-1 block">Model</Label>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        {MODEL_OPTIONS.map((m) => <SelectItem key={m.value} value={m.value} className="text-sm">{m.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
+                    <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">
+                        <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Right column: Style grid ── */}
+                <div className="w-1/2 flex-shrink-0">
+                  <StyleGrid value={selectedStyles} onChange={setSelectedStyles} maxHeight="none" multiple columns="grid-cols-3" />
                 </div>
               </div>
-
-              {/* Style — multi-select */}
-              <StyleGrid value={selectedStyles} onChange={setSelectedStyles} maxHeight="14rem" multiple />
-
-              {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
-                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-800">
-                    <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image.
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">

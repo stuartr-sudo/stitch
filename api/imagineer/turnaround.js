@@ -15,28 +15,49 @@
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
-function buildTurnaroundPrompt(characterDescription, style, hasReference) {
+/**
+ * Builds a single cohesive prompt from all structured inputs.
+ * This is the ONLY place prompt text is assembled — the frontend sends raw data.
+ */
+function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt }) {
+  // Style rendering instructions
   const stylePrompt = (style && style.trim())
-    ? `${style.trim()} style, high quality rendering`
-    : 'professional concept art, clean detailed rendering, animation studio quality';
+    ? `Rendered in ${style.trim()} style with high quality, detailed ${style.trim()} aesthetic throughout every cell`
+    : 'Professional concept art style, clean detailed rendering, animation studio quality';
 
+  // Reference handling
   const refNote = hasReference
     ? 'Use the reference image as the character design. Recreate this exact character in every cell of the grid'
     : 'Same character in every cell with consistent design, proportions, colors, and outfit throughout the entire sheet';
 
-  return [
-    `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background`,
+  // Props — woven into the pose descriptions
+  const propsNote = (props && props.length > 0)
+    ? `The character has the following props/accessories which should appear naturally throughout the poses: ${props.join(', ')}. Incorporate these items into relevant poses — for example, holding, wearing, using, or interacting with them`
+    : 'No additional props or accessories — focus purely on the character';
+
+  // Negative prompt — appended as avoidance instructions
+  const avoidNote = negativePrompt
+    ? `AVOID the following in all cells: ${negativePrompt}`
+    : '';
+
+  const parts = [
+    `${stylePrompt}`,
+    `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`,
     `Character: ${characterDescription}`,
-    `Row 1: front view standing, three-quarter front view, side profile view, back view — all in neutral standing pose`,
-    `Row 2: three-quarter back view, neutral expression close-up, determined expression, joyful laughing expression`,
-    `Row 3: side view walk cycle pose A (left foot forward), walk cycle pose B (right foot forward), walking toward viewer, walking away`,
-    `Row 4: running side view, jumping with arms raised, dynamic landing pose, fighting/action stance`,
-    `Row 5: sitting cross-legged, reaching hand outward, carrying an object, leaning against wall casually`,
-    `Row 6: face close-up head and shoulders, hand and accessory detail, bird's-eye view from above, dramatic low angle from below`,
+    propsNote,
+    `Row 1 — Turnaround (Neutral Standing): front view, three-quarter front view, side profile view, back view`,
+    `Row 2 — Expressions & Alternative Back: three-quarter back view, neutral expression close-up, determined expression, joyful laughing expression`,
+    `Row 3 — Walk Cycles: walk cycle pose A (left foot forward), walk cycle pose B (right foot forward), walking toward viewer, walking away`,
+    `Row 4 — Dynamic & Action: running side view, jumping with arms raised, dynamic hero landing pose, fighting/action stance`,
+    `Row 5 — Still Poses & Interaction: sitting cross-legged, reaching hand outward, carrying an object, leaning against wall casually`,
+    `Row 6 — Special Views & Details: face close-up head and shoulders, hand and accessory detail close-up, bird's-eye view from above, dramatic low angle from below`,
     refNote,
-    stylePrompt,
-    `character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference, white background grid layout`,
-  ].join('. ');
+    `character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference`,
+  ];
+
+  if (avoidNote) parts.push(avoidNote);
+
+  return parts.join('. ');
 }
 
 // ─── Model Definitions ────────────────────────────────────────────────────────
@@ -152,6 +173,7 @@ export default async function handler(req, res) {
     loraUrl,
     loras,
     negativePrompt,
+    props,
   } = req.body;
 
   if (!characterDescription) {
@@ -167,8 +189,14 @@ export default async function handler(req, res) {
   if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
 
   const hasRef = !!referenceImageUrl;
-  const prompt = buildTurnaroundPrompt(characterDescription, style, hasRef);
   const negPrompt = negativePrompt?.trim() || undefined;
+  const prompt = buildTurnaroundPrompt({
+    characterDescription,
+    style,
+    hasReference: hasRef,
+    props: Array.isArray(props) ? props : undefined,
+    negativePrompt: negPrompt,
+  });
 
   // Validate: edit models REQUIRE a reference image
   if (modelDef.type === 'edit' && !hasRef) {
