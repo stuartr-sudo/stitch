@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing story description' });
     }
 
-    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements)`);
+    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements, style: "${style?.substring(0, 60)}")`);
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
