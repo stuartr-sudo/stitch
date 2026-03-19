@@ -648,6 +648,45 @@ export default function ImagineerModal({
                   <div className="mt-3">
                     <label className="text-xs font-medium text-slate-600 mb-1 block">Result</label>
                     <img src={editResultUrl} alt="Edited result" className="w-full rounded-lg border border-slate-200" />
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          setEditSourceUrl(editResultUrl);
+                          setEditResultUrl('');
+                          toast.success('Result loaded as new source — edit again');
+                        }}
+                      >
+                        <Pencil className="w-3 h-3 mr-1" /> Edit Again
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          apiFetch('/api/library/save', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: editResultUrl, type: 'image', title: '[Imagineer] Edited Image', source: 'imagineer-edit' }),
+                          }).then(() => toast.success('Saved to library')).catch(() => toast.error('Save failed'));
+                        }}
+                      >
+                        <FolderOpen className="w-3 h-3 mr-1" /> Save to Library
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          if (onGenerate) onGenerate({ editedImageUrl: editResultUrl });
+                          onClose();
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" /> Use in Storyboard
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
