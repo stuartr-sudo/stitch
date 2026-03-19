@@ -163,6 +163,7 @@ export default function ImagineerModal({
 
   // Edit tab state
   const [showEditLibrary, setShowEditLibrary] = useState(false);
+  const [editModel, setEditModel] = useState("fal-flux");
   const [editStyle, setEditStyle] = useState("");
   const [editSourceUrl, setEditSourceUrl] = useState("");
   const editFileInputRef = useRef(null);
@@ -309,6 +310,7 @@ export default function ImagineerModal({
         body: JSON.stringify({
           image_url: editSourceUrl.trim(),
           prompt: fullEditPrompt,
+          model: editModel,
           strength: editStrength,
           dimensions: editDimensions,
           loras: editLoras.map(l => ({ url: l.url, scale: l.scale })),
@@ -500,11 +502,27 @@ export default function ImagineerModal({
             <div className="flex gap-6">
               {/* Left column — edit form */}
               <div className="w-1/2 min-w-0 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Pencil className="w-3.5 h-3.5" /> Edit Image
-                  </h3>
-                  <span className="text-[10px] text-slate-400">Model: FLUX 2 Dev</span>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> Edit Image
+                </h3>
+
+                {/* Model selector */}
+                <div className="grid grid-cols-3 gap-2">
+                  {IMAGE_MODELS.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setEditModel(m.value)}
+                      className={`text-left rounded-lg border-2 p-2 transition-all ${
+                        editModel === m.value
+                          ? 'border-[#2C666E] bg-[#2C666E]/5'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div className="font-medium text-xs text-slate-900">{m.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{m.description}</div>
+                    </button>
+                  ))}
                 </div>
 
                 <div>

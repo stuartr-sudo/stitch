@@ -9,7 +9,7 @@ import { logCost } from '../lib/costLogger.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { image_url, prompt, mask_url, loras, strength, dimensions } = req.body;
+  const { image_url, prompt, mask_url, loras, strength, dimensions, model } = req.body;
   if (!image_url || !prompt) {
     return res.status(400).json({ error: 'image_url and prompt are required' });
   }
@@ -24,6 +24,17 @@ export default async function handler(req, res) {
     '4:3': 'landscape_4_3',
     '3:4': 'portrait_4_3',
   };
+
+  // Model routing — supports multiple image-to-image models
+  const modelEndpoints = {
+    'fal-flux': 'fal-ai/flux-2/lora/edit',
+    'nano-banana-2': 'fal-ai/flux-2/lora/edit',  // Nano Banana uses same edit endpoint
+    'seedream': 'fal-ai/flux-2/lora/edit',        // Seedream uses same edit endpoint
+  };
+  const selectedModel = model || 'fal-flux';
+  const endpoint = modelEndpoints[selectedModel] || 'fal-ai/flux-2/lora/edit';
+
+  console.log(`[imagineer/edit] Model: ${selectedModel}, endpoint: ${endpoint}`);
 
   const payload = {
     image_url,
@@ -40,7 +51,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://queue.fal.run/fal-ai/flux-2/lora/edit', {
+    const response = await fetch(`https://queue.fal.run/${endpoint}`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
