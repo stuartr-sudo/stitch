@@ -377,7 +377,6 @@ export default function ImagineerModal({
       if (data.imageUrl) {
         toast.success('Image edited successfully');
         setEditResultUrl(data.imageUrl);
-        if (onGenerate) await onGenerate({ editedImageUrl: data.imageUrl });
       } else if (data.requestId) {
         // Poll for async result
         toast.info('Edit processing...');
@@ -393,7 +392,6 @@ export default function ImagineerModal({
             if (pollData.imageUrl) {
               toast.success('Image edited successfully');
               setEditResultUrl(pollData.imageUrl);
-              if (onGenerate) await onGenerate({ editedImageUrl: pollData.imageUrl });
               break;
             }
             if (pollData.status === 'failed' || pollData.error) {
