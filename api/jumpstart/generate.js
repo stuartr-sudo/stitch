@@ -790,6 +790,97 @@ async function handleLtxAudioVideo(req, res, params) {
  * Handle Kling O3 Reference-to-Video (Pro & Standard)
  * Uses elements array for character-consistent video generation
  */
+/**
+ * Upscale an image using SeedVR2 via FAL — ensures reference images meet the 300x300 minimum.
+ * Uses target mode to upscale to 720p. Returns the upscaled image URL, or the original on error.
+ */
+async function upscaleImage(imageUrl, FAL_KEY) {
+  try {
+    console.log(`[Upscale] Upscaling: ${imageUrl.substring(0, 80)}...`);
+    const submitRes = await fetch('https://fal.run/fal-ai/seedvr/upscale/image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        upscale_mode: 'target',
+        target_resolution: '720p',
+        output_format: 'jpg',
+      }),
+    });
+
+    if (!submitRes.ok) {
+      // May be queued — check for request_id
+      const data = await submitRes.json().catch(() => null);
+      if (data?.request_id) {
+        // Poll queue
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const statusRes = await fetch(
+            `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`,
+            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+          );
+          const status = await statusRes.json();
+          if (status.status === 'COMPLETED') {
+            const resultRes = await fetch(
+              `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`,
+              { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+            );
+            const result = await resultRes.json();
+            if (result.image?.url) {
+              console.log(`[Upscale] Done (queued): ${result.image.url.substring(0, 80)}`);
+              return result.image.url;
+            }
+          }
+          if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
+        }
+      }
+      console.warn(`[Upscale] Failed, using original. Status: ${submitRes.status}`);
+      return imageUrl;
+    }
+
+    const data = await submitRes.json();
+
+    // Synchronous result
+    if (data.image?.url) {
+      console.log(`[Upscale] Done (sync): ${data.image.url.substring(0, 80)}`);
+      return data.image.url;
+    }
+
+    // Queued result
+    if (data.request_id) {
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const statusRes = await fetch(
+          `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`,
+          { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+        );
+        const status = await statusRes.json();
+        if (status.status === 'COMPLETED') {
+          const resultRes = await fetch(
+            `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`,
+            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+          );
+          const result = await resultRes.json();
+          if (result.image?.url) {
+            console.log(`[Upscale] Done (queued): ${result.image.url.substring(0, 80)}`);
+            return result.image.url;
+          }
+        }
+        if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
+      }
+    }
+
+    console.warn('[Upscale] Timed out, using original');
+    return imageUrl;
+  } catch (err) {
+    console.warn('[Upscale] Error, using original:', err.message);
+    return imageUrl;
+  }
+}
+
 async function handleKlingR2V(req, res, params) {
   const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, r2vElements, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
 
@@ -810,19 +901,34 @@ async function handleKlingR2V(req, res, params) {
   };
 
   // Build elements array — supports up to 4 elements (@Element1, @Element2, etc.)
-  // Each element has a frontal_image_url and up to 4 reference_image_urls
+  // Each element has a frontal_image_url and up to 3 reference_image_urls
+  // All reference images are auto-upscaled via SeedVR2 to meet FAL's 300x300 minimum
+  console.log('[JumpStart/KlingR2V] Upscaling reference images to meet minimum dimensions...');
+
   if (r2vElements && r2vElements.length > 0) {
     // New multi-element format from Storyboard
-    requestBody.elements = r2vElements.slice(0, 4).map(el => ({
-      frontal_image_url: el.frontalImageUrl || el.referenceImageUrls?.[0],
-      reference_image_urls: (el.referenceImageUrls || []).slice(0, 3),
-    }));
+    const upscaledElements = [];
+    for (const el of r2vElements.slice(0, 4)) {
+      const refs = (el.referenceImageUrls || []).slice(0, 3);
+      const frontal = el.frontalImageUrl || refs[0];
+      // Upscale all refs and frontal in parallel
+      const allUrls = [frontal, ...refs];
+      const upscaled = await Promise.all(allUrls.map(url => upscaleImage(url, FAL_KEY)));
+      upscaledElements.push({
+        frontal_image_url: upscaled[0],
+        reference_image_urls: upscaled.slice(1),
+      });
+    }
+    requestBody.elements = upscaledElements;
   } else {
     // Legacy single-element format (JumpStart, etc.)
     const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
+    const refs = referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl];
+    const allUrls = [frontalUrl, ...refs];
+    const upscaled = await Promise.all(allUrls.map(url => upscaleImage(url, FAL_KEY)));
     requestBody.elements = [{
-      frontal_image_url: frontalUrl,
-      reference_image_urls: referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl],
+      frontal_image_url: upscaled[0],
+      reference_image_urls: upscaled.slice(1),
     }];
   }
 
