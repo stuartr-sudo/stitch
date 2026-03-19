@@ -109,10 +109,15 @@ export default async function handler(req, res) {
     }
 
     if (data.request_id) {
+      // Append '-edit' suffix so the result poller uses the correct edit endpoint
+      const pollModel = selectedModel === 'fal-flux' ? 'fal-flux-edit'
+        : selectedModel === 'nano-banana-2' ? 'nano-banana-2-edit'
+        : selectedModel === 'seedream' ? 'seedream-edit'
+        : selectedModel;
       return res.json({
         success: true,
         requestId: data.request_id,
-        model: selectedModel,
+        model: pollModel,
         status: 'processing',
         pollEndpoint: '/api/imagineer/result',
       });
