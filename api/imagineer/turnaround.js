@@ -48,7 +48,7 @@ const MODELS = {
   'nano-banana-2-edit': {
     endpoint: 'fal-ai/nano-banana-2/edit',
     type: 'edit',
-    buildPayload: (prompt, refUrl) => ({
+    buildPayload: (prompt, refUrl, extras) => ({
       prompt,
       image_urls: [refUrl],
       num_images: 1,
@@ -56,12 +56,13 @@ const MODELS = {
       aspect_ratio: '2:3',
       resolution: '1K',
       safety_tolerance: '4',
+      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
   'nano-banana-pro': {
     endpoint: 'fal-ai/nano-banana-pro/edit',
     type: 'edit',
-    buildPayload: (prompt, refUrl) => ({
+    buildPayload: (prompt, refUrl, extras) => ({
       prompt,
       image_urls: [refUrl],
       num_images: 1,
@@ -69,39 +70,43 @@ const MODELS = {
       aspect_ratio: '2:3',
       resolution: '1K',
       safety_tolerance: '4',
+      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
   'seedream': {
     endpoint: 'fal-ai/bytedance/seedream/v4.5/edit',
     type: 'edit',
-    buildPayload: (prompt, refUrl) => ({
+    buildPayload: (prompt, refUrl, extras) => ({
       prompt,
       image_urls: [refUrl],
       num_images: 1,
       width: 1440,
       height: 2560,
+      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
   'nano-banana-2': {
     endpoint: 'fal-ai/nano-banana-2',
     type: 'generate',
-    buildPayload: (prompt) => ({
+    buildPayload: (prompt, _refUrl, extras) => ({
       prompt,
       num_images: 1,
       output_format: 'png',
       aspect_ratio: '2:3',
       resolution: '1K',
       safety_tolerance: '4',
+      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
   'seedream-generate': {
     endpoint: 'fal-ai/bytedance/seedream/v4/text-to-image',
     type: 'generate',
-    buildPayload: (prompt) => ({
+    buildPayload: (prompt, _refUrl, extras) => ({
       prompt,
       num_images: 1,
       width: 1024,
       height: 1536,
+      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
   'fal-flux': {
@@ -110,6 +115,7 @@ const MODELS = {
     type: 'both',
     buildPayload: (prompt, refUrl, extras) => {
       const loraList = extras?.loras;
+      const negPrompt = extras?.negativePrompt;
       if (refUrl) {
         return {
           prompt,
@@ -118,6 +124,7 @@ const MODELS = {
           strength: 0.85,
           num_images: 1,
           ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+          ...(negPrompt ? { negative_prompt: negPrompt } : {}),
         };
       }
       return {
@@ -125,6 +132,7 @@ const MODELS = {
         image_size: { width: 1024, height: 1536 },
         num_images: 1,
         ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+        ...(negPrompt ? { negative_prompt: negPrompt } : {}),
       };
     },
   },
@@ -143,6 +151,7 @@ export default async function handler(req, res) {
     model = 'nano-banana-2-edit',
     loraUrl,
     loras,
+    negativePrompt,
   } = req.body;
 
   if (!characterDescription) {
@@ -159,6 +168,7 @@ export default async function handler(req, res) {
 
   const hasRef = !!referenceImageUrl;
   const prompt = buildTurnaroundPrompt(characterDescription, style, hasRef);
+  const negPrompt = negativePrompt?.trim() || undefined;
 
   // Validate: edit models REQUIRE a reference image
   if (modelDef.type === 'edit' && !hasRef) {
@@ -172,7 +182,7 @@ export default async function handler(req, res) {
 
   try {
     let result;
-    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null) };
+    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null), negativePrompt: negPrompt };
 
     if (modelDef.type === 'edit' || (modelDef.type === 'both' && hasRef)) {
       // Edit path — try with automatic fallback through available models
