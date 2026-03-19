@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StyleGrid from '@/components/ui/StyleGrid';
 import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
@@ -13,6 +14,7 @@ import PropsPillSelector from '@/components/ui/PropsPillSelector';
 import NegPromptPillSelector from '@/components/ui/NegPromptPillSelector';
 import BrandStyleGuideSelector, { extractBrandStyleData } from '@/components/ui/BrandStyleGuideSelector';
 import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
+import LoRAPicker from '@/components/LoRAPicker';
 import {
   Edit3, Upload, Link2, Loader2, Plus, X, Sparkles,
   CheckCircle2, Download, ExternalLink, FolderOpen,
@@ -22,7 +24,76 @@ import {
 const MODELS = [
   { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', description: 'Multi-image blending, high resolution', multiImage: true },
   { id: 'wavespeed-qwen', label: 'Qwen Image Edit', description: 'Multi-image blending, great detail', multiImage: true },
-  { id: 'fal-flux', label: 'Flux 2 Pro', description: 'Premium single-image editing', multiImage: false },
+  { id: 'fal-flux', label: 'Flux 2 Dev (LoRA)', description: 'Brand Kits & custom products', multiImage: false, supportsLora: true },
+  { id: 'nano-banana-2', label: 'Nano Banana 2', description: 'Fast, reliable editing', multiImage: false },
+  { id: 'seedream', label: 'Seedream v4.5', description: 'High detail editing', multiImage: false },
+];
+
+const LIGHTING = [
+  { value: "", label: "Select lighting..." },
+  { value: "natural-daylight", label: "Natural Daylight" },
+  { value: "golden-hour", label: "Golden Hour" },
+  { value: "blue-hour", label: "Blue Hour" },
+  { value: "studio-lighting", label: "Studio Lighting" },
+  { value: "dramatic", label: "Dramatic" },
+  { value: "neon", label: "Neon Glow" },
+  { value: "volumetric", label: "Volumetric/God Rays" },
+  { value: "backlit", label: "Backlit/Silhouette" },
+  { value: "low-key", label: "Low Key" },
+  { value: "high-key", label: "High Key" },
+];
+
+const CAMERA_ANGLE = [
+  { value: "", label: "Select angle..." },
+  { value: "eye-level", label: "Eye Level" },
+  { value: "high-angle", label: "High Angle" },
+  { value: "low-angle", label: "Low Angle" },
+  { value: "birds-eye", label: "Bird's Eye View" },
+  { value: "dutch-angle", label: "Dutch Angle" },
+  { value: "pov", label: "Point of View (POV)" },
+  { value: "wide-shot", label: "Wide Shot" },
+  { value: "close-up", label: "Close-Up" },
+];
+
+const MOOD = [
+  { value: "", label: "Select mood..." },
+  { value: "serene", label: "Serene/Peaceful" },
+  { value: "dramatic-mood", label: "Dramatic" },
+  { value: "mysterious", label: "Mysterious" },
+  { value: "joyful", label: "Joyful/Happy" },
+  { value: "melancholic", label: "Melancholic/Sad" },
+  { value: "energetic", label: "Energetic" },
+  { value: "romantic-mood", label: "Romantic" },
+  { value: "tense", label: "Tense/Suspenseful" },
+  { value: "ethereal", label: "Ethereal/Dreamy" },
+  { value: "dark", label: "Dark/Moody" },
+  { value: "epic", label: "Epic/Grand" },
+];
+
+const COLOR_PALETTE = [
+  { value: "", label: "Select color palette..." },
+  { value: "warm", label: "Warm (Reds, Oranges, Yellows)" },
+  { value: "cool", label: "Cool (Blues, Greens, Purples)" },
+  { value: "neutral", label: "Neutral (Grays, Browns, Beiges)" },
+  { value: "vibrant", label: "Vibrant/Saturated" },
+  { value: "muted", label: "Muted/Desaturated" },
+  { value: "pastel", label: "Pastel" },
+  { value: "neon-colors", label: "Neon" },
+  { value: "monochrome", label: "Monochrome" },
+  { value: "cinematic-orange-teal", label: "Cinematic (Orange & Teal)" },
+];
+
+const DIMENSIONS = [
+  { value: "1:1", label: "Square (1:1)" },
+  { value: "16:9", label: "Landscape Wide (16:9)" },
+  { value: "21:9", label: "Ultra Wide (21:9)" },
+  { value: "9:16", label: "Portrait Tall (9:16)" },
+  { value: "4:3", label: "Landscape Standard (4:3)" },
+  { value: "3:2", label: "Photo Landscape (3:2)" },
+  { value: "5:4", label: "Photo Standard (5:4)" },
+  { value: "3:4", label: "Portrait Standard (3:4)" },
+  { value: "4:5", label: "Portrait Photo (4:5)" },
+  { value: "2:3", label: "Portrait Tall (2:3)" },
 ];
 
 const OUTPUT_SIZES = [
@@ -88,6 +159,15 @@ export default function EditImageModal({
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negFreetext, setNegFreetext] = useState('');
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const [lighting, setLighting] = useState('');
+  const [cameraAngle, setCameraAngle] = useState('');
+  const [colorPalette, setColorPalette] = useState('');
+  const [mood, setMood] = useState('');
+
+  // fal.ai single-image settings
+  const [strength, setStrength] = useState(0.75);
+  const [dimensions, setDimensions] = useState('1:1');
+  const [loras, setLoras] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -99,6 +179,9 @@ export default function EditImageModal({
       setShowUrlInput(false); setUrlInput('');
       setSelectedProps([]); setSelectedNegPills([]);
       setNegFreetext(''); setSelectedBrand(null);
+      setLighting(''); setCameraAngle('');
+      setColorPalette(''); setMood('');
+      setStrength(0.75); setDimensions('1:1'); setLoras([]);
     }
   }, [isOpen, initialImage]);
 
@@ -144,6 +227,9 @@ export default function EditImageModal({
       .catch(() => {});
   };
 
+  const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
+  const isWavespeed = modelDef.multiImage;
+
   const buildCohesivePrompt = async () => {
     const styleInfo = findStyleByValue(style);
     const styleText = styleInfo?.promptText || style || '';
@@ -154,6 +240,11 @@ export default function EditImageModal({
       props: getPropsLabels(selectedProps),
       negativePrompt: getCombinedNegativePrompt(selectedNegPills, negFreetext),
       brandStyleGuide: extractBrandStyleData(selectedBrand),
+      lighting: LIGHTING.find(l => l.value === lighting)?.label || undefined,
+      cameraAngle: CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label || undefined,
+      colorPalette: COLOR_PALETTE.find(c => c.value === colorPalette)?.label || undefined,
+      mood: MOOD.find(m => m.value === mood)?.label || undefined,
+      editStrength: !isWavespeed ? strength : undefined,
     };
     const res = await apiFetch('/api/prompt/build-cohesive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -172,29 +263,50 @@ export default function EditImageModal({
     try {
       toast.info('Building cohesive prompt...');
       const cohesivePrompt = await buildCohesivePrompt();
+      const baseImage = images.find(img => img.isBase) || images[0];
 
-      const response = await apiFetch('/api/images/edit', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Edit failed');
-
-      if (data.imageUrl) {
-        setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
-      } else if (data.requestId) {
-        toast.info('Processing...'); pollForResult(data.requestId);
+      if (isWavespeed) {
+        // Wavespeed multi-image endpoint
+        const response = await apiFetch('/api/images/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) {
+          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
+        } else if (data.requestId) {
+          toast.info('Processing...'); pollForResult(data.requestId, 'wavespeed');
+        }
+      } else {
+        // fal.ai single-image endpoint
+        const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const response = await apiFetch('/api/imagineer/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model, strength, dimensions, loras: loraPayload }),
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) {
+          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
+        } else if (data.requestId) {
+          toast.info('Processing...'); pollForResult(data.requestId, 'fal', data.model || model);
+        }
       }
     } catch (error) { toast.error(error.message); }
     finally { setIsLoading(false); }
   };
 
-  const pollForResult = async (requestId) => {
+  const pollForResult = async (requestId, backend, falModel) => {
+    const endpoint = backend === 'fal' ? '/api/imagineer/result' : '/api/jumpstart/result';
     const poll = async () => {
       try {
-        const response = await apiFetch('/api/jumpstart/result', {
+        const body = backend === 'fal'
+          ? { requestId, model: falModel }
+          : { requestId };
+        const response = await apiFetch(endpoint, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId }),
+          body: JSON.stringify(body),
         });
         const data = await response.json();
         if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
@@ -209,8 +321,6 @@ export default function EditImageModal({
   };
 
   const handleUseResult = () => { if (onImageEdited && resultImage) onImageEdited(resultImage); onClose(); };
-
-  const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
 
   const content = (
     <div className="flex flex-col h-full">
@@ -331,6 +441,46 @@ export default function EditImageModal({
         {step === 2 && !resultImage && (
           <div className="p-6 space-y-5 max-w-2xl">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Lighting</label>
+                <Select value={lighting} onValueChange={setLighting}>
+                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select lighting..." /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    {LIGHTING.filter(l => l.value).map(l => <SelectItem key={l.value} value={l.value} className="text-sm">{l.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Camera Angle</label>
+                <Select value={cameraAngle} onValueChange={setCameraAngle}>
+                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select angle..." /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    {CAMERA_ANGLE.filter(a => a.value).map(a => <SelectItem key={a.value} value={a.value} className="text-sm">{a.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Color Palette</label>
+                <Select value={colorPalette} onValueChange={setColorPalette}>
+                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select palette..." /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    {COLOR_PALETTE.filter(c => c.value).map(c => <SelectItem key={c.value} value={c.value} className="text-sm">{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Mood</label>
+                <Select value={mood} onValueChange={setMood}>
+                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select mood..." /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    {MOOD.filter(m => m.value).map(m => <SelectItem key={m.value} value={m.value} className="text-sm">{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
             <NegPromptPillSelector selectedPills={selectedNegPills} onPillsChange={setSelectedNegPills}
               freetext={negFreetext} onFreetextChange={setNegFreetext} />
@@ -357,31 +507,62 @@ export default function EditImageModal({
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
                     {!m.multiImage && images.length > 1 && (
-                      <div className="text-[10px] text-amber-600 mt-1">Only uses first image — {images.length - 1} reference(s) ignored</div>
+                      <div className="text-[10px] text-amber-600 mt-1">Only uses base image — {images.length - 1} reference(s) ignored</div>
                     )}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-medium text-slate-600 mb-1 block">Output Size & Aspect Ratio</Label>
-              <select value={outputSize} onChange={(e) => setOutputSize(e.target.value)}
-                className="w-full p-2.5 border rounded-lg text-sm bg-white">
-                <optgroup label="Landscape (16:9)">
-                  {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
-                </optgroup>
-                <optgroup label="Square (1:1)">
-                  {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
-                </optgroup>
-                <optgroup label="Portrait (9:16)">
-                  {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
-                </optgroup>
-                <optgroup label="Other">
-                  {OUTPUT_SIZES.filter(s => !['16:9', '1:1', '9:16'].some(r => s.ratio.includes(r))).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
-                </optgroup>
-              </select>
+            {/* Settings — different per model type */}
+            <div className="grid grid-cols-2 gap-4">
+              {isWavespeed ? (
+                <div>
+                  <Label className="text-xs font-medium text-slate-600 mb-1 block">Output Size</Label>
+                  <select value={outputSize} onChange={(e) => setOutputSize(e.target.value)}
+                    className="w-full p-2.5 border rounded-lg text-sm bg-white">
+                    <optgroup label="Landscape (16:9)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('16:9')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Square (1:1)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('1:1')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Portrait (9:16)">
+                      {OUTPUT_SIZES.filter(s => s.ratio.includes('9:16')).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Other">
+                      {OUTPUT_SIZES.filter(s => !['16:9', '1:1', '9:16'].some(r => s.ratio.includes(r))).map(s => <option key={s.id} value={s.id}>{s.ratio} - {s.label}</option>)}
+                    </optgroup>
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Strength: {strength.toFixed(2)}</label>
+                    <input type="range" min="0.1" max="1.0" step="0.05" value={strength}
+                      onChange={(e) => setStrength(parseFloat(e.target.value))} className="w-full h-2 accent-[#2C666E]" />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle, Higher = creative</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                    <Select value={dimensions} onValueChange={setDimensions}>
+                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        {DIMENSIONS.map(d => <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* LoRA for Flux */}
+            {modelDef.supportsLora && (
+              <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+                <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
+                <LoRAPicker value={loras} onChange={setLoras} />
+              </div>
+            )}
 
             {/* Summary */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
@@ -391,6 +572,8 @@ export default function EditImageModal({
                 <div><span className="text-slate-400">Model:</span> <span className="font-medium">{modelDef.label}</span></div>
                 {style && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{style}</span></div>}
                 {selectedBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{selectedBrand.brand_name}</span></div>}
+                {lighting && <div><span className="text-slate-400">Lighting:</span> <span className="font-medium">{LIGHTING.find(l => l.value === lighting)?.label}</span></div>}
+                {mood && <div><span className="text-slate-400">Mood:</span> <span className="font-medium">{MOOD.find(m => m.value === mood)?.label}</span></div>}
               </div>
               {images.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pt-1">
