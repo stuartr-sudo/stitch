@@ -74,6 +74,9 @@ export default async function handler(req, res) {
   const payload = config.buildPayload();
 
   console.log(`[imagineer/edit] Model: ${selectedModel}, endpoint: ${config.endpoint}`);
+  console.log(`[imagineer/edit] Payload keys:`, Object.keys(payload));
+  console.log(`[imagineer/edit] image_url starts with:`, image_url?.substring(0, 30));
+  console.log(`[imagineer/edit] Has image_urls:`, !!payload.image_urls, payload.image_urls?.length);
 
   try {
     const response = await fetch(`https://queue.fal.run/${config.endpoint}`, {
