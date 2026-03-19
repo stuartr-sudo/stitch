@@ -165,6 +165,7 @@ export default function ImagineerModal({
   const [showEditLibrary, setShowEditLibrary] = useState(false);
   const [editModel, setEditModel] = useState("fal-flux");
   const [editStyle, setEditStyle] = useState("");
+  const [editResultUrl, setEditResultUrl] = useState("");
   const [editSourceUrl, setEditSourceUrl] = useState("");
   const editFileInputRef = useRef(null);
   const [editPrompt, setEditPrompt] = useState("");
@@ -321,11 +322,33 @@ export default function ImagineerModal({
 
       if (data.imageUrl) {
         toast.success('Image edited successfully');
+        setEditResultUrl(data.imageUrl);
         if (onGenerate) await onGenerate({ editedImageUrl: data.imageUrl });
-        onClose();
       } else if (data.requestId) {
-        toast.info('Edit queued — check results shortly');
-        onClose();
+        // Poll for async result
+        toast.info('Edit processing...');
+        for (let i = 0; i < 120; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const pollRes = await apiFetch('/api/imagineer/result', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: data.requestId, model: data.model || editModel }),
+            });
+            const pollData = await pollRes.json();
+            if (pollData.imageUrl) {
+              toast.success('Image edited successfully');
+              setEditResultUrl(pollData.imageUrl);
+              if (onGenerate) await onGenerate({ editedImageUrl: pollData.imageUrl });
+              break;
+            }
+            if (pollData.status === 'failed' || pollData.error) {
+              throw new Error(pollData.error || 'Edit failed');
+            }
+          } catch (pollErr) {
+            if (pollErr.message === 'Edit failed') throw pollErr;
+          }
+        }
       }
     } catch (err) {
       toast.error(err.message || 'Failed to edit image');
@@ -619,6 +642,14 @@ export default function ImagineerModal({
                     <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>
                   )}
                 </Button>
+
+                {/* Result image */}
+                {editResultUrl && (
+                  <div className="mt-3">
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Result</label>
+                    <img src={editResultUrl} alt="Edited result" className="w-full rounded-lg border border-slate-200" />
+                  </div>
+                )}
               </div>
 
               {/* Right column — Style grid */}
