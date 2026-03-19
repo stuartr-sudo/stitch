@@ -49,6 +49,7 @@ export default async function handler(req, res) {
     },
     'nano-banana-2': {
       endpoint: 'fal-ai/nano-banana-2/edit',
+      sync: true, // Use fal.run (synchronous) — queue polling doesn't work for this endpoint
       buildPayload: () => ({
         image_urls: [image_url],
         prompt,
@@ -60,6 +61,7 @@ export default async function handler(req, res) {
     },
     'seedream': {
       endpoint: 'fal-ai/bytedance/seedream/v4.5/edit',
+      sync: true, // Use fal.run (synchronous) — queue polling doesn't work for this endpoint
       buildPayload: () => ({
         image_urls: [image_url],
         prompt,
@@ -79,7 +81,8 @@ export default async function handler(req, res) {
   console.log(`[imagineer/edit] Has image_urls:`, !!payload.image_urls, payload.image_urls?.length);
 
   try {
-    const response = await fetch(`https://queue.fal.run/${config.endpoint}`, {
+    const baseUrl = config.sync ? 'https://fal.run' : 'https://queue.fal.run';
+    const response = await fetch(`${baseUrl}/${config.endpoint}`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
