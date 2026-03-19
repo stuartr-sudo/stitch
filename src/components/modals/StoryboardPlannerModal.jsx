@@ -517,14 +517,80 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     throw new Error(data.error || 'Generation failed');
   };
 
-  const generateAllScenes = async () => {
+  // Generate one scene at a time — user reviews each before proceeding
+  const generateNextScene = async () => {
+    // Find the first scene that hasn't been generated yet
+    const nextIndex = scenes.findIndex(s => s.status === 'pending' || s.status === 'error');
+    if (nextIndex < 0) {
+      toast.success('All scenes generated!');
+      return;
+    }
+
+    if (step !== 'generating') setStep('generating');
+    setGenerating(true);
+    cancelRef.current = false;
+
+    const scene = scenes[nextIndex];
+
+    // Determine start frame: previous scene's last frame, or the start frame image, or first ref
+    let frameUrl = null;
+    if (nextIndex > 0) {
+      const prev = scenes[nextIndex - 1];
+      frameUrl = prev.lastFrameUrl || null;
+    }
+    if (!frameUrl) {
+      frameUrl = startFrameUrl || null;
+    }
+
+    updateScene(scene.id, { status: 'generating', startFrameUrl: frameUrl });
+
+    try {
+      const videoUrl = await generateSingleScene(scene, frameUrl);
+
+      // Extract last frame for chaining to next scene
+      let lastFrame = null;
+      try {
+        lastFrame = await extractLastFrame(videoUrl);
+      } catch (err) {
+        console.warn(`[Storyboard] Could not extract last frame from scene ${nextIndex + 1}:`, err.message);
+      }
+
+      updateScene(scene.id, {
+        status: 'done',
+        videoUrl,
+        lastFrameUrl: lastFrame,
+      });
+
+      // Save video to library
+      apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: videoUrl,
+          type: 'video',
+          title: `[Storyboard] Scene ${nextIndex + 1} - ${storyboardTitle}`,
+          source: 'storyboard',
+        }),
+      }).catch(err => console.warn('Failed to save to library:', err));
+
+      toast.success(`Scene ${nextIndex + 1} generated — review before continuing`);
+
+    } catch (err) {
+      if (err.message !== 'Cancelled') {
+        updateScene(scene.id, { status: 'error' });
+        toast.error(`Scene ${nextIndex + 1} failed: ${err.message}`);
+      }
+    }
+
+    setGenerating(false);
+  };
+
+  // Batch generate all remaining scenes (for users who want auto mode)
+  const generateAllRemaining = async () => {
     setStep('generating');
     setGenerating(true);
     cancelRef.current = false;
     setGenerationCancelled(false);
-
-    // Use the start frame image for Scene 1; subsequent scenes chain from previous scene's last frame
-    let previousFrameUrl = startFrameUrl || null;
 
     for (let i = 0; i < scenes.length; i++) {
       if (cancelRef.current) {
@@ -533,12 +599,23 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       }
 
       const scene = scenes[i];
-      updateScene(scene.id, { status: 'generating', startFrameUrl: previousFrameUrl });
+      if (scene.status === 'done') continue; // Skip already completed
+
+      // Determine start frame
+      let frameUrl = null;
+      if (i > 0) {
+        const prev = scenes[i - 1];
+        frameUrl = prev.lastFrameUrl || null;
+      }
+      if (!frameUrl) {
+        frameUrl = startFrameUrl || null;
+      }
+
+      updateScene(scene.id, { status: 'generating', startFrameUrl: frameUrl });
 
       try {
-        const videoUrl = await generateSingleScene(scene, previousFrameUrl);
+        const videoUrl = await generateSingleScene(scene, frameUrl);
 
-        // Extract last frame for chaining to next scene
         let lastFrame = null;
         try {
           lastFrame = await extractLastFrame(videoUrl);
@@ -551,8 +628,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           videoUrl,
           lastFrameUrl: lastFrame,
         });
-
-        previousFrameUrl = lastFrame || previousFrameUrl;
 
         // Save video to library
         apiFetch('/api/library/save', {
@@ -574,7 +649,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
 
     setGenerating(false);
-    setStep('review');
   };
 
   const cancelGeneration = () => {
@@ -1143,14 +1217,14 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           </div>
         )}
 
-        {/* ── STEP 3: Generation Progress ── */}
+        {/* ── STEP 3: Generation — scene-by-scene with review ── */}
         {step === 'generating' && (
           <div className="space-y-3">
-            <div className="text-center mb-4">
-              <h3 className="text-sm font-semibold text-gray-800">Generating {scenes.length} Scenes</h3>
+            <div className="text-center mb-2">
+              <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
               <p className="text-xs text-gray-500 mt-1">
-                {completedScenes} / {scenes.length} complete
-                {failedScenes > 0 && ` (${failedScenes} failed)`}
+                {completedScenes} / {scenes.length} scenes generated
+                {failedScenes > 0 && ` · ${failedScenes} failed`}
               </p>
               <div className="w-full h-2 bg-gray-100 rounded-full mt-2">
                 <div
@@ -1161,30 +1235,52 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             </div>
 
             {scenes.map((scene, i) => (
-              <div key={scene.id} className={`flex items-center gap-3 p-2 rounded-lg border ${
+              <div key={scene.id} className={`rounded-lg border overflow-hidden ${
                 scene.status === 'generating' ? 'border-[#2C666E] bg-blue-50' :
-                scene.status === 'done' ? 'border-green-200 bg-green-50' :
+                scene.status === 'done' ? 'border-green-200' :
                 scene.status === 'error' ? 'border-red-200 bg-red-50' :
                 'border-gray-200'
               }`}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
-                  {scene.status === 'generating' ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
-                  ) : scene.status === 'done' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  ) : scene.status === 'error' ? (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                  ) : (
-                    <span className="text-xs text-gray-400 font-medium">{i + 1}</span>
+                {/* Video preview for completed scenes */}
+                {scene.status === 'done' && scene.videoUrl && (
+                  <video
+                    src={scene.videoUrl}
+                    controls
+                    className="w-full aspect-video bg-black"
+                    muted
+                  />
+                )}
+
+                <div className="p-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
+                      {scene.status === 'generating' ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
+                      ) : scene.status === 'done' ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      ) : scene.status === 'error' ? (
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                      ) : (
+                        <span className="text-xs text-gray-400 font-medium">{i + 1}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-700">Scene {i + 1}</p>
+                      <p className="text-[10px] text-gray-400 truncate">{scene.narrativeNote || scene.visualPrompt.substring(0, 60)}</p>
+                    </div>
+                  </div>
+                  {/* Redo button for completed or failed scenes */}
+                  {(scene.status === 'done' || scene.status === 'error') && !generating && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => regenerateScene(scene.id)}
+                      className="text-[10px] h-6 px-2"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-0.5" /> Redo
+                    </Button>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-700 truncate">Scene {i + 1}</p>
-                  <p className="text-[10px] text-gray-400 truncate">{scene.narrativeNote || scene.visualPrompt.substring(0, 60)}</p>
-                </div>
-                {scene.status === 'done' && scene.videoUrl && (
-                  <video src={scene.videoUrl} className="w-12 h-8 rounded object-cover" muted />
-                )}
               </div>
             ))}
           </div>
@@ -1261,6 +1357,11 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 <ChevronLeft className="w-3 h-3 mr-1" /> Back
               </Button>
             )}
+            {step === 'generating' && !generating && (
+              <Button variant="outline" size="sm" onClick={() => setStep('scenes')}>
+                <ChevronLeft className="w-3 h-3 mr-1" /> Edit Scenes
+              </Button>
+            )}
             {step === 'review' && (
               <Button variant="outline" size="sm" onClick={() => setStep('scenes')}>
                 <ChevronLeft className="w-3 h-3 mr-1" /> Edit Scenes
@@ -1295,24 +1396,57 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   <RotateCcw className="w-3 h-3 mr-1" /> Regenerate
                 </Button>
                 <Button
-                  onClick={generateAllScenes}
+                  onClick={generateNextScene}
                   disabled={scenes.length === 0}
                   className="bg-[#2C666E] text-white text-sm"
                 >
-                  <Play className="w-4 h-4 mr-1" /> Generate All Videos
+                  <Play className="w-4 h-4 mr-1" /> Generate Scene 1
                 </Button>
               </>
             )}
 
             {step === 'generating' && (
-              <Button
-                variant="outline"
-                onClick={cancelGeneration}
-                disabled={!generating}
-                className="text-red-600 border-red-300"
-              >
-                <Pause className="w-4 h-4 mr-1" /> Cancel
-              </Button>
+              <>
+                {generating ? (
+                  <Button
+                    variant="outline"
+                    onClick={cancelGeneration}
+                    className="text-red-600 border-red-300"
+                  >
+                    <Pause className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
+                ) : (
+                  <>
+                    {completedScenes < scenes.length && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={generateAllRemaining}
+                          disabled={generating}
+                        >
+                          <Play className="w-3 h-3 mr-1" /> Generate All Remaining
+                        </Button>
+                        <Button
+                          onClick={generateNextScene}
+                          disabled={generating}
+                          className="bg-[#2C666E] text-white text-sm"
+                        >
+                          <ChevronRight className="w-4 h-4 mr-1" /> Generate Scene {completedScenes + 1}
+                        </Button>
+                      </>
+                    )}
+                    {completedScenes > 0 && completedScenes === scenes.length && (
+                      <Button
+                        onClick={sendToTimeline}
+                        className="bg-[#2C666E] text-white text-sm"
+                      >
+                        <Send className="w-4 h-4 mr-1" /> Send to Timeline ({completedScenes})
+                      </Button>
+                    )}
+                  </>
+                )}
+              </>
             )}
 
             {step === 'review' && (
