@@ -163,6 +163,7 @@ export default function ImagineerModal({
 
   // Edit tab state
   const [showEditLibrary, setShowEditLibrary] = useState(false);
+  const [editStyle, setEditStyle] = useState("");
   const [editSourceUrl, setEditSourceUrl] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [editStrength, setEditStrength] = useState(0.75);
@@ -283,12 +284,21 @@ export default function ImagineerModal({
     }
     setIsEditing(true);
     try {
+      // Build edit prompt with full style description
+      let fullEditPrompt = editPrompt.trim();
+      if (editStyle) {
+        const styleInfo = findStyleByValue(editStyle);
+        if (styleInfo?.promptText) {
+          fullEditPrompt += `. Style: ${styleInfo.promptText}`;
+        }
+      }
+
       const res = await apiFetch('/api/imagineer/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image_url: editSourceUrl.trim(),
-          prompt: editPrompt.trim(),
+          prompt: fullEditPrompt,
           strength: editStrength,
           dimensions: editDimensions,
           loras: editLoras.map(l => ({ url: l.url, scale: l.scale })),
@@ -333,62 +343,69 @@ export default function ImagineerModal({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <TabsContent value="subject" className="mt-0 p-5 space-y-5">
-            {/* Model */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5" /> Model
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                {IMAGE_MODELS.map((m) => (
-                  <button
-                    key={m.value}
-                    type="button"
-                    onClick={() => setSelectedModel(m.value)}
-                    className={`text-left rounded-lg border-2 p-3 transition-all ${
-                      selectedModel === m.value
-                        ? 'border-[#2C666E] bg-[#2C666E]/5'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="font-medium text-sm text-slate-900">{m.label}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+          <TabsContent value="subject" className="mt-0 p-5">
+            <div className="flex gap-6">
+              {/* Left column — form fields */}
+              <div className="w-1/2 min-w-0 space-y-4">
+                {/* Model */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5" /> Model
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {IMAGE_MODELS.map((m) => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => setSelectedModel(m.value)}
+                        className={`text-left rounded-lg border-2 p-2 transition-all ${
+                          selectedModel === m.value
+                            ? 'border-[#2C666E] bg-[#2C666E]/5'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="font-medium text-xs text-slate-900">{m.label}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Subject */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <SelectField
-                  label="Subject Type"
-                  value={subjectType}
-                  onChange={setSubjectType}
-                  options={SUBJECT_TYPE}
-                  required
-                />
-              </div>
-              <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="14rem" />
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">
-                  Description (what/who is the subject?)
-                </label>
-                <Input
-                  value={subjectDescription}
-                  onChange={(e) => setSubjectDescription(e.target.value)}
-                  placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
-                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-                />
-              </div>
-            </div>
+                {/* Subject */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject</h3>
+                  <SelectField
+                    label="Subject Type"
+                    value={subjectType}
+                    onChange={setSubjectType}
+                    options={SUBJECT_TYPE}
+                    required
+                  />
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">
+                      Description (what/who is the subject?)
+                    </label>
+                    <Input
+                      value={subjectDescription}
+                      onChange={(e) => setSubjectDescription(e.target.value)}
+                      placeholder="e.g., a confident businesswoman, a vintage sports car, a majestic lion..."
+                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
+                    />
+                  </div>
+                </div>
 
-            {/* LoRA Models */}
-            <div className="space-y-3 p-4 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
-              <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
-              <p className="text-xs text-slate-500 -mt-2">Select LoRAs to use FLUX 2 Dev with your trained models. Include trigger words in your description!</p>
-              <LoRAPicker value={generateLoras} onChange={setGenerateLoras} />
+                {/* LoRA Models */}
+                <div className="space-y-2 p-3 bg-[#90DDF0]/10 border border-[#2C666E]/20 rounded-xl">
+                  <h3 className="text-sm font-semibold text-[#07393C] pb-1">LoRA Models (optional)</h3>
+                  <p className="text-xs text-slate-500 -mt-2">Select LoRAs to use FLUX 2 Dev with your trained models.</p>
+                  <LoRAPicker value={generateLoras} onChange={setGenerateLoras} />
+                </div>
+              </div>
+
+              {/* Right column — Style grid */}
+              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+                <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="none" columns="grid-cols-3" />
+              </div>
             </div>
           </TabsContent>
 
@@ -469,92 +486,98 @@ export default function ImagineerModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="edit" className="mt-0 p-5 space-y-5">
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Pencil className="w-3.5 h-3.5" /> LoRA-Enhanced Editing
-              </h3>
-              <p className="text-xs text-slate-500">
-                Edit an existing image with FLUX 2 + LoRA. The source image is modified according to your prompt while maintaining LoRA consistency.
-              </p>
+          <TabsContent value="edit" className="mt-0 p-5">
+            <div className="flex gap-6">
+              {/* Left column — edit form */}
+              <div className="w-1/2 min-w-0 space-y-3">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> Edit Image
+                </h3>
 
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image</label>
-                <div className="flex gap-2">
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Source Image</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={editSourceUrl}
+                      onChange={(e) => setEditSourceUrl(e.target.value)}
+                      placeholder="https://... (paste URL or pick from library)"
+                      className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditLibrary(true)}
+                      className="shrink-0"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
+                    </Button>
+                  </div>
+                  {editSourceUrl && (
+                    <img src={editSourceUrl} alt="Source" className="w-full h-32 object-cover rounded-lg mt-2 border border-slate-200" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Edit Prompt</label>
                   <Input
-                    value={editSourceUrl}
-                    onChange={(e) => setEditSourceUrl(e.target.value)}
-                    placeholder="https://... (paste URL or pick from library)"
-                    className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1 flex-1"
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    placeholder="e.g., change the background to a beach sunset, add a hat..."
+                    className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEditLibrary(true)}
-                    className="shrink-0"
-                  >
-                    <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
-                  </Button>
                 </div>
-                {editSourceUrl && (
-                  <img src={editSourceUrl} alt="Source" className="w-full h-24 object-cover rounded-lg mt-2 border border-slate-200" />
-                )}
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Edit Prompt</label>
-                <Input
-                  value={editPrompt}
-                  onChange={(e) => setEditPrompt(e.target.value)}
-                  placeholder="e.g., change the background to a beach sunset, add a hat..."
-                  className="bg-white focus-visible:ring-2 focus-visible:ring-offset-1"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">
-                    Strength: {editStrength.toFixed(2)}
-                  </label>
-                  <input
-                    type="range" min="0.1" max="1.0" step="0.05"
-                    value={editStrength}
-                    onChange={(e) => setEditStrength(parseFloat(e.target.value))}
-                    className="w-full h-2 accent-[#2C666E]"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle edit, Higher = creative rewrite</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">
+                      Strength: {editStrength.toFixed(2)}
+                    </label>
+                    <input
+                      type="range" min="0.1" max="1.0" step="0.05"
+                      value={editStrength}
+                      onChange={(e) => setEditStrength(parseFloat(e.target.value))}
+                      className="w-full h-2 accent-[#2C666E]"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Lower = subtle, Higher = creative</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
+                    <Select value={editDimensions} onValueChange={setEditDimensions}>
+                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        {DIMENSIONS.map((d) => (
+                          <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">Dimensions</label>
-                  <Select value={editDimensions} onValueChange={setEditDimensions}>
-                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {DIMENSIONS.map((d) => (
-                        <SelectItem key={d.value} value={d.value} className="text-sm">{d.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-semibold text-slate-600">LoRA Models (optional)</label>
+                  <LoRAPicker value={editLoras} onChange={setEditLoras} />
                 </div>
+
+                <Button
+                  onClick={handleEdit}
+                  disabled={isEditing || !editSourceUrl.trim() || !editPrompt.trim()}
+                  className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white"
+                >
+                  {isEditing ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
+                  ) : (
+                    <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>
+                  )}
+                </Button>
               </div>
 
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-xs font-semibold text-slate-600">LoRA Models (optional)</label>
-                <LoRAPicker value={editLoras} onChange={setEditLoras} />
+              {/* Right column — Style grid */}
+              <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+                <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
+                <StyleGrid value={editStyle} onChange={setEditStyle} maxHeight="none" columns="grid-cols-3" />
               </div>
-
-              <Button
-                onClick={handleEdit}
-                disabled={isEditing || !editSourceUrl.trim() || !editPrompt.trim()}
-                className="w-full bg-[#2C666E] hover:bg-[#07393C] text-white"
-              >
-                {isEditing ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
-                ) : (
-                  <><Pencil className="w-4 h-4 mr-2" /> Edit Image</>
-                )}
-              </Button>
             </div>
           </TabsContent>
         </div>
