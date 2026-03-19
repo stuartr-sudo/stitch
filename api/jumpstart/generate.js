@@ -832,9 +832,13 @@ async function handleKlingR2V(req, res, params) {
   }
 
   console.log('[JumpStart/KlingR2V] Request:', {
-    ...requestBody,
-    elements: `[${requestBody.elements.length} element(s)]`,
     prompt: requestBody.prompt.substring(0, 100) + '...',
+    start_image_url: requestBody.start_image_url?.substring(0, 80),
+    elements: requestBody.elements.map((el, i) => ({
+      index: i + 1,
+      frontal: el.frontal_image_url?.substring(0, 80),
+      refs: el.reference_image_urls?.map(u => u.substring(0, 80)),
+    })),
   });
 
   const submitResponse = await fetch(`https://fal.run/fal-ai/kling-video/o3/${tier}/reference-to-video`, {
@@ -849,7 +853,21 @@ async function handleKlingR2V(req, res, params) {
   if (!submitResponse.ok) {
     const errorText = await submitResponse.text();
     console.error('[JumpStart/KlingR2V] Error:', errorText);
-    return res.status(500).json({ error: `Kling R2V ${tier} API error: ` + errorText.substring(0, 200) });
+    // Parse FAL validation errors for user-friendly messages
+    let userError = `Kling R2V ${tier} API error: ` + errorText.substring(0, 200);
+    try {
+      const errData = JSON.parse(errorText);
+      if (errData.detail) {
+        const details = Array.isArray(errData.detail) ? errData.detail : [errData.detail];
+        const msgs = details.map(d => {
+          if (d.msg?.includes('too small')) return `Reference image too small (min 300x300px). Check your element reference images are high resolution.`;
+          if (d.msg?.includes('Maximum')) return d.msg;
+          return d.msg || String(d);
+        });
+        userError = msgs.join('. ');
+      }
+    } catch (e) { /* use raw error */ }
+    return res.status(500).json({ error: userError });
   }
 
   const data = await submitResponse.json();
