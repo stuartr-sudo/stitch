@@ -82,6 +82,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
   // Starting scene image state
   const [startFrameUrl, setStartFrameUrl] = useState(null);
+  const [startFrameDescription, setStartFrameDescription] = useState('');
+  const [analyzingStartFrame, setAnalyzingStartFrame] = useState(false);
   const [showImagineerForStartFrame, setShowImagineerForStartFrame] = useState(false);
   const [showLibraryForStartFrame, setShowLibraryForStartFrame] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
@@ -123,6 +125,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setElements([createEmptyElement(0)]);
       setActiveElementIndex(0);
       setStartFrameUrl(null);
+      setStartFrameDescription('');
+      setAnalyzingStartFrame(false);
       setShowImagineerForStartFrame(false);
       setShowLibraryForStartFrame(false);
       setShowUrlImport(false);
@@ -241,6 +245,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       if (data.imageUrl) {
         setStartFrameUrl(data.imageUrl);
         toast.success('Starting scene image generated');
+        analyzeStartFrame(data.imageUrl);
         // Auto-save to library
         apiFetch('/api/library/save', {
           method: 'POST',
@@ -263,6 +268,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             if (pollData.imageUrl) {
               setStartFrameUrl(pollData.imageUrl);
               toast.success('Starting scene image generated');
+              analyzeStartFrame(pollData.imageUrl);
               apiFetch('/api/library/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -290,10 +296,33 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   };
 
+  // Auto-analyze the start frame image to get a scene description for the LLM
+  const analyzeStartFrame = async (imageUrl) => {
+    if (!imageUrl || analyzingStartFrame) return;
+    setAnalyzingStartFrame(true);
+    try {
+      const res = await apiFetch('/api/storyboard/describe-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl }),
+      });
+      const data = await res.json();
+      if (data.success && data.description) {
+        setStartFrameDescription(data.description);
+        toast.success('Scene analyzed');
+      }
+    } catch (err) {
+      console.warn('[Storyboard] Scene analysis failed:', err.message);
+    } finally {
+      setAnalyzingStartFrame(false);
+    }
+  };
+
   const handleStartFrameFromLibrary = (item) => {
     setStartFrameUrl(item.url);
     setShowLibraryForStartFrame(false);
     toast.success('Starting scene image selected from library');
+    analyzeStartFrame(item.url);
   };
 
   const handleImportUrl = async () => {
@@ -311,6 +340,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         setStartFrameUrl(data.url);
         setShowUrlImport(false);
         setImportUrl('');
+        analyzeStartFrame(data.url);
         toast.success('Image imported successfully');
       } else {
         throw new Error(data.error || 'Import failed');
@@ -373,6 +403,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             .filter(el => el.refs.length > 0 || el.description)
             .map((el, i) => ({ index: i + 1, description: el.description })),
           hasStartFrame: !!startFrameUrl,
+          startFrameDescription: startFrameDescription || '',
         }),
       });
       const data = await res.json();
@@ -833,7 +864,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                    <span className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">Start Frame</span>
+                    <span className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                      {analyzingStartFrame ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Analyzing scene...</> : startFrameDescription ? 'Scene analyzed' : 'Start Frame'}
+                    </span>
                   </div>
                 ) : (generatingStartFrame || pollingStartFrame) ? (
                   <div className="w-full h-36 rounded-lg border-2 border-dashed border-[#2C666E]/30 bg-[#2C666E]/5 flex flex-col items-center justify-center gap-2">

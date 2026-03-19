@@ -45,6 +45,7 @@ export default async function handler(req, res) {
       characterDescription = '', // Legacy single character
       elements = [],             // New multi-element format: [{ index: 1, description: '...' }, ...]
       hasStartFrame = false,
+      startFrameDescription = '',
     } = req.body;
 
     if (!description) {
@@ -73,7 +74,7 @@ VISUAL STYLE TO APPLY TO EVERY SCENE: ${style}
 DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
 ${cameraPreferences ? `CAMERA PREFERENCES: ${cameraPreferences}` : ''}
 ${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt where that character/object appears:\n${elementInstructions}` : ''}
-${hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe what happens NEXT from that exact visual — same environment, same lighting, same composition continuing forward.' : ''}
+${hasStartFrame && startFrameDescription ? `STARTING SCENE IMAGE ANALYSIS — this is exactly what the first frame looks like. ALL scenes must take place in this same environment with this same visual style:\n${startFrameDescription}` : hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe what happens NEXT from that exact visual — same environment, same lighting, same composition continuing forward.' : ''}
 
 PROMPT WRITING RULES:
 
