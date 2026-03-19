@@ -41,9 +41,9 @@ export default async function handler(req, res) {
       numScenes = 4,
       style = 'cinematic',
       defaultDuration = 5,
-      cameraPreferences = '',
-      characterDescription = '', // Legacy single character
-      elements = [],             // New multi-element format: [{ index: 1, description: '...' }, ...]
+      overallMood = '',
+      sceneGuides = [],
+      elements = [],
       hasStartFrame = false,
       startFrameDescription = '',
     } = req.body;
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing story description' });
     }
 
-    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements, style: "${style?.substring(0, 60)}")`);
+    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements, ${sceneGuides.length} guides, style: "${style?.substring(0, 60)}")`);
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
@@ -63,40 +63,55 @@ export default async function handler(req, res) {
       elementInstructions = activeElements.map(el =>
         `@Element${el.index}: ${el.description}`
       ).join('\n');
-    } else if (characterDescription) {
-      // Legacy single-character fallback
-      elementInstructions = `@Element1: ${characterDescription}`;
     }
 
-    const systemPrompt = `You are an expert AI video prompt engineer. Your job is to write extremely detailed, hyper-specific visual prompts that AI video generation models can render into beautiful footage.
+    // Build per-scene guide instructions
+    const hasGuides = sceneGuides.some(g => g.action || g.environment || g.actionType);
+    let sceneGuideInstructions = '';
+    if (hasGuides) {
+      sceneGuideInstructions = sceneGuides.map(g => {
+        const parts = [`Scene ${g.sceneNumber}:`];
+        if (g.action) parts.push(`Action: ${g.action}`);
+        if (g.environment) parts.push(`Setting: ${g.environment}`);
+        if (g.environmentDetail) parts.push(`(${g.environmentDetail})`);
+        if (g.actionType) parts.push(`Movement: ${g.actionType}`);
+        if (g.expression) parts.push(`Expression: ${g.expression}`);
+        if (g.lighting) parts.push(`Lighting: ${g.lighting}`);
+        if (g.cameraAngle) parts.push(`Angle: ${g.cameraAngle}`);
+        if (g.cameraMovement) parts.push(`Camera: ${g.cameraMovement}`);
+        return parts.join(' | ');
+      }).join('\n');
+    }
 
+    const systemPrompt = `You are an expert AI video prompt engineer. Your job is to write detailed visual prompts that AI video generation models can render into beautiful footage.
+
+STORY OVERVIEW: ${description}
+${overallMood ? `OVERALL MOOD: ${overallMood}` : ''}
 VISUAL STYLE TO APPLY TO EVERY SCENE: ${style}
 DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
-${cameraPreferences ? `CAMERA PREFERENCES: ${cameraPreferences}` : ''}
-${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt where that character/object appears:\n${elementInstructions}` : ''}
-${hasStartFrame && startFrameDescription ? `STARTING SCENE IMAGE ANALYSIS — this is exactly what the first frame looks like. ALL scenes must take place in this same environment with this same visual style:\n${startFrameDescription}` : hasStartFrame ? 'NOTE: A starting scene image has been provided. Scene 1 should describe what happens NEXT from that exact visual — same environment, same lighting, same composition continuing forward.' : ''}
+${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt:\n${elementInstructions}` : ''}
+${hasStartFrame && startFrameDescription ? `STARTING SCENE IMAGE ANALYSIS — ALL scenes must take place in this exact environment:\n${startFrameDescription}` : ''}
+${sceneGuideInstructions ? `\nPER-SCENE DIRECTIONS FROM THE USER — follow these exactly for each scene:\n${sceneGuideInstructions}` : ''}
 
 PROMPT WRITING RULES:
 
-1. Write each visualPrompt as a single flowing paragraph — NOT with labeled sections like "SUBJECT:" or "ACTION:". Write naturally as if describing a shot to a cinematographer. Example: "@Element1 rides a blue skateboard along a sunlit suburban sidewalk, golden-hour light from camera-left casting warm shadows, picket fences and pastel houses softly blurred in the background, leaves scattered on the concrete path."
+1. Write each visualPrompt as a single flowing paragraph of 60-100 words. Describe what the camera sees naturally — the subject, their action, expression, the environment, and lighting.
 
-2. Each visualPrompt should be 60-100 words. Concise but specific — include the subject, what they're doing, the environment, and the lighting/mood. Don't pad with technical jargon.
+2. Follow the user's per-scene directions EXACTLY — use their specified environment, action, expression, lighting, camera angle, and camera movement for each scene. Expand on their direction with visual detail but do NOT change what they specified.
 
-3. CAMERA/MOTION: Be specific — "smooth tracking shot at waist height following the subject" not "camera follows character".
+3. Weave the visual style naturally into each description.
 
-4. STYLE: Weave the visual style naturally into the description. For 3D animation styles, describe characters as "smooth rounded 3D character with large expressive eyes" not just "a character".
+4. The end of scene N must visually match the start of scene N+1 — same environment, same lighting.
 
-5. SCENE CONTINUITY: The end of scene N must match the start of scene N+1 — same environment, same lighting, same character position.
+5. @Element placeholders: You MUST use them exactly as listed. Describe what the character is doing and their expression.
 
-6. @Element placeholders: You MUST use them exactly as listed above. Describe what the character is doing, their expression, and body language.
+6. NEVER include: text, words, typography, watermarks, logos, or UI elements.
 
-7. NEVER include: text, words, typography, watermarks, logos, or UI elements.
+7. If a start frame scene analysis is provided, ALL scenes must take place in that same environment.`;
 
-8. CRITICAL: The start_image_url provides the scene environment. Your prompt must describe the character WITHIN that same environment — do not describe a different location.`;
+    const userPrompt = `Write ${numScenes} scene prompts based on the story overview and per-scene directions provided.
 
-    const userPrompt = `Write ${numScenes} scene prompts for: ${description}
-
-Each visualPrompt should be a natural flowing paragraph of 60-100 words describing what the camera sees. Keep it concise and direct — describe the character, their action, the environment, and the lighting. Do NOT use labeled sections like "SUBJECT:" or "ACTION:". These prompts go to an AI video model that works best with natural descriptions, not structured templates.`;
+Each visualPrompt must be a natural flowing paragraph of 60-100 words. Follow the per-scene directions exactly — the user has specified what happens, where, the lighting, camera angle, and camera movement for each scene. Expand their direction into a rich visual description but do not deviate from what they specified.`;
 
     const completion = await openai.chat.completions.parse({
       model: 'gpt-5-mini',

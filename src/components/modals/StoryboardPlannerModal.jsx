@@ -54,14 +54,64 @@ const CAMERA_ANGLES = [
   'low-angle', 'over-shoulder', 'tracking', 'dutch angle', 'POV',
 ];
 
+// ── Scene Builder pill options ──
+const ENVIRONMENTS = ['Street/Road', 'Sidewalk/Path', 'Park/Garden', 'Forest/Woods', 'Beach', 'Indoor', 'Playground', 'School', 'Shop/Store', 'Backyard'];
+const ACTION_TYPES = ['Walking', 'Running', 'Riding', 'Standing', 'Sitting', 'Jumping', 'Looking', 'Turning', 'Stopping', 'Interacting'];
+const EXPRESSIONS = ['Happy/Smiling', 'Focused/Determined', 'Surprised', 'Worried/Concerned', 'Excited', 'Calm/Peaceful', 'Curious', 'Cautious'];
+const LIGHTING_OPTIONS = ['Golden Hour', 'Bright Midday', 'Soft Morning', 'Blue Hour/Dusk', 'Overcast', 'Night/Moonlit', 'Sunset Glow'];
+const CAMERA_MOVEMENTS = ['Static', 'Pan Left', 'Pan Right', 'Tracking Follow', 'Dolly In', 'Dolly Out', 'Orbit', 'Crane Up', 'Crane Down'];
+const MOODS = ['Joyful/Happy', 'Dramatic', 'Peaceful/Calm', 'Mysterious', 'Energetic', 'Tense/Suspenseful', 'Playful', 'Inspirational'];
+
+function PillSelector({ options, value, onChange, label }) {
+  return (
+    <div>
+      {label && <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">{label}</label>}
+      <div className="flex flex-wrap gap-1">
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(value === opt ? '' : opt)}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+              value === opt
+                ? 'bg-[#2C666E] text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const STEPS = ['setup', 'scenes', 'generating', 'review'];
+
+const EMPTY_SCENE_GUIDE = {
+  action: '',
+  environment: '',
+  environmentDetail: '',
+  actionType: '',
+  expression: '',
+  lighting: '',
+  cameraAngle: '',
+  cameraMovement: '',
+};
 
 export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComplete }) {
   // Step state
   const [step, setStep] = useState('setup');
 
+  // Story builder state
+  const [storyOverview, setStoryOverview] = useState('');
+  const [overallMood, setOverallMood] = useState('');
+  const [sceneGuides, setSceneGuides] = useState(
+    Array.from({ length: 4 }, () => ({ ...EMPTY_SCENE_GUIDE }))
+  );
+
   // Setup state
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(''); // kept for legacy/fallback
   const [numScenes, setNumScenes] = useState(4);
   const [style, setStyle] = useState('cinematic');
   const [defaultDuration, setDefaultDuration] = useState(5);
@@ -101,6 +151,21 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [libraryLoading, setLibraryLoading] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Sync sceneGuides length with numScenes
+  useEffect(() => {
+    setSceneGuides(prev => {
+      if (prev.length === numScenes) return prev;
+      if (prev.length < numScenes) {
+        return [...prev, ...Array.from({ length: numScenes - prev.length }, () => ({ ...EMPTY_SCENE_GUIDE }))];
+      }
+      return prev.slice(0, numScenes);
+    });
+  }, [numScenes]);
+
+  const updateSceneGuide = (index, updates) => {
+    setSceneGuides(prev => prev.map((g, i) => i === index ? { ...g, ...updates } : g));
+  };
+
   // Scene cards state
   const [scenes, setScenes] = useState([]);
   const [storyboardTitle, setStoryboardTitle] = useState('');
@@ -122,6 +187,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setNumScenes(4);
       setStyle('cinematic');
       setDefaultDuration(5);
+      setStoryOverview('');
+      setOverallMood('');
+      setSceneGuides(Array.from({ length: 4 }, () => ({ ...EMPTY_SCENE_GUIDE })));
       setElements([createEmptyElement(0)]);
       setActiveElementIndex(0);
       setStartFrameUrl(null);
@@ -384,8 +452,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
   // ── AI Scene Generation ──
   const generateSceneBreakdown = async () => {
-    if (!description.trim()) {
-      toast.error('Please describe your story concept');
+    if (!storyOverview.trim()) {
+      toast.error('Please provide a story overview');
       return;
     }
     setGeneratingScenes(true);
@@ -394,10 +462,12 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description,
+          description: storyOverview,
           numScenes,
           style: getPromptText(style) || style,
           defaultDuration,
+          overallMood,
+          sceneGuides: sceneGuides.map((g, i) => ({ sceneNumber: i + 1, ...g })),
           // Send all element descriptions so AI uses @Element1, @Element2, etc.
           elements: elements
             .filter(el => el.refs.length > 0 || el.description)
@@ -782,15 +852,17 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           <div className="flex gap-6">
             {/* Left column — form fields */}
             <div className="w-1/2 min-w-0 space-y-4">
+              {/* Story Overview + Mood */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Story Concept</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your story... e.g., 'A young explorer discovers a hidden portal in an ancient forest, steps through, and finds herself in a floating city above the clouds'"
-                  className="w-full h-28 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#2C666E] focus:border-transparent"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Story Overview</label>
+                <input
+                  value={storyOverview}
+                  onChange={(e) => setStoryOverview(e.target.value)}
+                  placeholder="e.g., 'A puppy learns about driveway safety while riding a scooter through town'"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#2C666E] focus:border-transparent"
                 />
               </div>
+              <PillSelector label="Overall Mood" options={MOODS} value={overallMood} onChange={setOverallMood} />
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -830,6 +902,60 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Per-Scene Builder Cards */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Scene-by-Scene Builder</label>
+                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                  {sceneGuides.map((guide, i) => (
+                    <div key={i} className="border rounded-lg p-2.5 bg-white space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#2C666E]">Scene {i + 1}</span>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5 block">What happens?</label>
+                        <input
+                          value={guide.action}
+                          onChange={(e) => updateSceneGuide(i, { action: e.target.value })}
+                          placeholder="e.g., 'The puppy rides the scooter past a driveway and looks both ways'"
+                          className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <PillSelector label="Environment" options={ENVIRONMENTS} value={guide.environment} onChange={(v) => updateSceneGuide(i, { environment: v })} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Environment Detail</label>
+                          <input
+                            value={guide.environmentDetail}
+                            onChange={(e) => updateSceneGuide(i, { environmentDetail: e.target.value })}
+                            placeholder="e.g., 'suburban road with parked cars'"
+                            className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                          />
+                        </div>
+                      </div>
+                      <PillSelector label="Character Action" options={ACTION_TYPES} value={guide.actionType} onChange={(v) => updateSceneGuide(i, { actionType: v })} />
+                      <PillSelector label="Expression" options={EXPRESSIONS} value={guide.expression} onChange={(v) => updateSceneGuide(i, { expression: v })} />
+                      <div className="grid grid-cols-2 gap-2">
+                        <PillSelector label="Lighting" options={LIGHTING_OPTIONS} value={guide.lighting} onChange={(v) => updateSceneGuide(i, { lighting: v })} />
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Camera Angle</label>
+                          <select
+                            value={guide.cameraAngle}
+                            onChange={(e) => updateSceneGuide(i, { cameraAngle: e.target.value })}
+                            className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                          >
+                            <option value="">Select...</option>
+                            {CAMERA_ANGLES.map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <PillSelector label="Camera Movement" options={CAMERA_MOVEMENTS} value={guide.cameraMovement} onChange={(v) => updateSceneGuide(i, { cameraMovement: v })} />
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -1408,7 +1534,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             {step === 'setup' && (
               <Button
                 onClick={generateSceneBreakdown}
-                disabled={generatingScenes || !description.trim()}
+                disabled={generatingScenes || !storyOverview.trim()}
                 className="bg-[#2C666E] text-white text-sm"
               >
                 {generatingScenes ? (
