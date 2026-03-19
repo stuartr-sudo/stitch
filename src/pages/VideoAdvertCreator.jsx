@@ -102,6 +102,19 @@ export default function VideoAdvertCreator() {
   // Keep ref in sync with state
   useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
 
+  // Listen for open-tool events from child modals (e.g., Imagineer Edit result actions)
+  useEffect(() => {
+    const handler = (e) => {
+      const { tool, imageUrl } = e.detail || {};
+      if (tool && imageUrl) {
+        setPendingImage(imageUrl);
+        setActiveModal(tool);
+      }
+    };
+    window.addEventListener('open-tool', handler);
+    return () => window.removeEventListener('open-tool', handler);
+  }, []);
+
   // Playback loop — stops at end of last element
   useEffect(() => {
     let animationFrameId;

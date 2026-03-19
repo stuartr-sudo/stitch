@@ -686,6 +686,28 @@ export default function ImagineerModal({
                       >
                         <Sparkles className="w-3 h-3 mr-1" /> Use in Storyboard
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          onClose();
+                          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'inpaint', imageUrl: editResultUrl } }));
+                        }}
+                      >
+                        Inpaint
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          onClose();
+                          window.dispatchEvent(new CustomEvent('open-tool', { detail: { tool: 'turnaround', imageUrl: editResultUrl } }));
+                        }}
+                      >
+                        Turnaround
+                      </Button>
                     </div>
                   </div>
                 )}
