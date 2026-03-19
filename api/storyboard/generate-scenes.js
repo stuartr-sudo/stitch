@@ -114,7 +114,7 @@ PROMPT WRITING RULES:
 Each visualPrompt must be a natural flowing paragraph of 60-100 words. Follow the per-scene directions exactly — the user has specified what happens, where, the lighting, camera angle, and camera movement for each scene. Expand their direction into a rich visual description but do not deviate from what they specified.`;
 
     const completion = await openai.chat.completions.parse({
-      model: 'gpt-5-mini',
+      model: 'gpt-4.1-mini-2025-04-14',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -129,7 +129,7 @@ Each visualPrompt must be a natural flowing paragraph of 60-100 words. Follow th
         username: req.user.email.split('@')[0],
         category: 'openai',
         operation: 'storyboard_scene_generation',
-        model: 'gpt-5-mini',
+        model: 'gpt-4.1-mini-2025-04-14',
         input_tokens: completion.usage.prompt_tokens,
         output_tokens: completion.usage.completion_tokens,
       });

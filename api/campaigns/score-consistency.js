@@ -92,7 +92,7 @@ export default async function handler(req, res) {
 
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-4.1-mini-2025-04-14',
         messages: [
           {
             role: 'system',
