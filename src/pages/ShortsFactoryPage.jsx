@@ -201,7 +201,7 @@ export default function ShortsFactoryPage() {
           niche,
           topic: topic || undefined,
           brand_username: brandUsername,
-          story_context: selectedStory?.story_context || undefined,
+          story_context: selectedStory ? `Real story: ${selectedStory.title}. ${selectedStory.summary}. Angle: ${selectedStory.story_angle}` : undefined,
         }),
       });
 
@@ -242,7 +242,7 @@ export default function ShortsFactoryPage() {
           caption_style: captionStyle,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
           script: editedScript || undefined,
-          story_context: selectedStory?.story_context || undefined,
+          story_context: selectedStory ? `Real story: ${selectedStory.title}. ${selectedStory.summary}. Angle: ${selectedStory.story_angle}` : undefined,
         }),
       });
 
@@ -543,6 +543,60 @@ export default function ShortsFactoryPage() {
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Story Source — toggle between custom topic and real story research */}
+        {niche && (
+          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-800">Story Source</h2>
+              <div className="flex items-center gap-1 bg-slate-100 rounded-full p-0.5">
+                <button
+                  onClick={() => { setStoryMode('custom'); setSelectedStory(null); }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${storyMode === 'custom' ? 'bg-[#2C666E] text-white shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                >Custom Topic</button>
+                <button
+                  onClick={() => setStoryMode('research')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${storyMode === 'research' ? 'bg-[#2C666E] text-white shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                >Find Real Stories</button>
+              </div>
+            </div>
+
+            {storyMode === 'research' && (
+              <>
+                <Button variant="outline" size="sm" onClick={handleResearchStories} disabled={loadingStories || isGenerating}>
+                  {loadingStories ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Searching...</> : <><Search className="w-3.5 h-3.5 mr-1.5" /> Search Trending Stories</>}
+                </Button>
+                {researchedStories.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto">
+                    {researchedStories.map((story, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setSelectedStory(story); setTopic(story.title); }}
+                        className={`p-3 rounded-lg border text-left transition-all ${
+                          selectedStory === story ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <p className="text-sm font-medium text-slate-800">{story.title}</p>
+                        <p className="text-xs text-slate-500 mt-1">{story.summary}</p>
+                        {story.source_hint && <p className="text-[10px] text-slate-400 mt-1">Source: {story.source_hint}</p>}
+                        {story.story_angle && <p className="text-[10px] text-[#2C666E] mt-0.5">Angle: {story.story_angle}</p>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedStory && (
+                  <p className="text-xs text-[#2C666E] font-medium">
+                    ✓ Using: &quot;{selectedStory.title}&quot; — this will inform the script generation.
+                  </p>
+                )}
+              </>
+            )}
+
+            {storyMode === 'custom' && (
+              <p className="text-xs text-slate-400">Using your custom topic above. Switch to &quot;Find Real Stories&quot; to base your short on trending news.</p>
             )}
           </div>
         )}
