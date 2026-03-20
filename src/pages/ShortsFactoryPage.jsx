@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import WizardStepper from '@/components/ui/WizardStepper';
+import StyleGrid from '@/components/ui/StyleGrid';
 import {
   ArrowLeft,
   Loader2,
@@ -37,6 +39,8 @@ import {
   Eye,
   Briefcase,
   Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import LoRAPicker from '@/components/LoRAPicker';
 
@@ -58,18 +62,32 @@ const NICHES = [
 ];
 
 const VOICE_PRESETS = [
-  { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam',   description: 'Deep, authoritative male',  niches: ['ai_tech_news', 'finance_money', 'history_did_you_know', 'conspiracy_mystery', 'business_entrepreneur'] },
-  { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', description: 'Warm, inspiring male',      niches: ['motivation_self_help', 'relationships_dating'] },
-  { id: '2EiwWnXFnvU5JabPnv8n', name: 'Clyde',  description: 'Deep gravelly male',        niches: ['scary_horror', 'true_crime'] },
-  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', description: 'Calm, eerie female',        niches: ['scary_horror', 'true_crime', 'conspiracy_mystery'] },
-  { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh',   description: 'Young energetic male',      niches: ['ai_tech_news', 'motivation_self_help', 'science_nature', 'health_fitness', 'gaming_popculture'] },
-  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella',  description: 'Young clear female',        niches: ['finance_money', 'ai_tech_news', 'health_fitness', 'relationships_dating'] },
+  { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', description: 'Deep, authoritative male', niches: ['ai_tech_news', 'finance_money', 'history_did_you_know', 'conspiracy_mystery', 'business_entrepreneur'] },
+  { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', description: 'Warm, inspiring male', niches: ['motivation_self_help', 'relationships_dating'] },
+  { id: '2EiwWnXFnvU5JabPnv8n', name: 'Clyde', description: 'Deep gravelly male', niches: ['scary_horror', 'true_crime'] },
+  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', description: 'Calm, eerie female', niches: ['scary_horror', 'true_crime', 'conspiracy_mystery'] },
+  { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', description: 'Young energetic male', niches: ['ai_tech_news', 'motivation_self_help', 'science_nature', 'health_fitness', 'gaming_popculture'] },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella', description: 'Young clear female', niches: ['finance_money', 'ai_tech_news', 'health_fitness', 'relationships_dating'] },
+  { id: 'VR6AewLTigWG4xSOukaG', name: 'Arnold', description: 'Crisp, narrative male', niches: ['history_did_you_know', 'science_nature', 'business_entrepreneur'] },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', description: 'Deep British male', niches: ['history_did_you_know', 'true_crime', 'science_nature', 'conspiracy_mystery'] },
+  { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', description: 'Warm British female', niches: ['science_nature', 'health_fitness', 'relationships_dating', 'motivation_self_help'] },
+  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', description: 'Confident American', niches: ['ai_tech_news', 'finance_money', 'business_entrepreneur', 'gaming_popculture'] },
+  { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', description: 'Friendly young male', niches: ['gaming_popculture', 'ai_tech_news', 'health_fitness'] },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', description: 'Expressive female', niches: ['motivation_self_help', 'relationships_dating', 'health_fitness', 'scary_horror'] },
+  { id: 'iP95p4xoKVk53GoZ742B', name: 'Chris', description: 'Casual American male', niches: ['gaming_popculture', 'ai_tech_news', 'conspiracy_mystery'] },
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', description: 'Deep narrator male', niches: ['true_crime', 'history_did_you_know', 'scary_horror', 'conspiracy_mystery'] },
+  { id: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum', description: 'Intense transatlantic', niches: ['scary_horror', 'true_crime', 'conspiracy_mystery', 'history_did_you_know'] },
 ];
 
 const CAPTION_STYLES = [
-  { key: 'word_pop', label: 'Word Pop', description: 'Bold white with black outline' },
-  { key: 'karaoke_glow', label: 'Karaoke Glow', description: 'Yellow with heavy shadow' },
+  { key: 'word_pop', label: 'Word Pop', description: 'Bold white, black outline — high impact' },
+  { key: 'karaoke_glow', label: 'Karaoke Glow', description: 'Yellow highlight with heavy shadow' },
   { key: 'word_highlight', label: 'Subtle', description: 'Clean white, minimal outline' },
+  { key: 'neon_glow', label: 'Neon Glow', description: 'Cyan glow on dark background' },
+  { key: 'typewriter', label: 'Typewriter', description: 'Letter-by-letter reveal effect' },
+  { key: 'bounce', label: 'Bounce', description: 'Words bounce in with spring animation' },
+  { key: 'gradient_slide', label: 'Gradient Slide', description: 'Words slide in with color gradient' },
+  { key: 'outline_only', label: 'Outline Only', description: 'Transparent fill, thick colored outline' },
 ];
 
 const PIPELINE_STEPS = [
@@ -84,15 +102,30 @@ const PIPELINE_STEPS = [
   { key: 'finalizing', label: 'Finalizing', icon: CheckCircle2 },
 ];
 
+const WIZARD_STEPS = [
+  { key: 'niche', label: 'Niche' },
+  { key: 'story', label: 'Story' },
+  { key: 'script', label: 'Script' },
+  { key: 'voice_style', label: 'Voice & Style' },
+  { key: 'generate', label: 'Generate' },
+];
+
 export default function ShortsFactoryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Wizard state
+  const [wizardStep, setWizardStep] = useState('niche');
+  const [wizardCompleted, setWizardCompleted] = useState([]);
 
   // Form state
   const [niche, setNiche] = useState(null);
   const [topic, setTopic] = useState('');
   const [voiceId, setVoiceId] = useState('');
+  const [customVoiceId, setCustomVoiceId] = useState('');
+  const [useCustomVoice, setUseCustomVoice] = useState(false);
   const [captionStyle, setCaptionStyle] = useState('word_pop');
+  const [visualStyle, setVisualStyle] = useState('');
   const [brandUsername, setBrandUsername] = useState('');
   const [brands, setBrands] = useState([]);
   const [loraConfig, setLoraConfig] = useState([]);
@@ -101,7 +134,7 @@ export default function ShortsFactoryPage() {
   // Pipeline state
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState(null);
-  const [currentStep, setCurrentStep] = useState(null);
+  const [pipelineStep, setPipelineStep] = useState(null);
   const [completedSteps, setCompletedSteps] = useState(0);
   const [result, setResult] = useState(null);
 
@@ -112,7 +145,6 @@ export default function ShortsFactoryPage() {
   // Script preview & edit
   const [scriptPreview, setScriptPreview] = useState(null);
   const [editedScript, setEditedScript] = useState('');
-  const [showScriptPreview, setShowScriptPreview] = useState(false);
   const [loadingScriptPreview, setLoadingScriptPreview] = useState(false);
 
   // Real story sourcing
@@ -130,7 +162,6 @@ export default function ShortsFactoryPage() {
         const res = await apiFetch('/api/brand/usernames');
         const data = await res.json();
         if (data.usernames?.length) {
-          // API returns [{username, brand_name}] objects
           const brandList = data.usernames.map(u =>
             typeof u === 'string' ? { username: u, brand_name: u } : u
           );
@@ -159,13 +190,21 @@ export default function ShortsFactoryPage() {
     };
   }, []);
 
+  // Auto-generate script when entering script step
+  useEffect(() => {
+    if (wizardStep === 'script' && !scriptPreview && !loadingScriptPreview && niche && brandUsername) {
+      handlePreviewScript();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep]);
+
   // Poll job status
   const pollJobStatus = useCallback(async (id) => {
     try {
       const res = await apiFetch(`/api/jobs/public-status?jobId=${id}`);
       const data = await res.json();
 
-      setCurrentStep(data.current_step);
+      setPipelineStep(data.current_step);
       setCompletedSteps(data.completed_steps || 0);
 
       if (data.status === 'completed') {
@@ -210,7 +249,6 @@ export default function ShortsFactoryPage() {
 
       setScriptPreview(data.script);
       setEditedScript(data.script.narration_full);
-      setShowScriptPreview(true);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -225,9 +263,11 @@ export default function ShortsFactoryPage() {
       return;
     }
 
+    const effectiveVoiceId = useCustomVoice && customVoiceId.trim() ? customVoiceId.trim() : voiceId;
+
     setIsGenerating(true);
     setResult(null);
-    setCurrentStep('generating_script');
+    setPipelineStep('generating_script');
     setCompletedSteps(0);
 
     try {
@@ -238,8 +278,9 @@ export default function ShortsFactoryPage() {
           niche,
           topic: topic || undefined,
           brand_username: brandUsername,
-          voice_id: voiceId || undefined,
+          voice_id: effectiveVoiceId || undefined,
           caption_style: captionStyle,
+          visual_style: visualStyle || undefined,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
           script: editedScript || undefined,
           story_context: selectedStory?.story_context || undefined,
@@ -320,9 +361,61 @@ export default function ShortsFactoryPage() {
     }
   };
 
-  const filteredVoices = niche
-    ? VOICE_PRESETS.filter(v => v.niches.includes(niche))
+  // ── Wizard navigation helpers ───────────────────────────────────────────
+
+  const stepKeys = WIZARD_STEPS.map(s => s.key);
+  const currentStepIndex = stepKeys.indexOf(wizardStep);
+
+  const canAdvance = () => {
+    switch (wizardStep) {
+      case 'niche': return !!niche;
+      case 'story': return true;
+      case 'script': return true;
+      case 'voice_style': return !!(voiceId || (useCustomVoice && customVoiceId.trim()));
+      case 'generate': return !!brandUsername;
+      default: return false;
+    }
+  };
+
+  const goNext = () => {
+    if (!canAdvance()) {
+      if (wizardStep === 'niche') toast.error('Please select a niche');
+      if (wizardStep === 'voice_style') toast.error('Please select a voice');
+      if (wizardStep === 'generate') toast.error('Please select a brand');
+      return;
+    }
+    setWizardCompleted(prev => prev.includes(wizardStep) ? prev : [...prev, wizardStep]);
+    if (currentStepIndex < stepKeys.length - 1) {
+      setWizardStep(stepKeys[currentStepIndex + 1]);
+    }
+  };
+
+  const goBack = () => {
+    if (currentStepIndex > 0) {
+      setWizardStep(stepKeys[currentStepIndex - 1]);
+    }
+  };
+
+  const goToStep = (key) => {
+    const targetIndex = stepKeys.indexOf(key);
+    if (targetIndex < currentStepIndex || wizardCompleted.includes(key)) {
+      setWizardStep(key);
+    }
+  };
+
+  // Sort voices: recommended first, then the rest
+  const sortedVoices = niche
+    ? [
+        ...VOICE_PRESETS.filter(v => v.niches.includes(niche)),
+        ...VOICE_PRESETS.filter(v => !v.niches.includes(niche)),
+      ]
     : VOICE_PRESETS;
+
+  const recommendedVoiceIds = niche
+    ? new Set(VOICE_PRESETS.filter(v => v.niches.includes(niche)).map(v => v.id))
+    : new Set();
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -341,510 +434,641 @@ export default function ShortsFactoryPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        {/* Brand Selector */}
-        {brands.length > 1 && (
-          <div className="bg-white rounded-2xl p-5 border shadow-sm">
-            <Label className="text-sm font-semibold text-slate-700">Brand</Label>
-            <select
-              value={brandUsername}
-              onChange={e => setBrandUsername(e.target.value)}
-              disabled={isGenerating}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
-            >
-              {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
-            </select>
-          </div>
-        )}
+      {/* White card container with stepper */}
+      <main className="max-w-3xl mx-auto px-6 py-8">
+        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+          {/* Wizard Stepper */}
+          <WizardStepper
+            steps={WIZARD_STEPS}
+            currentStep={wizardStep}
+            completedSteps={wizardCompleted}
+            onStepClick={goToStep}
+          />
 
-        {/* Niche Selector */}
-        <div className="bg-white rounded-2xl p-6 border shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-800 mb-4">Choose Your Niche</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {NICHES.map(n => {
-              const Icon = n.icon;
-              const selected = niche === n.key;
-              return (
-                <button
-                  key={n.key}
-                  onClick={() => !isGenerating && setNiche(n.key)}
-                  disabled={isGenerating}
-                  className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                    selected
-                      ? 'border-[#2C666E] bg-[#2C666E]/5 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                  } ${isGenerating ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${n.color} flex items-center justify-center mb-2`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="font-semibold text-sm text-slate-800">{n.label}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{n.description}</div>
-                  {selected && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          {/* Step Content */}
+          <div className="p-6 space-y-6">
 
-        {/* Story Source Toggle */}
-        {niche && (
-          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-800">Story Source</h2>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => { setStoryMode('custom'); setSelectedStory(null); }}
-                  disabled={isGenerating}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    storyMode === 'custom'
-                      ? 'bg-[#2C666E] text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Custom Topic
-                </button>
-                <button
-                  onClick={() => setStoryMode('research')}
-                  disabled={isGenerating}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    storyMode === 'research'
-                      ? 'bg-[#2C666E] text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Find Real Stories
-                </button>
+            {/* ── Step 1: Niche ──────────────────────────────────────────── */}
+            {wizardStep === 'niche' && (
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800 mb-4">Choose Your Niche</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {NICHES.map(n => {
+                    const Icon = n.icon;
+                    const selected = niche === n.key;
+                    return (
+                      <button
+                        key={n.key}
+                        onClick={() => setNiche(n.key)}
+                        className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                          selected
+                            ? 'border-[#2C666E] bg-[#2C666E]/5 shadow-md'
+                            : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                        } cursor-pointer`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${n.color} flex items-center justify-center mb-2`}>
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="font-semibold text-sm text-slate-800">{n.label}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{n.description}</div>
+                        {selected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Custom Topic Mode */}
-            {storyMode === 'custom' && (
+            {/* ── Step 2: Story ──────────────────────────────────────────── */}
+            {wizardStep === 'story' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs text-slate-600">Topic</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSuggestTopics}
-                    disabled={loadingTopics || isGenerating}
-                    className="text-xs text-[#2C666E]"
-                  >
-                    {loadingTopics ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
-                    Suggest Topics
-                  </Button>
+                  <h2 className="text-sm font-semibold text-slate-800">Story Source</h2>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => { setStoryMode('custom'); setSelectedStory(null); }}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        storyMode === 'custom'
+                          ? 'bg-[#2C666E] text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Custom Topic
+                    </button>
+                    <button
+                      onClick={() => setStoryMode('research')}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        storyMode === 'research'
+                          ? 'bg-[#2C666E] text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Find Real Stories
+                    </button>
+                  </div>
                 </div>
 
-                <Input
-                  value={topic}
-                  onChange={e => setTopic(e.target.value)}
-                  placeholder="Leave empty for auto-generated topic, or type your own..."
-                  disabled={isGenerating}
-                />
-
-                {suggestedTopics.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500">Click to use:</Label>
-                    {suggestedTopics.map((t, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setTopic(t.title); setSuggestedTopics([]); }}
-                        disabled={isGenerating}
-                        className="w-full text-left p-3 rounded-lg border border-slate-100 hover:border-[#2C666E]/30 hover:bg-[#2C666E]/5 transition-colors"
+                {/* Custom Topic Mode */}
+                {storyMode === 'custom' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-slate-600">Topic</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSuggestTopics}
+                        disabled={loadingTopics}
+                        className="text-xs text-[#2C666E]"
                       >
-                        <div className="text-sm font-medium text-slate-800">{t.title}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{t.hook_idea}</div>
-                      </button>
-                    ))}
+                        {loadingTopics ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                        Suggest Topics
+                      </Button>
+                    </div>
+
+                    <Input
+                      value={topic}
+                      onChange={e => setTopic(e.target.value)}
+                      placeholder="Leave empty for auto-generated topic, or type your own..."
+                    />
+
+                    {suggestedTopics.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-500">Click to use:</Label>
+                        {suggestedTopics.map((t, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setTopic(t.title); setSuggestedTopics([]); }}
+                            className="w-full text-left p-3 rounded-lg border border-slate-100 hover:border-[#2C666E]/30 hover:bg-[#2C666E]/5 transition-colors"
+                          >
+                            <div className="text-sm font-medium text-slate-800">{t.title}</div>
+                            <div className="text-xs text-slate-500 mt-0.5">{t.hook_idea}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Research Stories Mode */}
+                {storyMode === 'research' && (
+                  <div className="space-y-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResearchStories}
+                      disabled={loadingStories || !brandUsername}
+                      className="w-full border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5"
+                    >
+                      {loadingStories ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+                          Researching stories...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-3.5 h-3.5 mr-2" />
+                          {researchedStories.length > 0 ? 'Find More Stories' : 'Find Trending Stories'}
+                        </>
+                      )}
+                    </Button>
+
+                    {researchedStories.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-500">
+                          Select a story to use as the basis for your short:
+                        </Label>
+                        {researchedStories.map((story, i) => {
+                          const isSelected = selectedStory === story;
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setSelectedStory(isSelected ? null : story);
+                                setTopic(isSelected ? '' : story.title);
+                              }}
+                              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                                isSelected
+                                  ? 'border-[#2C666E] bg-[#2C666E]/5 shadow-sm'
+                                  : 'border-slate-100 hover:border-[#2C666E]/30 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold text-slate-800">{story.title}</div>
+                                  <div className="text-xs text-slate-500 mt-1 line-clamp-2">{story.summary}</div>
+                                  <div className="text-xs text-[#2C666E] mt-1.5 font-medium">{story.angle}</div>
+                                </div>
+                                {isSelected && (
+                                  <div className="flex-shrink-0 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center mt-0.5">
+                                    <CheckCircle2 className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              {story.why_viral && (
+                                <div className="text-[11px] text-slate-400 mt-2 italic">
+                                  {story.why_viral}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {selectedStory && (
+                      <div className="bg-[#2C666E]/5 rounded-lg p-3 border border-[#2C666E]/20">
+                        <p className="text-xs text-[#2C666E] font-medium">
+                          Selected: {selectedStory.title}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Story context will be passed to the script generator for accuracy.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Research Stories Mode */}
-            {storyMode === 'research' && (
+            {/* ── Step 3: Script ─────────────────────────────────────────── */}
+            {wizardStep === 'script' && (
               <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResearchStories}
-                  disabled={loadingStories || isGenerating || !brandUsername}
-                  className="w-full border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5"
-                >
-                  {loadingStories ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
-                      Researching stories...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-3.5 h-3.5 mr-2" />
-                      {researchedStories.length > 0 ? 'Find More Stories' : 'Find Trending Stories'}
-                    </>
-                  )}
-                </Button>
+                {loadingScriptPreview ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mb-3" />
+                    <p className="text-sm font-medium">Generating script...</p>
+                    <p className="text-xs text-slate-400 mt-1">This takes a few seconds</p>
+                  </div>
+                ) : scriptPreview ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-sm font-semibold text-slate-800">Script Preview</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Edit before generating — this is what the voiceover will say</p>
+                      </div>
+                      <button
+                        onClick={() => { setScriptPreview(null); setEditedScript(''); handlePreviewScript(); }}
+                        className="text-xs text-[#2C666E] hover:text-[#07393C] px-2 py-1 rounded hover:bg-[#2C666E]/5 flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Regenerate
+                      </button>
+                    </div>
 
-                {researchedStories.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500">
-                      Select a story to use as the basis for your short:
-                    </Label>
-                    {researchedStories.map((story, i) => {
-                      const isSelected = selectedStory === story;
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setSelectedStory(isSelected ? null : story);
-                            setTopic(isSelected ? '' : story.title);
-                          }}
-                          disabled={isGenerating}
-                          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                            isSelected
-                              ? 'border-[#2C666E] bg-[#2C666E]/5 shadow-sm'
-                              : 'border-slate-100 hover:border-[#2C666E]/30 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-slate-800">{story.title}</div>
-                              <div className="text-xs text-slate-500 mt-1 line-clamp-2">{story.summary}</div>
-                              <div className="text-xs text-[#2C666E] mt-1.5 font-medium">{story.angle}</div>
+                    {scriptPreview.title && (
+                      <div className="text-xs text-slate-500">
+                        <span className="font-medium text-slate-700">Title:</span> {scriptPreview.title}
+                      </div>
+                    )}
+
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Narration Script</Label>
+                      <textarea
+                        value={editedScript}
+                        onChange={e => setEditedScript(e.target.value)}
+                        rows={8}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white resize-y focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
+                        placeholder="Edit the script narration here..."
+                      />
+                      <p className="text-xs text-slate-400 mt-1">
+                        {editedScript.trim().split(/\s+/).filter(Boolean).length} words
+                      </p>
+                    </div>
+
+                    {scriptPreview.scenes && (
+                      <details className="text-xs">
+                        <summary className="text-slate-500 cursor-pointer hover:text-slate-700 font-medium">
+                          View scene breakdown ({scriptPreview.scenes.length} scenes)
+                        </summary>
+                        <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-slate-100">
+                          {scriptPreview.scenes.map((scene, i) => (
+                            <div key={i} className="text-slate-600">
+                              <span className="text-[#2C666E] font-medium">[{scene.role}]</span>{' '}
+                              {scene.narration_segment}
                             </div>
-                            {isSelected && (
-                              <div className="flex-shrink-0 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center mt-0.5">
-                                <CheckCircle2 className="w-3 h-3 text-white" />
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                    <Sparkles className="w-8 h-8 text-slate-300 mb-3" />
+                    <p className="text-sm font-medium">No script generated yet</p>
+                    <Button
+                      onClick={handlePreviewScript}
+                      disabled={!brandUsername}
+                      className="mt-3 bg-[#2C666E] hover:bg-[#07393C]"
+                      size="sm"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      Generate Script
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Step 4: Voice & Style ──────────────────────────────────── */}
+            {wizardStep === 'voice_style' && (
+              <div className="space-y-6">
+                <h2 className="text-sm font-semibold text-slate-800">Voice & Style</h2>
+
+                {/* Voice Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-slate-600 font-medium">Voice</Label>
+                    <button
+                      onClick={() => setUseCustomVoice(!useCustomVoice)}
+                      className="text-[11px] text-[#2C666E] hover:underline"
+                    >
+                      {useCustomVoice ? 'Use preset voice' : 'Use custom voice ID'}
+                    </button>
+                  </div>
+
+                  {useCustomVoice ? (
+                    <div className="space-y-1.5">
+                      <Input
+                        value={customVoiceId}
+                        onChange={e => setCustomVoiceId(e.target.value)}
+                        placeholder="Paste any ElevenLabs voice ID..."
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        Find voice IDs at elevenlabs.io/voice-library
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                      {sortedVoices.map(v => {
+                        const isRecommended = recommendedVoiceIds.has(v.id);
+                        const selected = voiceId === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => setVoiceId(v.id)}
+                            className={`relative p-3 rounded-lg border-2 text-left transition-all ${
+                              selected
+                                ? 'border-[#2C666E] bg-[#2C666E]/5'
+                                : 'border-slate-100 hover:border-slate-300'
+                            }`}
+                          >
+                            {isRecommended && (
+                              <span className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5 bg-[#2C666E] text-white rounded-full font-medium">
+                                Recommended
+                              </span>
+                            )}
+                            <div className="text-sm font-semibold text-slate-800">{v.name}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{v.description}</div>
+                            {selected && (
+                              <div className="absolute bottom-1.5 right-1.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-white" />
                               </div>
                             )}
-                          </div>
-                          {story.why_viral && (
-                            <div className="text-[11px] text-slate-400 mt-2 italic">
-                              {story.why_viral}
-                            </div>
-                          )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption Style */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-600 font-medium">Caption Style</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {CAPTION_STYLES.map(s => {
+                      const selected = captionStyle === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          onClick={() => setCaptionStyle(s.key)}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            selected
+                              ? 'border-[#2C666E] bg-[#2C666E]/5'
+                              : 'border-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="text-xs font-semibold text-slate-800">{s.label}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
                         </button>
                       );
                     })}
                   </div>
-                )}
-
-                {selectedStory && (
-                  <div className="bg-[#2C666E]/5 rounded-lg p-3 border border-[#2C666E]/20">
-                    <p className="text-xs text-[#2C666E] font-medium">
-                      Selected: {selectedStory.title}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Story context will be passed to the script generator for accuracy.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Voice & Style */}
-        {niche && (
-          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-            <h2 className="text-sm font-semibold text-slate-800">Voice & Style</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Voice */}
-              <div>
-                <Label className="text-xs text-slate-600">Voice</Label>
-                <select
-                  value={voiceId}
-                  onChange={e => setVoiceId(e.target.value)}
-                  disabled={isGenerating}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
-                >
-                  {filteredVoices.map(v => (
-                    <option key={v.id} value={v.id}>{v.name} — {v.description}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Caption Style */}
-              <div>
-                <Label className="text-xs text-slate-600">Caption Style</Label>
-                <select
-                  value={captionStyle}
-                  onChange={e => setCaptionStyle(e.target.value)}
-                  disabled={isGenerating}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
-                >
-                  {CAPTION_STYLES.map(s => (
-                    <option key={s.key} value={s.key}>{s.label} — {s.description}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LoRA Style (optional) */}
-        {niche && (
-          <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <button
-              onClick={() => !isGenerating && setShowLoraPicker(!showLoraPicker)}
-              disabled={isGenerating}
-              className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#2C666E]" />
-                <span className="text-sm font-semibold text-slate-800">LoRA Style Models</span>
-                {loraConfig.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#2C666E] text-white rounded-full font-medium">
-                    {loraConfig.length}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">
-                  {loraConfig.length > 0 ? 'Using FLUX 2' : 'Optional'}
-                </span>
-                {showLoraPicker ? (
-                  <ChevronUp className="w-4 h-4 text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                )}
-              </div>
-            </button>
-
-            {showLoraPicker && (
-              <div className="px-5 pb-5 border-t border-slate-100 pt-4">
-                <p className="text-xs text-slate-500 mb-3">
-                  Add trained LoRA models for consistent visual styles or branded characters.
-                  When enabled, images use FLUX 2 Dev with LoRA weights.
-                </p>
-                <LoRAPicker
-                  value={loraConfig}
-                  onChange={setLoraConfig}
-                  brandUsername={brandUsername}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Script Preview & Edit */}
-        {niche && showScriptPreview && scriptPreview && (
-          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-800">Script Preview</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Edit before generating — this is what the voiceover will say</p>
-              </div>
-              <button
-                onClick={() => { setShowScriptPreview(false); setScriptPreview(null); setEditedScript(''); }}
-                className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded hover:bg-slate-100"
-              >
-                Clear
-              </button>
-            </div>
-
-            {scriptPreview.title && (
-              <div className="text-xs text-slate-500">
-                <span className="font-medium text-slate-700">Title:</span> {scriptPreview.title}
-              </div>
-            )}
-
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Narration Script</Label>
-              <textarea
-                value={editedScript}
-                onChange={e => setEditedScript(e.target.value)}
-                disabled={isGenerating}
-                rows={8}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white resize-y focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
-                placeholder="Edit the script narration here..."
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                {editedScript.trim().split(/\s+/).filter(Boolean).length} words
-              </p>
-            </div>
-
-            {scriptPreview.scenes && (
-              <details className="text-xs">
-                <summary className="text-slate-500 cursor-pointer hover:text-slate-700 font-medium">
-                  View scene breakdown ({scriptPreview.scenes.length} scenes)
-                </summary>
-                <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-slate-100">
-                  {scriptPreview.scenes.map((scene, i) => (
-                    <div key={i} className="text-slate-600">
-                      <span className="text-[#2C666E] font-medium">[{scene.role}]</span>{' '}
-                      {scene.narration_segment}
-                    </div>
-                  ))}
                 </div>
-              </details>
-            )}
-          </div>
-        )}
 
-        {/* Generate Button */}
-        {niche && (
-          <div className="space-y-2">
-            {!showScriptPreview && (
-              <Button
-                variant="outline"
-                onClick={handlePreviewScript}
-                disabled={loadingScriptPreview || isGenerating || !brandUsername}
-                className="w-full py-4 rounded-xl border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5"
-              >
-                {loadingScriptPreview ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Generating preview...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Preview Script First
-                  </>
-                )}
-              </Button>
-            )}
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating || !brandUsername}
-              className="w-full py-6 text-lg bg-[#2C666E] hover:bg-[#07393C] rounded-xl shadow-lg"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  {showScriptPreview ? 'Generate Short with This Script' : 'Generate Short'}
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+                {/* Visual Style */}
+                <StyleGrid value={visualStyle} onChange={setVisualStyle} />
 
-        {/* Pipeline Progress */}
-        {isGenerating && currentStep && (
-          <div className="bg-white rounded-2xl p-6 border shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-4">Pipeline Progress</h2>
-            <div className="space-y-2">
-              {PIPELINE_STEPS.map((step, i) => {
-                const StepIcon = step.icon;
-                const stepIndex = PIPELINE_STEPS.findIndex(s => s.key === currentStep);
-                const isCompleted = i < stepIndex || (currentStep === 'done' && i <= stepIndex);
-                const isCurrent = step.key === currentStep;
-                const isPending = i > stepIndex;
-
-                return (
-                  <div
-                    key={step.key}
-                    className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                      isCurrent ? 'bg-[#2C666E]/5' : ''
-                    }`}
+                {/* LoRA Style (optional) */}
+                <div className="border rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setShowLoraPicker(!showLoraPicker)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      isCompleted ? 'bg-green-100 text-green-600'
-                        : isCurrent ? 'bg-[#2C666E] text-white'
-                          : 'bg-slate-100 text-slate-400'
-                    }`}>
-                      {isCurrent ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : isCompleted ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <StepIcon className="w-4 h-4" />
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-sm font-semibold text-slate-800">LoRA Style Models</span>
+                      {loraConfig.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-[#2C666E] text-white rounded-full font-medium">
+                          {loraConfig.length}
+                        </span>
                       )}
                     </div>
-                    <span className={`text-sm ${
-                      isCompleted ? 'text-green-700 font-medium'
-                        : isCurrent ? 'text-[#2C666E] font-semibold'
-                          : 'text-slate-400'
-                    }`}>
-                      {step.label}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">
+                        {loraConfig.length > 0 ? 'Using FLUX 2' : 'Optional'}
+                      </span>
+                      {showLoraPicker ? (
+                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {showLoraPicker && (
+                    <div className="px-4 pb-4 border-t border-slate-100 pt-3">
+                      <p className="text-xs text-slate-500 mb-3">
+                        Add trained LoRA models for consistent visual styles or branded characters.
+                        When enabled, images use FLUX 2 Dev with LoRA weights.
+                      </p>
+                      <LoRAPicker
+                        value={loraConfig}
+                        onChange={setLoraConfig}
+                        brandUsername={brandUsername}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 5: Generate ───────────────────────────────────────── */}
+            {wizardStep === 'generate' && (
+              <div className="space-y-6">
+                {/* Brand Selector */}
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700">Brand</Label>
+                  {brands.length > 0 ? (
+                    <select
+                      value={brandUsername}
+                      onChange={e => setBrandUsername(e.target.value)}
+                      disabled={isGenerating}
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
+                    >
+                      {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-slate-400 mt-1">No brands found. Create one in Settings first.</p>
+                  )}
+                </div>
+
+                {/* Summary */}
+                <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Summary</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <span className="text-slate-500">Niche</span>
+                    <span className="text-slate-800 font-medium">{NICHES.find(n => n.key === niche)?.label || '—'}</span>
+                    <span className="text-slate-500">Topic</span>
+                    <span className="text-slate-800 font-medium truncate">{topic || 'Auto-generated'}</span>
+                    <span className="text-slate-500">Voice</span>
+                    <span className="text-slate-800 font-medium">
+                      {useCustomVoice && customVoiceId.trim()
+                        ? `Custom (${customVoiceId.trim().slice(0, 10)}...)`
+                        : VOICE_PRESETS.find(v => v.id === voiceId)?.name || '—'}
                     </span>
+                    <span className="text-slate-500">Captions</span>
+                    <span className="text-slate-800 font-medium">{CAPTION_STYLES.find(s => s.key === captionStyle)?.label || '—'}</span>
+                    {visualStyle && (
+                      <>
+                        <span className="text-slate-500">Visual Style</span>
+                        <span className="text-slate-800 font-medium">{visualStyle}</span>
+                      </>
+                    )}
+                    <span className="text-slate-500">Script</span>
+                    <span className="text-slate-800 font-medium">{editedScript ? 'Custom' : 'Auto-generated'}</span>
+                    {loraConfig.length > 0 && (
+                      <>
+                        <span className="text-slate-500">LoRA Models</span>
+                        <span className="text-slate-800 font-medium">{loraConfig.length} selected</span>
+                      </>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            {/* Progress bar */}
-            <div className="mt-4 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#2C666E] to-[#90DDF0] transition-all duration-500 rounded-full"
-                style={{ width: `${(completedSteps / 9) * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-2 text-center">
-              Step {completedSteps + 1} of 9
-            </p>
-          </div>
-        )}
+                {/* Generate Button */}
+                {!isGenerating && !result && (
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !brandUsername}
+                    className="w-full py-6 text-lg bg-[#2C666E] hover:bg-[#07393C] rounded-xl shadow-lg"
+                  >
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Generate Short
+                  </Button>
+                )}
 
-        {/* Result */}
-        {result && result.video_url && (
-          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800">{result.title || 'Your Short'}</h2>
-              <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Ready</span>
-            </div>
+                {/* Pipeline Progress */}
+                {isGenerating && pipelineStep && (
+                  <div className="space-y-4">
+                    <h2 className="text-sm font-semibold text-slate-800">Pipeline Progress</h2>
+                    <div className="space-y-2">
+                      {PIPELINE_STEPS.map((step, i) => {
+                        const StepIcon = step.icon;
+                        const stepIndex = PIPELINE_STEPS.findIndex(s => s.key === pipelineStep);
+                        const isCompleted = i < stepIndex || (pipelineStep === 'done' && i <= stepIndex);
+                        const isCurrent = step.key === pipelineStep;
+                        const isPending = i > stepIndex;
 
-            {/* Video Player */}
-            <div className="rounded-xl overflow-hidden bg-black aspect-[9/16] max-w-[320px] mx-auto">
-              <video
-                src={result.video_url}
-                controls
-                className="w-full h-full object-contain"
-                playsInline
-              />
-            </div>
+                        return (
+                          <div
+                            key={step.key}
+                            className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                              isCurrent ? 'bg-[#2C666E]/5' : ''
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isCompleted ? 'bg-green-100 text-green-600'
+                                : isCurrent ? 'bg-[#2C666E] text-white'
+                                  : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {isCurrent ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : isCompleted ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <StepIcon className="w-4 h-4" />
+                              )}
+                            </div>
+                            <span className={`text-sm ${
+                              isCompleted ? 'text-green-700 font-medium'
+                                : isCurrent ? 'text-[#2C666E] font-semibold'
+                                  : 'text-slate-400'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <a
-                href={result.video_url}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
-              >
-                <Button variant="outline" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-              </a>
-              <Button
-                onClick={() => {
-                  setResult(null);
-                  setJobId(null);
-                  setCurrentStep(null);
-                  setCompletedSteps(0);
-                  setLoraConfig([]);
-                  setShowLoraPicker(false);
-                }}
-                className="flex-1 bg-[#2C666E] hover:bg-[#07393C]"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Make Another
-              </Button>
-            </div>
+                    {/* Progress bar */}
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#2C666E] to-[#90DDF0] transition-all duration-500 rounded-full"
+                        style={{ width: `${(completedSteps / 9) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 text-center">
+                      Step {completedSteps + 1} of 9
+                    </p>
+                  </div>
+                )}
 
-            {/* Campaign link */}
-            {result.campaign_id && (
-              <button
-                onClick={() => navigate('/campaigns')}
-                className="text-xs text-[#2C666E] hover:underline w-full text-center"
-              >
-                View in Campaigns
-              </button>
+                {/* Result */}
+                {result && result.video_url && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-bold text-slate-800">{result.title || 'Your Short'}</h2>
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Ready</span>
+                    </div>
+
+                    {/* Video Player */}
+                    <div className="rounded-xl overflow-hidden bg-black aspect-[9/16] max-w-[320px] mx-auto">
+                      <video
+                        src={result.video_url}
+                        controls
+                        className="w-full h-full object-contain"
+                        playsInline
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                      <a
+                        href={result.video_url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1"
+                      >
+                        <Button variant="outline" className="w-full">
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </a>
+                      <Button
+                        onClick={() => {
+                          setResult(null);
+                          setJobId(null);
+                          setPipelineStep(null);
+                          setCompletedSteps(0);
+                          setLoraConfig([]);
+                          setShowLoraPicker(false);
+                          setWizardStep('niche');
+                          setWizardCompleted([]);
+                          setScriptPreview(null);
+                          setEditedScript('');
+                          setNiche(null);
+                          setTopic('');
+                          setSelectedStory(null);
+                          setVisualStyle('');
+                        }}
+                        className="flex-1 bg-[#2C666E] hover:bg-[#07393C]"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Make Another
+                      </Button>
+                    </div>
+
+                    {/* Campaign link */}
+                    {result.campaign_id && (
+                      <button
+                        onClick={() => navigate('/campaigns')}
+                        className="text-xs text-[#2C666E] hover:underline w-full text-center"
+                      >
+                        View in Campaigns
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Navigation Buttons ─────────────────────────────────────── */}
+            {!isGenerating && !result && (
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                {currentStepIndex > 0 ? (
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="gap-1.5"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                  </Button>
+                ) : (
+                  <div />
+                )}
+
+                {wizardStep !== 'generate' ? (
+                  <Button
+                    onClick={goNext}
+                    disabled={!canAdvance()}
+                    className="gap-1.5 bg-[#2C666E] hover:bg-[#07393C]"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                ) : null}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </main>
     </div>
   );
