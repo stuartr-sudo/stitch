@@ -52,7 +52,11 @@ export default function InpaintModal({
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
-      setImage(initialImage || null);
+      // Only update image if a new initialImage was provided
+      // Otherwise keep the current image so re-opens don't blank out
+      if (initialImage) {
+        setImage(initialImage);
+      }
       setPrompt('');
       setBrushSize(30);
       setMode('paint');
