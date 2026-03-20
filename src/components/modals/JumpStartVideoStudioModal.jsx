@@ -596,16 +596,16 @@ export default function JumpStartVideoStudioModal({
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="flex-1 overflow-hidden mt-0">
-          <div className="flex-1 grid grid-cols-[minmax(300px,2fr)_minmax(340px,3fr)] overflow-hidden min-h-[500px] h-full">
+          <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden h-full">
             {/* LEFT COLUMN — Video Preview + Model & Settings */}
-            <div className="bg-gray-50 p-6 overflow-y-auto border-r border-slate-200 space-y-6">
+            <div className="bg-gray-50 p-4 overflow-y-auto border-r border-slate-200 space-y-4">
               {/* Video Preview */}
-              <div className="space-y-3">
-                <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black border-2 border-slate-300 relative">
+              <div className="space-y-2">
+                <div className="aspect-video rounded-lg overflow-hidden shadow-md bg-black border border-slate-300 relative">
                   <video src={selectedVideo?.url} controls className="w-full h-full object-contain" />
-                  <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] text-white font-bold tracking-wider">SOURCE</div>
+                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/60 rounded text-[9px] text-white font-bold tracking-wider">SOURCE</div>
                 </div>
-                <p className="text-slate-500 text-xs font-medium truncate text-center">{selectedVideo?.title}</p>
+                <p className="text-slate-500 text-[10px] font-medium truncate text-center">{selectedVideo?.title}</p>
               </div>
 
               {/* Model Selector */}
@@ -664,21 +664,21 @@ export default function JumpStartVideoStudioModal({
               )}
 
               {/* Resolution + Duration row */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {mode === 'extend' && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-slate-700">Duration</Label>
-                    <select className="w-full p-2 text-sm border rounded-lg bg-white cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-slate-500">Duration</Label>
+                    <select className="w-full p-2 text-xs border rounded-lg bg-white cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
                       {(currentExtendModel.durationOptions || [5, 10]).map(d => <option key={d} value={d}>{d}s</option>)}
                     </select>
                   </div>
                 )}
-                <div className={`space-y-2 ${mode === 'edit' ? 'col-span-2' : ''}`}>
-                  <Label className="text-xs font-bold text-slate-700">Resolution</Label>
-                  <div className={`grid gap-1.5 ${(mode === 'edit' ? currentEditModel.resolutions : currentExtendModel.resolutions || ['720p', '1080p']).length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <div className={`space-y-1 ${mode === 'edit' ? 'col-span-2' : ''}`}>
+                  <Label className="text-[10px] font-bold text-slate-500">Resolution</Label>
+                  <div className={`grid gap-1 ${(mode === 'edit' ? currentEditModel.resolutions : currentExtendModel.resolutions || ['720p', '1080p']).length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {(mode === 'edit' ? currentEditModel.resolutions : (currentExtendModel.resolutions || ['720p', '1080p'])).map(res => (
                       <button key={res} onClick={() => setResolution(res)}
-                        className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${resolution === res ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 hover:bg-slate-100 border-slate-200'}`}>
+                        className={`py-1 text-[10px] font-bold rounded-md border transition-all ${resolution === res ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 hover:bg-slate-100 border-slate-200'}`}>
                         {res}
                       </button>
                     ))}
@@ -744,7 +744,7 @@ export default function JumpStartVideoStudioModal({
             </div>
 
             {/* RIGHT COLUMN — Prompt Builder */}
-            <div className="p-6 overflow-y-auto bg-white space-y-5">
+            <div className="p-4 overflow-y-auto bg-white space-y-4">
               {/* Prompt mode toggle */}
               {mode === 'edit' && !currentEditModel.isErase && (
                 <div className="flex items-center gap-2">

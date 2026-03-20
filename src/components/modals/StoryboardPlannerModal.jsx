@@ -38,6 +38,7 @@ import LibraryModal from '@/components/modals/LibraryModal';
 import PropsPillSelector from '@/components/ui/PropsPillSelector';
 import NegPromptPillSelector from '@/components/ui/NegPromptPillSelector';
 import BrandStyleGuideSelector, { extractBrandStyleData } from '@/components/ui/BrandStyleGuideSelector';
+import { STYLE_OPTIONS, LIGHTING_OPTIONS as BUILDER_LIGHTING, COLOR_GRADE_OPTIONS } from '@/components/ui/PromptBuilder';
 import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
 
 // Reuse model list from JumpStart — subset that supports image-to-video
@@ -110,6 +111,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   // Story builder state
   const [storyOverview, setStoryOverview] = useState('');
   const [overallMood, setOverallMood] = useState('');
+  const [builderStyle, setBuilderStyle] = useState('');
+  const [builderLighting, setBuilderLighting] = useState('');
+  const [builderColorGrade, setBuilderColorGrade] = useState('');
   const [sceneGuides, setSceneGuides] = useState(
     Array.from({ length: 4 }, () => ({ ...EMPTY_SCENE_GUIDE }))
   );
@@ -595,6 +599,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     if (styleText) {
       prompt += `. Style: ${styleText}`;
     }
+    if (builderStyle) prompt += `. Style: ${builderStyle}`;
+    if (overallMood) prompt += `. Mood: ${overallMood}`;
+    if (builderLighting) prompt += `. Lighting: ${builderLighting}`;
+    if (builderColorGrade) prompt += `. Color grade: ${builderColorGrade}`;
 
     // Build FormData matching JumpStart's expected format
     const formData = new FormData();
@@ -905,6 +913,47 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 />
               </div>
               <PillSelector label="Overall Mood" options={MOODS} value={overallMood} onChange={setOverallMood} />
+
+              {/* Visual direction pills */}
+              <div className="space-y-3 p-4 bg-white rounded-lg border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-800">Visual Direction</h3>
+
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Style</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {STYLE_OPTIONS.map(s => (
+                      <button key={s} onClick={() => setBuilderStyle(builderStyle === s ? '' : s)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {BUILDER_LIGHTING.map(l => (
+                      <button key={l} onClick={() => setBuilderLighting(builderLighting === l ? '' : l)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Grade</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COLOR_GRADE_OPTIONS.map(cg => (
+                      <button key={cg} onClick={() => setBuilderColorGrade(builderColorGrade === cg ? '' : cg)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {cg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>

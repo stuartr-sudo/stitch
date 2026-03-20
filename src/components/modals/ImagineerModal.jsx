@@ -637,17 +637,62 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         {/* T2I Step 2: Enhance */}
         {mode === "t2i" && step === 2 && (
           <div className="p-5 space-y-5 max-w-2xl">
-            {/* Atmosphere */}
+            {/* Atmosphere — pill-based selectors */}
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Palette className="w-3.5 h-3.5" /> Atmosphere
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <SelectField label="Lighting" value={lighting} onChange={setLighting} options={LIGHTING} />
-                <SelectField label="Camera Angle" value={cameraAngle} onChange={setCameraAngle} options={CAMERA_ANGLE} />
-                <SelectField label="Color Palette" value={colorPalette} onChange={setColorPalette} options={COLOR_PALETTE} />
-                <SelectField label="Mood" value={mood} onChange={setMood} options={MOOD} />
+
+              <div className="space-y-2.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {LIGHTING.filter(l => l.value).map(l => (
+                      <button key={l.value} onClick={() => setLighting(lighting === l.value ? '' : l.value)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${lighting === l.value ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mood</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MOOD.filter(m => m.value).map(m => (
+                      <button key={m.value} onClick={() => setMood(mood === m.value ? '' : m.value)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${mood === m.value ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Camera Angle</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CAMERA_ANGLE.filter(a => a.value).map(a => (
+                      <button key={a.value} onClick={() => setCameraAngle(cameraAngle === a.value ? '' : a.value)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${cameraAngle === a.value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Palette</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COLOR_PALETTE.filter(c => c.value).map(c => (
+                      <button key={c.value} onClick={() => setColorPalette(colorPalette === c.value ? '' : c.value)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${colorPalette === c.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">Elements to Include (optional)</label>
                 <Input value={elementsToInclude} onChange={(e) => setElementsToInclude(e.target.value)}

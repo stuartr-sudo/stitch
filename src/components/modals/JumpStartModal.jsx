@@ -28,6 +28,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
+import { STYLE_OPTIONS, MOOD_OPTIONS, LIGHTING_OPTIONS, COLOR_GRADE_OPTIONS } from '@/components/ui/PromptBuilder';
 import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
 
@@ -490,7 +491,13 @@ export default function JumpStartModal({
   const [specialEffects, setSpecialEffects] = useState([]);
   const [sceneDescription, setSceneDescription] = useState('');
   const [description, setDescription] = useState('');
-  
+
+  // Structured prompt builder state
+  const [builderStyle, setBuilderStyle] = useState('');
+  const [builderMood, setBuilderMood] = useState('');
+  const [builderLighting, setBuilderLighting] = useState('');
+  const [builderColorGrade, setBuilderColorGrade] = useState('');
+
   // Model-specific settings
   const [enableAudio, setEnableAudio] = useState(true);
   const [drivingAudioUrl, setDrivingAudioUrl] = useState('');
@@ -897,6 +904,12 @@ export default function JumpStartModal({
       parts.push(specialEffects.join(', '));
     }
     
+    // Structured prompt builder fields
+    if (builderStyle) parts.push(`Style: ${builderStyle}`);
+    if (builderMood) parts.push(`Mood: ${builderMood}`);
+    if (builderLighting) parts.push(`Lighting: ${builderLighting}`);
+    if (builderColorGrade) parts.push(`Color grade: ${builderColorGrade}`);
+
     // Quality boosters for realistic styles
     if (isRealisticStyle) {
       parts.push('photorealistic with natural skin texture and visible pores, authentic micro-expressions and natural blink rhythm, believable weight and momentum in all movement, real-world lighting with true color temperature, natural imperfections that read as human');
@@ -1979,13 +1992,69 @@ export default function JumpStartModal({
                   </div>
                   
                   {sceneDescription && (
-                    <button 
+                    <button
                       onClick={() => setSceneDescription('')}
                       className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
                     >
                       ✕ Clear description
                     </button>
                   )}
+                </div>
+
+                {/* Style / Mood / Lighting / Color Grade pill selectors */}
+                <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
+                    <h3 className="font-semibold text-gray-900">Visual Direction</h3>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Style</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STYLE_OPTIONS.map(s => (
+                        <button key={s} onClick={() => setBuilderStyle(builderStyle === s ? '' : s)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mood</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MOOD_OPTIONS.map(m => (
+                        <button key={m} onClick={() => setBuilderMood(builderMood === m ? '' : m)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderMood === m ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {LIGHTING_OPTIONS.map(l => (
+                        <button key={l} onClick={() => setBuilderLighting(builderLighting === l ? '' : l)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Grade</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {COLOR_GRADE_OPTIONS.map(cg => (
+                        <button key={cg} onClick={() => setBuilderColorGrade(builderColorGrade === cg ? '' : cg)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {cg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Audio Transcript (only when audio is enabled) */}

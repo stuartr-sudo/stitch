@@ -442,42 +442,53 @@ export default function EditImageModal({
           <div className="p-6 space-y-5 max-w-2xl">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Lighting</label>
-                <Select value={lighting} onValueChange={setLighting}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select lighting..." /></SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {LIGHTING.filter(l => l.value).map(l => <SelectItem key={l.value} value={l.value} className="text-sm">{l.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2.5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {LIGHTING.filter(l => l.value).map(l => (
+                    <button key={l.value} onClick={() => setLighting(lighting === l.value ? '' : l.value)}
+                      className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${lighting === l.value ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Camera Angle</label>
-                <Select value={cameraAngle} onValueChange={setCameraAngle}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select angle..." /></SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {CAMERA_ANGLE.filter(a => a.value).map(a => <SelectItem key={a.value} value={a.value} className="text-sm">{a.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mood</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MOOD.filter(m => m.value).map(m => (
+                    <button key={m.value} onClick={() => setMood(mood === m.value ? '' : m.value)}
+                      className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${mood === m.value ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Color Palette</label>
-                <Select value={colorPalette} onValueChange={setColorPalette}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select palette..." /></SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {COLOR_PALETTE.filter(c => c.value).map(c => <SelectItem key={c.value} value={c.value} className="text-sm">{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Camera Angle</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {CAMERA_ANGLE.filter(a => a.value).map(a => (
+                    <button key={a.value} onClick={() => setCameraAngle(cameraAngle === a.value ? '' : a.value)}
+                      className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${cameraAngle === a.value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Mood</label>
-                <Select value={mood} onValueChange={setMood}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-9 text-sm"><SelectValue placeholder="Select mood..." /></SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {MOOD.filter(m => m.value).map(m => <SelectItem key={m.value} value={m.value} className="text-sm">{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Palette</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLOR_PALETTE.filter(c => c.value).map(c => (
+                    <button key={c.value} onClick={() => setColorPalette(colorPalette === c.value ? '' : c.value)}
+                      className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${colorPalette === c.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
