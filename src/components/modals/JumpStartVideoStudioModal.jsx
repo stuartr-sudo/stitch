@@ -615,6 +615,8 @@ export default function JumpStartVideoStudioModal({
                       <div className="aspect-video bg-slate-900 relative overflow-hidden">
                         {video.thumbnail_url ? (
                           <img src={video.thumbnail_url} alt={video.title || 'Video'} className="w-full h-full object-cover" />
+                        ) : video.url ? (
+                          <video src={video.url} muted preload="metadata" className="w-full h-full object-cover" onLoadedData={(e) => { e.target.currentTime = 0.1; }} />
                         ) : (
                           <div className="w-full h-full bg-slate-800 flex items-center justify-center">
                             <Video className="w-8 h-8 text-slate-500" />
