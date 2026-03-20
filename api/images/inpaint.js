@@ -5,52 +5,62 @@ import { getUserKeys } from '../lib/getUserKeys.js';
  * Inpaint API - AI Object Removal/Replacement
  */
 
-// Helper to upload data URL to Supabase and get public URL
-async function uploadToSupabase(dataUrl, filename) {
+// Helper to ensure a URL is publicly accessible by Wavespeed's servers.
+// Uploads data URLs and re-hosts remote URLs (e.g. fal.ai temp URLs) to Supabase storage.
+async function ensurePublicUrl(urlOrData, filename) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    console.warn('[Inpaint] Supabase not configured, using data URL directly');
-    return dataUrl;
+    console.warn('[Inpaint] Supabase not configured, using URL directly');
+    return urlOrData;
+  }
+
+  // Already a Supabase public URL — no need to re-upload
+  if (urlOrData.includes(SUPABASE_URL)) {
+    return urlOrData;
   }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    
-    // Parse data URL
-    const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!matches) {
-      return dataUrl; // Not a data URL, return as-is
+    let buffer, mimeType;
+
+    if (urlOrData.startsWith('data:')) {
+      // Parse data URL
+      const matches = urlOrData.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) return urlOrData;
+      mimeType = matches[1];
+      buffer = Buffer.from(matches[2], 'base64');
+    } else {
+      // Fetch remote URL and re-host it
+      console.log(`[Inpaint] Re-hosting remote URL for ${filename}...`);
+      const resp = await fetch(urlOrData);
+      if (!resp.ok) {
+        console.error(`[Inpaint] Failed to fetch remote URL (${resp.status}): ${urlOrData.substring(0, 100)}`);
+        return urlOrData; // fallback — let Wavespeed try it directly
+      }
+      mimeType = resp.headers.get('content-type') || 'image/png';
+      buffer = Buffer.from(await resp.arrayBuffer());
     }
-    
-    const mimeType = matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
-    const extension = mimeType.split('/')[1] || 'png';
+
+    const extension = mimeType.split('/')[1]?.split(';')[0] || 'png';
     const filePath = `inpaint/${filename}-${Date.now()}.${extension}`;
-    
-    const { data, error } = await supabase.storage
+
+    const { error } = await supabase.storage
       .from('media')
-      .upload(filePath, buffer, {
-        contentType: mimeType,
-        upsert: true
-      });
-    
+      .upload(filePath, buffer, { contentType: mimeType, upsert: true });
+
     if (error) {
       console.error('[Inpaint] Upload error:', error);
-      return dataUrl;
+      return urlOrData;
     }
-    
-    const { data: urlData } = supabase.storage
-      .from('media')
-      .getPublicUrl(filePath);
-    
-    console.log('[Inpaint] Uploaded to:', urlData.publicUrl);
+
+    const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
+    console.log(`[Inpaint] Re-hosted ${filename} to:`, urlData.publicUrl);
     return urlData.publicUrl;
   } catch (err) {
     console.error('[Inpaint] Upload failed:', err);
-    return dataUrl;
+    return urlOrData;
   }
 }
 
@@ -79,19 +89,10 @@ export default async function handler(req, res) {
 
     console.log('[Inpaint] Processing with Pro Ultra:', useProUltra);
 
-    // Upload data URLs to Supabase to get public URLs
-    let processedImageUrl = image_url;
-    let processedMaskUrl = mask_url;
-    
-    if (image_url.startsWith('data:')) {
-      console.log('[Inpaint] Uploading image to storage...');
-      processedImageUrl = await uploadToSupabase(image_url, 'image');
-    }
-    
-    if (mask_url.startsWith('data:')) {
-      console.log('[Inpaint] Uploading mask to storage...');
-      processedMaskUrl = await uploadToSupabase(mask_url, 'mask');
-    }
+    // Ensure both image and mask are publicly accessible URLs
+    // This handles data: URLs, expired fal.ai temp URLs, and other inaccessible sources
+    const processedImageUrl = await ensurePublicUrl(image_url, 'image');
+    const processedMaskUrl = await ensurePublicUrl(mask_url, 'mask');
 
     const endpoint = useProUltra 
       ? 'https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit-ultra'
