@@ -167,7 +167,25 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
 
   // ─── Library Import ─────────────────────────────────────────────────────
 
-  const loadLibraryItems = async (isInitial = true) => {
+  const loadLibraryFolders = async () => {
+    try {
+      const { data: allTitles } = await supabase
+        .from('image_library_items')
+        .select('title');
+      if (allTitles) {
+        const folders = new Set();
+        allTitles.forEach(item => {
+          const match = item.title?.match(/^\[([^\]]+)\]/);
+          if (match) folders.add(match[1]);
+        });
+        setLibraryFolders(Array.from(folders).sort());
+      }
+    } catch (err) {
+      console.error('Failed to load library folders:', err);
+    }
+  };
+
+  const loadLibraryItems = async (isInitial = true, folder = selectedFolder) => {
     if (isInitial) {
       setLoadingLibrary(true);
       setLibraryOffset(0);
@@ -179,11 +197,16 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     const offset = isInitial ? 0 : libraryOffset;
 
     try {
-      const { data: images } = await supabase
+      let query = supabase
         .from('image_library_items')
         .select('id, url, title, created_at')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + LIBRARY_PAGE_SIZE - 1);
+        .order('created_at', { ascending: false });
+
+      if (folder) {
+        query = query.like('title', `[${folder}]%`);
+      }
+
+      const { data: images } = await query.range(offset, offset + LIBRARY_PAGE_SIZE - 1);
 
       if (images) {
         const hasMore = images.length === LIBRARY_PAGE_SIZE;
@@ -199,15 +222,6 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             return [...prev, ...newItems];
           });
         }
-
-        // Extract folder names from all loaded items
-        const allItems = isInitial ? images : [...libraryItems, ...images];
-        const folders = new Set();
-        allItems.forEach(img => {
-          const match = img.title?.match(/^\[([^\]]+)\]/);
-          if (match) folders.add(match[1]);
-        });
-        setLibraryFolders(Array.from(folders).sort());
       } else {
         setLibraryHasMore(false);
       }
@@ -225,7 +239,8 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     setSelectedLibraryIds(new Set());
     setSelectedFolder(null);
     setLibraryItems([]);
-    loadLibraryItems(true);
+    loadLibraryFolders();
+    loadLibraryItems(true, null);
   };
 
   const toggleLibraryItem = (id) => {
@@ -237,12 +252,8 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     });
   };
 
-  const selectAllInFolder = (folderName) => {
-    const folderItems = libraryItems.filter(item => {
-      if (folderName === null) return true;
-      return item.title?.startsWith(`[${folderName}]`);
-    });
-    const allIds = new Set(folderItems.map(item => item.id));
+  const selectAllInFolder = () => {
+    const allIds = new Set(libraryItems.map(item => item.id));
     setSelectedLibraryIds(allIds);
   };
 
@@ -264,9 +275,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     toast.success(`Imported ${imported.length} images from library`);
   };
 
-  const filteredLibraryItems = selectedFolder === null
-    ? libraryItems
-    : libraryItems.filter(item => item.title?.startsWith(`[${selectedFolder}]`));
+  const filteredLibraryItems = libraryItems;
 
   const handleStartTraining = async () => {
     if (!loraName.trim()) { toast.error('Enter a name for your LoRA model'); return; }
@@ -901,7 +910,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             <div className="flex items-center gap-1.5 px-5 py-2 border-b border-gray-100 overflow-x-auto">
               <button
                 type="button"
-                onClick={() => setSelectedFolder(null)}
+                onClick={() => { setSelectedFolder(null); loadLibraryItems(true, null); }}
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedFolder === null
                     ? 'bg-[#2C666E] text-white'
@@ -914,7 +923,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                 <button
                   key={folder}
                   type="button"
-                  onClick={() => setSelectedFolder(folder)}
+                  onClick={() => { setSelectedFolder(folder); loadLibraryItems(true, folder); }}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                     selectedFolder === folder
                       ? 'bg-[#2C666E] text-white'
@@ -947,7 +956,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     <span className="text-xs text-gray-500">{filteredLibraryItems.length} images in "{selectedFolder}"</span>
                     <button
                       type="button"
-                      onClick={() => selectAllInFolder(selectedFolder)}
+                      onClick={() => selectAllInFolder()}
                       className="text-xs text-[#2C666E] hover:underline font-medium"
                     >
                       Select all in folder
@@ -986,7 +995,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     );
                   })}
                 </div>
-                {libraryHasMore && !selectedFolder && (
+                {libraryHasMore && (
                   <div className="flex justify-center pt-4">
                     <Button
                       variant="outline"
