@@ -21,7 +21,10 @@ import {
   Plus,
   FolderOpen,
   Volume2,
-  VolumeX
+  VolumeX,
+  ChevronDown,
+  Wand2,
+  Eye
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
@@ -170,10 +173,51 @@ export default function JumpStartVideoStudioModal({
 
   // Edit Specific Settings
   const [editModel, setEditModel] = useState('wavespeed');
+  const [editSeed, setEditSeed] = useState(-1);
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Structured prompt builder state
+  const [promptMode, setPromptMode] = useState('builder'); // 'builder' | 'freeform'
+  const [sceneDescription, setSceneDescription] = useState('');
+  const [editStyle, setEditStyle] = useState('');
+  const [editMood, setEditMood] = useState('');
+  const [editLighting, setEditLighting] = useState('');
+  const [editCamera, setEditCamera] = useState('');
+  const [editColorGrade, setEditColorGrade] = useState('');
 
   // Get current model configs
   const currentExtendModel = EXTEND_MODELS.find(m => m.id === extendModel) || EXTEND_MODELS[0];
   const currentEditModel = EDIT_MODELS.find(m => m.id === editModel) || EDIT_MODELS[0];
+
+  // Prompt builder options
+  const STYLE_OPTIONS = ['Cinematic', 'Anime', 'Photorealistic', 'Watercolor', 'Oil painting', 'Noir', 'Retro VHS', 'Cyberpunk neon', 'Studio Ghibli', 'Documentary', 'Music video', 'Fashion editorial'];
+  const MOOD_OPTIONS = ['Dramatic', 'Serene', 'Energetic', 'Melancholic', 'Mysterious', 'Joyful', 'Tense', 'Romantic', 'Whimsical', 'Epic'];
+  const LIGHTING_OPTIONS = ['Golden hour', 'Blue hour', 'Harsh midday sun', 'Soft diffused', 'Backlit silhouette', 'Neon glow', 'Candlelight', 'Overcast flat', 'Rim lighting', 'Chiaroscuro'];
+  const CAMERA_OPTIONS = ['Static locked', 'Slow pan left', 'Slow pan right', 'Dolly in', 'Dolly out', 'Orbit around subject', 'Tracking shot', 'Handheld shake', 'Crane up', 'Crane down', 'Zoom in', 'Zoom out'];
+  const COLOR_GRADE_OPTIONS = ['Warm amber', 'Cool blue', 'Teal and orange', 'Desaturated', 'High contrast B&W', 'Pastel', 'Vivid saturated', 'Faded film', 'Green tint matrix', 'Sepia'];
+
+  // Assemble structured prompt from builder fields
+  const assemblePrompt = useCallback(() => {
+    const parts = [];
+    if (sceneDescription.trim()) parts.push(sceneDescription.trim());
+    if (editStyle) parts.push(`Style: ${editStyle}`);
+    if (editMood) parts.push(`Mood: ${editMood}`);
+    if (editLighting) parts.push(`Lighting: ${editLighting}`);
+    if (editCamera) parts.push(`Camera: ${editCamera}`);
+    if (editColorGrade) parts.push(`Color grade: ${editColorGrade}`);
+    if (parts.length === 0) return '';
+    // Join with periods for clear separation — models parse this well
+    return parts.join('. ') + '.';
+  }, [sceneDescription, editStyle, editMood, editLighting, editCamera, editColorGrade]);
+
+  // Sync builder → freeform prompt when builder fields change
+  useEffect(() => {
+    if (mode === 'edit' && promptMode === 'builder') {
+      const assembled = assemblePrompt();
+      if (assembled) setPrompt(assembled);
+    }
+  }, [assemblePrompt, mode, promptMode]);
 
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -211,6 +255,16 @@ export default function JumpStartVideoStudioModal({
       setResolution('720p');
       setExtendModel('seedance');
       setEditModel('wavespeed');
+      setEditSeed(-1);
+      setNegativePrompt('');
+      setShowAdvanced(false);
+      setPromptMode('builder');
+      setSceneDescription('');
+      setEditStyle('');
+      setEditMood('');
+      setEditLighting('');
+      setEditCamera('');
+      setEditColorGrade('');
       setDuration(5);
       setGenerateAudio(true);
       setCameraFixed(false);
@@ -325,6 +379,8 @@ export default function JumpStartVideoStudioModal({
           camera_fixed: cameraFixed
         } : {
           model: editModel,
+          seed: editSeed,
+          ...(negativePrompt.trim() ? { negativePrompt: negativePrompt.trim() } : {}),
         })
       };
 
@@ -540,39 +596,24 @@ export default function JumpStartVideoStudioModal({
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="flex-1 overflow-hidden mt-0">
-          <div className="flex-1 grid grid-cols-2 overflow-hidden min-h-[500px] h-full">
-            <div className="bg-gray-100 flex items-center justify-center p-8 box-border">
-              <div className="w-full max-w-xl space-y-4">
-                <div className="aspect-video rounded-xl overflow-hidden shadow-2xl bg-white border-4 border-slate-600 ring-1 ring-slate-300 relative box-content">
+          <div className="flex-1 grid grid-cols-[minmax(300px,2fr)_minmax(340px,3fr)] overflow-hidden min-h-[500px] h-full">
+            {/* LEFT COLUMN — Video Preview + Model & Settings */}
+            <div className="bg-gray-50 p-6 overflow-y-auto border-r border-slate-200 space-y-6">
+              {/* Video Preview */}
+              <div className="space-y-3">
+                <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black border-2 border-slate-300 relative">
                   <video src={selectedVideo?.url} controls className="w-full h-full object-contain" />
                   <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] text-white font-bold tracking-wider">SOURCE</div>
                 </div>
-                <p className="text-slate-600 text-sm font-medium truncate text-center">{selectedVideo?.title}</p>
-              </div>
-            </div>
-
-            <div className="p-8 space-y-8 overflow-y-auto bg-white">
-              <div className="space-y-4">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  <Sparkles className={`w-4 h-4 ${mode === 'extend' ? 'text-[#2C666E]' : 'text-[#07393C]'}`} />
-                  {mode === 'extend' ? (currentExtendModel.promptLabel || 'Action Continuation Prompt') : 'Edit Prompt'}
-                </Label>
-                <textarea
-                  placeholder={mode === 'extend'
-                    ? (currentExtendModel.promptPlaceholder || "Describe what happens next...")
-                    : (currentEditModel.promptPlaceholder || "e.g., 'Change the man's shirt to red and make the sky rainy'")}
-                  className="w-full h-32 p-3 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 bg-slate-50 resize-none"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                />
+                <p className="text-slate-500 text-xs font-medium truncate text-center">{selectedVideo?.title}</p>
               </div>
 
-              {/* Extend Model Selector */}
-              {mode === 'extend' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold">Extend Model</Label>
+              {/* Model Selector */}
+              {mode === 'extend' ? (
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">Extend Model</Label>
                   <select
-                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer"
+                    className="w-full p-2.5 text-sm border rounded-lg bg-white cursor-pointer"
                     value={extendModel}
                     onChange={(e) => {
                       const newModel = e.target.value;
@@ -590,22 +631,18 @@ export default function JumpStartVideoStudioModal({
                       <option key={m.id} value={m.id}>{m.label}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-slate-500">{currentExtendModel.description}</p>
+                  <p className="text-[10px] text-slate-400">{currentExtendModel.description}</p>
                 </div>
-              )}
-
-              {/* Edit Model Selector */}
-              {mode === 'edit' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold">Edit Model</Label>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">Edit Model</Label>
                   <select
-                    className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer"
+                    className="w-full p-2.5 text-sm border rounded-lg bg-white cursor-pointer"
                     value={editModel}
                     onChange={(e) => {
                       const newModel = e.target.value;
                       setEditModel(newModel);
                       const config = EDIT_MODELS.find(m => m.id === newModel);
-                      // Reset resolution to a valid option for the new model
                       if (config && !config.resolutions.includes(resolution)) {
                         setResolution(config.resolutions[0]);
                       }
@@ -615,34 +652,33 @@ export default function JumpStartVideoStudioModal({
                       <option key={m.id} value={m.id}>{m.label}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-slate-500">{currentEditModel.description}</p>
+                  <p className="text-[10px] text-slate-400">{currentEditModel.description}</p>
                   {currentEditModel.tip && (
-                    <div className="mt-2 p-3 bg-[#90DDF0]/15 border border-[#2C666E]/20 rounded-lg">
-                      <p className="text-xs text-[#07393C] leading-relaxed">
-                        <span className="font-semibold">How to use: </span>
-                        {currentEditModel.tip}
+                    <div className="p-2.5 bg-[#90DDF0]/10 border border-[#2C666E]/15 rounded-lg">
+                      <p className="text-[10px] text-[#07393C] leading-relaxed">
+                        <span className="font-semibold">Tip: </span>{currentEditModel.tip}
                       </p>
                     </div>
                   )}
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-6">
+              {/* Resolution + Duration row */}
+              <div className="grid grid-cols-2 gap-4">
                 {mode === 'extend' && (
-                  <div className="space-y-3">
-                    <Label className="text-sm font-bold">Duration</Label>
-                    <select className="w-full p-2.5 text-sm border rounded-lg bg-slate-50 cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
-                      {(currentExtendModel.durationOptions || [5, 10]).map(d => <option key={d} value={d}>{d} seconds</option>)}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-slate-700">Duration</Label>
+                    <select className="w-full p-2 text-sm border rounded-lg bg-white cursor-pointer" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))}>
+                      {(currentExtendModel.durationOptions || [5, 10]).map(d => <option key={d} value={d}>{d}s</option>)}
                     </select>
                   </div>
                 )}
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold">Resolution</Label>
-                  <div className={`grid gap-2 ${mode === 'edit' && currentEditModel.resolutions.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <div className={`space-y-2 ${mode === 'edit' ? 'col-span-2' : ''}`}>
+                  <Label className="text-xs font-bold text-slate-700">Resolution</Label>
+                  <div className={`grid gap-1.5 ${(mode === 'edit' ? currentEditModel.resolutions : currentExtendModel.resolutions || ['720p', '1080p']).length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {(mode === 'edit' ? currentEditModel.resolutions : (currentExtendModel.resolutions || ['720p', '1080p'])).map(res => (
                       <button key={res} onClick={() => setResolution(res)}
-                        className={`py-2 text-xs font-bold rounded-lg border transition-all ${resolution === res ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                        className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${resolution === res ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 hover:bg-slate-100 border-slate-200'}`}>
                         {res}
                       </button>
                     ))}
@@ -650,39 +686,194 @@ export default function JumpStartVideoStudioModal({
                 </div>
               </div>
 
-              {/* Model Feature Toggles */}
+              {/* Extend-specific toggles */}
               {mode === 'extend' && (currentExtendModel.supportsAudio || currentExtendModel.supportsCameraFixed) && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold">Model Features</Label>
-
+                <div className="space-y-2">
                   {currentExtendModel.supportsAudio && (
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setGenerateAudio(!generateAudio)}>
-                      <div className="flex items-center gap-3">
-                        {generateAudio ? <Volume2 className="w-4 h-4 text-[#2C666E]" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
-                        <div>
-                          <p className="text-sm font-bold">Generate Audio</p>
-                          <p className="text-[10px] text-slate-500">{generateAudio ? 'Audio will be generated for the extension' : 'Extension will be silent'}</p>
-                        </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-100 cursor-pointer" onClick={() => setGenerateAudio(!generateAudio)}>
+                      <div className="flex items-center gap-2">
+                        {generateAudio ? <Volume2 className="w-3.5 h-3.5 text-[#2C666E]" /> : <VolumeX className="w-3.5 h-3.5 text-slate-400" />}
+                        <span className="text-xs font-bold">Audio</span>
                       </div>
-                      <div className={`w-10 h-6 rounded-full relative transition-colors ${generateAudio ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${generateAudio ? 'right-1' : 'left-1'}`} />
+                      <div className={`w-8 h-5 rounded-full relative transition-colors ${generateAudio ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${generateAudio ? 'right-0.5' : 'left-0.5'}`} />
                       </div>
                     </div>
                   )}
-
                   {currentExtendModel.supportsCameraFixed && (
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer" onClick={() => setCameraFixed(!cameraFixed)}>
-                      <div className="flex items-center gap-3">
-                        <Settings className={`w-4 h-4 ${cameraFixed ? 'text-[#2C666E]' : 'text-slate-400'}`} />
-                        <div>
-                          <p className="text-sm font-bold">Fixed Camera</p>
-                          <p className="text-[10px] text-slate-500">{cameraFixed ? 'Camera stays locked in position' : 'Camera can move freely'}</p>
-                        </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-100 cursor-pointer" onClick={() => setCameraFixed(!cameraFixed)}>
+                      <div className="flex items-center gap-2">
+                        <Settings className={`w-3.5 h-3.5 ${cameraFixed ? 'text-[#2C666E]' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">Fixed Camera</span>
                       </div>
-                      <div className={`w-10 h-6 rounded-full relative transition-colors ${cameraFixed ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${cameraFixed ? 'right-1' : 'left-1'}`} />
+                      <div className={`w-8 h-5 rounded-full relative transition-colors ${cameraFixed ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${cameraFixed ? 'right-0.5' : 'left-0.5'}`} />
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Edit-specific: Advanced Settings */}
+              {mode === 'edit' && (
+                <div className="space-y-2">
+                  <button onClick={() => setShowAdvanced(!showAdvanced)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700">
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                    Advanced Settings
+                  </button>
+                  {showAdvanced && (
+                    <div className="space-y-3 p-3 bg-white rounded-lg border border-slate-200">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-500">Seed</Label>
+                        <Input type="number" value={editSeed} onChange={(e) => setEditSeed(parseInt(e.target.value) || -1)} className="h-8 text-xs" placeholder="-1 for random" />
+                        <p className="text-[10px] text-slate-400">Use -1 for random, or set a number for reproducibility</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-500">Negative Prompt</Label>
+                        <textarea
+                          value={negativePrompt}
+                          onChange={(e) => setNegativePrompt(e.target.value)}
+                          placeholder="blur, distorted, low quality, watermark..."
+                          className="w-full h-16 p-2 text-xs border rounded-lg bg-slate-50 resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT COLUMN — Prompt Builder */}
+            <div className="p-6 overflow-y-auto bg-white space-y-5">
+              {/* Prompt mode toggle */}
+              {mode === 'edit' && !currentEditModel.isErase && (
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                    <button onClick={() => setPromptMode('builder')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${promptMode === 'builder' ? 'bg-white shadow text-[#07393C]' : 'text-slate-500 hover:text-slate-700'}`}>
+                      <Wand2 className="w-3 h-3" /> Builder
+                    </button>
+                    <button onClick={() => setPromptMode('freeform')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${promptMode === 'freeform' ? 'bg-white shadow text-[#07393C]' : 'text-slate-500 hover:text-slate-700'}`}>
+                      <Edit3 className="w-3 h-3" /> Freeform
+                    </button>
+                  </div>
+                  {promptMode === 'builder' && prompt && (
+                    <button onClick={() => { setPromptMode('freeform'); }} className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                      <Eye className="w-3 h-3" /> View assembled prompt
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Builder Mode (Edit only) */}
+              {mode === 'edit' && promptMode === 'builder' && !currentEditModel.isErase && (
+                <div className="space-y-4">
+                  {/* Scene Description */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#07393C]" /> Scene Description
+                    </Label>
+                    <textarea
+                      placeholder="Describe the full scene after editing. Be specific about subjects, actions, environment, and details you want preserved or changed."
+                      className="w-full h-24 p-3 text-sm border rounded-xl focus:ring-2 focus:ring-[#2C666E] bg-slate-50 resize-none"
+                      value={sceneDescription}
+                      onChange={(e) => setSceneDescription(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Style Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Style</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STYLE_OPTIONS.map(s => (
+                        <button key={s} onClick={() => setEditStyle(editStyle === s ? '' : s)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${editStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mood Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mood</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MOOD_OPTIONS.map(m => (
+                        <button key={m} onClick={() => setEditMood(editMood === m ? '' : m)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${editMood === m ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Lighting Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {LIGHTING_OPTIONS.map(l => (
+                        <button key={l} onClick={() => setEditLighting(editLighting === l ? '' : l)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${editLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Camera Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Camera Movement</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {CAMERA_OPTIONS.map(c => (
+                        <button key={c} onClick={() => setEditCamera(editCamera === c ? '' : c)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${editCamera === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color Grade Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Grade</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {COLOR_GRADE_OPTIONS.map(cg => (
+                        <button key={cg} onClick={() => setEditColorGrade(editColorGrade === cg ? '' : cg)}
+                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${editColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                          {cg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Assembled prompt preview */}
+                  {prompt && (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Assembled Prompt</Label>
+                      <p className="text-xs text-slate-600 leading-relaxed">{prompt}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Freeform Mode or Extend Mode or Erase Mode */}
+              {(mode === 'extend' || promptMode === 'freeform' || currentEditModel?.isErase) && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold flex items-center gap-2 text-slate-700">
+                    <Sparkles className={`w-3.5 h-3.5 ${mode === 'extend' ? 'text-[#2C666E]' : 'text-[#07393C]'}`} />
+                    {mode === 'extend' ? (currentExtendModel.promptLabel || 'Action Continuation Prompt') : currentEditModel?.isErase ? 'What to Remove' : 'Edit Prompt'}
+                  </Label>
+                  <textarea
+                    placeholder={mode === 'extend'
+                      ? (currentExtendModel.promptPlaceholder || "Describe what happens next...")
+                      : (currentEditModel.promptPlaceholder || "Describe the full scene after editing...")}
+                    className="w-full h-40 p-3 text-sm border rounded-xl focus:ring-2 focus:ring-[#2C666E] bg-slate-50 resize-none"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                  {mode === 'extend' && (
+                    <p className="text-[10px] text-slate-400">Be specific about subject actions, camera movement, and scene details for best results.</p>
                   )}
                 </div>
               )}

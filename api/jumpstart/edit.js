@@ -14,12 +14,13 @@ export default async function handler(req, res) {
   try {
     const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
 
-    const { 
-      videoUrl, 
-      prompt, 
+    const {
+      videoUrl,
+      prompt,
       model = 'wavespeed',
       resolution = '480p',
-      seed = -1
+      seed = -1,
+      negativePrompt = ''
     } = req.body;
 
     if (!videoUrl) {
