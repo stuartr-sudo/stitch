@@ -61,8 +61,8 @@ import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
-import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetModal';
-import StoryboardPlannerModal from '@/components/modals/StoryboardPlannerModal';
+import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
+import StoryboardPlannerModal from '@/components/modals/StoryboardPlannerWizard';
 
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
