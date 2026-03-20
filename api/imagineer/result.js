@@ -18,6 +18,8 @@ const ENDPOINT_MAP = {
   'fal-flux-edit':         'fal-ai/flux-2/lora/edit',
   'seedream':              'fal-ai/bytedance/seedream/v4/text-to-image',
   'seedream-generate':     'fal-ai/bytedance/seedream/v4/text-to-image',
+  // Inpaint
+  'inpaint':               'fal-ai/flux-kontext-lora/inpaint',
   // Legacy aliases
   'nano-banana-pro':       'fal-ai/nano-banana-pro/edit',
 };

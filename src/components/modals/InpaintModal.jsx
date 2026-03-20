@@ -308,10 +308,10 @@ export default function InpaintModal({
   const pollForResult = async (requestId) => {
     const poll = async () => {
       try {
-        const response = await apiFetch('/api/jumpstart/result', {
+        const response = await apiFetch('/api/imagineer/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId }),
+          body: JSON.stringify({ requestId, model: 'inpaint' }),
         });
         const data = await response.json();
 
@@ -448,17 +448,6 @@ export default function InpaintModal({
                 className="min-h-[80px]"
               />
             </div>
-
-            {/* Pro Ultra Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useProUltra}
-                onChange={(e) => setUseProUltra(e.target.checked)}
-                className="accent-[#2C666E]"
-              />
-              <span className="text-sm">Use Pro Ultra (4K/8K)</span>
-            </label>
 
             <Button
               onClick={handleInpaint}
