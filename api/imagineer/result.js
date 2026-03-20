@@ -19,7 +19,7 @@ const ENDPOINT_MAP = {
   'seedream':              'fal-ai/bytedance/seedream/v4/text-to-image',
   'seedream-generate':     'fal-ai/bytedance/seedream/v4/text-to-image',
   // Inpaint
-  'inpaint':               'fal-ai/flux-kontext-lora/inpaint',
+  'inpaint':               'fal-ai/qwen-image-edit/inpaint',
   // Legacy aliases
   'nano-banana-pro':       'fal-ai/nano-banana-pro/edit',
 };
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       }
 
       const resultData = await resultResponse.json();
-      const imageUrl = resultData.images?.[0]?.url || null;
+      const imageUrl = resultData.images?.[0]?.url || resultData.image?.url || null;
       console.log('[Imagineer/Result] Completed, image URL:', imageUrl ? 'found' : 'none');
 
       return res.json({

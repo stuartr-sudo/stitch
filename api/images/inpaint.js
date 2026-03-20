@@ -5,7 +5,7 @@ import { logCost } from '../lib/costLogger.js';
 /**
  * Inpaint API - AI masked region editing via fal.ai
  *
- * Uses fal.ai's Flux Kontext inpainting model which properly supports masks:
+ * Uses fal.ai's Qwen Image Edit inpainting model which properly supports masks:
  *   white = edit area, black = keep area
  *
  * Wavespeed's edit endpoints do NOT support masks — they edit the entire image.
@@ -84,17 +84,16 @@ export default async function handler(req, res) {
     if (!mask_url) return res.status(400).json({ error: 'Missing mask_url' });
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
-    console.log('[Inpaint] Processing via fal.ai (Flux Kontext inpaint)');
+    console.log('[Inpaint] Processing via fal.ai (Qwen Image Edit inpaint)');
 
     // Ensure both image and mask are publicly accessible URLs
     const processedImageUrl = await ensurePublicUrl(image_url, 'image');
     const processedMaskUrl = await ensurePublicUrl(mask_url, 'mask');
 
-    const endpoint = 'fal-ai/flux-kontext-lora/inpaint';
+    const endpoint = 'fal-ai/qwen-image-edit/inpaint';
 
     const requestBody = {
       image_url: processedImageUrl,
-      reference_image_url: processedImageUrl,
       mask_url: processedMaskUrl,
       prompt,
     };
@@ -172,8 +171,9 @@ async function tryQueue(falKey, endpoint, payload, req, res) {
     const data = await response.json();
 
     // Some fast models return the image directly even via queue
-    if (data.images?.[0]?.url) {
-      return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+    const directUrl = data.images?.[0]?.url || data.image?.url;
+    if (directUrl) {
+      return res.status(200).json({ success: true, imageUrl: directUrl, status: 'completed' });
     }
 
     if (data.request_id) {
