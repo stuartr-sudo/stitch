@@ -10,6 +10,7 @@
  * - 'generated_videos' for videos
  */
 import { createClient } from '@supabase/supabase-js';
+import { generateAndUploadImageThumbnail } from '../lib/thumbnailHelper.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -235,6 +236,21 @@ export default async function handler(req, res) {
 
     console.log(`[Library Save] SUCCESS - Saved to ${table} with ID: ${data.id}`);
     console.log(`[Library Save] Uploaded to storage: ${uploadedToStorage}`);
+
+    // Generate thumbnail asynchronously (don't block the response)
+    if (type === 'image' && finalUrl) {
+      generateAndUploadImageThumbnail(finalUrl, supabase, req.user?.id || 'anonymous')
+        .then(thumbUrl => {
+          if (thumbUrl) {
+            supabase.from('image_library_items')
+              .update({ thumbnail_url: thumbUrl })
+              .eq('id', data.id)
+              .then(() => console.log(`[Library Save] Thumbnail saved for ${data.id}`))
+              .catch(err => console.warn('[Library Save] Thumb update failed:', err.message));
+          }
+        })
+        .catch(err => console.warn('[Library Save] Thumb gen failed:', err.message));
+    }
 
     return res.status(200).json({
       success: true,
