@@ -481,7 +481,7 @@ export default function InpaintModal({
                 <CheckCircle2 className="w-4 h-4" /> Done!
               </div>
             </div>
-            <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
+            <Button variant="outline" onClick={() => { setImage(resultImage); setResultImage(null); }} className="w-full">
               Inpaint Again
             </Button>
             <Button
