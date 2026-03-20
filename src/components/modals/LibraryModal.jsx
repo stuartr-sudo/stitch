@@ -39,6 +39,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
   const [dimensions, setDimensions] = useState({ width: 0, height: 0, aspectRatio: 'landscape' });
 
   const mediaUrl = item.url || item.image_url || item.video_url || item.audio_url;
+  const thumbnailUrl = item.thumbnail_url || mediaUrl;
   const isVideo = item.type === 'video';
   const isAudio = item.type === 'audio';
 
@@ -154,17 +155,21 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
           </>
         ) : isVideo ? (
           <>
-            <video
-              ref={videoRef}
-              src={mediaUrl}
-              className="max-w-full max-h-full object-contain"
-              muted={isMuted}
-              loop
-              playsInline
-              onLoadedMetadata={handleMediaLoad}
-              onEnded={handleMediaEnd}
-              onClick={(e) => e.stopPropagation()}
-            />
+            {item.thumbnail_url ? (
+              <img src={item.thumbnail_url} alt={item.title || 'Video'} className="max-w-full max-h-full object-contain" loading="lazy" />
+            ) : (
+              <video
+                ref={videoRef}
+                src={mediaUrl}
+                className="max-w-full max-h-full object-contain"
+                muted={isMuted}
+                loop
+                playsInline
+                onLoadedMetadata={handleMediaLoad}
+                onEnded={handleMediaEnd}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
             <div className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
               <div className="flex items-center gap-2">
                 <button
@@ -201,7 +206,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
         ) : (
           <>
             <img
-              src={mediaUrl}
+              src={thumbnailUrl}
               alt={item.title || 'Media'}
               className="max-w-full max-h-full object-contain"
               loading="lazy"
@@ -229,10 +234,10 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
               {isMultiSelected && <CheckCircle2 className="w-4 h-4" />}
             </div>
           ) : (
-            <div className={`p-1.5 rounded-lg ${
+            <div className={`p-2 rounded-lg ${
               isAudio ? 'bg-purple-500' : isVideo ? 'bg-blue-500' : 'bg-green-500'
             } text-white shadow-lg`}>
-              {isAudio ? <MusicIcon className="w-3.5 h-3.5" /> : isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+              {isAudio ? <MusicIcon className="w-5 h-5" /> : isVideo ? <Video className="w-5 h-5" /> : <ImageIcon className="w-5 h-5" />}
             </div>
           )}
         </div>
@@ -315,7 +320,7 @@ function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoa
 
   return (
     <div className="p-4 space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-max">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-max">
         {filtered.map(item => (
           <MediaCard
             key={`${item.type}-${item.id}`}
@@ -407,7 +412,7 @@ export default function LibraryModal({
       if (isInitial || hasMore.images) {
         const { data: images } = await supabase
           .from('image_library_items')
-          .select('id, url, title, prompt, created_at, alt_text')
+          .select('id, url, thumbnail_url, title, prompt, created_at, alt_text')
           .order('created_at', { ascending: false })
           .range(currentOffsets.images, currentOffsets.images + PAGE_SIZE - 1);
         if (images) {
@@ -422,7 +427,7 @@ export default function LibraryModal({
       if (isInitial || hasMore.videos) {
         const { data: videos } = await supabase
           .from('generated_videos')
-          .select('id, url, title, prompt, created_at')
+          .select('id, url, thumbnail_url, title, prompt, created_at')
           .order('created_at', { ascending: false })
           .range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
         if (videos) {
