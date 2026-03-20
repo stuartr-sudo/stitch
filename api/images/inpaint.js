@@ -93,6 +93,7 @@ export default async function handler(req, res) {
     const endpoint = 'fal-ai/flux-kontext-lora/inpaint';
 
     const requestBody = {
+      image_url: processedImageUrl,
       reference_image_url: processedImageUrl,
       mask_url: processedMaskUrl,
       prompt,
