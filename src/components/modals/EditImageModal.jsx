@@ -18,15 +18,15 @@ import LoRAPicker from '@/components/LoRAPicker';
 import {
   Edit3, Upload, Link2, Loader2, Plus, X, Sparkles,
   CheckCircle2, Download, ExternalLink, FolderOpen,
-  ChevronLeft, ChevronRight, Cpu,
+  ChevronLeft, ChevronRight, Cpu, AlertCircle,
 } from 'lucide-react';
 
 const MODELS = [
-  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', description: 'Multi-image blending, high resolution', multiImage: true },
-  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', description: 'Multi-image blending, great detail', multiImage: true },
-  { id: 'fal-flux', label: 'Flux 2 Dev (LoRA)', description: 'Brand Kits & custom products', multiImage: false, supportsLora: true },
-  { id: 'nano-banana-2', label: 'Nano Banana 2', description: 'Fast, reliable editing', multiImage: false },
-  { id: 'seedream', label: 'Seedream v4.5', description: 'High detail editing', multiImage: false },
+  { id: 'wavespeed-nano-ultra', label: 'Nano Banana Pro Ultra (4K/8K)', description: 'Multi-image blending, high resolution', multiImage: true, badges: ['Multi-Image', '4K/8K'] },
+  { id: 'wavespeed-qwen', label: 'Qwen Image Edit', description: 'Multi-image blending, great detail', multiImage: true, badges: ['Multi-Image'] },
+  { id: 'fal-flux', label: 'Flux 2 Dev (LoRA)', description: 'Brand Kits & custom products', multiImage: false, supportsLora: true, badges: ['LoRA'] },
+  { id: 'nano-banana-2', label: 'Nano Banana 2', description: 'Fast, reliable editing', multiImage: false, badges: [] },
+  { id: 'seedream', label: 'Seedream v4.5', description: 'High detail editing', multiImage: false, badges: [] },
 ];
 
 const LIGHTING = [
@@ -358,6 +358,14 @@ export default function EditImageModal({
         {/* Step 0: Images */}
         {step === 0 && !resultImage && (
           <div className="max-w-2xl p-6 space-y-4">
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-1">Multi-image blending</p>
+              <p className="text-xs text-blue-600">
+                Add a base image and optional references. Models that support multi-image blending:
+                <strong> Nano Banana Pro Ultra</strong> and <strong>Qwen Image Edit</strong>.
+                Other models will only use your base image.
+              </p>
+            </div>
             <div>
               <Label className="text-sm font-medium mb-1 block">
                 Images <span className="text-slate-400 font-normal">(first = base, others = references)</span>
@@ -517,12 +525,32 @@ export default function EditImageModal({
                       {m.multiImage && <span className="px-1.5 py-0.5 bg-[#90DDF0]/30 text-[#07393C] text-[10px] font-bold rounded">MULTI-IMAGE</span>}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">{m.description}</div>
+                    <div className="flex gap-1 mt-1">
+                      {m.badges?.map(badge => (
+                        <span key={badge} className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          badge === 'Multi-Image' ? 'bg-green-100 text-green-700' :
+                          badge === 'LoRA' ? 'bg-purple-100 text-purple-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>{badge}</span>
+                      ))}
+                    </div>
                     {!m.multiImage && images.length > 1 && (
                       <div className="text-[10px] text-amber-600 mt-1">Only uses base image — {images.length - 1} reference(s) ignored</div>
                     )}
                   </button>
                 ))}
               </div>
+              {images.length > 1 && model && !MODELS.find(m => m.id === model)?.multiImage && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-amber-800 font-medium">Single-image model selected</p>
+                    <p className="text-xs text-amber-600">
+                      You have {images.length} images loaded, but <strong>{MODELS.find(m => m.id === model)?.label}</strong> only uses the base image. Switch to <strong>Nano Banana Pro Ultra</strong> or <strong>Qwen</strong> to blend all images.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Settings — different per model type */}
