@@ -272,6 +272,12 @@ app.post('/api/library/save', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/library/update-thumbnail', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/update-thumbnail.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Brand Kit routes (with auth)
 app.post('/api/brand/kit', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/kit.js');
@@ -403,6 +409,18 @@ app.post('/api/shorts/topics', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/shorts/research', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/research.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/shorts/preview-script', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/preview-script.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('templates/list.js');
@@ -505,6 +523,12 @@ app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
 // Create campaign manually (with auth)
 app.post('/api/campaigns/create', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/create.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/campaigns/export', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/export.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
