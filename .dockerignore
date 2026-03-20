@@ -7,3 +7,9 @@ dist
 *.md
 supabase/.temp
 .mcp.json
+.next
+.superpowers
+docs
+.fly
+.vscode
+*.log
