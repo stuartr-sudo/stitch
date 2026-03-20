@@ -300,7 +300,7 @@ export default function VideoAdvertCreator() {
     }
   };
 
-  const addGeneratedImage = (url, prompt) => {
+  const addGeneratedImage = (url, prompt, source = 'imagineer') => {
     const newImage = {
       id: Date.now().toString(),
       url,
@@ -308,13 +308,13 @@ export default function VideoAdvertCreator() {
       createdAt: new Date().toISOString(),
     };
     setCreatedImages(prev => [newImage, ...prev]);
-    setLastGeneratedImage({ url, prompt });
+    setLastGeneratedImage({ url, prompt, source });
     toast.success('Image generated successfully!');
 
     apiFetch('/api/library/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, type: 'image', title: 'Imagineer Image', prompt, source: 'imagineer' }),
+      body: JSON.stringify({ url, type: 'image', title: prompt || 'Generated Image', prompt, source }),
     }).catch(err => console.warn('Failed to save image to library:', err));
   };
 
@@ -1092,7 +1092,7 @@ export default function VideoAdvertCreator() {
         isOpen={activeModal === 'turnaround'}
         onClose={() => { setActiveModal(null); setPendingImage(null); }}
         initialImage={pendingImage}
-        onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet')}
+        onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet', 'turnaround')}
       />
 
       <StoryboardPlannerModal
@@ -1128,7 +1128,7 @@ export default function VideoAdvertCreator() {
 
       {/* Floating action panel after image generation */}
       {lastGeneratedImage && (
-        <div className="fixed bottom-6 right-6 z-[100] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="flex items-start gap-3">
             <img
               src={lastGeneratedImage.url}
@@ -1139,36 +1139,47 @@ export default function VideoAdvertCreator() {
               <p className="text-sm font-semibold text-gray-900 mb-0.5">Image Generated</p>
               <p className="text-xs text-gray-500 truncate mb-2">{lastGeneratedImage.prompt}</p>
               <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleSendToTool('turnaround')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E] text-white hover:bg-[#07393C] transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" /> Turnaround
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendToTool('inpaint')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors"
-                >
-                  <Eraser className="w-3 h-3" /> Inpaint
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendToTool('editimage')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors"
-                >
-                  <Edit3 className="w-3 h-3" /> Edit
-                </button>
+                {lastGeneratedImage.source === 'turnaround' ? (
+                  <>
+                    <button type="button" onClick={() => handleSendToTool('storyboard')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E] text-white hover:bg-[#07393C] transition-colors">
+                      <Clapperboard className="w-3 h-3" /> Storyboard
+                    </button>
+                    <button type="button" onClick={() => handleSendToTool('editimage')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors">
+                      <Edit3 className="w-3 h-3" /> Edit
+                    </button>
+                    <button type="button" onClick={() => handleSendToTool('jumpstart')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors">
+                      <Sparkles className="w-3 h-3" /> JumpStart
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => handleSendToTool('turnaround')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E] text-white hover:bg-[#07393C] transition-colors">
+                      <RotateCcw className="w-3 h-3" /> Turnaround
+                    </button>
+                    <button type="button" onClick={() => handleSendToTool('inpaint')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors">
+                      <Eraser className="w-3 h-3" /> Inpaint
+                    </button>
+                    <button type="button" onClick={() => handleSendToTool('editimage')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2C666E]/10 text-[#2C666E] hover:bg-[#2C666E]/20 transition-colors">
+                      <Edit3 className="w-3 h-3" /> Edit
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <button
               type="button"
-              onClick={() => setLastGeneratedImage(null)}
-              className="text-gray-400 hover:text-gray-600 -mt-1 -mr-1"
+              onClick={(e) => { e.stopPropagation(); setLastGeneratedImage(null); }}
+              className="text-gray-400 hover:text-gray-600 -mt-1 -mr-1 p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               <span className="sr-only">Close</span>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
         </div>
