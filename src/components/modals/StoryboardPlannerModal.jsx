@@ -691,8 +691,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       let lastFrame = null;
       try {
         lastFrame = await extractLastFrame(videoUrl);
+        console.log(`[Storyboard] Extracted last frame from scene ${nextIndex + 1}:`, lastFrame?.substring(0, 80));
       } catch (err) {
-        console.warn(`[Storyboard] Could not extract last frame from scene ${nextIndex + 1}:`, err.message);
+        console.error(`[Storyboard] Failed to extract last frame from scene ${nextIndex + 1}:`, err.message);
+        toast.error(`Warning: Could not extract last frame from scene ${nextIndex + 1} — next scene may not chain correctly`);
       }
 
       updateScene(scene.id, {
@@ -759,8 +761,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         let lastFrame = null;
         try {
           lastFrame = await extractLastFrame(videoUrl);
+          console.log(`[Storyboard] Extracted last frame from scene ${i + 1}:`, lastFrame?.substring(0, 80));
         } catch (err) {
-          console.warn(`[Storyboard] Could not extract last frame from scene ${i + 1}:`, err.message);
+          console.error(`[Storyboard] Failed to extract last frame from scene ${i + 1}:`, err.message);
+          toast.error(`Warning: Could not extract last frame from scene ${i + 1} — next scene may not chain correctly`);
         }
 
         updateScene(scene.id, {
