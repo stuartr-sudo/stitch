@@ -1,7 +1,3 @@
-// src/components/modals/StoryboardPlannerWizard.jsx
-// Wizard-style refactor of StoryboardPlannerModal.jsx
-// Breaks the single "setup" step into 5 focused wizard steps.
-
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
@@ -46,7 +42,8 @@ import { STYLE_OPTIONS, LIGHTING_OPTIONS as BUILDER_LIGHTING, COLOR_GRADE_OPTION
 import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
 import WizardStepper from '@/components/ui/WizardStepper';
 
-// Reuse model list from JumpStart — subset that supports image-to-video
+// ── Constants ──
+
 const STORYBOARD_MODELS = [
   { id: 'kling-r2v-pro', label: 'Kling O3 Pro (R2V)', description: 'Best character consistency', supportsRefs: true },
   { id: 'kling-r2v-standard', label: 'Kling O3 Standard (R2V)', description: 'Faster, lower cost', supportsRefs: true },
@@ -62,38 +59,12 @@ const CAMERA_ANGLES = [
   'low-angle', 'over-shoulder', 'tracking', 'dutch angle', 'POV',
 ];
 
-// ── Scene Builder pill options ──
 const ENVIRONMENTS = ['Street/Road', 'Sidewalk/Path', 'Park/Garden', 'Forest/Woods', 'Beach', 'Indoor', 'Playground', 'School', 'Shop/Store', 'Backyard'];
 const ACTION_TYPES = ['Walking', 'Running', 'Riding', 'Standing', 'Sitting', 'Jumping', 'Looking', 'Turning', 'Stopping', 'Interacting'];
 const EXPRESSIONS = ['Happy/Smiling', 'Focused/Determined', 'Surprised', 'Worried/Concerned', 'Excited', 'Calm/Peaceful', 'Curious', 'Cautious'];
 const LIGHTING_OPTIONS = ['Golden Hour', 'Bright Midday', 'Soft Morning', 'Blue Hour/Dusk', 'Overcast', 'Night/Moonlit', 'Sunset Glow'];
 const CAMERA_MOVEMENTS = ['Static', 'Pan Left', 'Pan Right', 'Tracking Follow', 'Dolly In', 'Dolly Out', 'Orbit', 'Crane Up', 'Crane Down'];
 const MOODS = ['Joyful/Happy', 'Dramatic', 'Peaceful/Calm', 'Mysterious', 'Energetic', 'Tense/Suspenseful', 'Playful', 'Inspirational'];
-
-// ── Pill selector — larger sizing for wizard ──
-function PillSelector({ options, value, onChange, label }) {
-  return (
-    <div>
-      {label && <label className="text-sm font-medium text-gray-700 mb-1.5 block">{label}</label>}
-      <div className="flex flex-wrap gap-1.5">
-        {options.map(opt => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(value === opt ? '' : opt)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              value === opt
-                ? 'bg-[#2C666E] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 const WIZARD_STEPS = [
   { key: 'story', label: 'Story & Mood' },
@@ -116,8 +87,36 @@ const EMPTY_SCENE_GUIDE = {
   cameraMovement: '',
 };
 
-export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComplete, initialImage = null }) {
-  // ── Wizard step state ──
+// ── Wizard-sized PillSelector (bigger pills than the original) ──
+
+function PillSelector({ options, value, onChange, label }) {
+  return (
+    <div>
+      {label && <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">{label}</label>}
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(value === opt ? '' : opt)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              value === opt
+                ? 'bg-[#2C666E] text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Wizard Component ──
+
+export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesComplete, initialImage = null }) {
+  // Step state
   const [step, setStep] = useState('story');
   const [completedSteps, setCompletedSteps] = useState([]);
 
@@ -132,19 +131,20 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   );
 
   // Setup state
-  const [description, setDescription] = useState(''); // kept for legacy/fallback
+  const [description, setDescription] = useState('');
   const [numScenes, setNumScenes] = useState(4);
   const [style, setStyle] = useState('cinematic');
   const [defaultDuration, setDefaultDuration] = useState(5);
   const [model, setModel] = useState('kling-r2v-pro');
   const [aspectRatio, setAspectRatio] = useState('16:9');
+
   // Props, neg prompts, brand style
   const [selectedProps, setSelectedProps] = useState([]);
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negFreetext, setNegFreetext] = useState('');
   const [selectedBrand, setSelectedBrand] = useState(null);
 
-  // Elements — up to 4 characters/objects, each referenced as @Element1, @Element2, etc.
+  // Elements
   const createEmptyElement = (index) => ({
     id: `el-${Date.now()}-${index}`,
     label: `Element ${index + 1}`,
@@ -177,21 +177,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const [libraryLoading, setLibraryLoading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Sync sceneGuides length with numScenes
-  useEffect(() => {
-    setSceneGuides(prev => {
-      if (prev.length === numScenes) return prev;
-      if (prev.length < numScenes) {
-        return [...prev, ...Array.from({ length: numScenes - prev.length }, () => ({ ...EMPTY_SCENE_GUIDE }))];
-      }
-      return prev.slice(0, numScenes);
-    });
-  }, [numScenes]);
-
-  const updateSceneGuide = (index, updates) => {
-    setSceneGuides(prev => prev.map((g, i) => i === index ? { ...g, ...updates } : g));
-  };
-
   // Scene cards state
   const [scenes, setScenes] = useState([]);
   const [storyboardTitle, setStoryboardTitle] = useState('');
@@ -205,6 +190,19 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   // Polling state for async models
   const [pollingScene, setPollingScene] = useState(null);
 
+  // ── Effects ──
+
+  // Sync sceneGuides length with numScenes
+  useEffect(() => {
+    setSceneGuides(prev => {
+      if (prev.length === numScenes) return prev;
+      if (prev.length < numScenes) {
+        return [...prev, ...Array.from({ length: numScenes - prev.length }, () => ({ ...EMPTY_SCENE_GUIDE }))];
+      }
+      return prev.slice(0, numScenes);
+    });
+  }, [numScenes]);
+
   // Reset when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -216,6 +214,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
       setDefaultDuration(5);
       setStoryOverview('');
       setOverallMood('');
+      setBuilderStyle('');
+      setBuilderLighting('');
+      setBuilderColorGrade('');
       setSceneGuides(Array.from({ length: 4 }, () => ({ ...EMPTY_SCENE_GUIDE })));
       setElements([createEmptyElement(0)]);
       setActiveElementIndex(0);
@@ -241,7 +242,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   }, [isOpen]);
 
-  // Pre-populate start frame from initialImage (e.g., turnaround sheet or blended image)
+  // Pre-populate start frame from initialImage
   useEffect(() => {
     if (isOpen && initialImage) {
       setStartFrameUrl(initialImage);
@@ -249,22 +250,10 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   }, [isOpen, initialImage]);
 
-  // ── Wizard navigation ──
-  const handleNext = () => {
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (currentIdx < WIZARD_STEPS.length - 1) {
-      setCompletedSteps(prev => [...new Set([...prev, step])]);
-      const nextStep = WIZARD_STEPS[currentIdx + 1].key;
-      if (nextStep === 'scenes' && scenes.length === 0) {
-        generateSceneBreakdown();
-      }
-      setStep(nextStep);
-    }
-  };
+  // ── Helpers ──
 
-  const handleBack = () => {
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (currentIdx > 0) setStep(WIZARD_STEPS[currentIdx - 1].key);
+  const updateSceneGuide = (index, updates) => {
+    setSceneGuides(prev => prev.map((g, i) => i === index ? { ...g, ...updates } : g));
   };
 
   // ── Library browser ──
@@ -347,7 +336,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     const urls = selected.map(i => i.url);
     const el = elements[activeElementIndex];
     const isFirstRef = el.refs.length === 0;
-    const capped = urls.slice(0, 3 - el.refs.length); // Max 3 refs per element
+    const capped = urls.slice(0, 3 - el.refs.length);
     updateElement(activeElementIndex, { refs: [...el.refs, ...capped] });
     setShowLibrary(false);
     toast.success(`Added ${capped.length} reference image(s) to @Element${activeElementIndex + 1}`);
@@ -419,7 +408,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   };
 
-  // Auto-analyze the start frame image to get a scene description for the LLM
   const analyzeStartFrame = async (imageUrl) => {
     if (!imageUrl || analyzingStartFrame) return;
     setAnalyzingStartFrame(true);
@@ -544,6 +532,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         lastFrameUrl: null,
         startFrameUrl: null,
       })));
+      setStep('scenes');
+      markStepCompleted('settings');
       toast.success(`Generated ${data.scenes.length} scenes`);
     } catch (err) {
       toast.error(err.message);
@@ -603,16 +593,14 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
         if (data.status === 'failed' || data.error) throw new Error(data.error || 'Generation failed');
       } catch (err) {
         if (err.message === 'Cancelled') throw err;
-        // Continue polling on network errors
       }
     }
     throw new Error('Generation timed out');
   };
 
-  // Cache upscaled R2V element URLs across scenes to avoid redundant upscaling
   const upscaledElementsCache = useRef(null);
 
-  const generateSingleScene = async (scene, startFrame) => {
+  const generateSingleScene = async (scene, startFrameUrlForScene) => {
     const selectedModel = STORYBOARD_MODELS.find(m => m.id === model);
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
     const isR2V = selectedModel?.supportsRefs && elementsWithRefs.length > 0;
@@ -637,7 +625,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     formData.append('aspectRatio', aspectRatio);
     formData.append('resolution', '720p');
 
-    const imageUrl = startFrame || elementsWithRefs[0]?.refs[0] || null;
+    const imageUrl = startFrameUrlForScene || elementsWithRefs[0]?.refs[0] || null;
     if (!imageUrl) {
       throw new Error('No start image available. Add a starting scene image or character reference images.');
     }
@@ -684,7 +672,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     throw new Error(data.error || 'Generation failed');
   };
 
-  // Generate one scene at a time — user reviews each before proceeding
   const generateNextScene = async () => {
     const nextIndex = scenes.findIndex(s => s.status === 'pending' || s.status === 'error');
     if (nextIndex < 0) {
@@ -750,7 +737,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     setGenerating(false);
   };
 
-  // Batch generate all remaining scenes
   const generateAllRemaining = async () => {
     setStep('generating');
     setGenerating(true);
@@ -821,7 +807,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     setGenerationCancelled(true);
   };
 
-  // Re-generate a single scene
   const regenerateScene = async (sceneId) => {
     const sceneIndex = scenes.findIndex(s => s.id === sceneId);
     if (sceneIndex < 0) return;
@@ -855,21 +840,20 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     }
   };
 
-  // Send completed scenes to timeline
   const sendToTimeline = () => {
-    const completedScenes = scenes.filter(s => s.status === 'done' && s.videoUrl);
-    if (!completedScenes.length) {
+    const completedScenesList = scenes.filter(s => s.status === 'done' && s.videoUrl);
+    if (!completedScenesList.length) {
       toast.error('No completed scenes to add');
       return;
     }
     if (onScenesComplete) {
-      onScenesComplete(completedScenes.map(s => ({
+      onScenesComplete(completedScenesList.map(s => ({
         videoUrl: s.videoUrl,
         title: `Scene ${s.sceneNumber} - ${storyboardTitle}`,
         durationSeconds: s.durationSeconds,
       })));
     }
-    toast.success(`${completedScenes.length} scenes sent to timeline`);
+    toast.success(`${completedScenesList.length} scenes sent to timeline`);
     onClose();
   };
 
@@ -880,134 +864,106 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
   const completedScenesCount = scenes.filter(s => s.status === 'done').length;
   const failedScenes = scenes.filter(s => s.status === 'error').length;
 
-  const subtitle = step === 'generating'
-    ? `${completedScenesCount} / ${scenes.length} scenes generated`
-    : 'Create multi-scene video sequences with AI';
+  // ── Wizard Navigation ──
 
-  // ── Library browser overlay (shared between characters step and settings step) ──
-  const LibraryBrowserOverlay = () => (
-    showLibrary ? (
-      <div className="border rounded-lg p-4 bg-gray-50 space-y-3 mt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Select from Library</span>
-          <button onClick={() => setShowLibrary(false)} className="text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        {libraryFolders.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            <button
-              onClick={() => setSelectedFolder(null)}
-              className={`px-2 py-0.5 rounded text-xs ${selectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
-            >
-              All
-            </button>
-            {libraryFolders.map(f => (
-              <button
-                key={f}
-                onClick={() => setSelectedFolder(f)}
-                className={`px-2 py-0.5 rounded text-xs ${selectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
-        {!libraryLoading && filteredLibrary.length > 0 && (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => {
-                const allIds = filteredLibrary.map(i => i.id);
-                const allSelected = allIds.every(id => selectedIds.has(id));
-                if (allSelected) {
-                  setSelectedIds(prev => {
-                    const next = new Set(prev);
-                    allIds.forEach(id => next.delete(id));
-                    return next;
-                  });
-                } else {
-                  setSelectedIds(prev => {
-                    const next = new Set(prev);
-                    allIds.forEach(id => next.add(id));
-                    return next;
-                  });
-                }
-              }}
-              className="text-xs text-[#2C666E] hover:underline font-medium"
-            >
-              {filteredLibrary.every(i => selectedIds.has(i.id)) ? 'Deselect All' : `Select All (${filteredLibrary.length})`}
-            </button>
-            {selectedIds.size > 0 && (
-              <span className="text-xs text-gray-400">{selectedIds.size} selected</span>
-            )}
-          </div>
-        )}
-        {libraryLoading ? (
-          <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-        ) : (
-          <div className="grid grid-cols-6 gap-1.5 max-h-48 overflow-y-auto">
-            {filteredLibrary.map(item => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedIds(prev => {
-                  const next = new Set(prev);
-                  next.has(item.id) ? next.delete(item.id) : next.add(item.id);
-                  return next;
-                })}
-                className={`relative cursor-pointer rounded border-2 overflow-hidden ${
-                  selectedIds.has(item.id) ? 'border-[#2C666E]' : 'border-transparent'
-                }`}
-              >
-                <img src={item.url} alt="" className="w-full aspect-square object-cover" />
-                {selectedIds.has(item.id) && (
-                  <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-white" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {selectedIds.size > 0 && (
-          <Button size="sm" onClick={importFromLibrary} className="w-full text-sm bg-[#2C666E] text-white">
-            Import {selectedIds.size} image(s)
-          </Button>
-        )}
-      </div>
-    ) : null
-  );
+  const markStepCompleted = (stepKey) => {
+    setCompletedSteps(prev => prev.includes(stepKey) ? prev : [...prev, stepKey]);
+  };
+
+  const handleNext = () => {
+    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
+    if (currentIdx < 0) return;
+
+    // Mark current step as completed
+    markStepCompleted(step);
+
+    if (step === 'settings') {
+      // "Generate Scenes" — trigger generation and advance to scenes step
+      generateSceneBreakdown();
+      return;
+    }
+
+    if (step === 'scenes') {
+      // Move to generating step, start generation
+      setStep('generating');
+      markStepCompleted('scenes');
+      generateNextScene();
+      return;
+    }
+
+    if (step === 'generating') {
+      // Send to timeline
+      sendToTimeline();
+      return;
+    }
+
+    // Default: advance to next step
+    const nextStep = WIZARD_STEPS[currentIdx + 1];
+    if (nextStep) {
+      setStep(nextStep.key);
+    }
+  };
+
+  const handleBack = () => {
+    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
+    if (currentIdx <= 0) return;
+    const prevStep = WIZARD_STEPS[currentIdx - 1];
+    if (prevStep) {
+      setStep(prevStep.key);
+    }
+  };
+
+  const handleStepClick = (key) => {
+    const targetIdx = WIZARD_STEPS.findIndex(s => s.key === key);
+    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
+    if (targetIdx < currentIdx) {
+      setStep(key);
+    }
+  };
+
+  // Determine the subtitle based on step
+  const getSubtitle = () => {
+    const found = WIZARD_STEPS.find(s => s.key === step);
+    return found ? `Step ${WIZARD_STEPS.indexOf(found) + 1} of ${WIZARD_STEPS.length}: ${found.label}` : '';
+  };
+
+  // Determine if Next button should be disabled
+  const isNextDisabled = () => {
+    if (step === 'story' && !storyOverview.trim()) return true;
+    if (step === 'settings' && generatingScenes) return true;
+    if (step === 'scenes' && scenes.length === 0) return true;
+    if (step === 'generating' && (generating || completedScenesCount === 0)) return true;
+    return false;
+  };
 
   return (
     <SlideOverPanel
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
       title="Storyboard Planner"
-      subtitle={subtitle}
+      description={getSubtitle()}
+      size="xl"
       icon={<Clapperboard className="w-5 h-5" />}
     >
       <WizardStepper
         steps={WIZARD_STEPS}
         currentStep={step}
         completedSteps={completedSteps}
-        onStepClick={(key) => {
-          const targetIdx = WIZARD_STEPS.findIndex(s => s.key === key);
-          const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-          if (targetIdx < currentIdx) setStep(key);
-        }}
+        onStepClick={handleStepClick}
       />
 
       <SlideOverBody className="p-6 bg-gray-50">
 
-        {/* ── STEP 1: Story & Mood ── */}
+        {/* ── Step 1: Story & Mood ── */}
         {step === 'story' && (
-          <div className="space-y-6 max-w-2xl mx-auto">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Story Overview</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Story Overview</label>
               <textarea
                 value={storyOverview}
                 onChange={(e) => setStoryOverview(e.target.value)}
-                rows={4}
                 placeholder="e.g., 'A puppy learns about driveway safety while riding a scooter through town'"
+                rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#2C666E] focus:border-transparent resize-none"
               />
             </div>
@@ -1016,7 +972,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Scenes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Number of Scenes</label>
                 <select
                   value={numScenes}
                   onChange={(e) => setNumScenes(parseInt(e.target.value))}
@@ -1027,9 +983,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration per Scene</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration per Scene</label>
                 <select
                   value={defaultDuration}
                   onChange={(e) => setDefaultDuration(parseInt(e.target.value))}
@@ -1040,9 +995,8 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Aspect Ratio</label>
                 <select
                   value={aspectRatio}
                   onChange={(e) => setAspectRatio(e.target.value)}
@@ -1057,224 +1011,317 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           </div>
         )}
 
-        {/* ── STEP 2: Visual Style ── */}
+        {/* ── Step 2: Visual Style ── */}
         {step === 'style' && (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">Style</p>
-              <div className="flex flex-wrap gap-2">
-                {STYLE_OPTIONS.map(s => (
-                  <button key={s} onClick={() => setBuilderStyle(builderStyle === s ? '' : s)}
-                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">Lighting</p>
-              <div className="flex flex-wrap gap-2">
-                {BUILDER_LIGHTING.map(l => (
-                  <button key={l} onClick={() => setBuilderLighting(builderLighting === l ? '' : l)}
-                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">Color Grade</p>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_GRADE_OPTIONS.map(cg => (
-                  <button key={cg} onClick={() => setBuilderColorGrade(builderColorGrade === cg ? '' : cg)}
-                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                    {cg}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div>
-              <p className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-3">Visual Style Preset</p>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">Style Preset</h3>
               <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-4" />
             </div>
 
-            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
+            <div className="space-y-4 p-5 bg-white rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-800">Visual Direction</h3>
+
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Style</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STYLE_OPTIONS.map(s => (
+                    <button key={s} onClick={() => setBuilderStyle(builderStyle === s ? '' : s)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Lighting</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {BUILDER_LIGHTING.map(l => (
+                    <button key={l} onClick={() => setBuilderLighting(builderLighting === l ? '' : l)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Color Grade</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLOR_GRADE_OPTIONS.map(cg => (
+                    <button key={cg} onClick={() => setBuilderColorGrade(builderColorGrade === cg ? '' : cg)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${builderColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                      {cg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ── STEP 3: Characters ── */}
+        {/* ── Step 3: Characters ── */}
         {step === 'characters' && (
-          <div className="space-y-5 max-w-2xl mx-auto">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Character Elements <span className="text-gray-400">(R2V — up to 4)</span>
-                </label>
-                {elements.length < 4 && (
-                  <button onClick={addElement} className="flex items-center gap-1 text-sm font-medium text-[#2C666E] hover:text-[#07393C]">
-                    <Plus className="w-4 h-4" /> Add Element
-                  </button>
-                )}
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">Character Elements</h3>
+                <p className="text-sm text-gray-400 mt-0.5">
+                  Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 3 reference images each.
+                </p>
               </div>
-              <p className="text-sm text-gray-500 mb-3">
-                Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 3 reference images each.
-              </p>
-
-              {/* Element tabs */}
-              <div className="flex gap-2 mb-4">
-                {elements.map((el, i) => (
-                  <button
-                    key={el.id}
-                    onClick={() => setActiveElementIndex(i)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 ${
-                      i === activeElementIndex
-                        ? 'bg-[#2C666E] text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    @Element{i + 1}
-                    {el.refs.length > 0 && <span className="text-xs opacity-70">({el.refs.length})</span>}
-                    {elements.length > 1 && (
-                      <span
-                        onClick={(e) => { e.stopPropagation(); removeElement(i); }}
-                        className="ml-0.5 hover:text-red-300"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Active element content */}
-              {elements[activeElementIndex] && (() => {
-                const el = elements[activeElementIndex];
-                const elIdx = activeElementIndex;
-                return (
-                  <div className="border rounded-lg p-5 bg-white space-y-4">
-                    {/* Description */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-sm font-medium text-gray-700">Description</label>
-                        {el.refs.length > 0 && (
-                          <button
-                            onClick={() => describeCharacterFromImage(el.refs[0], elIdx)}
-                            disabled={el.analyzing}
-                            className="flex items-center gap-1 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
-                          >
-                            {el.analyzing
-                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
-                              : <><Sparkles className="w-3.5 h-3.5" /> Auto-describe</>}
-                          </button>
-                        )}
-                      </div>
-                      <textarea
-                        value={el.description}
-                        onChange={(e) => updateElement(elIdx, { description: e.target.value })}
-                        rows={3}
-                        placeholder={el.analyzing ? 'Analyzing...' : "e.g., 'Young woman, red hair, green eyes, brown leather jacket'"}
-                        className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none ${el.analyzing ? 'bg-gray-50 animate-pulse' : ''}`}
-                      />
-                    </div>
-
-                    {/* Reference images */}
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">
-                        Reference Images ({el.refs.length}/3)
-                      </label>
-                      <div className="flex gap-2 mb-3">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={el.refs.length >= 3}
-                          className="text-sm"
-                        >
-                          <Upload className="w-4 h-4 mr-1.5" /> Upload
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={openLibrary}
-                          disabled={el.refs.length >= 3}
-                          className="text-sm"
-                        >
-                          <FolderOpen className="w-4 h-4 mr-1.5" /> Library
-                        </Button>
-                      </div>
-                      {el.refs.length > 0 && (
-                        <div className="flex flex-wrap gap-3">
-                          {el.refs.map((url, i) => (
-                            <div key={i} className="relative group">
-                              <img
-                                src={url}
-                                alt={`ref ${i + 1}`}
-                                onClick={() => updateElement(elIdx, { frontalIndex: i })}
-                                title={i === el.frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
-                                className={`w-20 h-20 rounded-lg object-cover cursor-pointer transition-all ${
-                                  i === el.frontalIndex
-                                    ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
-                                    : 'border border-gray-200 hover:border-gray-400'
-                                }`}
-                              />
-                              {i === el.frontalIndex && (
-                                <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-[#2C666E] text-white rounded-full text-xs flex items-center justify-center font-bold">F</span>
-                              )}
-                              <button
-                                onClick={() => {
-                                  const newRefs = el.refs.filter((_, j) => j !== i);
-                                  const newFrontal = el.frontalIndex >= newRefs.length ? 0 : (i < el.frontalIndex ? el.frontalIndex - 1 : el.frontalIndex);
-                                  updateElement(elIdx, { refs: newRefs, frontalIndex: newFrontal });
-                                }}
-                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
-                          {el.refs.length > 1 && (
-                            <p className="w-full text-sm text-gray-400 mt-0.5">Click to set frontal ref (F)</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+              {elements.length < 4 && (
+                <Button variant="outline" size="sm" onClick={addElement} className="text-sm">
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Element
+                </Button>
+              )}
             </div>
 
-            <LibraryBrowserOverlay />
+            {/* Element tabs */}
+            <div className="flex gap-1.5">
+              {elements.map((el, i) => (
+                <button
+                  key={el.id}
+                  onClick={() => setActiveElementIndex(i)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 ${
+                    i === activeElementIndex
+                      ? 'bg-[#2C666E] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  @Element{i + 1}
+                  {el.refs.length > 0 && <span className="text-xs opacity-70">({el.refs.length})</span>}
+                  {elements.length > 1 && (
+                    <span
+                      onClick={(e) => { e.stopPropagation(); removeElement(i); }}
+                      className="ml-0.5 hover:text-red-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Active element content */}
+            {elements[activeElementIndex] && (() => {
+              const el = elements[activeElementIndex];
+              const elIdx = activeElementIndex;
+              return (
+                <div className="border rounded-lg p-5 bg-white space-y-4">
+                  {/* Description */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm text-gray-500 uppercase tracking-wide font-medium">Description</label>
+                      {el.refs.length > 0 && (
+                        <button
+                          onClick={() => describeCharacterFromImage(el.refs[0], elIdx)}
+                          disabled={el.analyzing}
+                          className="flex items-center gap-1 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
+                        >
+                          {el.analyzing
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
+                            : <><Sparkles className="w-3.5 h-3.5" /> Auto-describe</>}
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={el.description}
+                      onChange={(e) => updateElement(elIdx, { description: e.target.value })}
+                      placeholder={el.analyzing ? 'Analyzing...' : "e.g., 'Young woman, red hair, green eyes, brown leather jacket'"}
+                      rows={3}
+                      className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none ${el.analyzing ? 'bg-gray-50 animate-pulse' : ''}`}
+                    />
+                  </div>
+
+                  {/* Reference images */}
+                  <div>
+                    <label className="text-sm text-gray-500 uppercase tracking-wide mb-2 block font-medium">
+                      Reference Images ({el.refs.length}/3)
+                    </label>
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={el.refs.length >= 3}
+                        className="text-sm"
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1" /> Upload
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={openLibrary}
+                        disabled={el.refs.length >= 3}
+                        className="text-sm"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
+                      </Button>
+                    </div>
+                    {el.refs.length > 0 && (
+                      <div className="flex flex-wrap gap-3">
+                        {el.refs.map((url, i) => (
+                          <div key={i} className="relative group">
+                            <img
+                              src={url}
+                              alt={`ref ${i + 1}`}
+                              onClick={() => updateElement(elIdx, { frontalIndex: i })}
+                              title={i === el.frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
+                              className={`w-20 h-20 rounded-lg object-cover cursor-pointer transition-all ${
+                                i === el.frontalIndex
+                                  ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
+                                  : 'border border-gray-200 hover:border-gray-400'
+                              }`}
+                            />
+                            {i === el.frontalIndex && (
+                              <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-[#2C666E] text-white rounded-full text-[9px] flex items-center justify-center font-bold">F</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                const newRefs = el.refs.filter((_, j) => j !== i);
+                                const newFrontal = el.frontalIndex >= newRefs.length ? 0 : (i < el.frontalIndex ? el.frontalIndex - 1 : el.frontalIndex);
+                                updateElement(elIdx, { refs: newRefs, frontalIndex: newFrontal });
+                              }}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {el.refs.length > 1 && (
+                          <p className="w-full text-sm text-gray-400 mt-1">Click to set frontal ref (F)</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Library browser overlay */}
+            {showLibrary && (
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Select from Library</span>
+                  <button onClick={() => setShowLibrary(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                {libraryFolders.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setSelectedFolder(null)}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${selectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
+                    >
+                      All
+                    </button>
+                    {libraryFolders.map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setSelectedFolder(f)}
+                        className={`px-3 py-1.5 rounded-lg text-sm ${selectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-white border text-gray-600'}`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!libraryLoading && filteredLibrary.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        const allIds = filteredLibrary.map(i => i.id);
+                        const allSelected = allIds.every(id => selectedIds.has(id));
+                        if (allSelected) {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            allIds.forEach(id => next.delete(id));
+                            return next;
+                          });
+                        } else {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            allIds.forEach(id => next.add(id));
+                            return next;
+                          });
+                        }
+                      }}
+                      className="text-sm text-[#2C666E] hover:underline font-medium"
+                    >
+                      {filteredLibrary.every(i => selectedIds.has(i.id)) ? 'Deselect All' : `Select All (${filteredLibrary.length})`}
+                    </button>
+                    {selectedIds.size > 0 && (
+                      <span className="text-sm text-gray-400">{selectedIds.size} selected</span>
+                    )}
+                  </div>
+                )}
+                {libraryLoading ? (
+                  <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+                ) : (
+                  <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+                    {filteredLibrary.map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                          return next;
+                        })}
+                        className={`relative cursor-pointer rounded-lg border-2 overflow-hidden ${
+                          selectedIds.has(item.id) ? 'border-[#2C666E]' : 'border-transparent'
+                        }`}
+                      >
+                        <img src={item.url} alt="" className="w-full aspect-square object-cover" />
+                        {selectedIds.has(item.id) && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedIds.size > 0 && (
+                  <Button size="sm" onClick={importFromLibrary} className="w-full text-sm bg-[#2C666E] text-white">
+                    Import {selectedIds.size} image(s)
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── STEP 4: Scene Builder ── */}
+        {/* ── Step 4: Scene Builder ── */}
         {step === 'scene-builder' && (
           <div className="space-y-5">
-            <label className="block text-sm font-medium text-gray-700">Scene-by-Scene Builder</label>
-            <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 mb-1">Scene-by-Scene Builder</h3>
+              <p className="text-sm text-gray-400">Guide the AI with per-scene details. These are optional hints to shape each scene.</p>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto pr-1">
               {sceneGuides.map((guide, i) => (
                 <div key={i} className="border rounded-lg p-5 bg-white space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[#2C666E]">Scene {i + 1}</span>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1.5 block">What happens?</label>
+                    <label className="text-sm text-gray-500 uppercase tracking-wide mb-1 block font-medium">What happens?</label>
                     <textarea
                       value={guide.action}
                       onChange={(e) => updateSceneGuide(i, { action: e.target.value })}
-                      rows={3}
                       placeholder="e.g., 'The puppy rides the scooter past a driveway and looks both ways'"
+                      rows={3}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"
                     />
                   </div>
@@ -1283,7 +1330,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                       <PillSelector label="Environment" options={ENVIRONMENTS} value={guide.environment} onChange={(v) => updateSceneGuide(i, { environment: v })} />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1.5 block">Environment Detail</label>
+                      <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Environment Detail</label>
                       <input
                         value={guide.environmentDetail}
                         onChange={(e) => updateSceneGuide(i, { environmentDetail: e.target.value })}
@@ -1297,7 +1344,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   <div className="grid grid-cols-2 gap-4">
                     <PillSelector label="Lighting" options={LIGHTING_OPTIONS} value={guide.lighting} onChange={(v) => updateSceneGuide(i, { lighting: v })} />
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1.5 block">Camera Angle</label>
+                      <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Camera Angle</label>
                       <select
                         value={guide.cameraAngle}
                         onChange={(e) => updateSceneGuide(i, { cameraAngle: e.target.value })}
@@ -1315,9 +1362,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           </div>
         )}
 
-        {/* ── STEP 5: Frame & Model ── */}
+        {/* ── Step 5: Frame & Model ── */}
         {step === 'settings' && (
-          <div className="space-y-6 max-w-2xl mx-auto">
+          <div className="space-y-6">
             {/* Starting Scene Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Starting Scene Image</label>
@@ -1328,7 +1375,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   <img
                     src={startFrameUrl}
                     alt="Starting scene"
-                    className="w-full h-56 rounded-xl object-cover border border-gray-200"
+                    className="w-full h-52 rounded-lg object-cover border border-gray-200"
                   />
                   <button
                     onClick={() => setStartFrameUrl(null)}
@@ -1336,12 +1383,12 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   >
                     <X className="w-4 h-4" />
                   </button>
-                  <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1.5">
+                  <span className="absolute bottom-2 left-2 bg-black/60 text-white text-sm px-2 py-1 rounded flex items-center gap-1">
                     {analyzingStartFrame ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing scene...</> : startFrameDescription ? 'Scene analyzed' : 'Start Frame'}
                   </span>
                 </div>
               ) : (generatingStartFrame || pollingStartFrame) ? (
-                <div className="w-full h-56 rounded-xl border-2 border-dashed border-[#2C666E]/30 bg-[#2C666E]/5 flex flex-col items-center justify-center gap-3">
+                <div className="w-full h-52 rounded-lg border-2 border-dashed border-[#2C666E]/30 bg-[#2C666E]/5 flex flex-col items-center justify-center gap-2">
                   <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
                   <span className="text-sm text-[#2C666E]">
                     {pollingStartFrame ? 'Generating image...' : 'Processing...'}
@@ -1396,7 +1443,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
             {/* Video Model */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Video Model</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
@@ -1418,112 +1465,115 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
               freetext={negFreetext}
               onFreetextChange={setNegFreetext}
             />
+
+            {/* Brand Style Guide */}
+            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
           </div>
         )}
 
-        {/* ── STEP 6: Scenes ── */}
+        {/* ── Step 6: Scenes (AI-generated scene cards) ── */}
         {step === 'scenes' && (
           <div className="space-y-3">
+            {storyboardTitle && (
+              <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
+            )}
+
             {generatingScenes && (
-              <div className="flex items-center justify-center gap-3 py-8 text-[#2C666E]">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span className="text-sm font-medium">Generating scene breakdown...</span>
+              <div className="flex items-center justify-center gap-2 py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                <span className="text-sm text-gray-500">Generating scene breakdown...</span>
               </div>
             )}
-            {!generatingScenes && (
-              <>
-                {storyboardTitle && (
-                  <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
-                )}
-                {scenes.map((scene, i) => (
-                  <div key={scene.id} className="border rounded-lg p-3 bg-white space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#2C666E]">Scene {i + 1}</span>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => moveScene(i, -1)} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => moveScene(i, 1)} disabled={i === scenes.length - 1} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => removeScene(scene.id)} className="p-0.5 text-red-400 hover:text-red-600">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
 
-                    <div>
-                      <label className="text-[10px] text-gray-500 uppercase tracking-wide">Visual Prompt</label>
-                      <textarea
-                        value={scene.visualPrompt}
-                        onChange={(e) => updateScene(scene.id, { visualPrompt: e.target.value })}
-                        className="w-full h-16 px-2 py-1 border border-gray-200 rounded text-xs resize-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wide">Motion</label>
-                        <input
-                          value={scene.motionPrompt}
-                          onChange={(e) => updateScene(scene.id, { motionPrompt: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                          placeholder="Camera motion..."
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wide">Duration</label>
-                        <select
-                          value={scene.durationSeconds}
-                          onChange={(e) => updateScene(scene.id, { durationSeconds: parseInt(e.target.value) })}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                        >
-                          {[3, 4, 5, 6, 8, 10].map(n => (
-                            <option key={n} value={n}>{n}s</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wide">Camera</label>
-                        <select
-                          value={scene.cameraAngle}
-                          onChange={(e) => updateScene(scene.id, { cameraAngle: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                        >
-                          {CAMERA_ANGLES.map(a => (
-                            <option key={a} value={a}>{a}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {scene.narrativeNote && (
-                      <p className="text-[10px] text-gray-400 italic">{scene.narrativeNote}</p>
-                    )}
+            {scenes.map((scene, i) => (
+              <div key={scene.id} className="border rounded-lg p-3 bg-white space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-[#2C666E]">Scene {i + 1}</span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => moveScene(i, -1)} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => moveScene(i, 1)} disabled={i === scenes.length - 1} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => removeScene(scene.id)} className="p-0.5 text-red-400 hover:text-red-600">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                ))}
+                </div>
 
-                <Button variant="outline" size="sm" onClick={addScene} className="w-full text-xs">
-                  <Plus className="w-3 h-3 mr-1" /> Add Scene
-                </Button>
-              </>
+                <div>
+                  <label className="text-sm text-gray-500 uppercase tracking-wide">Visual Prompt</label>
+                  <textarea
+                    value={scene.visualPrompt}
+                    onChange={(e) => updateScene(scene.id, { visualPrompt: e.target.value })}
+                    className="w-full h-16 px-2 py-1 border border-gray-200 rounded text-sm resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-sm text-gray-500 uppercase tracking-wide">Motion</label>
+                    <input
+                      value={scene.motionPrompt}
+                      onChange={(e) => updateScene(scene.id, { motionPrompt: e.target.value })}
+                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                      placeholder="Camera motion..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500 uppercase tracking-wide">Duration</label>
+                    <select
+                      value={scene.durationSeconds}
+                      onChange={(e) => updateScene(scene.id, { durationSeconds: parseInt(e.target.value) })}
+                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                    >
+                      {[3, 4, 5, 6, 8, 10].map(n => (
+                        <option key={n} value={n}>{n}s</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500 uppercase tracking-wide">Camera</label>
+                    <select
+                      value={scene.cameraAngle}
+                      onChange={(e) => updateScene(scene.id, { cameraAngle: e.target.value })}
+                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                    >
+                      {CAMERA_ANGLES.map(a => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {scene.narrativeNote && (
+                  <p className="text-sm text-gray-400 italic">{scene.narrativeNote}</p>
+                )}
+              </div>
+            ))}
+
+            {!generatingScenes && (
+              <Button variant="outline" size="sm" onClick={addScene} className="w-full text-sm">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Scene
+              </Button>
             )}
           </div>
         )}
 
-        {/* ── STEP 7: Generate ── */}
+        {/* ── Step 7: Generate ── */}
         {step === 'generating' && (
           <div className="space-y-3">
             <div className="text-center mb-2">
               <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 {completedScenesCount} / {scenes.length} scenes generated
                 {failedScenes > 0 && ` · ${failedScenes} failed`}
               </p>
               <div className="w-full h-2 bg-gray-100 rounded-full mt-2">
                 <div
                   className="h-full bg-[#2C666E] rounded-full transition-all"
-                  style={{ width: `${scenes.length > 0 ? (completedScenesCount / scenes.length) * 100 : 0}%` }}
+                  style={{ width: `${(completedScenesCount / scenes.length) * 100}%` }}
                 />
               </div>
             </div>
@@ -1535,7 +1585,6 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 scene.status === 'error' ? 'border-red-200 bg-red-50' :
                 'border-gray-200'
               }`}>
-                {/* Video preview for completed scenes */}
                 {scene.status === 'done' && scene.videoUrl && (
                   <video
                     src={scene.videoUrl}
@@ -1545,7 +1594,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                   />
                 )}
 
-                <div className="p-2 flex items-center justify-between">
+                <div className="p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
                       {scene.status === 'generating' ? (
@@ -1555,12 +1604,12 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                       ) : scene.status === 'error' ? (
                         <AlertCircle className="w-4 h-4 text-red-500" />
                       ) : (
-                        <span className="text-xs text-gray-400 font-medium">{i + 1}</span>
+                        <span className="text-sm text-gray-400 font-medium">{i + 1}</span>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-700">Scene {i + 1}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{scene.narrativeNote || scene.visualPrompt?.substring(0, 60)}</p>
+                      <p className="text-sm font-medium text-gray-700">Scene {i + 1}</p>
+                      <p className="text-sm text-gray-400 truncate">{scene.narrativeNote || scene.visualPrompt.substring(0, 60)}</p>
                     </div>
                   </div>
                   {(scene.status === 'done' || scene.status === 'error') && !generating && (
@@ -1568,9 +1617,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                       variant="outline"
                       size="sm"
                       onClick={() => regenerateScene(scene.id)}
-                      className="text-[10px] h-6 px-2"
+                      className="text-sm h-7 px-3"
                     >
-                      <RefreshCw className="w-3 h-3 mr-0.5" /> Redo
+                      <RefreshCw className="w-3.5 h-3.5 mr-1" /> Redo
                     </Button>
                   )}
                 </div>
@@ -1578,20 +1627,21 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             ))}
           </div>
         )}
+
       </SlideOverBody>
 
       <SlideOverFooter>
         <div className="flex justify-between w-full">
-          {/* Back button */}
+          {/* Left side: Back button */}
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={step === 'story' || (step === 'generating' && generating)}
-            >
+            <Button variant="outline" onClick={handleBack} disabled={step === 'story'}>
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
-            {/* Extra scene-step actions */}
+          </div>
+
+          {/* Right side: Next button + contextual actions */}
+          <div className="flex gap-2">
+            {/* Extra actions for specific steps */}
             {step === 'scenes' && scenes.length > 0 && (
               <Button
                 variant="outline"
@@ -1599,64 +1649,52 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                 onClick={generateSceneBreakdown}
                 disabled={generatingScenes}
               >
-                <RotateCcw className="w-3 h-3 mr-1" /> Regenerate
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Regenerate
               </Button>
             )}
-          </div>
 
-          {/* Forward / action button */}
-          <div className="flex gap-2">
-            {step === 'generating' && (
+            {step === 'generating' && generating && (
+              <Button
+                variant="outline"
+                onClick={cancelGeneration}
+                className="text-red-600 border-red-300"
+              >
+                <Pause className="w-4 h-4 mr-1" /> Cancel
+              </Button>
+            )}
+
+            {step === 'generating' && !generating && completedScenesCount < scenes.length && (
               <>
-                {generating ? (
-                  <Button
-                    variant="outline"
-                    onClick={cancelGeneration}
-                    className="text-red-600 border-red-300"
-                  >
-                    <Pause className="w-4 h-4 mr-1" /> Cancel
-                  </Button>
-                ) : (
-                  <>
-                    {completedScenesCount < scenes.length && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={generateAllRemaining}
-                          disabled={generating}
-                        >
-                          <Play className="w-3 h-3 mr-1" /> Generate All Remaining
-                        </Button>
-                        <Button
-                          onClick={generateNextScene}
-                          disabled={generating}
-                          className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-                        >
-                          <ChevronRight className="w-4 h-4 mr-1" /> Generate Scene {completedScenesCount + 1}
-                        </Button>
-                      </>
-                    )}
-                    {completedScenesCount > 0 && completedScenesCount === scenes.length && (
-                      <Button
-                        onClick={sendToTimeline}
-                        className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-                      >
-                        <Send className="w-4 h-4 mr-1" /> Send to Timeline ({completedScenesCount})
-                      </Button>
-                    )}
-                  </>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generateAllRemaining}
+                >
+                  <Play className="w-3.5 h-3.5 mr-1" /> Generate All Remaining
+                </Button>
+                <Button
+                  onClick={generateNextScene}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white"
+                >
+                  Generate Scene {completedScenesCount + 1} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
               </>
             )}
 
+            {step === 'generating' && !generating && completedScenesCount > 0 && completedScenesCount === scenes.length && (
+              <Button
+                onClick={sendToTimeline}
+                className="bg-[#2C666E] hover:bg-[#07393C] text-white"
+              >
+                <Send className="w-4 h-4 mr-1" /> Send to Timeline ({completedScenesCount}) <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
+
+            {/* Standard Next button (not shown on generating step which has its own buttons) */}
             {step !== 'generating' && (
               <Button
-                onClick={step === 'scenes' ? generateNextScene : handleNext}
-                disabled={
-                  (step === 'story' && !storyOverview.trim()) ||
-                  (step === 'scenes' && (scenes.length === 0 || generatingScenes))
-                }
+                onClick={handleNext}
+                disabled={isNextDisabled()}
                 className="bg-[#2C666E] hover:bg-[#07393C] text-white"
               >
                 {step === 'settings' ? (
@@ -1666,7 +1704,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
                     <><Sparkles className="w-4 h-4 mr-1" /> Generate Scenes</>
                   )
                 ) : step === 'scenes' ? (
-                  <><Play className="w-4 h-4 mr-1" /> Generate Scene 1</>
+                  <><Play className="w-4 h-4 mr-1" /> Start Generating</>
                 ) : (
                   <>Next <ChevronRight className="w-4 h-4 ml-1" /></>
                 )}
