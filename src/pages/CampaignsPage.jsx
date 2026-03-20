@@ -740,7 +740,7 @@ export default function CampaignsPage() {
             <div className="bg-white rounded-xl p-5 border grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-slate-500 text-xs">Brand</p>
-                <p className="font-semibold text-slate-800">{selectedCampaign.brand_username || '—'}</p>
+                <p className="font-semibold text-slate-800">{typeof selectedCampaign.brand_username === 'object' ? selectedCampaign.brand_username?.username : (selectedCampaign.brand_username || '—')}</p>
               </div>
               <div>
                 <p className="text-slate-500 text-xs">Writing Structure</p>
@@ -878,7 +878,7 @@ export default function CampaignsPage() {
       )}
       {showAutonomousConfig && (
         <AutonomousConfigModal
-          brandUsername={campaigns[0]?.brand_username || ''}
+          brandUsername={typeof campaigns[0]?.brand_username === 'object' ? campaigns[0]?.brand_username?.username : (campaigns[0]?.brand_username || '')}
           onClose={() => setShowAutonomousConfig(false)}
         />
       )}
