@@ -398,27 +398,47 @@ app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) 
 
 // Shorts Factory routes (with auth)
 app.post('/api/shorts/generate', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('shorts/generate.js');
-  if (handler) return handler(req, res);
-  res.status(500).json({ error: 'Handler not found' });
+  try {
+    const handler = await loadApiRoute('shorts/generate.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (err) {
+    console.error('[shorts/generate] Unhandled error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 app.post('/api/shorts/topics', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('shorts/topics.js');
-  if (handler) return handler(req, res);
-  res.status(500).json({ error: 'Handler not found' });
+  try {
+    const handler = await loadApiRoute('shorts/topics.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (err) {
+    console.error('[shorts/topics] Unhandled error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 app.post('/api/shorts/research', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('shorts/research.js');
-  if (handler) return handler(req, res);
-  res.status(500).json({ error: 'Handler not found' });
+  try {
+    const handler = await loadApiRoute('shorts/research.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (err) {
+    console.error('[shorts/research] Unhandled error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 app.post('/api/shorts/preview-script', authenticateToken, async (req, res) => {
-  const handler = await loadApiRoute('shorts/preview-script.js');
-  if (handler) return handler(req, res);
-  res.status(500).json({ error: 'Handler not found' });
+  try {
+    const handler = await loadApiRoute('shorts/preview-script.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (err) {
+    console.error('[shorts/preview-script] Unhandled error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 // Template routes (with auth)

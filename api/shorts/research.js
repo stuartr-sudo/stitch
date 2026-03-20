@@ -1,14 +1,10 @@
 /**
  * POST /api/shorts/research
  *
- * Find story ideas for a given niche using OpenAI's training data.
+ * Find real trending stories for a given niche using SearchAPI (Google News)
+ * then structure them with GPT for the shorts pipeline.
  *
- * NOTE: GPT does not have real-time web access, so stories come from training data.
- * TODO: Integrate Tavily (https://tavily.com) for real-time story sourcing.
- *       Tavily provides a search API designed for LLM agents that returns
- *       clean, structured news/article content. Replace the GPT-only approach
- *       below with a Tavily search → GPT summarization pipeline for
- *       genuinely current stories.
+ * Flow: SearchAPI (real-time news) → GPT (structure & angle) → response
  *
  * Body: {
  *   niche: string,
@@ -36,6 +32,74 @@ const StorySchema = z.object({
     story_context: z.string().describe('Detailed context paragraph that can be passed to the script generator — include all key facts, names, dates, and the narrative arc'),
   })),
 });
+
+// Search queries per niche for finding trending stories
+const NICHE_SEARCH_QUERIES = {
+  ai_tech_news: ['AI breakthrough news today', 'new AI technology 2024 2025', 'artificial intelligence latest developments'],
+  finance_money: ['stock market surprising news', 'money saving strategy viral', 'finance news unexpected'],
+  motivation_self_help: ['incredible comeback story', 'against all odds success story', 'inspirational true story viral'],
+  scary_horror: ['unexplained mystery real', 'creepy true story', 'paranormal event documented'],
+  history_did_you_know: ['bizarre history fact', 'historical event most people dont know', 'strange true history'],
+  true_crime: ['unsolved mystery case', 'true crime shocking twist', 'cold case breakthrough'],
+  science_nature: ['mind-blowing science discovery', 'nature phenomenon unexplained', 'scientific breakthrough surprising'],
+  relationships_dating: ['relationship psychology study', 'dating trend research', 'love story extraordinary'],
+  health_fitness: ['health myth debunked study', 'fitness discovery surprising', 'nutrition science new finding'],
+  gaming_popculture: ['gaming easter egg discovered', 'pop culture hidden detail', 'video game secret revealed'],
+  conspiracy_mystery: ['conspiracy theory evidence', 'government secret declassified', 'unexplained phenomenon recent'],
+  business_entrepreneur: ['startup story unexpected', 'business strategy unconventional success', 'entrepreneur breakthrough story'],
+};
+
+async function searchRealStories(niche, nicheName) {
+  const searchApiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
+  if (!searchApiKey) {
+    console.warn('[shorts/research] No SEARCHAPI_KEY or SERP_API_KEY — falling back to GPT-only');
+    return null;
+  }
+
+  const queries = NICHE_SEARCH_QUERIES[niche] || [`${nicheName} trending story`, `${nicheName} viral news`];
+  // Pick a random query for variety
+  const query = queries[Math.floor(Math.random() * queries.length)];
+
+  try {
+    const url = new URL('https://www.searchapi.io/api/v1/search');
+    url.searchParams.set('api_key', searchApiKey);
+    url.searchParams.set('engine', 'google_news');
+    url.searchParams.set('q', query);
+    url.searchParams.set('num', '10');
+
+    console.log(`[shorts/research] SearchAPI query: "${query}"`);
+
+    const response = await fetch(url.toString(), {
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn(`[shorts/research] SearchAPI returned ${response.status}: ${text.slice(0, 200)}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const articles = data.news_results || data.organic_results || [];
+
+    if (articles.length === 0) {
+      console.warn('[shorts/research] SearchAPI returned no results');
+      return null;
+    }
+
+    // Extract clean article summaries for GPT
+    return articles.slice(0, 8).map(a => ({
+      title: a.title || '',
+      snippet: a.snippet || a.description || '',
+      source: a.source?.name || a.source || '',
+      link: a.link || '',
+      date: a.date || a.published_date || '',
+    })).filter(a => a.title);
+  } catch (err) {
+    console.warn('[shorts/research] SearchAPI fetch failed:', err.message);
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -68,25 +132,39 @@ export default async function handler(req, res) {
   const openai = new OpenAI({ apiKey: openaiKey });
 
   try {
-    const completion = await openai.chat.completions.parse({
-      model: 'gpt-5-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos.
+    // Step 1: Search for real trending stories via SearchAPI
+    const realArticles = await searchRealStories(niche, nicheTemplate.name);
+    const hasRealArticles = realArticles && realArticles.length > 0;
 
-Your job is to surface specific, real-feeling stories that would make excellent 60-second vertical videos.
+    // Step 2: Use GPT to structure stories (with real articles as context if available)
+    const systemPrompt = hasRealArticles
+      ? `You are a viral content researcher for ${nicheTemplate.name} short-form videos.
+
+You have been given REAL trending news articles. Your job is to pick the ${count} most compelling ones and transform them into viral short-form video concepts.
+
+For each story:
+- Use the REAL facts from the articles — do NOT make up information
+- Find the most surprising or counterintuitive angle
+- The story_context field should include all key facts, names, dates from the article
+- Make the title punchy and click-worthy for 60-second vertical videos`
+      : `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos.
+
+Your job is to surface specific, real stories that would make excellent 60-second vertical videos.
 Focus on: historical events, documented cases, real people, verifiable facts, and well-known narratives.
 
 For each story:
 - Be SPECIFIC: real names, dates, places — not "a man in the 1980s"
 - Pick stories with a clear narrative arc: setup → conflict → resolution
 - Prioritize counterintuitive angles: the thing most people don't know
-- The story_context field should be rich enough that a script writer could use it without any additional research`,
-        },
-        {
-          role: 'user',
-          content: `Find ${count} compelling story ideas for a ${nicheTemplate.name} short-form video channel.
+- The story_context field should be rich enough that a script writer could use it without any additional research`;
+
+    const userPrompt = hasRealArticles
+      ? `Here are real trending articles in the ${nicheTemplate.name} space:
+
+${realArticles.map((a, i) => `${i + 1}. "${a.title}" (${a.source}, ${a.date})\n   ${a.snippet}`).join('\n\n')}
+
+Transform the ${count} best stories into viral short-form video concepts. Each should work as a self-contained 60-second video with a clear hook, narrative arc, and surprising element.`
+      : `Find ${count} compelling story ideas for a ${nicheTemplate.name} short-form video channel.
 
 Each story should be:
 - Self-contained in 60 seconds
@@ -94,8 +172,15 @@ Each story should be:
 - Have a surprising or counterintuitive element
 - Relevant to the ${nicheTemplate.name} niche
 
-Provide rich story_context for each so a script writer has all the facts they need.`,
-        },
+Provide rich story_context for each so a script writer has all the facts they need.`;
+
+    console.log(`[shorts/research] Generating ${count} stories (real articles: ${hasRealArticles ? realArticles.length : 'none'})`);
+
+    const completion = await openai.chat.completions.parse({
+      model: 'gpt-5-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       response_format: zodResponseFormat(StorySchema, 'story_ideas'),
       temperature: 0.9,
@@ -114,9 +199,13 @@ Provide rich story_context for each so a script writer has all the facts they ne
       });
     }
 
-    return res.json({ stories: result.stories, niche });
+    return res.json({
+      stories: result.stories,
+      niche,
+      source: hasRealArticles ? 'searchapi_plus_gpt' : 'gpt_only',
+    });
   } catch (err) {
     console.error('[shorts/research] Error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message || 'Story research failed' });
   }
 }
