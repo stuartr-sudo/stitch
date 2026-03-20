@@ -80,14 +80,22 @@ const VOICE_PRESETS = [
 ];
 
 const CAPTION_STYLES = [
-  { key: 'word_pop', label: 'Word Pop', description: 'Bold white, black outline — high impact' },
-  { key: 'karaoke_glow', label: 'Karaoke Glow', description: 'Yellow highlight with heavy shadow' },
-  { key: 'word_highlight', label: 'Subtle', description: 'Clean white, minimal outline' },
-  { key: 'neon_glow', label: 'Neon Glow', description: 'Cyan glow on dark background' },
-  { key: 'typewriter', label: 'Typewriter', description: 'Letter-by-letter reveal effect' },
-  { key: 'bounce', label: 'Bounce', description: 'Words bounce in with spring animation' },
-  { key: 'gradient_slide', label: 'Gradient Slide', description: 'Words slide in with color gradient' },
-  { key: 'outline_only', label: 'Outline Only', description: 'Transparent fill, thick colored outline' },
+  { key: 'word_pop', label: 'Word Pop', description: 'Bold white, black outline — high impact',
+    preview: { text: 'WORD', bg: 'bg-slate-900', style: 'text-white font-black text-lg tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]', textStroke: '2px black' } },
+  { key: 'karaoke_glow', label: 'Karaoke Glow', description: 'Yellow highlight with heavy shadow',
+    preview: { text: 'GLOW', bg: 'bg-slate-900', style: 'text-yellow-400 font-black text-lg tracking-wide drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]' } },
+  { key: 'word_highlight', label: 'Subtle', description: 'Clean white, minimal outline',
+    preview: { text: 'subtle', bg: 'bg-slate-800', style: 'text-white/90 font-semibold text-base tracking-wide' } },
+  { key: 'neon_glow', label: 'Neon Glow', description: 'Cyan glow on dark background',
+    preview: { text: 'NEON', bg: 'bg-slate-950', style: 'text-cyan-400 font-black text-lg tracking-widest drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]' } },
+  { key: 'typewriter', label: 'Typewriter', description: 'Letter-by-letter reveal effect',
+    preview: { text: 'type_', bg: 'bg-slate-900', style: 'text-green-400 font-mono font-bold text-base tracking-wider' } },
+  { key: 'bounce', label: 'Bounce', description: 'Words bounce in with spring animation',
+    preview: { text: 'POP!', bg: 'bg-indigo-950', style: 'text-white font-black text-lg tracking-wide animate-bounce' } },
+  { key: 'gradient_slide', label: 'Gradient Slide', description: 'Words slide in with color gradient',
+    preview: { text: 'FLOW', bg: 'bg-slate-900', style: 'font-black text-lg tracking-wide bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent' } },
+  { key: 'outline_only', label: 'Outline Only', description: 'Transparent fill, thick colored outline',
+    preview: { text: 'EDGE', bg: 'bg-slate-900', style: 'font-black text-lg tracking-wide', textStroke: '1.5px #f97316' } },
 ];
 
 const PIPELINE_STEPS = [
@@ -782,18 +790,32 @@ export default function ShortsFactoryPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {CAPTION_STYLES.map(s => {
                       const selected = captionStyle === s.key;
+                      const p = s.preview;
                       return (
                         <button
                           key={s.key}
                           onClick={() => setCaptionStyle(s.key)}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          className={`rounded-lg border-2 text-left transition-all overflow-hidden ${
                             selected
-                              ? 'border-[#2C666E] bg-[#2C666E]/5'
+                              ? 'border-[#2C666E] ring-1 ring-[#2C666E]/30'
                               : 'border-slate-100 hover:border-slate-300'
                           }`}
                         >
-                          <div className="text-xs font-semibold text-slate-800">{s.label}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                          {/* Visual preview swatch */}
+                          {p && (
+                            <div className={`${p.bg} flex items-center justify-center py-3 px-2`}>
+                              <span
+                                className={p.style}
+                                style={p.textStroke ? { WebkitTextStroke: p.textStroke } : undefined}
+                              >
+                                {p.text}
+                              </span>
+                            </div>
+                          )}
+                          <div className="p-2">
+                            <div className="text-xs font-semibold text-slate-800">{s.label}</div>
+                            <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{s.description}</div>
+                          </div>
                         </button>
                       );
                     })}
