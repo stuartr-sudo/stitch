@@ -28,25 +28,41 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  History,
+  Skull,
+  Microscope,
+  Heart,
+  Dumbbell,
+  Gamepad2,
+  Eye,
+  Briefcase,
 } from 'lucide-react';
 import LoRAPicker from '@/components/LoRAPicker';
 
 // ── Niche definitions ───────────────────────────────────────────────────────
 
 const NICHES = [
-  { key: 'ai_tech_news', label: 'AI / Tech News', icon: Zap, description: 'Breaking AI developments with authority', color: 'from-blue-500 to-cyan-500' },
-  { key: 'finance_money', label: 'Finance / Money', icon: DollarSign, description: 'Actionable money strategies', color: 'from-green-500 to-emerald-500' },
-  { key: 'motivation_self_help', label: 'Motivation', icon: Brain, description: 'Powerful stories with emotional arc', color: 'from-orange-500 to-amber-500' },
-  { key: 'scary_horror', label: 'Scary / Horror', icon: Ghost, description: 'Atmospheric horror with shocking twist', color: 'from-purple-500 to-violet-500' },
+  { key: 'ai_tech_news',           label: 'AI / Tech News',       icon: Zap,       description: 'Breaking AI developments with authority', color: 'from-blue-500 to-cyan-500' },
+  { key: 'finance_money',          label: 'Finance / Money',      icon: DollarSign, description: 'Actionable money strategies',            color: 'from-green-500 to-emerald-500' },
+  { key: 'motivation_self_help',   label: 'Motivation',           icon: Brain,     description: 'Powerful stories with emotional arc',    color: 'from-orange-500 to-amber-500' },
+  { key: 'scary_horror',           label: 'Scary / Horror',       icon: Ghost,     description: 'Atmospheric horror with shocking twist', color: 'from-purple-500 to-violet-500' },
+  { key: 'history_did_you_know',   label: 'History',              icon: History,   description: 'Fascinating historical facts & stories', color: 'from-yellow-600 to-amber-700' },
+  { key: 'true_crime',             label: 'True Crime',           icon: Skull,     description: 'Gripping real crime cases & reveals',   color: 'from-gray-600 to-slate-700' },
+  { key: 'science_nature',         label: 'Science / Nature',     icon: Microscope, description: 'Mind-expanding science that rewires',  color: 'from-teal-500 to-cyan-600' },
+  { key: 'relationships_dating',   label: 'Relationships',        icon: Heart,     description: 'Psychology-backed relationship insights', color: 'from-rose-500 to-pink-500' },
+  { key: 'health_fitness',         label: 'Health & Fitness',     icon: Dumbbell,  description: 'Science-backed health myth-busting',    color: 'from-lime-500 to-green-600' },
+  { key: 'gaming_popculture',      label: 'Gaming / Pop Culture', icon: Gamepad2,  description: 'Hidden lore & fan theories uncovered',  color: 'from-indigo-500 to-purple-600' },
+  { key: 'conspiracy_mystery',     label: 'Conspiracy / Mystery', icon: Eye,       description: 'Unsolved mysteries & alternative takes', color: 'from-slate-500 to-gray-700' },
+  { key: 'business_entrepreneur',  label: 'Business',             icon: Briefcase, description: 'Raw founder strategies that drive action', color: 'from-sky-500 to-blue-600' },
 ];
 
 const VOICE_PRESETS = [
-  { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', description: 'Deep, authoritative male', niches: ['ai_tech_news', 'finance_money'] },
-  { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', description: 'Warm, inspiring male', niches: ['motivation_self_help'] },
-  { id: '2EiwWnXFnvU5JabPnv8n', name: 'Clyde', description: 'Deep gravelly male', niches: ['scary_horror'] },
-  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', description: 'Calm, eerie female', niches: ['scary_horror'] },
-  { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', description: 'Young energetic male', niches: ['ai_tech_news', 'motivation_self_help'] },
-  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella', description: 'Young clear female', niches: ['finance_money', 'ai_tech_news'] },
+  { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam',   description: 'Deep, authoritative male',  niches: ['ai_tech_news', 'finance_money', 'history_did_you_know', 'conspiracy_mystery', 'business_entrepreneur'] },
+  { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', description: 'Warm, inspiring male',      niches: ['motivation_self_help', 'relationships_dating'] },
+  { id: '2EiwWnXFnvU5JabPnv8n', name: 'Clyde',  description: 'Deep gravelly male',        niches: ['scary_horror', 'true_crime'] },
+  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', description: 'Calm, eerie female',        niches: ['scary_horror', 'true_crime', 'conspiracy_mystery'] },
+  { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh',   description: 'Young energetic male',      niches: ['ai_tech_news', 'motivation_self_help', 'science_nature', 'health_fitness', 'gaming_popculture'] },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella',  description: 'Young clear female',        niches: ['finance_money', 'ai_tech_news', 'health_fitness', 'relationships_dating'] },
 ];
 
 const CAPTION_STYLES = [
@@ -265,7 +281,7 @@ export default function ShortsFactoryPage() {
         {/* Niche Selector */}
         <div className="bg-white rounded-2xl p-6 border shadow-sm">
           <h2 className="text-sm font-semibold text-slate-800 mb-4">Choose Your Niche</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {NICHES.map(n => {
               const Icon = n.icon;
               const selected = niche === n.key;
