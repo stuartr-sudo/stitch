@@ -521,9 +521,9 @@ export default function JumpStartVideoStudioModal({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="relative flex-1 overflow-hidden">
         {/* Source Tab */}
-        <TabsContent value="source" className="flex-1 flex flex-col overflow-hidden mt-0">
+        <TabsContent value="source" className="absolute inset-0 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col p-6 overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-800">Select a Video to {mode === 'extend' ? 'Extend' : 'Edit'}</h2>
@@ -595,8 +595,8 @@ export default function JumpStartVideoStudioModal({
         </TabsContent>
 
         {/* Settings Tab */}
-        <TabsContent value="settings" className="flex-1 overflow-hidden mt-0">
-          <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden h-full">
+        <TabsContent value="settings" className="absolute inset-0 overflow-hidden mt-0">
+          <div className="h-full grid grid-cols-[280px_1fr] overflow-hidden">
             {/* LEFT COLUMN — Video Preview + Model & Settings */}
             <div className="bg-gray-50 p-4 overflow-y-auto border-r border-slate-200 space-y-4">
               {/* Video Preview */}
@@ -882,7 +882,7 @@ export default function JumpStartVideoStudioModal({
         </TabsContent>
 
         {/* Preview Tab */}
-        <TabsContent value="preview" className="flex-1 flex flex-col overflow-hidden mt-0">
+        <TabsContent value="preview" className="absolute inset-0 flex flex-col overflow-hidden mt-0">
           <div className="flex-1 flex flex-col bg-gray-100 overflow-hidden">
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="w-full h-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl bg-white relative border-4 border-slate-600 ring-1 ring-slate-300 box-content">
