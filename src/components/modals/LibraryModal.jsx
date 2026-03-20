@@ -412,7 +412,7 @@ export default function LibraryModal({
       if (isInitial || hasMore.images) {
         const { data: images } = await supabase
           .from('image_library_items')
-          .select('id, url, thumbnail_url, title, prompt, created_at, alt_text')
+          .select('id, url, title, prompt, created_at, alt_text')
           .order('created_at', { ascending: false })
           .range(currentOffsets.images, currentOffsets.images + PAGE_SIZE - 1);
         if (images) {
@@ -427,7 +427,7 @@ export default function LibraryModal({
       if (isInitial || hasMore.videos) {
         const { data: videos } = await supabase
           .from('generated_videos')
-          .select('id, url, thumbnail_url, title, prompt, created_at')
+          .select('id, url, title, prompt, created_at')
           .order('created_at', { ascending: false })
           .range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
         if (videos) {
