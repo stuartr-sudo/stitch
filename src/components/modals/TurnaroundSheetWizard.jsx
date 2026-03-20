@@ -1,7 +1,5 @@
-// src/components/modals/TurnaroundSheetWizard.jsx
-// Wizard refactor of TurnaroundSheetModal — 4 configure steps + results + cells
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { SlideOverPanel, SlideOverBody, SlideOverFooter } from "@/components/ui/slide-over-panel";
+import { SlideOverPanel } from "@/components/ui/slide-over-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +18,17 @@ import { getPromptText } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import WizardStepper from "@/components/ui/WizardStepper";
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const WIZARD_STEPS = [
+  { key: 'character', label: 'Character' },
+  { key: 'style-model', label: 'Style & Model' },
+  { key: 'props', label: 'Props' },
+  { key: 'refinements', label: 'Refinements' },
+  { key: 'results', label: 'Results' },
+  { key: 'cells', label: 'Cell Editor' },
+];
 
 const MODEL_OPTIONS = [
   { value: "nano-banana-2-edit", label: "Nano Banana 2 Edit", needsRef: true, tag: "Recommended" },
@@ -185,23 +194,13 @@ const CELL_LABELS = [
   "Face Detail", "Hand Detail", "Top-Down", "Low Angle",
 ];
 
-const WIZARD_STEPS = [
-  { key: 'character', label: 'Character' },
-  { key: 'style-model', label: 'Style & Model' },
-  { key: 'props', label: 'Props' },
-  { key: 'refinements', label: 'Refinements' },
-  { key: 'results', label: 'Results' },
-  { key: 'cells', label: 'Cell Editor' },
-];
+// ─── Component ─────────────────────────────────────────────────────────────
 
-// Steps that are part of the wizard configure flow (not results/cells)
-const CONFIG_STEP_KEYS = ['character', 'style-model', 'props', 'refinements'];
-
-export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, initialImage = null }) {
+export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated, initialImage = null }) {
   const { user } = useAuth();
 
-  // Wizard steps
-  const [step, setStep] = useState('character');
+  // Wizard step
+  const [wizardStep, setWizardStep] = useState('character');
   const [completedSteps, setCompletedSteps] = useState([]);
 
   // Form
@@ -225,11 +224,11 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const [activeSheetId, setActiveSheetId] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Slice & select (Step 2 grid)
+  // Slice & select
   const [showGrid, setShowGrid] = useState(true);
   const [selectedCells, setSelectedCells] = useState(new Set());
 
-  // Step 3: Cell editing
+  // Cell editing
   const [cellImages, setCellImages] = useState([]);
   const [editingCellIndex, setEditingCellIndex] = useState(null);
   const [savingForLora, setSavingForLora] = useState(false);
@@ -295,34 +294,40 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
 
   // ─── Wizard navigation ────────────────────────────────────────────────────
 
-  const handleNext = () => {
-    const currentIndex = CONFIG_STEP_KEYS.indexOf(step);
-    if (currentIndex === -1) return;
-    setCompletedSteps(prev => prev.includes(step) ? prev : [...prev, step]);
-    if (currentIndex < CONFIG_STEP_KEYS.length - 1) {
-      setStep(CONFIG_STEP_KEYS[currentIndex + 1]);
+  const currentStepIndex = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
+
+  const markCompleted = (stepKey) => {
+    setCompletedSteps(prev => prev.includes(stepKey) ? prev : [...prev, stepKey]);
+  };
+
+  const goToStep = (stepKey) => {
+    setWizardStep(stepKey);
+  };
+
+  const goNext = () => {
+    markCompleted(wizardStep);
+    const nextIndex = currentStepIndex + 1;
+    if (nextIndex < WIZARD_STEPS.length) {
+      setWizardStep(WIZARD_STEPS[nextIndex].key);
     }
   };
 
-  const handleBack = () => {
-    const currentIndex = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (currentIndex <= 0) return;
-    setStep(WIZARD_STEPS[currentIndex - 1].key);
+  const goBack = () => {
+    const prevIndex = currentStepIndex - 1;
+    if (prevIndex >= 0) {
+      setWizardStep(WIZARD_STEPS[prevIndex].key);
+    }
   };
 
   const handleStepClick = (key) => {
-    const clickedIndex = WIZARD_STEPS.findIndex(s => s.key === key);
-    const currentIndex = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (clickedIndex < currentIndex || completedSteps.includes(key)) {
-      setStep(key);
-    }
+    goToStep(key);
   };
 
   // ─── Reset ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (isOpen) {
-      setStep('character');
+      setWizardStep('character');
       setCompletedSteps([]);
       setCharacterDescription(DEFAULT_CHARACTER_DESC);
       setSelectedStyles([]);
@@ -376,7 +381,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     }
   }, [anyGenerating]);
 
-  // ─── Polling for queued sheets ───────────────────────────────────────────
+  // ─── Polling for queued sheets ────────────────────────────────────────────
 
   const startPolling = useCallback((sheetId, reqId, model) => {
     if (pollingIntervalsRef.current[sheetId]) return;
@@ -459,7 +464,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ─── Generate (parallel per style) ──────────────────────────────────────
+  // ─── Generate (parallel per style) ────────────────────────────────────────
 
   const handleGenerate = async () => {
     if (!characterDescription.trim()) { toast.error("Please describe your character."); return; }
@@ -478,14 +483,16 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
 
     setSheets(newSheets);
     setActiveSheetId(null);
-    setStep('results');
-    setCompletedSteps(prev => {
-      const all = [...CONFIG_STEP_KEYS];
-      return [...new Set([...prev, ...all])];
-    });
     setSelectedCells(new Set());
     setCellImages([]);
     setEditingCellIndex(null);
+
+    // Mark config steps completed and advance to results
+    markCompleted('character');
+    markCompleted('style-model');
+    markCompleted('props');
+    markCompleted('refinements');
+    setWizardStep('results');
 
     for (const sheet of newSheets) {
       (async () => {
@@ -580,8 +587,8 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
 
       setCellImages(cells);
       setEditingCellIndex(null);
-      setStep('cells');
-      setCompletedSteps(prev => prev.includes('results') ? prev : [...prev, 'results']);
+      markCompleted('results');
+      setWizardStep('cells');
       toast.success('Sheet sliced into 24 cells — review, edit, or delete.');
     } catch (err) {
       toast.error('Failed to slice: ' + err.message);
@@ -733,7 +740,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     }
   };
 
-  // ─── Reassemble active cells into a composite turnaround sheet ──────────
+  // ─── Reassemble active cells into a composite turnaround sheet ────────────
 
   const handleReassembleAndSave = async () => {
     const keepCells = cellImages.filter(c => !c.deleted);
@@ -821,7 +828,7 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     }
   };
 
-  // Legacy: save from grid overlay (Step 2)
+  // Legacy: save from grid overlay
   const handleSaveSelectedForLora = async () => {
     const saveUrl = sheetImageUrl;
     if (selectedCells.size === 0 || !saveUrl) return;
@@ -878,14 +885,11 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
     document.body.removeChild(link);
   };
 
-  // Toggle prop selection
   const toggleProp = (propValue) => {
     setSelectedProps(prev =>
       prev.includes(propValue) ? prev.filter(p => p !== propValue) : [...prev, propValue]
     );
   };
-
-  // ─── Toggle cell selection ────────────────────────────────────────────────
 
   const toggleCell = (i) => setSelectedCells(prev => {
     const next = new Set(prev);
@@ -896,16 +900,22 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
   const activeCells = cellImages.filter(c => !c.deleted);
   const deletedCount = cellImages.filter(c => c.deleted).length;
 
-  // ─── Subtitle ─────────────────────────────────────────────────────────────
-
   const completedSheets = sheets.filter(s => s.imageUrl);
 
-  const isConfigStep = CONFIG_STEP_KEYS.includes(step);
-  const isResultsStep = step === 'results';
-  const isCellsStep = step === 'cells';
+  // ─── Subtitle ─────────────────────────────────────────────────────────────
 
-  // Footer visibility: show wizard Back/Next for config steps only
-  const showWizardFooter = isConfigStep;
+  const subtitleMap = {
+    'character': 'Describe your character',
+    'style-model': 'Choose art style & AI model',
+    'props': 'Add props & accessories',
+    'refinements': 'Fine-tune with negative prompts & brand style',
+    'results': activeSheetId
+      ? `Viewing: ${activeSheet?.styleText || 'sheet'}`
+      : anyGenerating
+        ? `Generating ${sheets.length} sheet${sheets.length > 1 ? 's' : ''}... (${completedSheets.length}/${sheets.length} done)`
+        : `${completedSheets.length} sheet${completedSheets.length !== 1 ? 's' : ''} ready`,
+    'cells': `${activeCells.length} cells — review, edit & save`,
+  };
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
 
@@ -915,435 +925,499 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
       title="Character Turnaround"
-      subtitle={
-        isConfigStep ? 'Configure your character sheet'
-          : isResultsStep && !activeSheetId
-            ? anyGenerating
-              ? `Generating ${sheets.length} sheet${sheets.length > 1 ? 's' : ''}... (${completedSheets.length}/${sheets.length} done)`
-              : `${completedSheets.length} sheet${completedSheets.length !== 1 ? 's' : ''} ready`
-            : isResultsStep && activeSheetId
-              ? `Viewing: ${activeSheet?.styleText || 'sheet'}`
-              : `${activeCells.length} cells — review, edit & save`
-      }
+      subtitle={subtitleMap[wizardStep] || ''}
       icon={<RotateCcw className="w-5 h-5" />}
     >
-      {/* Wizard stepper — shown for all steps */}
-      <WizardStepper
-        steps={WIZARD_STEPS}
-        currentStep={step}
-        completedSteps={completedSteps}
-        onStepClick={handleStepClick}
-      />
+      <div className="flex flex-col h-full overflow-hidden">
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Wizard Stepper */}
+        <WizardStepper
+          steps={WIZARD_STEPS}
+          currentStep={wizardStep}
+          completedSteps={completedSteps}
+          onStepClick={handleStepClick}
+        />
 
         {/* ═══ STEP 1: CHARACTER ═══════════════════════════════════════════ */}
-        {step === 'character' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {wizardStep === 'character' && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="max-w-2xl mx-auto space-y-6">
 
-            {/* Character Description */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-semibold text-slate-700">
-                  Character Description <span className="text-red-500">*</span>
-                </Label>
-                {referenceImageUrl && (
-                  <button onClick={() => describeCharacter(referenceImageUrl)} disabled={analyzingRef}
-                    className="flex items-center gap-1.5 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50">
-                    {analyzingRef
-                      ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
-                      : <><Sparkles className="w-3.5 h-3.5" /> Re-analyze reference</>}
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <Textarea
-                  value={characterDescription}
-                  onChange={(e) => setCharacterDescription(e.target.value)}
-                  placeholder="e.g., A young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build"
-                  rows={6}
-                  className={`bg-white text-sm w-full ${analyzingRef ? 'opacity-60' : ''}`}
-                  disabled={analyzingRef}
-                />
-                {analyzingRef && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
-                    <div className="flex items-center gap-2 text-[#2C666E]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="text-sm font-medium">Analyzing character...</span>
-                    </div>
+                {/* Character Description */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-semibold text-slate-700">
+                      Character Description <span className="text-red-500">*</span>
+                    </Label>
+                    {referenceImageUrl && (
+                      <button onClick={() => describeCharacter(referenceImageUrl)} disabled={analyzingRef}
+                        className="flex items-center gap-1.5 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50">
+                        {analyzingRef
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</>
+                          : <><Sparkles className="w-4 h-4" /> Re-analyze reference</>}
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-              <p className="text-sm text-slate-400 mt-1.5">
-                {analyzingRef ? 'AI vision is describing your character...'
-                  : referenceImageUrl ? 'Auto-filled from reference. Edit freely.'
-                  : 'Describe the character only — the turnaround prompt is built automatically.'}
-              </p>
-            </div>
-
-            {/* Reference Image */}
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-2 block">Reference Image (optional)</Label>
-              {(referencePreview || referenceImageUrl) ? (
-                <div className="flex items-start gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={referencePreview || referenceImageUrl}
-                      alt="Reference"
-                      className="w-32 h-32 object-cover rounded-lg border border-slate-200"
-                      onError={(e) => { e.target.src = ''; }}
-                    />
-                    {uploadingRef && (
-                      <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                  <div className="relative">
+                    <Textarea value={characterDescription} onChange={(e) => setCharacterDescription(e.target.value)}
+                      placeholder="e.g., A young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build"
+                      rows={6}
+                      className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`} disabled={analyzingRef} />
+                    {analyzingRef && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
+                        <div className="flex items-center gap-2 text-[#2C666E]">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span className="text-sm font-medium">Analyzing character...</span>
+                        </div>
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-600 font-medium mb-1">
-                      {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing...' : 'Reference loaded'}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {analyzingRef ? 'AI is describing your character...' : 'Description auto-filled above.'}
-                    </p>
-                    <button
-                      onClick={clearReferenceImage}
-                      className="mt-2 text-sm text-red-500 hover:text-red-700 flex items-center gap-1">
-                      <X className="w-3.5 h-3.5" /> Remove
-                    </button>
-                  </div>
+                  <p className="text-sm text-slate-400 mt-1.5">
+                    {analyzingRef ? 'AI vision is describing your character...'
+                      : referenceImageUrl ? 'Auto-filled from reference. Edit freely.'
+                      : 'Describe the character only — the turnaround prompt is built automatically.'}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                      <Upload className="w-5 h-5 text-slate-400" />
-                      <span className="text-sm text-slate-500 font-medium">Upload Image</span>
-                    </div>
-                    <div
-                      onClick={() => setShowLibrary(true)}
-                      className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                      <FolderOpen className="w-5 h-5 text-slate-400" />
-                      <span className="text-sm text-slate-500 font-medium">From Library</span>
-                    </div>
-                  </div>
-                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  <Input
-                    value={referenceImageUrl}
-                    onChange={(e) => { setReferenceImageUrl(e.target.value); setReferencePreview(e.target.value); }}
-                    onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) describeCharacter(url); }}
-                    placeholder="https://... paste a reference image URL"
-                    className="bg-white text-sm"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* ═══ STEP 2: STYLE & MODEL ════════════════════════════════════════ */}
-        {step === 'style-model' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-            {/* Style Grid — full width */}
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-2 block">
-                Art Style <span className="text-red-500">*</span>
-              </Label>
-              <StyleGrid value={selectedStyles} onChange={setSelectedStyles} maxHeight="none" multiple columns="grid-cols-4" />
-            </div>
-
-            {/* Model selector */}
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-2 block">Generation Model</Label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-10 text-sm w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {MODEL_OPTIONS.map((m) => (
-                    <SelectItem key={m.value} value={m.value} className="text-sm">
-                      <span>{m.label}</span>
-                      {m.tag && <span className="ml-2 text-xs text-slate-400">({m.tag})</span>}
-                      {m.needsRef && <span className="ml-1 text-xs text-amber-500">· needs ref</span>}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-slate-400 mt-1.5">
-                Models marked "needs ref" require a reference image from Step 1. "No Ref" models generate from description alone.
-              </p>
-            </div>
-
-            {/* Warning if no ref + model needs one */}
-            {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
-              <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                {/* Reference Image */}
                 <div>
-                  <p className="text-sm text-amber-800 font-medium">
-                    {MODEL_OPTIONS.find(m => m.value === selectedModel)?.label} requires a reference image.
-                  </p>
-                  <p className="text-sm text-amber-700 mt-0.5">
-                    Go back to Step 1 to upload a reference, or choose a "No Ref" model above.
-                  </p>
+                  <Label className="text-sm font-semibold text-slate-700 mb-2 block">Reference Image (optional)</Label>
+                  {(referencePreview || referenceImageUrl) ? (
+                    <div className="flex items-start gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <div className="relative flex-shrink-0">
+                        <img src={referencePreview || referenceImageUrl} alt="Reference"
+                          className="w-32 h-32 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
+                        {uploadingRef && (
+                          <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-600 font-medium mb-1">
+                          {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing...' : 'Reference loaded'}
+                        </p>
+                        <p className="text-sm text-slate-400">
+                          {analyzingRef ? 'AI is describing your character...' : 'Description auto-filled from this image.'}
+                        </p>
+                        <button onClick={clearReferenceImage}
+                          className="mt-2 text-sm text-red-500 hover:text-red-700 flex items-center gap-1">
+                          <X className="w-4 h-4" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <div onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                          <Upload className="w-5 h-5 text-slate-400" />
+                          <span className="text-sm text-slate-500">Upload</span>
+                        </div>
+                        <div onClick={() => setShowLibrary(true)}
+                          className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                          <FolderOpen className="w-5 h-5 text-slate-400" />
+                          <span className="text-sm text-slate-500">Library</span>
+                        </div>
+                      </div>
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                      <Input value={referenceImageUrl}
+                        onChange={(e) => { setReferenceImageUrl(e.target.value); setReferencePreview(e.target.value); }}
+                        onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) describeCharacter(url); }}
+                        placeholder="https://... paste a reference image URL" className="bg-white text-sm h-9" />
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <span className="text-sm text-slate-400">
+                4 cols x 6 rows = 24 poses
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button onClick={goNext} disabled={!characterDescription.trim() || analyzingRef || uploadingRef}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-2">
+                  Next: Style & Model <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ═══ STEP 2: STYLE & MODEL ═══════════════════════════════════════ */}
+        {wizardStep === 'style-model' && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="space-y-6">
+
+                {/* Style Grid — full width */}
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700 mb-2 block">Art Style <span className="text-red-500">*</span></Label>
+                  <StyleGrid value={selectedStyles} onChange={setSelectedStyles} maxHeight="none" multiple columns="grid-cols-4" />
+                </div>
+
+                {/* Model Selector */}
+                <div className="max-w-md">
+                  <Label className="text-sm font-semibold text-slate-700 mb-2 block">AI Model</Label>
+                  <Select value={selectedModel} onValueChange={setSelectedModel}>
+                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 h-10 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      {MODEL_OPTIONS.map((m) => (
+                        <SelectItem key={m.value} value={m.value} className="text-sm">
+                          {m.label}
+                          {m.tag && <span className="ml-2 text-xs text-slate-400">({m.tag})</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Warning if no ref + model needs it */}
+                {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-md">
+                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-800">
+                      <strong>{MODEL_OPTIONS.find(m => m.value === selectedModel)?.label}</strong> requires a reference image. Go back to add one, or switch to a "No Ref" model.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <span className="text-sm text-slate-400">
+                {selectedStyles.length > 0
+                  ? `${selectedStyles.length} style${selectedStyles.length !== 1 ? 's' : ''} selected`
+                  : 'Select at least one style'}
+                {selectedStyles.length > 1 && ` = ${selectedStyles.length} sheets`}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={goBack} className="gap-1">
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </Button>
+                <Button onClick={goNext} disabled={selectedStyles.length === 0}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-2">
+                  Next: Props <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
 
         {/* ═══ STEP 3: PROPS ═══════════════════════════════════════════════ */}
-        {step === 'props' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-semibold text-slate-700 block">Props & Accessories</Label>
-                <p className="text-sm text-slate-400 mt-0.5">Optional items your character will carry or interact with.</p>
-              </div>
-              {selectedProps.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-[#2C666E] font-medium">{selectedProps.length} selected</span>
-                  <button onClick={() => setSelectedProps([])}
-                    className="text-sm text-slate-400 hover:text-slate-600">Clear all</button>
+        {wizardStep === 'props' && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="max-w-2xl mx-auto">
+                <Label className="text-sm font-semibold text-slate-700 mb-3 block">Props & Accessories (optional)</Label>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+                  {PROP_CATEGORIES.map(cat => (
+                    <div key={cat.label}>
+                      <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 px-0.5">{cat.label}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cat.props.map(prop => (
+                          <button key={prop.value} type="button"
+                            onClick={() => toggleProp(prop.value)}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                              selectedProps.includes(prop.value)
+                                ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                            }`}>
+                            {prop.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-              {PROP_CATEGORIES.map(cat => (
-                <div key={cat.label}>
-                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{cat.label}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {cat.props.map(prop => (
-                      <button
-                        key={prop.value}
-                        type="button"
-                        onClick={() => toggleProp(prop.value)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-all ${
-                          selectedProps.includes(prop.value)
-                            ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
-                        }`}>
-                        {prop.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ═══ STEP 4: REFINEMENTS ═════════════════════════════════════════ */}
-        {step === 'refinements' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-            {/* Negative Prompt pills */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700 block">Negative Prompt</Label>
-                  <p className="text-sm text-slate-400 mt-0.5">Select things you want to avoid in the output.</p>
-                </div>
-                {selectedNegPills.length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-red-500 font-medium">{selectedNegPills.length} selected</span>
-                    <button onClick={() => setSelectedNegPills([])}
+                {selectedProps.length > 0 && (
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-sm text-[#2C666E] font-medium">{selectedProps.length} selected</span>
+                    <button onClick={() => setSelectedProps([])}
                       className="text-sm text-slate-400 hover:text-slate-600">Clear all</button>
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-                {NEG_PROMPT_CATEGORIES.map(cat => (
-                  <div key={cat.label}>
-                    <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{cat.label}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {cat.prompts.map(np => (
-                        <button
-                          key={np.value}
-                          type="button"
-                          onClick={() => toggleNegPill(np.value)}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-all ${
-                            selectedNegPills.includes(np.value)
-                              ? 'bg-red-500 text-white border-red-500'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-red-400 hover:text-red-500'
-                          }`}>
-                          {np.label}
-                        </button>
-                      ))}
+            {/* Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <span className="text-sm text-slate-400">
+                4 cols x 6 rows = 24 poses
+                {selectedProps.length > 0 && ` · ${selectedProps.length} prop${selectedProps.length !== 1 ? 's' : ''}`}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={goBack} className="gap-1">
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </Button>
+                <Button onClick={goNext}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-2">
+                  Next: Refinements <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ═══ STEP 4: REFINEMENTS ═════════════════════════════════════════ */}
+        {wizardStep === 'refinements' && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="max-w-2xl mx-auto space-y-6">
+
+                {/* Negative Prompt Pills */}
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700 mb-3 block">Negative Prompt (optional)</Label>
+                  <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+                    {NEG_PROMPT_CATEGORIES.map(cat => (
+                      <div key={cat.label}>
+                        <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 px-0.5">{cat.label}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {cat.prompts.map(np => (
+                            <button key={np.value} type="button"
+                              onClick={() => toggleNegPill(np.value)}
+                              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                                selectedNegPills.includes(np.value)
+                                  ? 'bg-red-500 text-white border-red-500'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:border-red-400 hover:text-red-500'
+                              }`}>
+                              {np.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedNegPills.length > 0 && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-sm text-red-500 font-medium">{selectedNegPills.length} selected</span>
+                      <button onClick={() => setSelectedNegPills([])}
+                        className="text-sm text-slate-400 hover:text-slate-600">Clear all</button>
                     </div>
+                  )}
+                </div>
+
+                {/* Freetext negative prompt */}
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700 mb-2 block">Additional Negative Prompt</Label>
+                  <Textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder="Additional things to avoid..."
+                    rows={2} className="bg-white text-sm" />
+                </div>
+
+                {/* Brand Style Guide */}
+                <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <span className="text-sm text-slate-400">
+                4 cols x 6 rows = 24 poses
+                {selectedStyles.length > 1 && ` · ${selectedStyles.length} styles = ${selectedStyles.length} sheets`}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={goBack} className="gap-1">
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </Button>
+                <Button onClick={handleGenerate} disabled={!canGenerate || analyzingRef || uploadingRef}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60 gap-2">
+                  <RotateCcw className="w-4 h-4" />
+                  {selectedStyles.length > 1 ? `Generate ${selectedStyles.length} Sheets` : 'Generate Sheet'}
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ═══ STEP 5: RESULTS — Gallery or Detail View ════════════════════ */}
+        {wizardStep === 'results' && !activeSheetId && (
+          <>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className={`grid ${sheets.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-2'} gap-4`}>
+                {sheets.map(sheet => (
+                  <div key={sheet.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-700">{sheet.styleText}</span>
+                      {sheet.generating && (
+                        <span className="text-[10px] text-[#2C666E] font-medium flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+                        </span>
+                      )}
+                      {sheet.imageUrl && (
+                        <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Ready
+                        </span>
+                      )}
+                      {sheet.error && (
+                        <span className="text-[10px] text-red-500 font-medium flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> Failed
+                        </span>
+                      )}
+                    </div>
+
+                    {sheet.generating && !sheet.imageUrl && (
+                      <div className="flex flex-col items-center justify-center py-16 px-4">
+                        <div className="relative mb-4">
+                          <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
+                          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-[#2C666E] animate-spin" />
+                          <RotateCcw className="absolute inset-0 m-auto w-5 h-5 text-[#2C666E]" />
+                        </div>
+                        <p className="text-xs text-slate-400">30–90 seconds per sheet</p>
+                        <span className="text-xs font-mono text-slate-500 mt-1">{formatTime(elapsedSeconds)}</span>
+                      </div>
+                    )}
+
+                    {sheet.imageUrl && (
+                      <div className="relative group cursor-pointer" onClick={() => setActiveSheetId(sheet.id)}>
+                        <img src={sheet.imageUrl} alt={`Turnaround — ${sheet.styleText}`}
+                          className="w-full h-auto block" crossOrigin="anonymous" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-semibold bg-[#2C666E] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                            <Eye className="w-4 h-4" /> View & Edit
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {sheet.error && !sheet.generating && (
+                      <div className="flex flex-col items-center justify-center py-12 px-4 text-slate-400">
+                        <AlertCircle className="w-8 h-8 mb-2 text-red-300" />
+                        <p className="text-xs text-red-500 text-center">{sheet.error}</p>
+                      </div>
+                    )}
+
+                    {sheet.imageUrl && (
+                      <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+                        <button onClick={() => setActiveSheetId(sheet.id)}
+                          className="text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] flex items-center gap-1">
+                          <Grid3X3 className="w-3 h-3" /> Grid & Slice
+                        </button>
+                        <button onClick={() => handleDownload(sheet.imageUrl)}
+                          className="text-[10px] font-medium text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                          <Download className="w-3 h-3" /> Download
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* Freetext negative prompt */}
-              <div className="mt-3">
-                <Label className="text-sm font-medium text-slate-600 mb-1.5 block">Additional things to avoid</Label>
-                <Textarea
-                  value={negativePrompt}
-                  onChange={(e) => setNegativePrompt(e.target.value)}
-                  placeholder="e.g. weapons, dark background, multiple people..."
-                  rows={2}
-                  className="bg-white text-sm"
-                />
+            {/* Gallery Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button onClick={goBack}
+                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
+                </button>
+                {anyGenerating && (
+                  <span className="text-xs text-[#2C666E] font-medium flex items-center gap-1 ml-2">
+                    <Loader2 className="w-3 h-3 animate-spin" /> {completedSheets.length}/{sheets.length} done · {formatTime(elapsedSeconds)}
+                  </span>
+                )}
+                {!anyGenerating && completedSheets.length > 0 && (
+                  <span className="text-xs text-green-600 font-medium flex items-center gap-1 ml-2">
+                    <CheckCircle2 className="w-3 h-3" /> {completedSheets.length} sheet{completedSheets.length !== 1 ? 's' : ''} ready
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleGenerate} variant="outline" className="gap-1">
+                  <RotateCcw className="w-4 h-4" /> Regenerate All
+                </Button>
               </div>
             </div>
+          </>
+        )}
 
-            {/* Brand Style Guide */}
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-2 block">Brand Style Guide (optional)</Label>
-              <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
-            </div>
+        {/* ═══ STEP 5b: DETAIL VIEW for a single sheet ═════════════════════ */}
+        {wizardStep === 'results' && activeSheetId && activeSheet && (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              {activeSheet.imageUrl && (
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setShowGrid(prev => !prev)}
+                        className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+                          showGrid ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}>
+                        <Grid3X3 className="w-3.5 h-3.5" /> {showGrid ? 'Grid On' : 'Grid Off'}
+                      </button>
+                      {showGrid && (
+                        <>
+                          <button onClick={() => setSelectedCells(new Set(Array.from({ length: TOTAL_CELLS }, (_, i) => i)))}
+                            className="text-xs text-[#2C666E] hover:underline font-medium px-2 py-1">Select All</button>
+                          <button onClick={() => setSelectedCells(new Set())}
+                            className="text-xs text-slate-400 hover:underline font-medium px-2 py-1">Clear</button>
+                          {selectedCells.size > 0 && (
+                            <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">{selectedCells.size} selected</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded">{activeSheet.styleText}</span>
+                  </div>
 
-            {/* Summary / ready-to-generate info */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-              <p className="text-sm font-semibold text-slate-700">Ready to generate</p>
-              <p className="text-sm text-slate-500">
-                {selectedStyles.length} style{selectedStyles.length !== 1 ? 's' : ''} selected
-                {selectedProps.length > 0 && ` · ${selectedProps.length} prop${selectedProps.length !== 1 ? 's' : ''}`}
-                {referenceImageUrl && ' · reference image set'}
-              </p>
-              {!canGenerate && (
-                <p className="text-sm text-amber-600 font-medium">
-                  {!characterDescription.trim() ? 'Character description required (Step 1)' :
-                    selectedStyles.length === 0 ? 'Select at least one style (Step 2)' :
-                    'Check model/reference requirements (Step 2)'}
-                </p>
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                    <img src={activeSheet.imageUrl} alt="Character turnaround sheet" className="w-full h-auto block" crossOrigin="anonymous" />
+                    {showGrid && (
+                      <div className="absolute inset-0 grid"
+                        style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)` }}>
+                        {Array.from({ length: TOTAL_CELLS }).map((_, i) => (
+                          <div key={i} onClick={() => toggleCell(i)}
+                            className={`border cursor-pointer transition-all flex items-end justify-center pb-1 ${
+                              selectedCells.has(i) ? 'border-[#2C666E] bg-[#2C666E]/20 border-2' : 'border-white/30 hover:bg-white/10'
+                            }`}>
+                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                              selectedCells.has(i) ? 'bg-[#2C666E] text-white' : 'bg-black/50 text-white/80'
+                            }`}>{CELL_LABELS[i]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        )}
 
-        {/* ═══ STEP 5: RESULTS — Gallery or Detail View ═══════════════════ */}
-        {step === 'results' && !activeSheetId && (
-          <div className="flex-1 overflow-y-auto p-5">
-            <div className={`grid ${sheets.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-2'} gap-4`}>
-              {sheets.map(sheet => (
-                <div key={sheet.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                  <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700">{sheet.styleText}</span>
-                    {sheet.generating && (
-                      <span className="text-[10px] text-[#2C666E] font-medium flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" /> Generating...
-                      </span>
-                    )}
-                    {sheet.imageUrl && (
-                      <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Ready
-                      </span>
-                    )}
-                    {sheet.error && (
-                      <span className="text-[10px] text-red-500 font-medium flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Failed
-                      </span>
-                    )}
-                  </div>
-
-                  {sheet.generating && !sheet.imageUrl && (
-                    <div className="flex flex-col items-center justify-center py-16 px-4">
-                      <div className="relative mb-4">
-                        <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
-                        <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-[#2C666E] animate-spin" />
-                        <RotateCcw className="absolute inset-0 m-auto w-5 h-5 text-[#2C666E]" />
-                      </div>
-                      <p className="text-xs text-slate-400">30–90 seconds per sheet</p>
-                      <span className="text-xs font-mono text-slate-500 mt-1">{formatTime(elapsedSeconds)}</span>
-                    </div>
-                  )}
-
-                  {sheet.imageUrl && (
-                    <div className="relative group cursor-pointer" onClick={() => setActiveSheetId(sheet.id)}>
-                      <img src={sheet.imageUrl} alt={`Turnaround — ${sheet.styleText}`}
-                        className="w-full h-auto block" crossOrigin="anonymous" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-semibold bg-[#2C666E] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-                          <Eye className="w-4 h-4" /> View & Edit
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {sheet.error && !sheet.generating && (
-                    <div className="flex flex-col items-center justify-center py-12 px-4 text-slate-400">
-                      <AlertCircle className="w-8 h-8 mb-2 text-red-300" />
-                      <p className="text-xs text-red-500 text-center">{sheet.error}</p>
-                    </div>
-                  )}
-
-                  {sheet.imageUrl && (
-                    <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
-                      <button onClick={() => setActiveSheetId(sheet.id)}
-                        className="text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] flex items-center gap-1">
-                        <Grid3X3 className="w-3 h-3" /> Grid & Slice
-                      </button>
-                      <button onClick={() => handleDownload(sheet.imageUrl)}
-                        className="text-[10px] font-medium text-slate-500 hover:text-slate-700 flex items-center gap-1">
-                        <Download className="w-3 h-3" /> Download
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ═══ STEP 5b: DETAIL VIEW for a single sheet ════════════════════ */}
-        {step === 'results' && activeSheetId && activeSheet && (
-          <div className="flex-1 overflow-y-auto">
-            {activeSheet.imageUrl && (
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setShowGrid(prev => !prev)}
-                      className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
-                        showGrid ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}>
-                      <Grid3X3 className="w-3.5 h-3.5" /> {showGrid ? 'Grid On' : 'Grid Off'}
-                    </button>
-                    {showGrid && (
-                      <>
-                        <button onClick={() => setSelectedCells(new Set(Array.from({ length: TOTAL_CELLS }, (_, i) => i)))}
-                          className="text-xs text-[#2C666E] hover:underline font-medium px-2 py-1">Select All</button>
-                        <button onClick={() => setSelectedCells(new Set())}
-                          className="text-xs text-slate-400 hover:underline font-medium px-2 py-1">Clear</button>
-                        {selectedCells.size > 0 && (
-                          <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">{selectedCells.size} selected</span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded">{activeSheet.styleText}</span>
-                </div>
-
-                <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                  <img src={activeSheet.imageUrl} alt="Character turnaround sheet" className="w-full h-auto block" crossOrigin="anonymous" />
-                  {showGrid && (
-                    <div className="absolute inset-0 grid"
-                      style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)` }}>
-                      {Array.from({ length: TOTAL_CELLS }).map((_, i) => (
-                        <div key={i} onClick={() => toggleCell(i)}
-                          className={`border cursor-pointer transition-all flex items-end justify-center pb-1 ${
-                            selectedCells.has(i) ? 'border-[#2C666E] bg-[#2C666E]/20 border-2' : 'border-white/30 hover:bg-white/10'
-                          }`}>
-                          <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-                            selectedCells.has(i) ? 'bg-[#2C666E] text-white' : 'bg-black/50 text-white/80'
-                          }`}>{CELL_LABELS[i]}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {/* Detail Footer */}
+            <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setActiveSheetId(null); setSelectedCells(new Set()); }}
+                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
+                  <ArrowLeft className="w-3.5 h-3.5" /> {sheets.length > 1 ? 'All Sheets' : 'Back'}
+                </button>
               </div>
-            )}
-          </div>
+              <div className="flex gap-2">
+                {selectedCells.size > 0 && (
+                  <Button onClick={handleSaveSelectedForLora} disabled={savingForLora} variant="outline" className="text-sm gap-1">
+                    {savingForLora ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {savingForLora ? 'Saving...' : `Quick Save ${selectedCells.size}`}
+                  </Button>
+                )}
+                <Button onClick={() => handleDownload(activeSheet.imageUrl)} variant="outline" className="text-sm gap-1">
+                  <Download className="w-4 h-4" /> Download
+                </Button>
+                <Button onClick={handleSliceIntoCells} disabled={slicing}
+                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                  {slicing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
+                  Slice & Edit Cells <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
 
         {/* ═══ STEP 6: CELL EDITOR ═════════════════════════════════════════ */}
-        {step === 'cells' && (
+        {wizardStep === 'cells' && (
           <>
             {/* Toolbar */}
             <div className="flex-shrink-0 px-5 py-3 border-b bg-white flex items-center justify-between">
@@ -1506,141 +1580,48 @@ export default function TurnaroundSheetModal({ isOpen, onClose, onImageCreated, 
                 </div>
               </div>
             )}
+
+            {/* Cells Footer */}
+            <div className="px-5 py-3 border-t bg-slate-50 flex-shrink-0 space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-medium text-gray-600 whitespace-nowrap">LoRA Folder:</Label>
+                <Input
+                  value={loraFolderName}
+                  onChange={(e) => setLoraFolderName(e.target.value)}
+                  placeholder="e.g., Hero Character, Red Sneaker"
+                  className="h-7 text-xs bg-white border-gray-300 max-w-xs"
+                />
+                <span className="text-[10px] text-gray-400 whitespace-nowrap">Groups saved cells by folder name</span>
+              </div>
+              <div className="flex justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setWizardStep('results')}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
+                    <ArrowLeft className="w-3.5 h-3.5" /> Back to sheet
+                  </button>
+                  <span className="text-xs text-slate-400 ml-2">
+                    {activeCells.length} of {TOTAL_CELLS} cells will be saved
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={onClose}>Close</Button>
+                  <Button onClick={handleSaveCellsForLora} disabled={savingForLora || reassembling || activeCells.length === 0}
+                    variant="outline" className="gap-1 text-[#2C666E] border-[#2C666E]">
+                    {savingForLora
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                      : <><Save className="w-4 h-4" /> Save Cells Only</>}
+                  </Button>
+                  <Button onClick={handleReassembleAndSave} disabled={reassembling || savingForLora || activeCells.length === 0}
+                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                    {reassembling
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Reassembling...</>
+                      : <><Grid3X3 className="w-4 h-4" /> Reassemble & Save ({activeCells.length})</>}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </>
         )}
-
-        {/* ─── Footer: wizard config steps ────────────────────────────────── */}
-        {isConfigStep && (
-          <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
-            <Button variant="outline" onClick={handleBack} disabled={step === 'character'}>
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
-            </Button>
-            <div className="flex items-center gap-2">
-              {step === 'character' && (
-                <span className="text-xs text-slate-400">4 cols x 6 rows = 24 poses</span>
-              )}
-              {step === 'refinements' ? (
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!canGenerate || analyzingRef || uploadingRef}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white disabled:opacity-60 gap-2">
-                  <RotateCcw className="w-4 h-4" />
-                  {selectedStyles.length > 1 ? `Generate ${selectedStyles.length} Sheets` : 'Generate Sheet'}
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
-                  Next <ChevronRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ─── Footer: results gallery ─────────────────────────────────────── */}
-        {isResultsStep && !activeSheetId && (
-          <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setStep('refinements');
-                  Object.values(pollingIntervalsRef.current).forEach(clearInterval);
-                  pollingIntervalsRef.current = {};
-                }}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
-                <ArrowLeft className="w-3.5 h-3.5" /> Back
-              </button>
-              {anyGenerating && (
-                <span className="text-xs text-[#2C666E] font-medium flex items-center gap-1 ml-2">
-                  <Loader2 className="w-3 h-3 animate-spin" /> {completedSheets.length}/{sheets.length} done · {formatTime(elapsedSeconds)}
-                </span>
-              )}
-              {!anyGenerating && completedSheets.length > 0 && (
-                <span className="text-xs text-green-600 font-medium flex items-center gap-1 ml-2">
-                  <CheckCircle2 className="w-3 h-3" /> {completedSheets.length} sheet{completedSheets.length !== 1 ? 's' : ''} ready
-                </span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleGenerate} variant="outline" className="gap-1">
-                <RotateCcw className="w-4 h-4" /> Regenerate All
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Footer: results detail view ────────────────────────────────── */}
-        {isResultsStep && activeSheetId && (
-          <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <button onClick={() => { setActiveSheetId(null); setSelectedCells(new Set()); }}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
-                <ArrowLeft className="w-3.5 h-3.5" /> {sheets.length > 1 ? 'All Sheets' : 'Back'}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              {selectedCells.size > 0 && (
-                <Button onClick={handleSaveSelectedForLora} disabled={savingForLora} variant="outline" className="text-sm gap-1">
-                  {savingForLora ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {savingForLora ? 'Saving...' : `Quick Save ${selectedCells.size}`}
-                </Button>
-              )}
-              <Button onClick={() => handleDownload(activeSheet.imageUrl)} variant="outline" className="text-sm gap-1">
-                <Download className="w-4 h-4" /> Download
-              </Button>
-              <Button onClick={handleSliceIntoCells} disabled={slicing}
-                className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
-                {slicing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
-                Slice & Edit Cells <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Footer: cells ───────────────────────────────────────────────── */}
-        {isCellsStep && (
-          <div className="px-5 py-3 border-t bg-slate-50 flex-shrink-0 space-y-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs font-medium text-gray-600 whitespace-nowrap">LoRA Folder:</Label>
-              <Input
-                value={loraFolderName}
-                onChange={(e) => setLoraFolderName(e.target.value)}
-                placeholder="e.g., Hero Character, Red Sneaker"
-                className="h-7 text-xs bg-white border-gray-300 max-w-xs"
-              />
-              <span className="text-[10px] text-gray-400 whitespace-nowrap">Groups saved cells by folder name</span>
-            </div>
-            <div className="flex justify-between items-center gap-3">
-              <div className="flex items-center gap-2">
-                <button onClick={() => setStep('results')}
-                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Back to sheet
-                </button>
-                <span className="text-xs text-slate-400 ml-2">
-                  {activeCells.length} of {TOTAL_CELLS} cells will be saved
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>Close</Button>
-                <Button onClick={handleSaveCellsForLora} disabled={savingForLora || reassembling || activeCells.length === 0}
-                  variant="outline" className="gap-1 text-[#2C666E] border-[#2C666E]">
-                  {savingForLora
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                    : <><Save className="w-4 h-4" /> Save Cells Only</>}
-                </Button>
-                <Button onClick={handleReassembleAndSave} disabled={reassembling || savingForLora || activeCells.length === 0}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
-                  {reassembling
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Reassembling...</>
-                    : <><Grid3X3 className="w-4 h-4" /> Reassemble & Save ({activeCells.length})</>}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </SlideOverPanel>
 
