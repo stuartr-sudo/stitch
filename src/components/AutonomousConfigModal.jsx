@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { X, Zap, Loader2, Clock, Send, Layers } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
-export default function AutonomousConfigModal({ brandUsername, onClose }) {
+export default function AutonomousConfigModal({ brandUsername: rawBrandUsername, onClose }) {
+  const brandUsername = typeof rawBrandUsername === 'object' ? rawBrandUsername?.username : (rawBrandUsername || '');
   const [config, setConfig] = useState({
     is_active: true,
     auto_publish: false,
