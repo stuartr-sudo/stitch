@@ -36,6 +36,7 @@ import {
   Gamepad2,
   Eye,
   Briefcase,
+  Search,
 } from 'lucide-react';
 import LoRAPicker from '@/components/LoRAPicker';
 
@@ -113,6 +114,12 @@ export default function ShortsFactoryPage() {
   const [editedScript, setEditedScript] = useState('');
   const [showScriptPreview, setShowScriptPreview] = useState(false);
   const [loadingScriptPreview, setLoadingScriptPreview] = useState(false);
+
+  // Real story sourcing
+  const [storyMode, setStoryMode] = useState('custom'); // 'custom' | 'research'
+  const [loadingStories, setLoadingStories] = useState(false);
+  const [researchedStories, setResearchedStories] = useState([]);
+  const [selectedStory, setSelectedStory] = useState(null);
 
   const pollRef = useRef(null);
 
@@ -194,6 +201,7 @@ export default function ShortsFactoryPage() {
           niche,
           topic: topic || undefined,
           brand_username: brandUsername,
+          story_context: selectedStory?.story_context || undefined,
         }),
       });
 
@@ -234,6 +242,7 @@ export default function ShortsFactoryPage() {
           caption_style: captionStyle,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
           script: editedScript || undefined,
+          story_context: selectedStory?.story_context || undefined,
         }),
       });
 
@@ -277,6 +286,37 @@ export default function ShortsFactoryPage() {
       toast.error(err.message);
     } finally {
       setLoadingTopics(false);
+    }
+  };
+
+  // Research real stories
+  const handleResearchStories = async () => {
+    if (!niche || !brandUsername) {
+      toast.error('Select a niche and brand first');
+      return;
+    }
+
+    setLoadingStories(true);
+    setResearchedStories([]);
+    setSelectedStory(null);
+    try {
+      const res = await apiFetch('/api/shorts/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche,
+          brand_username: brandUsername,
+          count: 5,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to find stories');
+      setResearchedStories(data.stories || []);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoadingStories(false);
     }
   };
 
@@ -351,44 +391,157 @@ export default function ShortsFactoryPage() {
           </div>
         </div>
 
-        {/* Topic */}
+        {/* Story Source Toggle */}
         {niche && (
           <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-800">Topic</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSuggestTopics}
-                disabled={loadingTopics || isGenerating}
-                className="text-xs text-[#2C666E]"
-              >
-                {loadingTopics ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
-                Suggest Topics
-              </Button>
+              <h2 className="text-sm font-semibold text-slate-800">Story Source</h2>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { setStoryMode('custom'); setSelectedStory(null); }}
+                  disabled={isGenerating}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    storyMode === 'custom'
+                      ? 'bg-[#2C666E] text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Custom Topic
+                </button>
+                <button
+                  onClick={() => setStoryMode('research')}
+                  disabled={isGenerating}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    storyMode === 'research'
+                      ? 'bg-[#2C666E] text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Find Real Stories
+                </button>
+              </div>
             </div>
 
-            <Input
-              value={topic}
-              onChange={e => setTopic(e.target.value)}
-              placeholder="Leave empty for auto-generated topic, or type your own..."
-              disabled={isGenerating}
-            />
-
-            {suggestedTopics.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-500">Click to use:</Label>
-                {suggestedTopics.map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setTopic(t.title); setSuggestedTopics([]); }}
-                    disabled={isGenerating}
-                    className="w-full text-left p-3 rounded-lg border border-slate-100 hover:border-[#2C666E]/30 hover:bg-[#2C666E]/5 transition-colors"
+            {/* Custom Topic Mode */}
+            {storyMode === 'custom' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-slate-600">Topic</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSuggestTopics}
+                    disabled={loadingTopics || isGenerating}
+                    className="text-xs text-[#2C666E]"
                   >
-                    <div className="text-sm font-medium text-slate-800">{t.title}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{t.hook_idea}</div>
-                  </button>
-                ))}
+                    {loadingTopics ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                    Suggest Topics
+                  </Button>
+                </div>
+
+                <Input
+                  value={topic}
+                  onChange={e => setTopic(e.target.value)}
+                  placeholder="Leave empty for auto-generated topic, or type your own..."
+                  disabled={isGenerating}
+                />
+
+                {suggestedTopics.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500">Click to use:</Label>
+                    {suggestedTopics.map((t, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setTopic(t.title); setSuggestedTopics([]); }}
+                        disabled={isGenerating}
+                        className="w-full text-left p-3 rounded-lg border border-slate-100 hover:border-[#2C666E]/30 hover:bg-[#2C666E]/5 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-slate-800">{t.title}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{t.hook_idea}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Research Stories Mode */}
+            {storyMode === 'research' && (
+              <div className="space-y-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResearchStories}
+                  disabled={loadingStories || isGenerating || !brandUsername}
+                  className="w-full border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5"
+                >
+                  {loadingStories ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+                      Researching stories...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-3.5 h-3.5 mr-2" />
+                      {researchedStories.length > 0 ? 'Find More Stories' : 'Find Trending Stories'}
+                    </>
+                  )}
+                </Button>
+
+                {researchedStories.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500">
+                      Select a story to use as the basis for your short:
+                    </Label>
+                    {researchedStories.map((story, i) => {
+                      const isSelected = selectedStory === story;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setSelectedStory(isSelected ? null : story);
+                            setTopic(isSelected ? '' : story.title);
+                          }}
+                          disabled={isGenerating}
+                          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                            isSelected
+                              ? 'border-[#2C666E] bg-[#2C666E]/5 shadow-sm'
+                              : 'border-slate-100 hover:border-[#2C666E]/30 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-slate-800">{story.title}</div>
+                              <div className="text-xs text-slate-500 mt-1 line-clamp-2">{story.summary}</div>
+                              <div className="text-xs text-[#2C666E] mt-1.5 font-medium">{story.angle}</div>
+                            </div>
+                            {isSelected && (
+                              <div className="flex-shrink-0 w-5 h-5 bg-[#2C666E] rounded-full flex items-center justify-center mt-0.5">
+                                <CheckCircle2 className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          {story.why_viral && (
+                            <div className="text-[11px] text-slate-400 mt-2 italic">
+                              {story.why_viral}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {selectedStory && (
+                  <div className="bg-[#2C666E]/5 rounded-lg p-3 border border-[#2C666E]/20">
+                    <p className="text-xs text-[#2C666E] font-medium">
+                      Selected: {selectedStory.title}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Story context will be passed to the script generator for accuracy.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

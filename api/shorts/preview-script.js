@@ -8,6 +8,7 @@
  *   niche: string,
  *   topic?: string,
  *   brand_username: string,
+ *   story_context?: string,  // optional real story context from research endpoint
  * }
  *
  * Response: { script, niche }
@@ -21,7 +22,7 @@ import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, topic, brand_username } = req.body;
+  const { niche, topic, brand_username, story_context } = req.body;
 
   if (!brand_username || !niche) {
     return res.status(400).json({ error: 'Missing niche or brand_username' });
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
       nicheTemplate,
       keys: { openaiKey },
       brandUsername: brand_username,
+      storyContext: story_context || undefined,
     });
 
     return res.json({ script, niche });
