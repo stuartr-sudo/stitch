@@ -94,9 +94,9 @@ export default async function handler(req, res) {
     const processedImageUrl = await ensurePublicUrl(image_url, 'image');
     const processedMaskUrl = await ensurePublicUrl(mask_url, 'mask');
 
-    const endpoint = useProUltra 
+    const endpoint = useProUltra
       ? 'https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit-ultra'
-      : 'https://api.wavespeed.ai/api/v3/google/nano-banana/edit';
+      : 'https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit';
 
     const requestBody = {
       images: [processedImageUrl],
