@@ -223,8 +223,40 @@ function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
   const [captionStyle, setCaptionStyle] = useState('sentence');
   const [isScoringConsistency, setIsScoringConsistency] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const isReady = draft.generation_status === 'ready';
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await apiFetch(`/api/campaigns/export?draft_id=${draft.id}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      const bundle = data.export;
+      for (const platform of bundle.platforms) {
+        for (const scene of platform.scenes) {
+          const url = scene.videoUrl || scene.imageUrl;
+          if (url) {
+            const ext = scene.videoUrl ? 'mp4' : 'jpg';
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${bundle.campaign_name}-${platform.platform}-${scene.role}-${scene.index + 1}.${ext}`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      }
+      toast.success(`Exported ${bundle.platforms.length} platform(s) of assets`);
+    } catch (err) {
+      toast.error(err.message || 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handlePublishNow = async () => {
     if (!confirm('Publish this draft now?')) return;
@@ -282,6 +314,11 @@ function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
           {/* Actions — only when ready */}
           {isReady && draft.publish_status !== 'published' && (
             <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting || !isReady}
+                className="text-xs h-8">
+                {isExporting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />}
+                Export All
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowSchedule(true)}
                 className="text-xs h-8">
                 <Calendar className="w-3.5 h-3.5 mr-1" />
