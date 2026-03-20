@@ -35,26 +35,63 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
     ? `The character has the following props/accessories which should appear naturally throughout the poses: ${props.join(', ')}. Incorporate these items into relevant poses — for example, holding, wearing, using, or interacting with them`
     : 'No additional props or accessories — focus purely on the character';
 
-  // Negative prompt — appended as avoidance instructions
+  // Parse negative prompt to filter conflicting expressions from Row 2
+  const negLower = (negativePrompt || '').toLowerCase();
+
+  // Default Row 2 expressions — filter out any that conflict with the negative prompt
+  const defaultExpressions = [
+    { label: 'determined expression', conflicts: ['angry', 'aggressive', 'fierce', 'intense', 'negative emotion'] },
+    { label: 'joyful laughing expression', conflicts: ['sad', 'negative emotion', 'crying', 'unhappy'] },
+  ];
+  // Replacement expressions if originals are filtered out
+  const safeExpressions = [
+    'calm confident expression',
+    'gentle smile expression',
+    'curious interested expression',
+    'thoughtful expression',
+  ];
+
+  let expressionCells = defaultExpressions.map(e => e.label);
+  if (negativePrompt) {
+    expressionCells = defaultExpressions.map(e => {
+      const isConflicting = e.conflicts.some(c => negLower.includes(c));
+      return isConflicting ? null : e.label;
+    });
+    // Replace filtered expressions with safe alternatives
+    let safeIdx = 0;
+    expressionCells = expressionCells.map(e => {
+      if (e === null && safeIdx < safeExpressions.length) return safeExpressions[safeIdx++];
+      if (e === null) return 'neutral pleasant expression';
+      return e;
+    });
+  }
+
+  // Build the avoidance instruction — placed FIRST so the model sees it early
   const avoidNote = negativePrompt
-    ? `AVOID the following in all cells: ${negativePrompt}`
+    ? `CRITICAL INSTRUCTION — DO NOT include any of the following in ANY cell of this sheet: ${negativePrompt}. Every cell must avoid these elements completely`
     : '';
 
-  const parts = [
+  const parts = [];
+
+  // Avoidance goes FIRST — models pay most attention to the beginning of the prompt
+  if (avoidNote) parts.push(avoidNote);
+
+  parts.push(
     `${stylePrompt}`,
     `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`,
     `Character: ${characterDescription}`,
     propsNote,
     `Row 1 — Turnaround (Neutral Standing): front view, three-quarter front view, side profile view, back view`,
-    `Row 2 — Expressions & Alternative Back: three-quarter back view, neutral expression close-up, determined expression, joyful laughing expression`,
+    `Row 2 — Expressions & Alternative Back: three-quarter back view, neutral expression close-up, ${expressionCells[0]}, ${expressionCells[1]}`,
     `Row 3 — Walk Cycles: walk cycle pose A (left foot forward), walk cycle pose B (right foot forward), walking toward viewer, walking away`,
     `Row 4 — Dynamic & Action: running side view, jumping with arms raised, dynamic hero landing pose, fighting/action stance`,
     `Row 5 — Still Poses & Interaction: sitting cross-legged, reaching hand outward, carrying an object, leaning against wall casually`,
     `Row 6 — Special Views & Details: face close-up head and shoulders, hand and accessory detail close-up, bird's-eye view from above, dramatic low angle from below`,
     refNote,
     `character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference`,
-  ];
+  );
 
+  // Repeat avoidance at the end too for reinforcement
   if (avoidNote) parts.push(avoidNote);
 
   // Brand style guide context
