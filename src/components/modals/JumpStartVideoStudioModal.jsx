@@ -26,7 +26,6 @@ import {
   Eye
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
-import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
@@ -142,24 +141,6 @@ export default function JumpStartVideoStudioModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [showUrlImport, setShowUrlImport] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
-
-  const handleLibrarySelect = (item) => {
-    const url = item.url || item.video_url;
-    if (url) {
-      const newVideo = {
-        id: uuidv4(),
-        title: item.title || 'Library Video',
-        url: url,
-        source: 'library',
-        created_at: new Date().toISOString()
-      };
-      setSelectedVideo(newVideo);
-      setVideoLibrary(prev => [newVideo, ...prev]);
-      setActiveTab('settings');
-      toast.success('Video selected from library!');
-    }
-  };
 
   // Shared Settings
   const [prompt, setPrompt] = useState('');
@@ -276,26 +257,57 @@ export default function JumpStartVideoStudioModal({
     }
   }, [isOpen, initialMode]);
 
-  // Auto-load videos from library on open
+  // Auto-load videos from both generated_videos AND image_library_items on open
   useEffect(() => {
     if (!isOpen) return;
     const loadVideos = async () => {
       setIsLoadingLibrary(true);
       try {
-        const { data, error } = await supabase
+        const results = [];
+
+        // Load from generated_videos table
+        const { data: genVideos } = await supabase
           .from('generated_videos')
-          .select('id, url, title, prompt, created_at')
+          .select('id, url, thumbnail_url, title, prompt, created_at')
           .order('created_at', { ascending: false })
           .limit(50);
-        if (error) throw error;
-        if (data?.length) {
-          setVideoLibrary(data.map(v => ({
+        if (genVideos?.length) {
+          results.push(...genVideos.map(v => ({
             id: v.id,
             title: v.title || v.prompt || 'Video',
             url: v.url,
-            source: 'library',
+            thumbnail_url: v.thumbnail_url || null,
+            source: 'generated',
             created_at: v.created_at
           })));
+        }
+
+        // Also load video items from image_library_items
+        const { data: libVideos } = await supabase
+          .from('image_library_items')
+          .select('id, url, title, created_at')
+          .or('url.ilike.%.mp4%,url.ilike.%.mov%,url.ilike.%.webm%,title.ilike.%video%')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (libVideos?.length) {
+          // Deduplicate by URL
+          const existingUrls = new Set(results.map(v => v.url));
+          results.push(...libVideos
+            .filter(v => !existingUrls.has(v.url))
+            .map(v => ({
+              id: v.id,
+              title: v.title || 'Library Video',
+              url: v.url,
+              source: 'library',
+              created_at: v.created_at
+            }))
+          );
+        }
+
+        // Sort by date descending
+        results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        if (results.length) {
+          setVideoLibrary(results);
         }
       } catch (err) {
         console.warn('[VideoStudio] Failed to load library:', err);
@@ -516,18 +528,6 @@ export default function JumpStartVideoStudioModal({
     onClose();
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      setMode(initialMode);
-      setActiveTab('source');
-      setSelectedVideo(null);
-      setGeneratedVideoUrl(null);
-      setLastSavedVideoUrl(null);
-      setIsGenerating(false);
-      setPrompt('');
-    }
-  }, [isOpen, initialMode]);
-
   const renderContent = () => (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Mode toggle + Tab navigation */}
@@ -565,16 +565,15 @@ export default function JumpStartVideoStudioModal({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-800">Select a Video to {mode === 'extend' ? 'Extend' : 'Edit'}</h2>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={() => setShowUrlImport(true)}>
+                <Button variant="outline" size="sm" onClick={() => setShowUrlImport(true)}>
                   Import from URL
                 </Button>
-                <Button variant="outline" onClick={() => setShowLibrary(true)}>
-                  <FolderOpen className="w-4 h-4 mr-2" /> Library
-                </Button>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input placeholder="Search library..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                </div>
+                {filteredLibrary.length > 3 && (
+                  <div className="relative w-48">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input placeholder="Search..." className="pl-9 h-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -604,32 +603,33 @@ export default function JumpStartVideoStudioModal({
               ) : filteredLibrary.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl p-8">
                   <Video className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="font-medium mb-2">No videos found</p>
-                  <p className="text-sm text-center">Import a video URL or select from your library</p>
-                  <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" onClick={() => setShowUrlImport(true)}>Import URL</Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)}><FolderOpen className="w-3 h-3 mr-1" /> Browse Library</Button>
-                  </div>
+                  <p className="font-medium mb-2">No videos yet</p>
+                  <p className="text-sm text-center mb-4">Import a video URL to get started</p>
+                  <Button variant="outline" size="sm" onClick={() => setShowUrlImport(true)}>Import Video URL</Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {filteredLibrary.map((video) => (
                     <div key={video.id} onClick={() => { setSelectedVideo(video); setActiveTab('settings'); }}
-                      className={`group relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedVideo?.id === video.id ? 'border-blue-600 ring-4 ring-blue-100' : 'border-transparent hover:border-slate-300 shadow-sm'}`}>
-                      <div className="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
-                        <div className="opacity-40 text-white text-[10px] font-bold uppercase">{video.source}</div>
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Play className="w-8 h-8 text-white fill-current" />
-                        </div>
-                        {selectedVideo?.id === video.id && (
-                          <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-1 shadow-lg">
-                            <CheckCircle2 className="w-4 h-4" />
+                      className={`group relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all hover:shadow-md ${selectedVideo?.id === video.id ? 'border-[#2C666E] ring-4 ring-[#90DDF0]/20' : 'border-slate-200 hover:border-slate-400'}`}>
+                      <div className="aspect-video bg-slate-900 relative overflow-hidden">
+                        {video.thumbnail_url ? (
+                          <img src={video.thumbnail_url} alt={video.title || 'Video'} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                            <Video className="w-8 h-8 text-slate-500" />
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                            <Play className="w-5 h-5 text-slate-900 fill-current ml-0.5" />
+                          </div>
+                        </div>
+                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/50 rounded text-[9px] text-white/80 font-medium uppercase">{video.source}</div>
                       </div>
-                      <div className="p-3 bg-white border-t border-slate-100">
+                      <div className="p-2.5 bg-white border-t border-slate-100">
                         <p className="text-xs font-semibold text-slate-800 line-clamp-1">{video.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-1">{new Date(video.created_at).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{new Date(video.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                   ))}
@@ -969,7 +969,7 @@ export default function JumpStartVideoStudioModal({
         {activeTab === 'source' && (
           <>
             <Button variant="ghost" onClick={handleClose}>Cancel</Button>
-            <p className="text-xs text-slate-400">Click a video to continue</p>
+            <p className="text-xs text-slate-400">{filteredLibrary.length > 0 ? 'Click a video to configure' : 'Import a video to get started'}</p>
           </>
         )}
 
@@ -1035,13 +1035,6 @@ export default function JumpStartVideoStudioModal({
       </SlideOverPanel>
 
       <LoadingModal isOpen={isGenerating && activeTab !== 'preview'} message={generationStatus} />
-
-      <LibraryModal
-        isOpen={showLibrary}
-        onClose={() => setShowLibrary(false)}
-        onSelect={handleLibrarySelect}
-        mediaType="videos"
-      />
     </>
   );
 }
