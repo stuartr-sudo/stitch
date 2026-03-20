@@ -436,6 +436,15 @@ export default function InpaintModal({
               <RotateCcw className="w-4 h-4 mr-2" /> Clear Mask
             </Button>
 
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                <Upload className="w-4 h-4 mr-1" /> Change Image
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)} className="flex-1">
+                <FolderOpen className="w-4 h-4 mr-1" /> Library
+              </Button>
+            </div>
+
             <hr />
 
             {/* Prompt */}
