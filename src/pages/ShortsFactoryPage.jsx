@@ -108,6 +108,12 @@ export default function ShortsFactoryPage() {
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [suggestedTopics, setSuggestedTopics] = useState([]);
 
+  // Script preview & edit
+  const [scriptPreview, setScriptPreview] = useState(null);
+  const [editedScript, setEditedScript] = useState('');
+  const [showScriptPreview, setShowScriptPreview] = useState(false);
+  const [loadingScriptPreview, setLoadingScriptPreview] = useState(false);
+
   const pollRef = useRef(null);
 
   // Load brands on mount
@@ -172,6 +178,38 @@ export default function ShortsFactoryPage() {
     }
   }, []);
 
+  // Preview script before generation
+  const handlePreviewScript = async () => {
+    if (!niche || !brandUsername) {
+      toast.error('Select a niche and brand first');
+      return;
+    }
+
+    setLoadingScriptPreview(true);
+    try {
+      const res = await apiFetch('/api/shorts/preview-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche,
+          topic: topic || undefined,
+          brand_username: brandUsername,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to preview script');
+
+      setScriptPreview(data.script);
+      setEditedScript(data.script.narration_full);
+      setShowScriptPreview(true);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoadingScriptPreview(false);
+    }
+  };
+
   // Generate short
   const handleGenerate = async () => {
     if (!niche || !brandUsername) {
@@ -195,6 +233,7 @@ export default function ShortsFactoryPage() {
           voice_id: voiceId || undefined,
           caption_style: captionStyle,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
+          script: editedScript || undefined,
         }),
       });
 
@@ -439,25 +478,102 @@ export default function ShortsFactoryPage() {
           </div>
         )}
 
+        {/* Script Preview & Edit */}
+        {niche && showScriptPreview && scriptPreview && (
+          <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Script Preview</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Edit before generating — this is what the voiceover will say</p>
+              </div>
+              <button
+                onClick={() => { setShowScriptPreview(false); setScriptPreview(null); setEditedScript(''); }}
+                className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded hover:bg-slate-100"
+              >
+                Clear
+              </button>
+            </div>
+
+            {scriptPreview.title && (
+              <div className="text-xs text-slate-500">
+                <span className="font-medium text-slate-700">Title:</span> {scriptPreview.title}
+              </div>
+            )}
+
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Narration Script</Label>
+              <textarea
+                value={editedScript}
+                onChange={e => setEditedScript(e.target.value)}
+                disabled={isGenerating}
+                rows={8}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white resize-y focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
+                placeholder="Edit the script narration here..."
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                {editedScript.trim().split(/\s+/).filter(Boolean).length} words
+              </p>
+            </div>
+
+            {scriptPreview.scenes && (
+              <details className="text-xs">
+                <summary className="text-slate-500 cursor-pointer hover:text-slate-700 font-medium">
+                  View scene breakdown ({scriptPreview.scenes.length} scenes)
+                </summary>
+                <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-slate-100">
+                  {scriptPreview.scenes.map((scene, i) => (
+                    <div key={i} className="text-slate-600">
+                      <span className="text-[#2C666E] font-medium">[{scene.role}]</span>{' '}
+                      {scene.narration_segment}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
         {/* Generate Button */}
         {niche && (
-          <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || !brandUsername}
-            className="w-full py-6 text-lg bg-[#2C666E] hover:bg-[#07393C] rounded-xl shadow-lg"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 mr-2" />
-                Generate Short
-              </>
+          <div className="space-y-2">
+            {!showScriptPreview && (
+              <Button
+                variant="outline"
+                onClick={handlePreviewScript}
+                disabled={loadingScriptPreview || isGenerating || !brandUsername}
+                className="w-full py-4 rounded-xl border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5"
+              >
+                {loadingScriptPreview ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Generating preview...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Preview Script First
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={isGenerating || !brandUsername}
+              className="w-full py-6 text-lg bg-[#2C666E] hover:bg-[#07393C] rounded-xl shadow-lg"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  {showScriptPreview ? 'Generate Short with This Script' : 'Generate Short'}
+                </>
+              )}
+            </Button>
+          </div>
         )}
 
         {/* Pipeline Progress */}

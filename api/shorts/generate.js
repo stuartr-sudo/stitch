@@ -4,7 +4,7 @@
  * Faceless Shorts Factory — topic → script → voiceover → images → video → music → assembly → captions → done.
  *
  * Body: {
- *   niche: string,           // 'ai_tech_news' | 'finance_money' | 'motivation_self_help' | 'scary_horror'
+ *   niche: string,           // e.g. 'ai_tech_news'
  *   topic?: string,          // optional — auto-generated if omitted
  *   brand_username: string,
  *   voice_id?: string,       // ElevenLabs voice ID override
@@ -12,6 +12,8 @@
  *   caption_style?: string,  // 'word_pop' | 'karaoke_glow' | 'word_highlight'
  *   words_per_chunk?: number, // caption words per group (default: 3)
  *   lora_config?: Array<{ id, type, url, triggerWord, scale }>,  // from LoRAPicker UI
+ *   script?: string,         // pre-generated narration text (from preview-script) — skips GPT script generation
+ *   story_context?: string,  // optional real story context to inject into script generation
  * }
  *
  * Response: { success, jobId, poll_url }
@@ -42,6 +44,8 @@ export default async function handler(req, res) {
     caption_style = 'word_pop',
     words_per_chunk = 3,
     lora_config,
+    script: prebuiltScript,
+    story_context,
   } = req.body;
 
   if (!brand_username) return res.status(400).json({ error: 'Missing brand_username' });
@@ -117,7 +121,7 @@ export default async function handler(req, res) {
       current_step: 'generating_script',
       total_steps: 9,
       completed_steps: 0,
-      input_json: { niche, topic, brand_username, voice_id, visual_style, caption_style, lora_count: loraConfigs.length },
+      input_json: { niche, topic, brand_username, voice_id, visual_style, caption_style, lora_count: loraConfigs.length, has_prebuilt_script: !!prebuiltScript },
       workflow_state: 'running',
     })
     .select()
@@ -140,6 +144,8 @@ export default async function handler(req, res) {
     captionStyle: caption_style,
     wordsPerChunk: words_per_chunk,
     loraConfigs,
+    prebuiltScript: prebuiltScript || null,
+    storyContext: story_context || null,
     supabase,
   }).catch(async (err) => {
     console.error('[shorts/generate] Pipeline error:', err);
@@ -155,7 +161,9 @@ export default async function handler(req, res) {
 
 async function runShortsPipeline({
   job, userId, brandKit, keys, niche, topic, nicheTemplate,
-  voiceId, visualStyle, captionStyle, wordsPerChunk, loraConfigs, supabase,
+  voiceId, visualStyle, captionStyle, wordsPerChunk, loraConfigs,
+  prebuiltScript, storyContext,
+  supabase,
 }) {
   const jobId = job.id;
   const updateJob = (patch) => supabase.from('jobs').update(patch).eq('id', jobId);
@@ -180,15 +188,37 @@ async function runShortsPipeline({
   let script;
   if (!wf.hasCompleted('generate_script')) {
     await updateJob({ current_step: 'generating_script', completed_steps: 0 });
-    console.log(`[shorts] Step 1: Generating script for niche="${niche}" topic="${topic || 'auto'}"`);
 
-    script = await generateScript({
-      niche,
-      topic,
-      nicheTemplate,
-      keys,
-      brandUsername: brand_username,
-    });
+    if (prebuiltScript) {
+      // User reviewed and optionally edited the script via preview-script endpoint
+      console.log(`[shorts] Step 1: Using prebuilt script (${prebuiltScript.narration_full?.length || typeof prebuiltScript === 'string' ? (typeof prebuiltScript === 'string' ? prebuiltScript.length : prebuiltScript.narration_full.length) : 0} chars)`);
+      // prebuiltScript may be a full script object or just the narration string
+      if (typeof prebuiltScript === 'string') {
+        // narration_full override only — regenerate structured script with this narration as guidance
+        script = await generateScript({
+          niche,
+          topic: prebuiltScript, // pass as topic so GPT uses it as the script content
+          nicheTemplate,
+          keys,
+          brandUsername: brand_username,
+          storyContext,
+        });
+        // Override narration_full with the user-edited text
+        script.narration_full = prebuiltScript;
+      } else {
+        script = prebuiltScript;
+      }
+    } else {
+      console.log(`[shorts] Step 1: Generating script for niche="${niche}" topic="${topic || 'auto'}"`);
+      script = await generateScript({
+        niche,
+        topic,
+        nicheTemplate,
+        keys,
+        brandUsername: brand_username,
+        storyContext,
+      });
+    }
 
     await wf.transition('generate_script', { script });
   } else {

@@ -40,7 +40,7 @@ const ShortsScriptSchema = z.object({
  * @param {string} [params.brandUsername] - For cost logging
  * @returns {Promise<object>} Parsed ShortsScriptSchema result
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
@@ -68,9 +68,13 @@ CRITICAL RULES:
 - NEVER include text, words, letters, numbers, or typography in visual_prompts
 - Every sentence must earn its place — zero filler words`;
 
+  const storyContextBlock = storyContext
+    ? `\n\nREAL STORY CONTEXT (use this as the basis for the script):\n${storyContext}`
+    : '';
+
   const userPrompt = topic
-    ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}`
-    : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.`;
+    ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}${storyContextBlock}`
+    : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}`;
 
   const completion = await openai.chat.completions.parse({
     model: 'gpt-5-mini',
