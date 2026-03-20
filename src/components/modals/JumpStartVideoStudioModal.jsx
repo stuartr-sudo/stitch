@@ -268,7 +268,7 @@ export default function JumpStartVideoStudioModal({
         // Load from generated_videos table
         const { data: genVideos } = await supabase
           .from('generated_videos')
-          .select('id, url, title, prompt, created_at')
+          .select('id, url, thumbnail_url, title, prompt, created_at')
           .order('created_at', { ascending: false })
           .limit(50);
         if (genVideos?.length) {
