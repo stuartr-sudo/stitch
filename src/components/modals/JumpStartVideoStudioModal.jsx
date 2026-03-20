@@ -156,8 +156,8 @@ export default function JumpStartVideoStudioModal({
       };
       setSelectedVideo(newVideo);
       setVideoLibrary(prev => [newVideo, ...prev]);
+      setActiveTab('settings');
       toast.success('Video selected from library!');
-      // No need to save again - already in library
     }
   };
 
@@ -296,6 +296,7 @@ export default function JumpStartVideoStudioModal({
     setVideoLibrary(prev => [newVideo, ...prev]);
     setShowUrlImport(false);
     setUrlInput('');
+    setActiveTab('settings');
     toast.success('Video imported!');
 
     // Save imported video to library
@@ -569,7 +570,7 @@ export default function JumpStartVideoStudioModal({
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {filteredLibrary.map((video) => (
-                    <div key={video.id} onClick={() => setSelectedVideo(video)}
+                    <div key={video.id} onClick={() => { setSelectedVideo(video); setActiveTab('settings'); }}
                       className={`group relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedVideo?.id === video.id ? 'border-blue-600 ring-4 ring-blue-100' : 'border-transparent hover:border-slate-300 shadow-sm'}`}>
                       <div className="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
                         <div className="opacity-40 text-white text-[10px] font-bold uppercase">{video.source}</div>
