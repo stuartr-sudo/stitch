@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +28,7 @@ import {
 import LoadingModal from '@/components/canvas/LoadingModal';
 import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 // Extend Model Options
 const EXTEND_MODELS = [
@@ -168,7 +168,7 @@ export default function JumpStartVideoStudioModal({
   // Extend Specific Settings
   const [extendModel, setExtendModel] = useState('seedance');
   const [duration, setDuration] = useState(5);
-  const [generateAudio, setGenerateAudio] = useState(true);
+  const [generateAudio, setGenerateAudio] = useState(false);
   const [cameraFixed, setCameraFixed] = useState(false);
 
   // Edit Specific Settings
@@ -266,7 +266,7 @@ export default function JumpStartVideoStudioModal({
       setEditCamera('');
       setEditColorGrade('');
       setDuration(5);
-      setGenerateAudio(true);
+      setGenerateAudio(false);
       setCameraFixed(false);
       setIsGenerating(false);
       setGenerationStatus('');
@@ -275,6 +275,36 @@ export default function JumpStartVideoStudioModal({
       setLastSavedVideoUrl(null);
     }
   }, [isOpen, initialMode]);
+
+  // Auto-load videos from library on open
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadVideos = async () => {
+      setIsLoadingLibrary(true);
+      try {
+        const { data, error } = await supabase
+          .from('generated_videos')
+          .select('id, url, title, prompt, created_at')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (error) throw error;
+        if (data?.length) {
+          setVideoLibrary(data.map(v => ({
+            id: v.id,
+            title: v.title || v.prompt || 'Video',
+            url: v.url,
+            source: 'library',
+            created_at: v.created_at
+          })));
+        }
+      } catch (err) {
+        console.warn('[VideoStudio] Failed to load library:', err);
+      } finally {
+        setIsLoadingLibrary(false);
+      }
+    };
+    loadVideos();
+  }, [isOpen]);
 
   // Import from URL
   const handleImportFromUrl = () => {
@@ -499,7 +529,7 @@ export default function JumpStartVideoStudioModal({
   }, [isOpen, initialMode]);
 
   const renderContent = () => (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {/* Mode toggle + Tab navigation */}
       <div className="p-4 border-b shrink-0 bg-slate-50">
         <div className="flex items-center justify-between mb-3">
@@ -513,12 +543,18 @@ export default function JumpStartVideoStudioModal({
             </button>
           </div>
 
-          {/* Tabs */}
-          <TabsList>
-            <TabsTrigger value="source">Source</TabsTrigger>
-            <TabsTrigger value="settings" disabled={!selectedVideo}>Settings</TabsTrigger>
-            <TabsTrigger value="preview" disabled={!generatedVideoUrl}>Preview</TabsTrigger>
-          </TabsList>
+          {/* Tab navigation */}
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+            <button onClick={() => setActiveTab('source')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'source' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+              Source
+            </button>
+            <button onClick={() => selectedVideo && setActiveTab('settings')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'} ${!selectedVideo ? 'opacity-40 cursor-not-allowed' : ''}`}>
+              Settings
+            </button>
+            <button onClick={() => generatedVideoUrl && setActiveTab('preview')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'preview' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'} ${!generatedVideoUrl ? 'opacity-40 cursor-not-allowed' : ''}`}>
+              Preview
+            </button>
+          </div>
         </div>
       </div>
 
@@ -560,12 +596,20 @@ export default function JumpStartVideoStudioModal({
             )}
 
             <div className="flex-1 overflow-y-auto pr-2">
-              {filteredLibrary.length === 0 ? (
+              {isLoadingLibrary ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p className="text-sm">Loading your videos...</p>
+                </div>
+              ) : filteredLibrary.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl p-8">
                   <Video className="w-12 h-12 mb-4 opacity-20" />
                   <p className="font-medium mb-2">No videos found</p>
-                  <p className="text-sm text-center">Import a video URL to get started</p>
-                  <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowUrlImport(true)}>Import Video</Button>
+                  <p className="text-sm text-center">Import a video URL or select from your library</p>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => setShowUrlImport(true)}>Import URL</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowLibrary(true)}><FolderOpen className="w-3 h-3 mr-1" /> Browse Library</Button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -925,9 +969,7 @@ export default function JumpStartVideoStudioModal({
         {activeTab === 'source' && (
           <>
             <Button variant="ghost" onClick={handleClose}>Cancel</Button>
-            <Button disabled={!selectedVideo} onClick={() => setActiveTab('settings')} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-12 px-8 font-bold rounded-xl">
-              Configure {mode === 'extend' ? 'Extension' : 'Edit'} <ArrowRight className="w-4 h-4" />
-            </Button>
+            <p className="text-xs text-slate-400">Click a video to continue</p>
           </>
         )}
 
@@ -968,7 +1010,7 @@ export default function JumpStartVideoStudioModal({
           </>
         )}
       </div>
-    </Tabs>
+    </div>
   );
 
   if (isEmbedded) {
