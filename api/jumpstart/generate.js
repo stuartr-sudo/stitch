@@ -150,6 +150,7 @@ export default async function handler(req, res) {
       // Kling O3 Reference-to-Video — character-consistent video from reference images
       let referenceImages = [];
       let r2vElements = [];
+      let r2vElementsPreUpscaled = null;
       try {
         if (fields.referenceImages?.[0]) {
           referenceImages = JSON.parse(fields.referenceImages[0]);
@@ -164,9 +165,17 @@ export default async function handler(req, res) {
       } catch (e) {
         console.warn('[JumpStart] Failed to parse r2vElements:', e);
       }
+      try {
+        if (fields.r2vElementsPreUpscaled?.[0]) {
+          r2vElementsPreUpscaled = JSON.parse(fields.r2vElementsPreUpscaled[0]);
+          console.log('[JumpStart] Using pre-upscaled R2V elements (cached from previous scene)');
+        }
+      } catch (e) {
+        console.warn('[JumpStart] Failed to parse r2vElementsPreUpscaled:', e);
+      }
       return await handleKlingR2V(req, res, {
         imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl,
-        referenceImages, r2vElements, enableAudio, model, frontalImageUrl, FAL_KEY
+        referenceImages, r2vElements, r2vElementsPreUpscaled, enableAudio, model, frontalImageUrl, FAL_KEY
       });
     } else if (model === 'ltx-iclora') {
       // LTX-Video ICLoRA — in-context LoRA for subject-consistent video
@@ -882,7 +891,7 @@ async function upscaleImage(imageUrl, FAL_KEY) {
 }
 
 async function handleKlingR2V(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, r2vElements, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
+  const { imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl, referenceImages, r2vElements, r2vElementsPreUpscaled, enableAudio, model, frontalImageUrl, FAL_KEY } = params;
 
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
@@ -903,10 +912,14 @@ async function handleKlingR2V(req, res, params) {
   // Build elements array — supports up to 4 elements (@Element1, @Element2, etc.)
   // Each element has a frontal_image_url and up to 3 reference_image_urls
   // All reference images are auto-upscaled via SeedVR2 to meet FAL's 300x300 minimum
-  console.log('[JumpStart/KlingR2V] Upscaling reference images to meet minimum dimensions...');
 
-  if (r2vElements && r2vElements.length > 0) {
-    // New multi-element format from Storyboard
+  if (r2vElementsPreUpscaled && r2vElementsPreUpscaled.length > 0) {
+    // Use pre-upscaled elements from a previous scene — no redundant upscaling
+    console.log('[JumpStart/KlingR2V] Using pre-upscaled elements from previous scene (skipping upscale)');
+    requestBody.elements = r2vElementsPreUpscaled;
+  } else if (r2vElements && r2vElements.length > 0) {
+    // New multi-element format from Storyboard — upscale for the first time
+    console.log('[JumpStart/KlingR2V] Upscaling reference images to meet minimum dimensions...');
     const upscaledElements = [];
     for (const el of r2vElements.slice(0, 4)) {
       const refs = (el.referenceImageUrls || []).slice(0, 3);
@@ -922,6 +935,7 @@ async function handleKlingR2V(req, res, params) {
     requestBody.elements = upscaledElements;
   } else {
     // Legacy single-element format (JumpStart, etc.)
+    console.log('[JumpStart/KlingR2V] Upscaling reference images to meet minimum dimensions...');
     const frontalUrl = frontalImageUrl || (referenceImages?.length > 0 ? referenceImages[0] : imageUrl);
     const refs = referenceImages?.length > 0 ? referenceImages.slice(0, 3) : [imageUrl];
     const allUrls = [frontalUrl, ...refs];
@@ -979,13 +993,16 @@ async function handleKlingR2V(req, res, params) {
   const data = await submitResponse.json();
   console.log('[JumpStart/KlingR2V] Response:', JSON.stringify(data).substring(0, 500));
 
+  // Include upscaled element URLs so the client can reuse them for subsequent scenes
+  const upscaledElements = requestBody.elements;
+
   if (data.video?.url) {
-    return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
+    return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed', upscaledElements });
   }
 
   const requestId = data.request_id || data.requestId;
   if (requestId) {
-    return res.status(200).json({ success: true, requestId, model, status: 'processing' });
+    return res.status(200).json({ success: true, requestId, model, status: 'processing', upscaledElements });
   }
 
   return res.status(500).json({ error: 'Unexpected response from Kling R2V API' });

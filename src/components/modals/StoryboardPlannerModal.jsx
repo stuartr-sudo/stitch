@@ -578,6 +578,9 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     throw new Error('Generation timed out');
   };
 
+  // Cache upscaled R2V element URLs across scenes to avoid redundant upscaling
+  const upscaledElementsCache = useRef(null);
+
   const generateSingleScene = async (scene, startFrameUrl) => {
     const selectedModel = STORYBOARD_MODELS.find(m => m.id === model);
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
@@ -614,14 +617,19 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
 
     // R2V: pass structured elements array (up to 4 elements, each with up to 4 refs)
     if (isR2V) {
-      const r2vElements = elementsWithRefs.map(el => ({
-        frontalImageUrl: el.refs[el.frontalIndex] || el.refs[0],
-        referenceImageUrls: el.refs.slice(0, 3),
-      }));
-      formData.append('r2vElements', JSON.stringify(r2vElements));
-      // Legacy single-element fields for backward compat
-      formData.append('referenceImages', JSON.stringify(elementsWithRefs[0].refs));
-      formData.append('frontalImageUrl', elementsWithRefs[0].refs[elementsWithRefs[0].frontalIndex] || elementsWithRefs[0].refs[0]);
+      if (upscaledElementsCache.current) {
+        // Use cached upscaled URLs from a previous scene — skip redundant upscaling
+        formData.append('r2vElementsPreUpscaled', JSON.stringify(upscaledElementsCache.current));
+      } else {
+        const r2vElements = elementsWithRefs.map(el => ({
+          frontalImageUrl: el.refs[el.frontalIndex] || el.refs[0],
+          referenceImageUrls: el.refs.slice(0, 3),
+        }));
+        formData.append('r2vElements', JSON.stringify(r2vElements));
+        // Legacy single-element fields for backward compat
+        formData.append('referenceImages', JSON.stringify(elementsWithRefs[0].refs));
+        formData.append('frontalImageUrl', elementsWithRefs[0].refs[elementsWithRefs[0].frontalIndex] || elementsWithRefs[0].refs[0]);
+      }
     }
 
     formData.append('negativePrompt', 'blur, blurry, out of focus, distorted, deformed, disfigured, low quality, low resolution, pixelated, blocky, flat shading, flat lighting, overexposed, underexposed, text, words, watermark, logo, letterbox, black bars, ugly, amateur, draft quality, rough edges, jagged lines, artifacts, noise, grain');
@@ -632,6 +640,12 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
     });
 
     const data = await res.json();
+
+    // Cache upscaled element URLs from the server for subsequent scenes
+    if (data.upscaledElements && !upscaledElementsCache.current) {
+      upscaledElementsCache.current = data.upscaledElements;
+      console.log('[Storyboard] Cached upscaled R2V elements for subsequent scenes');
+    }
 
     if (data.videoUrl) return data.videoUrl;
     if (data.requestId) {

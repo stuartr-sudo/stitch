@@ -231,6 +231,13 @@ app.post('/api/images/inpaint', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Video frame extraction (with auth)
+app.post('/api/video/extract-frame', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('video/extract-frame.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Lens route (with auth)
 app.post('/api/lens/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('lens/generate.js');
