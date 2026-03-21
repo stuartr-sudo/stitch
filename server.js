@@ -412,6 +412,11 @@ app.post('/api/campaigns/research', authenticateToken, (await import('./api/camp
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
 app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campaigns/topics.js')).default);
 
+// Style/voice list routes (with auth)
+app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
+app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
+app.get('/api/styles/voices', authenticateToken, (await import('./api/styles/voices.js')).default);
+
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('templates/list.js');
