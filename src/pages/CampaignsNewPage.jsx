@@ -55,8 +55,8 @@ const NICHES = [
 ];
 
 const WIZARD_STEPS = [
-  { key: 'brand_niche', label: 'Brand & Niche' },
-  { key: 'topic_story', label: 'Topic & Story' },
+  { key: 'brand_niche', label: 'Brand, Niche & Topic' },
+  { key: 'topic_story', label: 'Starting Image' },
   { key: 'script', label: 'Script' },
   { key: 'look_feel', label: 'Look & Feel' },
   { key: 'motion_sound', label: 'Motion & Sound' },
@@ -224,8 +224,8 @@ export default function CampaignsNewPage() {
   };
   const canGoNext = () => {
     switch (wizardStep) {
-      case 'brand_niche': return selectedBrand && niche;
-      case 'topic_story': return topic.trim().length > 0;
+      case 'brand_niche': return selectedBrand && niche && topic.trim().length > 0;
+      case 'topic_story': return true; // Starting image is optional
       case 'script': return scriptScenes.length > 0;
       case 'look_feel': return visualStyle;
       case 'motion_sound': return videoStyle && voiceId;
@@ -398,9 +398,9 @@ export default function CampaignsNewPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        {/* Content type toggle + brand selector */}
-        <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-          <div className="flex gap-2 mb-6">
+        {/* Content type toggle — always visible */}
+        <div className="bg-white rounded-2xl p-6 border shadow-sm">
+          <div className="flex gap-2">
             <button
               onClick={() => setContentType('ad')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -419,14 +419,16 @@ export default function CampaignsNewPage() {
             </button>
           </div>
 
-          {/* Brand selector shared between both modes */}
-          <div>
-            <Label className="text-sm text-slate-700">Brand</Label>
-            <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mt-1">
-              <option value="">None</option>
-              {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
-            </select>
-          </div>
+          {/* Brand selector — only for Ad mode (Shorts wizard has its own in Step 1) */}
+          {contentType === 'ad' && (
+            <div className="mt-4">
+              <Label className="text-sm text-slate-700">Brand</Label>
+              <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+                <option value="">None</option>
+                {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Ad form */}
@@ -554,11 +556,11 @@ export default function CampaignsNewPage() {
             <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
               onStepClick={(key) => { if (completedSteps.includes(key)) setWizardStep(key); }} />
 
-            {/* Step 1: Brand & Niche */}
+            {/* Step 1: Brand, Niche & Topic */}
             {wizardStep === 'brand_niche' && (
               <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Brand</label>
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Brand</label>
                   <div className="flex items-center gap-3">
                     <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm">
                       <option value="">Select brand...</option>
@@ -567,14 +569,15 @@ export default function CampaignsNewPage() {
                     <button onClick={() => setShowBrandKit(true)} className="text-xs text-[#2C666E] underline whitespace-nowrap">Edit Brand Kit</button>
                   </div>
                   {selectedBrand && (
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2">
                       {ytConnected && <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full">YouTube ✓</span>}
                       <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Guidelines set</span>
                     </div>
                   )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Niche Template</label>
+
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Niche Template</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {NICHES.map(n => (
                       <button key={n.key} onClick={() => setNiche(n.key)}
@@ -586,46 +589,68 @@ export default function CampaignsNewPage() {
                     ))}
                   </div>
                 </div>
+
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Topic</label>
+                  <div className="flex gap-2">
+                    <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="What is this short about?" className="flex-1 border rounded-lg px-3 py-2 text-sm" />
+                    <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()} className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg whitespace-nowrap disabled:opacity-50">
+                      {researchLoading ? 'Researching...' : '🔍 Research'}
+                    </button>
+                  </div>
+                  {researchedStories.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                      <label className="text-[10px] font-medium text-slate-400 uppercase">Trending Stories</label>
+                      {researchedStories.map((s, i) => (
+                        <button key={i} onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
+                          className="w-full text-left p-3 border rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                          <div className="font-medium text-slate-800">{s.title}</div>
+                          <div className="text-slate-500 mt-0.5">{s.angle || s.summary}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Step 2: Topic & Story */}
+            {/* Step 2: Starting Image */}
             {wizardStep === 'topic_story' && (
               <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Topic</label>
-                  <div className="flex gap-2">
-                    <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Enter a topic or describe your short..." className="flex-1 border rounded-lg px-3 py-2 text-sm" />
-                    <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()} className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg whitespace-nowrap disabled:opacity-50">
-                      {researchLoading ? 'Researching...' : '🔍 Research Stories'}
-                    </button>
-                  </div>
-                </div>
-                {researchedStories.length > 0 && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Trending Stories</label>
-                    {researchedStories.map((s, i) => (
-                      <button key={i} onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
-                        className="w-full text-left p-3 border rounded-lg text-xs hover:bg-slate-50 transition-colors">
-                        <div className="font-medium text-slate-800">{s.title}</div>
-                        <div className="text-slate-500 mt-0.5">{s.angle || s.summary}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Starting Image <span className="text-xs text-slate-400 font-normal">(optional)</span></label>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Starting Image <span className="text-xs text-slate-400 font-normal">(optional — sets Scene 1's visual starting point)</span></label>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6">
                     {startingImage ? (
-                      <div className="space-y-2">
-                        <img src={startingImage} alt="Starting" className="max-h-32 mx-auto rounded-lg" />
-                        <button onClick={() => setStartingImage(null)} className="text-xs text-red-500">Remove</button>
+                      <div className="text-center space-y-3">
+                        <img src={startingImage} alt="Starting" className="max-h-40 mx-auto rounded-lg shadow-sm" />
+                        <button onClick={() => setStartingImage(null)} className="text-xs text-red-500 hover:underline">Remove image</button>
                       </div>
                     ) : (
-                      <div>
-                        <input type="text" placeholder="Paste image URL..." className="w-full border rounded-lg px-3 py-2 text-sm text-center mb-2"
-                          onBlur={e => { if (e.target.value.trim()) setStartingImage(e.target.value.trim()); }} />
-                        <div className="text-[10px] text-slate-400">Sets the visual starting point for Scene 1</div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs text-slate-500 block mb-1">Paste URL</label>
+                          <div className="flex gap-2">
+                            <input id="startImgUrl" type="text" placeholder="https://..." className="flex-1 border rounded-lg px-3 py-2 text-sm" />
+                            <button onClick={() => {
+                              const url = document.getElementById('startImgUrl').value.trim();
+                              if (url) setStartingImage(url);
+                            }} className="px-3 py-2 text-xs bg-[#2C666E] text-white rounded-lg hover:bg-[#235258]">Add</button>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[10px] text-slate-400 mb-2">— or —</div>
+                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-xs text-slate-600 transition-colors">
+                            <Image className="w-3.5 h-3.5" /> Upload from device
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = () => setStartingImage(reader.result);
+                              reader.readAsDataURL(file);
+                            }} />
+                          </label>
+                        </div>
+                        <div className="text-center text-[10px] text-slate-400">Skip this step if you want the AI to generate Scene 1 from scratch</div>
                       </div>
                     )}
                   </div>
@@ -888,7 +913,7 @@ export default function CampaignsNewPage() {
               )}
             </div>
 
-            {showBrandKit && <BrandKitModal onClose={() => setShowBrandKit(false)} />}
+            {showBrandKit && <BrandKitModal isOpen={true} onClose={() => setShowBrandKit(false)} />}
           </div>
         )}
       </main>
