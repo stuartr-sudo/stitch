@@ -86,6 +86,11 @@ export default function YouTubePublishModal({ draftId, brandUsername, campaignNa
               Publishing to <strong>{ytStatus.channel_title || ytStatus.channel_id}</strong>
             </p>
 
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <span className="text-amber-600 text-xs">AI</span>
+              <p className="text-xs text-amber-700">This video will be labeled as AI-generated content on YouTube</p>
+            </div>
+
             <div>
               <Label className="text-sm text-slate-700">Title</Label>
               <Input

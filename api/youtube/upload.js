@@ -66,6 +66,7 @@ export default async function handler(req, res) {
       status: {
         privacyStatus: privacy,
         selfDeclaredMadeForKids: false,
+        containsSyntheticMedia: true,
       },
     };
 
