@@ -40,18 +40,54 @@ const PLATFORMS = [
 const SCENE_ROLES = ['hook', 'problem', 'solution', 'feature', 'benefit', 'social_proof', 'cta', 'outro'];
 
 const NICHES = [
-  { key: 'ai_tech_news', label: 'AI/Tech News', icon: '🤖', scenes: 8 },
-  { key: 'finance_money', label: 'Finance & Crypto', icon: '💰', scenes: 7 },
-  { key: 'motivation_self_help', label: 'Motivation', icon: '🧠', scenes: 7 },
-  { key: 'scary_horror', label: 'Horror & Creepy', icon: '💀', scenes: 8 },
-  { key: 'history_did_you_know', label: 'History & Mysteries', icon: '📜', scenes: 7 },
-  { key: 'true_crime', label: 'True Crime', icon: '🔍', scenes: 8 },
-  { key: 'science_nature', label: 'Science & Nature', icon: '🔬', scenes: 7 },
-  { key: 'relationships_dating', label: 'Relationships', icon: '❤️', scenes: 7 },
-  { key: 'health_fitness', label: 'Health & Fitness', icon: '💪', scenes: 7 },
-  { key: 'gaming_popculture', label: 'Gaming & Pop Culture', icon: '🎮', scenes: 7 },
-  { key: 'conspiracy_mystery', label: 'Conspiracy', icon: '👁️', scenes: 7 },
-  { key: 'business_entrepreneur', label: 'Business & Startups', icon: '💼', scenes: 7 },
+  { key: 'ai_tech_news', label: 'AI/Tech News', icon: '🤖', scenes: 8, topics: [
+    'GPT-5 and the future of reasoning AI', 'AI replacing white-collar jobs', 'The AI chip war explained',
+    'How AI is changing healthcare', 'Open source vs closed AI models', 'AI-generated deepfakes getting scary',
+  ]},
+  { key: 'finance_money', label: 'Finance & Crypto', icon: '💰', scenes: 7, topics: [
+    'The 50/30/20 rule is dead', 'Why the rich pay less tax than you', 'Bitcoin halving explained simply',
+    'Side hustles that actually pay in 2026', 'The hidden fees banks charge you', 'How to retire by 40',
+  ]},
+  { key: 'motivation_self_help', label: 'Motivation', icon: '🧠', scenes: 7, topics: [
+    'The 5-second rule that changes everything', 'Why discipline beats motivation', 'How Goggins became unstoppable',
+    'The monk who sold his Ferrari lesson', 'Atomic habits in 60 seconds', 'Why successful people wake at 5am',
+  ]},
+  { key: 'scary_horror', label: 'Horror & Creepy', icon: '💀', scenes: 8, topics: [
+    'The Dyatlov Pass incident', 'Skinwalker Ranch explained', 'The most haunted building in America',
+    'Deep web horror stories', 'The Bermuda Triangle new theory', 'Creepiest unsolved disappearances',
+  ]},
+  { key: 'history_did_you_know', label: 'History & Mysteries', icon: '📜', scenes: 7, topics: [
+    'The real story behind the Titanic', 'Ancient civilizations we can\'t explain', 'History\'s biggest cover-ups',
+    'The library of Alexandria tragedy', 'Why the Mayans really disappeared', 'Nikola Tesla\'s stolen inventions',
+  ]},
+  { key: 'true_crime', label: 'True Crime', icon: '🔍', scenes: 8, topics: [
+    'The case that broke the FBI', 'Crimes solved by DNA decades later', 'The perfect crime that wasn\'t',
+    'Missing persons cases still unsolved', 'Serial killers who were never caught', 'Wrongful convictions overturned',
+  ]},
+  { key: 'science_nature', label: 'Science & Nature', icon: '🔬', scenes: 7, topics: [
+    'What happens at the bottom of the ocean', 'The paradox that breaks physics', 'How your brain tricks you daily',
+    'Animals with superpowers', 'What would happen if the sun disappeared', 'The multiverse theory explained',
+  ]},
+  { key: 'relationships_dating', label: 'Relationships', icon: '❤️', scenes: 7, topics: [
+    'The attachment style ruining your relationships', 'Why couples therapy works', 'Red flags you keep ignoring',
+    'The science of attraction', 'How to argue without destroying trust', 'Why modern dating is broken',
+  ]},
+  { key: 'health_fitness', label: 'Health & Fitness', icon: '💪', scenes: 7, topics: [
+    'The exercise myth everyone believes', 'Why stretching before workouts is wrong', 'Foods marketed as healthy that aren\'t',
+    'Cold plunge benefits backed by science', 'The sleep hack that changes everything', 'Why calorie counting doesn\'t work',
+  ]},
+  { key: 'gaming_popculture', label: 'Gaming & Pop Culture', icon: '🎮', scenes: 7, topics: [
+    'Easter eggs developers hid for years', 'The game that took 15 years to make', 'Why GTA 6 will break records',
+    'Video game music that hits different', 'The speedrun that shouldn\'t be possible', 'Cancelled games we\'ll never play',
+  ]},
+  { key: 'conspiracy_mystery', label: 'Conspiracy', icon: '👁️', scenes: 7, topics: [
+    'Declassified government projects', 'The simulation theory evidence', 'What they found under the Vatican',
+    'MKUltra experiments exposed', 'The Denver Airport secrets', 'Why Nikola Tesla\'s papers vanished',
+  ]},
+  { key: 'business_entrepreneur', label: 'Business & Startups', icon: '💼', scenes: 7, topics: [
+    'How a $0 startup became worth billions', 'The business model nobody talks about', 'Why 90% of startups fail',
+    'The psychology behind Apple\'s pricing', 'How to validate an idea in 24 hours', 'Side project to $10K/month',
+  ]},
 ];
 
 const WIZARD_STEPS = [
@@ -598,6 +634,21 @@ export default function CampaignsNewPage() {
                       {researchLoading ? 'Researching...' : '🔍 Research'}
                     </button>
                   </div>
+                  {niche && (
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1.5">Suggestions</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(NICHES.find(n => n.key === niche)?.topics || []).map(t => (
+                          <button key={t} onClick={() => setTopic(t)}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                              topic === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                            }`}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {researchedStories.length > 0 && (
                     <div className="space-y-1 mt-2">
                       <label className="text-[10px] font-medium text-slate-400 uppercase">Trending Stories</label>
