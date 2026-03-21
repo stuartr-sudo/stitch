@@ -1,0 +1,78 @@
+<h2>Issue #1: Library & Video Thumbnails</h2>
+<p class="subtitle">Icons too small, slow to load, video library shows no thumbnails</p>
+
+<div class="section">
+  <h3>Current Problems</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; color: #94a3b8;">
+      <div style="font-weight: 600; color: #f8fafc; margin-bottom: 8px;">🔍 Icons Too Small</div>
+      <p style="font-size: 13px;">Type badges (image/video/audio) are tiny 14px icons. Hard to distinguish media types at a glance.</p>
+    </div>
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; color: #94a3b8;">
+      <div style="font-weight: 600; color: #f8fafc; margin-bottom: 8px;">🐌 Slow Loading</div>
+      <p style="font-size: 13px;">Full-res images load via <code>loading="lazy"</code> but no thumbnail/placeholder system. Videos load full files.</p>
+    </div>
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; color: #94a3b8;">
+      <div style="font-weight: 600; color: #f8fafc; margin-bottom: 8px;">📹 No Video Thumbnails</div>
+      <p style="font-size: 13px;">Video Studio library shows dark cards with "LIBRARY" text. No poster frames or thumbnails are being generated/stored.</p>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top: 24px;">Proposed Fixes</h3>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Thumbnail Generation Pipeline</h3>
+      <p>When saving media to library, generate a 400px thumbnail (images) or extract first frame (videos) and store a <code>thumbnail_url</code> column. Show thumbnails in grids, full-res on click/hover.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Dramatically faster grid loading</li><li>Videos finally show previews</li><li>Lower bandwidth usage</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Needs DB migration (add thumbnail_url columns)</li><li>Need to backfill existing items</li><li>Storage cost for thumbnails</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Supabase Image Transforms (Quick Win)</h3>
+      <p>If images are in Supabase Storage, use their built-in transform URL params (<code>?width=400&height=300</code>) for thumbnails. For videos, extract poster frame client-side on first load and cache.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>No DB migration needed</li><li>Works with existing URLs</li><li>Instant for images</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Only works for Supabase-hosted files</li><li>Client-side video frame extraction is janky</li><li>External URLs won't benefit</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Pipeline + Transforms + Blurhash</h3>
+      <p>Generate thumbnails on save (pipeline), use Supabase transforms as fallback, and add <a href="https://blurha.sh" target="_blank">BlurHash</a> placeholders for instant perceived loading. Store blurhash string per item.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Best UX — instant blurhash → thumbnail → full-res</li><li>Works for all URL types</li><li>Progressive loading feels fast</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most implementation work</li><li>BlurHash library dependency</li><li>Still needs DB columns + backfill</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Icon Size Fix (Will Do Regardless)</h3>
+  <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px;">
+    <p style="font-size: 14px; color: #166534; margin: 0;">
+      <strong>✅ Simple CSS change:</strong> Increase type badges from <code>w-3.5 h-3.5</code> → <code>w-5 h-5</code> and badge container from <code>p-1.5</code> → <code>p-2</code>. Also increase the grid to show larger cards on desktop (3 cols instead of 4 for better visibility).
+    </p>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 16px;">
+  <h3>Video Studio Specific Fix</h3>
+  <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 12px; padding: 16px;">
+    <p style="font-size: 14px; color: #1e40af; margin: 0;">
+      <strong>📹 Video Studio library</strong> currently queries <code>generated_videos</code> but the table has no thumbnail column. The cards show "LIBRARY" text because there's no poster frame. Whichever approach we pick above will fix this — the key is storing/generating a thumbnail per video.
+    </p>
+  </div>
+</div>

@@ -408,38 +408,9 @@ app.post('/api/shorts/generate', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/shorts/topics', authenticateToken, async (req, res) => {
-  try {
-    const handler = await loadApiRoute('shorts/topics.js');
-    if (handler) return await handler(req, res);
-    res.status(500).json({ error: 'Handler not found' });
-  } catch (err) {
-    console.error('[shorts/topics] Unhandled error:', err);
-    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
-
-app.post('/api/shorts/research', authenticateToken, async (req, res) => {
-  try {
-    const handler = await loadApiRoute('shorts/research.js');
-    if (handler) return await handler(req, res);
-    res.status(500).json({ error: 'Handler not found' });
-  } catch (err) {
-    console.error('[shorts/research] Unhandled error:', err);
-    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
-
-app.post('/api/shorts/preview-script', authenticateToken, async (req, res) => {
-  try {
-    const handler = await loadApiRoute('shorts/preview-script.js');
-    if (handler) return await handler(req, res);
-    res.status(500).json({ error: 'Handler not found' });
-  } catch (err) {
-    console.error('[shorts/preview-script] Unhandled error:', err);
-    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
+app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
+app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
+app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campaigns/topics.js')).default);
 
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
