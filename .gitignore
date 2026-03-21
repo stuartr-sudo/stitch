@@ -28,3 +28,5 @@ npm-debug.log*
 .cache/
 .parcel-cache/
 node_modules
+.next/
+.superpowers/
