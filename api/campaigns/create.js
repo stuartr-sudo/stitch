@@ -20,6 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 import { generateImage, animateImage, generateMusic, concatVideos } from '../lib/pipelineHelpers.js';
 import { getStyleSuffix } from '../lib/stylePresets.js';
 import { groupPlatformsByRatio } from '../lib/videoTemplates.js';
+import { runShortsPipeline } from '../lib/shortsPipeline.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -34,11 +35,97 @@ export default async function handler(req, res) {
     music_mood,
     output_type = 'both',
     auto_generate = false,
+    // Shorts-specific fields
+    content_type,
+    niche,
+    topic,
+    story_context,
+    visual_style,
+    video_style,
+    video_model,
+    voice_id,
+    caption_style,
+    words_per_chunk,
+    lora_config,
+    script,
   } = req.body;
+
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  // Shorts branch — must come before the manual/ad logic
+  if (content_type === 'shorts') {
+    if (!niche || !brand_username) {
+      return res.status(400).json({ error: 'niche and brand_username are required for shorts' });
+    }
+
+    const campaign_name = name;
+
+    // Create campaign with content_type
+    const { data: campaign, error: campError } = await supabase
+      .from('campaigns')
+      .insert({
+        user_id: req.user.id,
+        name: campaign_name || `${niche} Short`,
+        brand_username,
+        content_type: 'shorts',
+        status: 'generating',
+      })
+      .select()
+      .single();
+
+    if (campError) return res.status(500).json({ error: campError.message });
+
+    // Create job for progress tracking
+    const { data: job } = await supabase
+      .from('jobs')
+      .insert({
+        user_id: req.user.id,
+        type: 'shorts_pipeline',
+        status: 'running',
+        campaign_id: campaign.id,
+      })
+      .select()
+      .single();
+
+    // Return immediately, run pipeline in background
+    res.json({ success: true, campaign_id: campaign.id, job_id: job.id });
+
+    // Resolve API keys — same pattern as shorts/generate.js
+    const { data: userKeys } = await supabase
+      .from('user_api_keys')
+      .select('fal_key, wavespeed_key, openai_key, elevenlabs_key')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    const keys = {
+      falKey: userKeys?.fal_key || process.env.FAL_KEY,
+      wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+      openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
+      elevenlabsKey: userKeys?.elevenlabs_key || process.env.ELEVENLABS_API_KEY,
+    };
+
+    // Background pipeline
+    runShortsPipeline({
+      niche, topic, story_context, brand_username,
+      visual_style, video_style, video_model,
+      voice_id, caption_style, words_per_chunk: words_per_chunk || 3,
+      lora_config: lora_config || [], script,
+      supabase,
+      keys,
+      jobId: job.id,
+      campaignId: campaign.id,
+      userId: req.user.id,
+    }).catch(err => {
+      console.error('[campaigns/create] Shorts pipeline error:', err);
+      supabase.from('jobs').update({ status: 'failed', error: err.message }).eq('id', job.id);
+      supabase.from('campaigns').update({ status: 'failed' }).eq('id', campaign.id);
+    });
+
+    return;
+  }
 
   if (!name?.trim()) return res.status(400).json({ error: 'Campaign name is required' });
 
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const userId = req.user.id;
 
   // Create campaign
@@ -54,6 +141,7 @@ export default async function handler(req, res) {
       source_type: 'manual',
       total_drafts: 1,
       completed_drafts: 0,
+      content_type: content_type || 'ad',
     })
     .select()
     .single();
