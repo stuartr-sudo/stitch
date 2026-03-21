@@ -404,7 +404,7 @@ app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campai
 // Style/voice list routes (with auth)
 app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
 app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
-app.get('/api/styles/voices', authenticateToken, (await import('./api/styles/voices.js')).default);
+app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
 
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
