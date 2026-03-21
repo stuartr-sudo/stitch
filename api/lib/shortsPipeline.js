@@ -49,6 +49,8 @@ import { logCost } from './costLogger.js';
  * @param {number} [opts.words_per_chunk]
  * @param {Array}  [opts.lora_config]
  * @param {object|string|null} [opts.script]  — pre-built script (skips Step 1 GPT call)
+ * @param {string} [opts.starting_image]      — URL of image to use for scene 0 instead of generating
+ * @param {string} [opts.image_model]         — override image model (e.g. 'fal_flux', 'fal_flux_pro')
  * @param {object} opts.supabase              — Supabase client
  * @param {object} opts.keys                  — { falKey, wavespeedKey, openaiKey, elevenlabsKey }
  * @param {string} opts.jobId
@@ -70,6 +72,8 @@ export async function runShortsPipeline(opts) {
     words_per_chunk: wordsPerChunk = 3,
     lora_config: loraConfigs = [],
     script: prebuiltScript = null,
+    starting_image,
+    image_model,
     supabase,
     keys,
     jobId,
@@ -179,7 +183,10 @@ export async function runShortsPipeline(opts) {
     let imageUrl;
     let imagePromptUsed;
 
-    if (imageStrategy === 'frame_chain' && i > 0 && prevFrameUrl) {
+    if (i === 0 && opts.starting_image) {
+      imageUrl = opts.starting_image;
+      console.log('[shortsPipeline] Using provided starting image for scene 0');
+    } else if (imageStrategy === 'frame_chain' && i > 0 && prevFrameUrl) {
       // Reuse the last frame of the previous clip as the source image
       imageUrl = prevFrameUrl;
       imagePromptUsed = '[reused frame from previous clip]';
@@ -200,9 +207,10 @@ export async function runShortsPipeline(opts) {
         promptWithContinuity += `. Maintain visual continuity: ${prevFrameAnalysis}`;
       }
 
-      console.log(`[shortsPipeline] Scene ${i + 1}: generating image (${imageStrategy})`);
+      const resolvedImageModel = image_model || (hasLoras ? 'fal_flux' : undefined);
+      console.log(`[shortsPipeline] Scene ${i + 1}: generating image (${imageStrategy}${resolvedImageModel ? ', model: ' + resolvedImageModel : ''})`);
       imageUrl = await withRetry(
-        () => generateImage(promptWithContinuity, '9:16', keys, supabase, hasLoras ? 'fal_flux' : undefined, loraConfigs),
+        () => generateImage(promptWithContinuity, '9:16', keys, supabase, resolvedImageModel, loraConfigs),
         { maxAttempts: 2, baseDelayMs: 2000 }
       );
 

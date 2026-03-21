@@ -48,6 +48,8 @@ export default async function handler(req, res) {
     words_per_chunk,
     lora_config,
     script,
+    starting_image,
+    image_model,
   } = req.body;
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -110,6 +112,7 @@ export default async function handler(req, res) {
       visual_style, video_style, video_model,
       voice_id, caption_style, words_per_chunk: words_per_chunk || 3,
       lora_config: lora_config || [], script,
+      starting_image, image_model,
       supabase,
       keys,
       jobId: job.id,
