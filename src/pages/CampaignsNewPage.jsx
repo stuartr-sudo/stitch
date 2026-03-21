@@ -16,6 +16,7 @@ import BrandKitModal from '@/components/modals/BrandKitModal';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
 import { SCENE_PILL_CATEGORIES } from '@/lib/scenePills';
+import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 
 const STYLE_PRESETS = [
   { key: 'ugc', label: 'UGC', description: 'Authentic, handheld' },
@@ -202,6 +203,11 @@ export default function CampaignsNewPage() {
   // Step 1
   const [showBrandKit, setShowBrandKit] = useState(false);
   const [ytConnected, setYtConnected] = useState(false);
+
+  // Topic funnel (3 levels)
+  const [topicL1, setTopicL1] = useState('');
+  const [topicL2, setTopicL2] = useState('');
+  const [topicL3, setTopicL3] = useState('');
 
   // Step 2
   const [startingImage, setStartingImage] = useState(null);
@@ -616,7 +622,7 @@ export default function CampaignsNewPage() {
                   <label className="text-sm font-medium text-slate-700 block">Niche Template</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {NICHES.map(n => (
-                      <button key={n.key} onClick={() => setNiche(n.key)}
+                      <button key={n.key} onClick={() => { setNiche(n.key); setTopicL1(''); setTopicL2(''); setTopicL3(''); setTopic(''); }}
                         className={`p-3 rounded-xl border text-center transition-all ${niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
                         <div className="text-xl mb-1">{n.icon}</div>
                         <div className="text-xs font-medium text-slate-700">{n.label}</div>
@@ -634,21 +640,78 @@ export default function CampaignsNewPage() {
                       {researchLoading ? 'Researching...' : '🔍 Research'}
                     </button>
                   </div>
-                  {niche && (
-                    <div>
-                      <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1.5">Suggestions</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(NICHES.find(n => n.key === niche)?.topics || []).map(t => (
-                          <button key={t} onClick={() => setTopic(t)}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                              topic === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
-                            }`}>
-                            {t}
-                          </button>
-                        ))}
+                  {niche && TOPIC_SUGGESTIONS[niche] && (() => {
+                    const nicheData = TOPIC_SUGGESTIONS[niche];
+                    const l1Items = nicheData.topics || [];
+                    const l1Match = l1Items.find(t => t.label === topicL1);
+                    const l2Items = l1Match?.sub || [];
+                    const l2Match = l2Items.find(t => t.label === topicL2);
+                    const l3Items = l2Match?.sub || [];
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Level 1: Broad category */}
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1.5">Category</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {l1Items.map(t => (
+                              <button key={t.label} onClick={() => {
+                                setTopicL1(topicL1 === t.label ? '' : t.label);
+                                setTopicL2(''); setTopicL3('');
+                                setTopic(t.label);
+                              }}
+                                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                                  topicL1 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                                }`}>
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Level 2: Specific angle */}
+                        {l2Items.length > 0 && (
+                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1.5">Angle</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {l2Items.map(t => (
+                                <button key={t.label} onClick={() => {
+                                  setTopicL2(topicL2 === t.label ? '' : t.label);
+                                  setTopicL3('');
+                                  setTopic(`${topicL1} — ${t.label}`);
+                                }}
+                                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                                    topicL2 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                                  }`}>
+                                  {t.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Level 3: Hook/twist */}
+                        {l3Items.length > 0 && (
+                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1.5">Hook</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {l3Items.map(t => (
+                                <button key={t} onClick={() => {
+                                  setTopicL3(topicL3 === t ? '' : t);
+                                  setTopic(`${topicL1} — ${topicL2} — ${t}`);
+                                }}
+                                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                                    topicL3 === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]'
+                                  }`}>
+                                  {t}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   {researchedStories.length > 0 && (
                     <div className="space-y-1 mt-2">
                       <label className="text-[10px] font-medium text-slate-400 uppercase">Trending Stories</label>

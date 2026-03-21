@@ -183,7 +183,6 @@ Provide rich story_context for each so a script writer has all the facts they ne
         { role: 'user', content: userPrompt },
       ],
       response_format: zodResponseFormat(StorySchema, 'story_ideas'),
-      temperature: 0.9,
     });
 
     const result = completion.choices[0].message.parsed;
