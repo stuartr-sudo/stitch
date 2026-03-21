@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import {
   Image, Music, ChevronDown, ChevronUp, Play, Save,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import WizardStepper from '@/components/ui/WizardStepper';
+import StyleGrid from '@/components/ui/StyleGrid';
+import LoRAPicker from '@/components/LoRAPicker';
+import BrandKitModal from '@/components/modals/BrandKitModal';
+import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
+import { CAPTION_STYLES } from '@/lib/captionStylePresets';
+import { SCENE_PILL_CATEGORIES } from '@/lib/scenePills';
 
 const STYLE_PRESETS = [
   { key: 'ugc', label: 'UGC', description: 'Authentic, handheld' },
@@ -47,21 +54,13 @@ const NICHES = [
   { key: 'business_entrepreneur', label: 'Business & Startups', icon: '💼', scenes: 7 },
 ];
 
-const VIDEO_MODELS = [
-  { key: 'fal_kling', label: 'Kling V3' },
-  { key: 'fal_veo3', label: 'Veo 3' },
-  { key: 'wavespeed_wan', label: 'Wan 2.5' },
-  { key: 'fal_hailuo', label: 'Hailuo' },
-  { key: 'fal_pixverse', label: 'PixVerse' },
-];
-
-const CAPTION_STYLES = [
-  { key: 'word_pop', label: 'Word Pop' },
-  { key: 'karaoke_glow', label: 'Karaoke Glow' },
-  { key: 'word_highlight', label: 'Word Highlight' },
-  { key: 'neon_glow', label: 'Neon Glow' },
-  { key: 'typewriter', label: 'Typewriter' },
-  { key: 'bounce', label: 'Bounce' },
+const WIZARD_STEPS = [
+  { key: 'brand_niche', label: 'Brand & Niche' },
+  { key: 'topic_story', label: 'Topic & Story' },
+  { key: 'script', label: 'Script' },
+  { key: 'look_feel', label: 'Look & Feel' },
+  { key: 'motion_sound', label: 'Motion & Sound' },
+  { key: 'generate', label: 'Generate' },
 ];
 
 function SceneEditor({ scene, index, onChange, onRemove, isOnly }) {
@@ -156,18 +155,34 @@ export default function CampaignsNewPage() {
   const [videoModel, setVideoModel] = useState('fal_kling');
   const [voiceId, setVoiceId] = useState('');
   const [captionStyle, setCaptionStyle] = useState('word_pop');
-  const [wordsPerChunk, setWordsPerChunk] = useState(3);
   const [loraConfig, setLoraConfig] = useState([]);
   const [researchedStories, setResearchedStories] = useState([]);
   const [researchLoading, setResearchLoading] = useState(false);
+
+  // Wizard navigation
+  const [wizardStep, setWizardStep] = useState('brand_niche');
+  const [completedSteps, setCompletedSteps] = useState([]);
+
+  // Step 1
+  const [showBrandKit, setShowBrandKit] = useState(false);
+  const [ytConnected, setYtConnected] = useState(false);
+
+  // Step 2
+  const [startingImage, setStartingImage] = useState(null);
+
+  // Step 3
+  const [scriptScenes, setScriptScenes] = useState([]);
+  const [scriptLoading, setScriptLoading] = useState(false);
+  const [expandedScene, setExpandedScene] = useState(null);
+
+  // Step 4
+  const [imageModel, setImageModel] = useState('fal_flux');
+
+  // Step 5
+  const [videoStylesList, setVideoStylesList] = useState([]);
+  const [voicesList, setVoicesList] = useState([]);
   const [previewingVoice, setPreviewingVoice] = useState(null);
-
-  // Data fetched from API for shorts mode
-  const [visualStyles, setVisualStyles] = useState([]);
-  const [videoStyles, setVideoStyles] = useState([]);
-  const [voices, setVoices] = useState([]);
-
-  const previewAudioRef = React.useRef(null);
+  const previewAudioRef = useRef(null);
 
   useEffect(() => {
     apiFetch('/api/brand/usernames').then(r => r.json()).then(d => {
@@ -184,11 +199,39 @@ export default function CampaignsNewPage() {
   }, []);
 
   useEffect(() => {
-    if (contentType !== 'shorts') return;
-    apiFetch('/api/styles/visual').then(r => r.json()).then(setVisualStyles).catch(() => {});
-    apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStyles).catch(() => {});
-    apiFetch('/api/styles/voices').then(r => r.json()).then(setVoices).catch(() => {});
-  }, [contentType]);
+    if (wizardStep === 'motion_sound' && videoStylesList.length === 0) {
+      apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
+      apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
+    }
+  }, [wizardStep]);
+
+  useEffect(() => {
+    if (!selectedBrand || contentType !== 'shorts') return;
+    apiFetch(`/api/youtube/status?brand_username=${encodeURIComponent(selectedBrand)}`)
+      .then(r => r.json()).then(d => setYtConnected(d.connected)).catch(() => setYtConnected(false));
+  }, [selectedBrand, contentType]);
+
+  const goNext = () => {
+    const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
+    if (idx < WIZARD_STEPS.length - 1) {
+      setCompletedSteps(prev => [...new Set([...prev, wizardStep])]);
+      setWizardStep(WIZARD_STEPS[idx + 1].key);
+    }
+  };
+  const goBack = () => {
+    const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
+    if (idx > 0) setWizardStep(WIZARD_STEPS[idx - 1].key);
+  };
+  const canGoNext = () => {
+    switch (wizardStep) {
+      case 'brand_niche': return selectedBrand && niche;
+      case 'topic_story': return topic.trim().length > 0;
+      case 'script': return scriptScenes.length > 0;
+      case 'look_feel': return visualStyle;
+      case 'motion_sound': return videoStyle && voiceId;
+      default: return true;
+    }
+  };
 
   const handleTemplateSelect = (id) => {
     setSelectedTemplate(id);
@@ -246,73 +289,64 @@ export default function CampaignsNewPage() {
     }
   };
 
+  const handleGenerateScript = async () => {
+    setScriptLoading(true);
+    try {
+      const res = await apiFetch('/api/campaigns/preview-script', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand }),
+      });
+      const data = await res.json();
+      if (data.scenes) setScriptScenes(data.scenes);
+      else if (data.script?.scenes) setScriptScenes(data.script.scenes);
+    } catch { toast.error('Script generation failed'); }
+    finally { setScriptLoading(false); }
+  };
+
   const handleVoicePreview = async (vid) => {
-    if (previewingVoice === vid) {
-      previewAudioRef.current?.pause();
-      setPreviewingVoice(null);
-      return;
-    }
+    if (previewingVoice === vid) { previewAudioRef.current?.pause(); setPreviewingVoice(null); return; }
     setPreviewingVoice(vid);
     try {
       const res = await apiFetch('/api/voice/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voice_id: vid, text: 'This is a preview of this voice style for your short video.' }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_id: vid, text: 'This is a preview of this voice for your short video.' }),
       });
-      if (!res.ok) throw new Error('Preview failed');
+      if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (previewAudioRef.current) { previewAudioRef.current.pause(); }
-      const audio = new Audio(url);
+      if (previewAudioRef.current) previewAudioRef.current.pause();
+      const audio = new Audio(URL.createObjectURL(blob));
       previewAudioRef.current = audio;
       audio.onended = () => setPreviewingVoice(null);
       audio.play();
-    } catch {
-      toast.error('Voice preview failed');
-      setPreviewingVoice(null);
-    }
+    } catch { toast.error('Voice preview failed'); setPreviewingVoice(null); }
   };
 
   const handleCreate = async (autoGenerate) => {
     if (contentType === 'shorts') {
-      if (!niche) { toast.error('Please select a niche'); return; }
-      if (!topic.trim()) { toast.error('Please enter a topic'); return; }
-      if (!visualStyle) { toast.error('Please select a visual style'); return; }
-      if (!videoStyle) { toast.error('Please select a video style'); return; }
-
+      if (!selectedBrand || !niche || !topic.trim() || !visualStyle || !videoStyle || !voiceId) {
+        toast.error('Please complete all required steps'); return;
+      }
       setIsCreating(true);
       try {
         const res = await apiFetch('/api/campaigns/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content_type: 'shorts',
-            campaign_name: topic.slice(0, 60),
-            brand_username: selectedBrand,
-            niche,
-            topic: topic.trim(),
+            content_type: 'shorts', campaign_name: topic.slice(0, 60),
+            brand_username: selectedBrand, niche, topic: topic.trim(),
             story_context: storyContext || undefined,
-            visual_style: visualStyle,
-            video_style: videoStyle,
-            video_model: videoModel,
-            voice_id: voiceId || undefined,
-            caption_style: captionStyle,
-            words_per_chunk: wordsPerChunk,
+            visual_style: visualStyle, video_style: videoStyle,
+            video_model: videoModel, image_model: imageModel,
+            voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
+            starting_image: startingImage || undefined,
+            script: scriptScenes.length > 0 ? { scenes: scriptScenes } : undefined,
           }),
         });
         const data = await res.json();
-        if (data.success) {
-          toast.success('Short generation started!');
-          navigate('/campaigns');
-        } else {
-          toast.error(data.error || 'Failed to create short');
-        }
-      } catch {
-        toast.error('Failed to create short');
-      } finally {
-        setIsCreating(false);
-      }
+        if (data.success) { toast.success('Short generation started!'); navigate('/campaigns'); }
+        else toast.error(data.error || 'Failed');
+      } catch { toast.error('Failed to create short'); }
+      finally { setIsCreating(false); }
       return;
     }
 
@@ -514,164 +548,348 @@ export default function CampaignsNewPage() {
           </>
         )}
 
-        {/* Shorts form */}
+        {/* Shorts wizard */}
         {contentType === 'shorts' && (
-          <>
-            {/* Niche grid */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Niche Template</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                {NICHES.map(n => (
-                  <button
-                    key={n.key}
-                    onClick={() => setNiche(n.key)}
-                    className={`p-3 rounded-xl border text-center transition-all ${
-                      niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="text-xl mb-1">{n.icon}</div>
-                    <div className="text-xs font-medium text-slate-700">{n.label}</div>
-                    <div className="text-[10px] text-slate-400">{n.scenes} scenes</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="space-y-6">
+            <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
+              onStepClick={(key) => { if (completedSteps.includes(key)) setWizardStep(key); }} />
 
-            {/* Topic + Research */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Topic</label>
-              <div className="flex gap-2">
-                <input
-                  value={topic}
-                  onChange={e => setTopic(e.target.value)}
-                  placeholder="Enter a topic or describe your short..."
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                />
-                <button
-                  onClick={handleResearch}
-                  disabled={researchLoading || !niche || !topic.trim()}
-                  className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg whitespace-nowrap disabled:opacity-50"
-                >
-                  {researchLoading ? 'Researching...' : 'Research Stories'}
-                </button>
+            {/* Step 1: Brand & Niche */}
+            {wizardStep === 'brand_niche' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Brand</label>
+                  <div className="flex items-center gap-3">
+                    <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select brand...</option>
+                      {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+                    </select>
+                    <button onClick={() => setShowBrandKit(true)} className="text-xs text-[#2C666E] underline whitespace-nowrap">Edit Brand Kit</button>
+                  </div>
+                  {selectedBrand && (
+                    <div className="flex gap-2 mt-2">
+                      {ytConnected && <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full">YouTube ✓</span>}
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Guidelines set</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Niche Template</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {NICHES.map(n => (
+                      <button key={n.key} onClick={() => setNiche(n.key)}
+                        className={`p-3 rounded-xl border text-center transition-all ${niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="text-xl mb-1">{n.icon}</div>
+                        <div className="text-xs font-medium text-slate-700">{n.label}</div>
+                        <div className="text-[10px] text-slate-400">{n.scenes} scenes</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              {researchedStories.length > 0 && (
-                <div className="space-y-1 mt-2">
-                  {researchedStories.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
-                      className="w-full text-left p-2 border rounded-lg text-xs hover:bg-slate-50"
-                    >
-                      <div className="font-medium text-slate-800">{s.title}</div>
-                      <div className="text-slate-500 mt-0.5">{s.angle || s.summary}</div>
+            )}
+
+            {/* Step 2: Topic & Story */}
+            {wizardStep === 'topic_story' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Topic</label>
+                  <div className="flex gap-2">
+                    <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Enter a topic or describe your short..." className="flex-1 border rounded-lg px-3 py-2 text-sm" />
+                    <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()} className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg whitespace-nowrap disabled:opacity-50">
+                      {researchLoading ? 'Researching...' : '🔍 Research Stories'}
                     </button>
+                  </div>
+                </div>
+                {researchedStories.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-500">Trending Stories</label>
+                    {researchedStories.map((s, i) => (
+                      <button key={i} onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
+                        className="w-full text-left p-3 border rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                        <div className="font-medium text-slate-800">{s.title}</div>
+                        <div className="text-slate-500 mt-0.5">{s.angle || s.summary}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Starting Image <span className="text-xs text-slate-400 font-normal">(optional)</span></label>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
+                    {startingImage ? (
+                      <div className="space-y-2">
+                        <img src={startingImage} alt="Starting" className="max-h-32 mx-auto rounded-lg" />
+                        <button onClick={() => setStartingImage(null)} className="text-xs text-red-500">Remove</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input type="text" placeholder="Paste image URL..." className="w-full border rounded-lg px-3 py-2 text-sm text-center mb-2"
+                          onBlur={e => { if (e.target.value.trim()) setStartingImage(e.target.value.trim()); }} />
+                        <div className="text-[10px] text-slate-400">Sets the visual starting point for Scene 1</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Script */}
+            {wizardStep === 'script' && (
+              <div className="space-y-4">
+                {scriptScenes.length === 0 && !scriptLoading && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-slate-500 mb-3">Generate a script from your topic</p>
+                    <button onClick={handleGenerateScript} className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-sm font-medium hover:bg-[#235258]">
+                      Generate Script
+                    </button>
+                  </div>
+                )}
+                {scriptLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                    <span className="ml-2 text-sm text-slate-500">Generating script...</span>
+                  </div>
+                )}
+                {scriptScenes.length > 0 && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-slate-700">Scenes ({scriptScenes.length})</label>
+                      <button onClick={handleGenerateScript} className="text-xs text-[#2C666E] hover:underline">🔄 Regenerate</button>
+                    </div>
+                    {scriptScenes.map((scene, i) => (
+                      <div key={i} className={`border rounded-xl p-4 transition-all ${expandedScene === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200'}`}>
+                        <div className="flex items-center gap-2 mb-2 cursor-pointer" onClick={() => setExpandedScene(expandedScene === i ? null : i)}>
+                          <span className="bg-[#2C666E] text-white text-[10px] px-2 py-0.5 rounded-full font-medium">{i + 1}</span>
+                          <span className="text-xs font-semibold text-[#2C666E] uppercase">{scene.role || 'scene'}</span>
+                          <span className="text-[10px] text-slate-400">{scene.duration_seconds || scene.duration || 5}s</span>
+                        </div>
+                        <textarea value={scene.narration || scene.narration_segment || ''} onChange={e => {
+                          const updated = [...scriptScenes]; updated[i] = { ...updated[i], narration: e.target.value, narration_segment: e.target.value }; setScriptScenes(updated);
+                        }} className="w-full text-sm text-slate-700 italic bg-transparent border-0 resize-none focus:ring-0 p-0" rows={2} placeholder="Narration text..." />
+                        {expandedScene === i && (
+                          <div className="mt-3 space-y-2 pt-3 border-t border-slate-100">
+                            <div>
+                              <label className="text-[10px] text-slate-400 uppercase font-medium">Visual Prompt</label>
+                              <textarea value={scene.visual_prompt || ''} onChange={e => {
+                                const updated = [...scriptScenes]; updated[i] = { ...updated[i], visual_prompt: e.target.value }; setScriptScenes(updated);
+                              }} className="w-full text-xs text-slate-600 border rounded-lg px-2 py-1.5 mt-1 resize-none" rows={2} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-400 uppercase font-medium">Motion Prompt</label>
+                              <textarea value={scene.motion_prompt || ''} onChange={e => {
+                                const updated = [...scriptScenes]; updated[i] = { ...updated[i], motion_prompt: e.target.value }; setScriptScenes(updated);
+                              }} className="w-full text-xs text-slate-600 border rounded-lg px-2 py-1.5 mt-1 resize-none" rows={1} />
+                            </div>
+                            <button onClick={() => { const updated = scriptScenes.filter((_, j) => j !== i); setScriptScenes(updated); setExpandedScene(null); }}
+                              className="text-[10px] text-red-500 hover:underline">Remove scene</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="border border-dashed border-slate-200 rounded-xl p-3">
+                      <label className="text-xs font-medium text-slate-500 block mb-2">Scene Builder Helpers</label>
+                      {SCENE_PILL_CATEGORIES.map(cat => (
+                        <div key={cat.label} className="mb-2">
+                          <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {cat.pills.map(pill => (
+                              <button key={pill} onClick={() => {
+                                if (expandedScene !== null) {
+                                  const updated = [...scriptScenes];
+                                  const s = updated[expandedScene];
+                                  updated[expandedScene] = { ...s, visual_prompt: ((s.visual_prompt || '') + ', ' + pill).replace(/^, /, '') };
+                                  setScriptScenes(updated);
+                                } else { toast.info('Click a scene to expand it first'); }
+                              }} className="text-[10px] px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
+                                {pill}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Look & Feel */}
+            {wizardStep === 'look_feel' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Visual Style</label>
+                  <StyleGrid value={visualStyle} onChange={setVisualStyle} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Image Model</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {IMAGE_MODELS.map(m => (
+                      <button key={m.value} onClick={() => { setImageModel(m.value); if (!m.lora) setLoraConfig([]); }}
+                        className={`p-3 rounded-xl border text-left transition-all ${imageModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                          {m.lora && <span className="text-[9px] bg-[#2C666E] text-white px-1.5 py-0.5 rounded">LoRA</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                        <div className="text-[10px] text-slate-400">{m.price}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {IMAGE_MODELS.find(m => m.value === imageModel)?.lora && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-2">LoRA Models</label>
+                    <LoRAPicker value={loraConfig} onChange={setLoraConfig} brandUsername={selectedBrand} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 5: Motion & Sound */}
+            {wizardStep === 'motion_sound' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Style</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {videoStylesList.map(s => (
+                      <button key={s.key} onClick={() => setVideoStyle(s.key)}
+                        className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" />}
+                        <div className="p-2">
+                          <div className="text-xs font-medium text-slate-700">{s.label}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Model</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VIDEO_MODELS.map(m => (
+                      <button key={m.value} onClick={() => setVideoModel(m.value)}
+                        className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                          <span className="text-[10px] text-slate-400">{m.price}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Voice</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                    {voicesList.filter(v => v.source === 'preset').length > 0 && voicesList.filter(v => v.source === 'preset').map(v => (
+                      <div key={v.id} onClick={() => setVoiceId(v.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-700">{v.name}</span>
+                          <button onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }} className="p-1 hover:bg-slate-100 rounded text-xs">
+                            {previewingVoice === v.id ? '⏹' : '▶️'}
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{v.description}</div>
+                        {v.niches?.includes(niche) && <span className="text-[9px] text-[#2C666E] font-medium mt-1 block">Recommended</span>}
+                      </div>
+                    ))}
+                    {voicesList.filter(v => v.source === 'custom').length > 0 && (
+                      <>
+                        <div className="col-span-full text-[10px] text-slate-400 uppercase font-medium pt-2">Your Voices</div>
+                        {voicesList.filter(v => v.source === 'custom').map(v => (
+                          <div key={v.id} onClick={() => setVoiceId(v.id)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all ${voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-slate-700">{v.name}</span>
+                              <button onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }} className="p-1 hover:bg-slate-100 rounded text-xs">
+                                {previewingVoice === v.id ? '⏹' : '▶️'}
+                              </button>
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">{v.description}</div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Caption Style</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CAPTION_STYLES.map(c => (
+                      <button key={c.key} onClick={() => setCaptionStyle(c.key)}
+                        className={`rounded-xl border overflow-hidden transition-all ${captionStyle === c.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className={`${c.preview.bg} py-4 flex items-center justify-center`}>
+                          <span className={c.preview.style} style={c.preview.textStroke ? { WebkitTextStroke: c.preview.textStroke } : undefined}>{c.preview.text}</span>
+                        </div>
+                        <div className="p-1.5 text-center">
+                          <div className="text-[10px] font-medium text-slate-700">{c.label}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Generate */}
+            {wizardStep === 'generate' && (
+              <div className="space-y-4">
+                <label className="text-sm font-medium text-slate-700 block">Review & Generate</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Brand', value: selectedBrand },
+                    { label: 'Niche', value: NICHES.find(n => n.key === niche)?.label || niche },
+                    { label: 'Visual Style', value: visualStyle },
+                    { label: 'Video Style', value: videoStylesList.find(s => s.key === videoStyle)?.label || videoStyle },
+                    { label: 'Image Model', value: IMAGE_MODELS.find(m => m.value === imageModel)?.label || imageModel },
+                    { label: 'Video Model', value: VIDEO_MODELS.find(m => m.value === videoModel)?.label || videoModel },
+                    { label: 'Voice', value: voicesList.find(v => v.id === voiceId)?.name || voiceId },
+                    { label: 'Captions', value: CAPTION_STYLES.find(c => c.key === captionStyle)?.label || captionStyle },
+                  ].map(item => (
+                    <div key={item.label} className="bg-slate-50 rounded-lg p-3">
+                      <div className="text-[10px] text-slate-400 uppercase">{item.label}</div>
+                      <div className="text-sm text-slate-800 font-medium">{item.value}</div>
+                    </div>
                   ))}
                 </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-[10px] text-slate-400 uppercase">Topic</div>
+                  <div className="text-sm text-slate-800">{topic}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-[10px] text-slate-400 uppercase">Scenes</div>
+                  <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~60 seconds · 9:16 vertical</div>
+                </div>
+                {loraConfig.length > 0 && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-[10px] text-slate-400 uppercase">LoRA Models</div>
+                    <div className="text-sm text-slate-800">{loraConfig.map(l => l.triggerWord || l.name || l.id).join(', ')}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-4 border-t">
+              {wizardStep !== 'brand_niche' ? (
+                <button onClick={goBack} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
+              ) : <div />}
+              {wizardStep !== 'generate' ? (
+                <button onClick={() => { if (wizardStep === 'topic_story' && scriptScenes.length === 0) handleGenerateScript(); goNext(); }}
+                  disabled={!canGoNext()} className="px-5 py-2 bg-[#2C666E] text-white rounded-xl text-sm font-medium hover:bg-[#235258] disabled:opacity-50">
+                  Next →
+                </button>
+              ) : (
+                <button onClick={() => handleCreate(true)} disabled={isCreating}
+                  className="px-8 py-3 bg-[#2C666E] text-white rounded-xl text-sm font-semibold hover:bg-[#235258] disabled:opacity-50">
+                  {isCreating ? 'Generating...' : 'Generate Short'}
+                </button>
               )}
             </div>
 
-            {/* Visual Style grid */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Visual Style</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                {visualStyles.map(s => (
-                  <button
-                    key={s.key}
-                    onClick={() => setVisualStyle(s.key)}
-                    className={`p-3 rounded-xl border text-center transition-all ${
-                      visualStyle === s.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="text-xs font-medium text-slate-700">{s.label}</div>
-                    <div className="text-[10px] text-slate-400 capitalize">{s.category}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Video Style grid */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Video Style</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                {videoStyles.map(s => (
-                  <button
-                    key={s.key}
-                    onClick={() => setVideoStyle(s.key)}
-                    className={`p-3 rounded-xl border text-center transition-all ${
-                      videoStyle === s.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="text-xs font-medium text-slate-700">{s.label}</div>
-                    <div className="text-[10px] text-slate-400 capitalize">{s.category}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Video Model */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Video Model</label>
-              <select value={videoModel} onChange={e => setVideoModel(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-                {VIDEO_MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
-              </select>
-            </div>
-
-            {/* Voice selector */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Voice</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-                {voices.map(v => (
-                  <div
-                    key={v.id}
-                    onClick={() => setVoiceId(v.id)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                      voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-700">{v.name}</span>
-                      <button
-                        onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }}
-                        className="p-1 hover:bg-slate-100 rounded"
-                      >
-                        {previewingVoice === v.id ? '⏹' : '▶️'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Caption Style grid */}
-            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-2">
-              <label className="text-sm font-medium text-slate-700">Caption Style</label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {CAPTION_STYLES.map(c => (
-                  <button
-                    key={c.key}
-                    onClick={() => setCaptionStyle(c.key)}
-                    className={`p-2 rounded-lg border text-xs font-medium transition-all ${
-                      captionStyle === c.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E] text-[#2C666E]' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Shorts Create button */}
-            <div className="pb-8">
-              <button
-                onClick={() => handleCreate(true)}
-                disabled={isCreating || !selectedBrand || !niche || !topic.trim()}
-                className="w-full py-3 bg-[#2C666E] text-white rounded-xl font-medium hover:bg-[#235258] disabled:opacity-50 transition-colors"
-              >
-                {isCreating ? 'Creating...' : 'Create & Generate Short'}
-              </button>
-            </div>
-          </>
+            {showBrandKit && <BrandKitModal onClose={() => setShowBrandKit(false)} />}
+          </div>
         )}
       </main>
     </div>
