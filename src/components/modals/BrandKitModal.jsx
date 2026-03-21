@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Loader2, Plus, Trash2, Save, User, AtSign, Link2, CheckCircle2,
-  FileText, Upload, Palette, MessageSquare, Eye, Shield, Globe, Sparkles,
+  FileText, Upload, Palette, MessageSquare, Eye, Shield, Globe, Sparkles, Youtube,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -152,6 +152,10 @@ export default function BrandKitModal({ isOpen, onClose }) {
   const [newAvatar, setNewAvatar] = useState({ name: '', description: '', reference_image_url: '', lora_url: '', lora_trigger_word: '' });
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
 
+  // YouTube connection
+  const [ytStatus, setYtStatus] = useState(null);
+  const [ytLoading, setYtLoading] = useState(false);
+
   // Active tab
   const [activeTab, setActiveTab] = useState('identity');
 
@@ -164,6 +168,19 @@ export default function BrandKitModal({ isOpen, onClose }) {
   }, [isOpen, user]);
 
   const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const loadYouTubeStatus = async (username) => {
+    if (!username) return;
+    setYtLoading(true);
+    try {
+      const res = await apiFetch(`/api/youtube/status?brand_username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      setYtStatus(data);
+    } catch {
+      setYtStatus(null);
+    }
+    setYtLoading(false);
+  };
 
   // ── Load brands ──────────────────────────────────────────────────────────────
   const loadBrands = async () => {
@@ -217,6 +234,7 @@ export default function BrandKitModal({ isOpen, onClose }) {
     setSewoGuidelines(null);
     setSewoImageStyle(null);
     setSewoCompany(null);
+    loadYouTubeStatus(brand.brand_username);
   };
 
   const handleNewBrand = () => {
@@ -652,6 +670,52 @@ export default function BrandKitModal({ isOpen, onClose }) {
                       className="bg-[#2C666E] hover:bg-[#07393C] text-white"><Plus className="w-4 h-4" /></Button>
                   </div>
                 </FieldGroup>
+
+                {/* YouTube Connection */}
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">
+                    <Youtube className="w-4 h-4 text-red-600" /> YouTube Channel
+                  </h3>
+                  {ytLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Checking connection...
+                    </div>
+                  ) : ytStatus?.connected ? (
+                    <div className="flex items-center justify-between bg-green-50 rounded-lg p-3 border border-green-200">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Connected</p>
+                        <p className="text-xs text-green-600">{ytStatus.channel_title || ytStatus.channel_id}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm('Disconnect YouTube channel?')) return;
+                          await apiFetch('/api/youtube/disconnect', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ brand_username: form.brand_username }),
+                          });
+                          setYtStatus({ connected: false });
+                          toast.success('YouTube disconnected');
+                        }}
+                        className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        window.location.href = `/api/youtube/auth?brand_username=${encodeURIComponent(form.brand_username)}`;
+                      }}
+                      className="text-sm"
+                    >
+                      <Youtube className="w-4 h-4 mr-2 text-red-600" /> Connect YouTube Channel
+                    </Button>
+                  )}
+                </div>
               </TabsContent>
 
               {/* ── Tab: Voice & Messaging ── */}

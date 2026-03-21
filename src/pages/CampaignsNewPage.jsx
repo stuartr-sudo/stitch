@@ -115,9 +115,11 @@ export default function CampaignsNewPage() {
 
   useEffect(() => {
     apiFetch('/api/brand/usernames').then(r => r.json()).then(d => {
-      const list = d.usernames || [];
+      const raw = d.usernames || [];
+      // Normalize: API returns objects {username, brand_name} or plain strings
+      const list = raw.map(u => typeof u === 'string' ? { username: u, brand_name: u } : u);
       setBrands(list);
-      if (list.length > 0) setSelectedBrand(list[0]);
+      if (list.length > 0) setSelectedBrand(list[0].username);
     }).catch(() => {});
 
     apiFetch('/api/templates/list').then(r => r.json()).then(d => {
@@ -221,7 +223,7 @@ export default function CampaignsNewPage() {
               <Label className="text-sm text-slate-700">Brand</Label>
               <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mt-1">
                 <option value="">None</option>
-                {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
               </select>
             </div>
             <div>

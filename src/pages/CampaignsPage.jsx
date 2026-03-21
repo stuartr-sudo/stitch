@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import {
   ArrowLeft, Plus, Loader2, Calendar, Link, Video, Image, Layers,
   Clock, CheckCircle2, AlertCircle, Play, Send, Eye, Download,
-  ChevronDown, ChevronUp, X, RefreshCw, RotateCcw, Upload, Zap, DollarSign,
+  ChevronDown, ChevronUp, X, RefreshCw, RotateCcw, Upload, Zap, DollarSign, Youtube,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 import RegenerateSceneModal from '@/components/RegenerateSceneModal';
 import BulkUploadModal from '@/components/BulkUploadModal';
 import AutonomousConfigModal from '@/components/AutonomousConfigModal';
+import YouTubePublishModal from '@/components/modals/YouTubePublishModal';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -215,10 +216,11 @@ function AssetGrid({ assets, draft, onPreview, onRegenerated }) {
 }
 
 // ── Single draft card ─────────────────────────────────────────────────────────
-function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
+function DraftCard({ draft, campaign, onPreview, onUpdated, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showYouTubePublish, setShowYouTubePublish] = useState(false);
   const [isGeneratingThumbs, setIsGeneratingThumbs] = useState(false);
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
   const [captionStyle, setCaptionStyle] = useState('sentence');
@@ -324,6 +326,10 @@ function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
                 <Calendar className="w-3.5 h-3.5 mr-1" />
                 Schedule
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowYouTubePublish(true)}
+                className="text-xs h-8" title="Publish to YouTube">
+                <Youtube className="w-3.5 h-3.5 text-red-600" />
+              </Button>
               <Button size="sm" onClick={handlePublishNow} disabled={isPublishing}
                 className="bg-[#2C666E] hover:bg-[#07393C] text-white text-xs h-8">
                 {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
@@ -334,6 +340,15 @@ function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
           {draft.publish_status === 'published' && (
             <span className="text-xs text-emerald-600 flex items-center gap-1 flex-shrink-0">
               <CheckCircle2 className="w-3.5 h-3.5" /> Published
+              {draft.youtube_video_id && (
+                <a href={`https://youtube.com/watch?v=${draft.youtube_video_id}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="ml-1 text-red-600 hover:text-red-700"
+                  onClick={e => e.stopPropagation()}
+                  title="View on YouTube">
+                  <Youtube className="w-3.5 h-3.5" />
+                </a>
+              )}
             </span>
           )}
 
@@ -581,6 +596,17 @@ function DraftCard({ draft, onPreview, onUpdated, onRefresh }) {
           onScheduled={onUpdated}
         />
       )}
+
+      {showYouTubePublish && (
+        <YouTubePublishModal
+          draftId={draft.id}
+          brandUsername={typeof campaign?.brand_username === 'object' ? campaign?.brand_username?.username : (campaign?.brand_username || '')}
+          campaignName={campaign?.name || ''}
+          scriptText={draft.storyboard_json?.script || ''}
+          onClose={() => setShowYouTubePublish(false)}
+          onPublished={() => { setShowYouTubePublish(false); onUpdated({ ...draft, publish_status: 'published' }); }}
+        />
+      )}
     </>
   );
 }
@@ -773,6 +799,7 @@ export default function CampaignsPage() {
                   <DraftCard
                     key={draft.id}
                     draft={draft}
+                    campaign={selectedCampaign}
                     onPreview={setPreviewMedia}
                     onUpdated={handleDraftUpdated}
                     onRefresh={() => loadCampaigns(true)}
@@ -855,8 +882,8 @@ export default function CampaignsPage() {
               {search ? 'Try a different search term' : 'Send an article to the pipeline or create a campaign manually'}
             </p>
             {!search && (
-              <Button onClick={() => navigate('/studio')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
-                <Plus className="w-4 h-4 mr-2" /> Create Campaign
+              <Button onClick={() => navigate('/campaigns/new')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                <Plus className="w-4 h-4 mr-2" /> New Campaign
               </Button>
             )}
           </div>

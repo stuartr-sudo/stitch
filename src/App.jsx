@@ -1,6 +1,7 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import HomePage from './pages/HomePage';
 import VideoAdvertCreator from './pages/VideoAdvertCreator';
@@ -47,10 +48,29 @@ function GuestRoute({ children }) {
   return children;
 }
 
+function YouTubeRedirectHandler() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (searchParams.get('youtube_connected') === '1') {
+      toast.success(`YouTube connected for ${searchParams.get('brand') || 'brand'}!`);
+      navigate(window.location.pathname, { replace: true });
+    }
+    if (searchParams.get('youtube_error')) {
+      toast.error(`YouTube connection failed: ${searchParams.get('youtube_error')}`);
+      navigate(window.location.pathname, { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <YouTubeRedirectHandler />
         <Routes>
           {/* Public home / login */}
           <Route

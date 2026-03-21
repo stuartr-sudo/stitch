@@ -512,6 +512,45 @@ app.get('/api/lora/library', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Voice preview (ElevenLabs TTS sample)
+app.post('/api/voice/preview', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('voice/preview.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// YouTube OAuth & Publishing
+app.get('/api/youtube/auth', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/auth.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/youtube/callback', async (req, res) => {
+  // No auth — redirect from Google, user_id verified from state parameter
+  const handler = await loadApiRoute('youtube/callback.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/youtube/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/youtube/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/upload.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/youtube/disconnect', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/disconnect.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Visual subject LoRA training (with auth)
 app.post('/api/brand/avatars/:id/train', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/train-avatar.js');
@@ -641,7 +680,7 @@ app.post('/api/autonomous/config', authenticateToken, async (req, res) => {
 
 // ── Stitch Queue Poller ──────────────────────────────────────────────────────
 // Polls stitch_queue for pending items and routes them by payload type.
-const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '15000', 10);
+const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '43200000', 10); // 12 hours (twice a day)
 
 // ── brand_setup handler: auto-create brand_kit from provision data ──────────
 async function handleBrandSetup(supabase, item) {
@@ -796,8 +835,8 @@ async function pollStitchQueue() {
 
 // Dynamic queue poller with exponential backoff
 let consecutiveQueueErrors = 0;
-const MIN_POLL_MS = QUEUE_POLL_INTERVAL_MS; // 15s
-const MAX_POLL_MS = 120000; // 2 minutes
+const MIN_POLL_MS = QUEUE_POLL_INTERVAL_MS; // 12 hours
+const MAX_POLL_MS = 86400000; // 24 hours
 
 async function pollWithBackoff() {
   try {

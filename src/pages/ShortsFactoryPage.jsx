@@ -41,6 +41,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Volume2,
+  Square,
 } from 'lucide-react';
 import LoRAPicker from '@/components/LoRAPicker';
 
@@ -154,6 +156,40 @@ export default function ShortsFactoryPage() {
   const [scriptPreview, setScriptPreview] = useState(null);
   const [editedScript, setEditedScript] = useState('');
   const [loadingScriptPreview, setLoadingScriptPreview] = useState(false);
+
+  // Voice preview
+  const [previewingVoice, setPreviewingVoice] = useState(null);
+  const previewAudioRef = useRef(null);
+
+  const handleVoicePreview = useCallback(async (e, voicePreviewId) => {
+    e.stopPropagation();
+    // If already previewing this voice, stop it
+    if (previewingVoice === voicePreviewId) {
+      if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
+      setPreviewingVoice(null);
+      return;
+    }
+    // Stop any existing preview
+    if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
+    setPreviewingVoice(voicePreviewId);
+    try {
+      const res = await apiFetch('/api/voice/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_id: voicePreviewId, brand_username: brandUsername }),
+      });
+      if (!res.ok) throw new Error('Preview failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      audio.onended = () => { setPreviewingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
+      audio.play();
+    } catch (err) {
+      toast.error('Voice preview failed — check ElevenLabs key');
+      setPreviewingVoice(null);
+    }
+  }, [previewingVoice, brandUsername]);
 
   // Real story sourcing
   const [storyMode, setStoryMode] = useState('custom'); // 'custom' | 'research'
@@ -770,7 +806,22 @@ export default function ShortsFactoryPage() {
                                 Recommended
                               </span>
                             )}
-                            <div className="text-sm font-semibold text-slate-800">{v.name}</div>
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-semibold text-slate-800">{v.name}</div>
+                              <button
+                                onClick={(e) => handleVoicePreview(e, v.id)}
+                                className={`p-1 rounded-full transition-colors ${
+                                  previewingVoice === v.id
+                                    ? 'bg-[#2C666E] text-white'
+                                    : 'text-slate-400 hover:text-[#2C666E] hover:bg-slate-100'
+                                }`}
+                                title={previewingVoice === v.id ? 'Stop preview' : 'Preview voice'}
+                              >
+                                {previewingVoice === v.id
+                                  ? <Square className="w-3 h-3" />
+                                  : <Volume2 className="w-3 h-3" />}
+                              </button>
+                            </div>
                             <div className="text-[11px] text-slate-500 mt-0.5">{v.description}</div>
                             {selected && (
                               <div className="absolute bottom-1.5 right-1.5 w-4 h-4 bg-[#2C666E] rounded-full flex items-center justify-center">
