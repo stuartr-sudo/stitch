@@ -396,17 +396,6 @@ app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) 
   res.status(500).json({ error: 'Handler not found' });
 });
 
-// Shorts Factory routes (with auth)
-app.post('/api/shorts/generate', authenticateToken, async (req, res) => {
-  try {
-    const handler = await loadApiRoute('shorts/generate.js');
-    if (handler) return await handler(req, res);
-    res.status(500).json({ error: 'Handler not found' });
-  } catch (err) {
-    console.error('[shorts/generate] Unhandled error:', err);
-    if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
 
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
