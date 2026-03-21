@@ -38,5 +38,6 @@ export default async function handler(req, res) {
     state,
   });
 
-  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  return res.json({ success: true, url: authUrl });
 }

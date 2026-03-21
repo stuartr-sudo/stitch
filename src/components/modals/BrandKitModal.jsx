@@ -707,8 +707,13 @@ export default function BrandKitModal({ isOpen, onClose }) {
                   ) : (
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        window.location.href = `/api/youtube/auth?brand_username=${encodeURIComponent(form.brand_username)}`;
+                      onClick={async () => {
+                        try {
+                          const res = await apiFetch(`/api/youtube/auth?brand_username=${encodeURIComponent(form.brand_username)}`);
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                          else toast.error(data.error || 'Failed to start YouTube auth');
+                        } catch { toast.error('Failed to connect YouTube'); }
                       }}
                       className="text-sm"
                     >
