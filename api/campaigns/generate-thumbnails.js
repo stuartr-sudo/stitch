@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
   const keys = {
     falKey: userKeys?.fal_key || process.env.FAL_KEY,
-    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
   };
 
   // Get scene inputs for model/LoRA config

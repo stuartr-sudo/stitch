@@ -112,7 +112,7 @@ async function regenerateScene({
 
   const keys = {
     falKey: userKeys?.fal_key || process.env.FAL_KEY,
-    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
     openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
   };
 

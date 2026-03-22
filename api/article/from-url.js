@@ -139,7 +139,7 @@ export default async function handler(req, res) {
 
   const keys = {
     falKey: userKeys?.fal_key || process.env.FAL_KEY,
-    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
     openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
   };
 
@@ -488,7 +488,7 @@ export async function runPipelineFromJob(job, supabase) {
   const { data: userKeys } = await supabase.from('user_api_keys').select('fal_key, wavespeed_key, openai_key').eq('user_id', job.user_id).maybeSingle();
   const keys = {
     falKey: userKeys?.fal_key || process.env.FAL_KEY,
-    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
     openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
   };
 

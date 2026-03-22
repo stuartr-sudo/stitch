@@ -106,7 +106,7 @@ export default async function handler(req, res) {
 
     const keys = {
       falKey: userKeys?.fal_key || process.env.FAL_KEY,
-      wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY || process.env.WAVESPEED_API_KEY,
+      wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
       openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
       elevenlabsKey: userKeys?.elevenlabs_key || process.env.ELEVENLABS_API_KEY,
     };
@@ -208,7 +208,7 @@ async function generateManualDraft(draft, campaign, userId, stylePreset, platfor
 
   const keys = {
     falKey: userKeys?.fal_key || process.env.FAL_KEY,
-    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_KEY,
+    wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
   };
 
   const allRatioAssets = [];
