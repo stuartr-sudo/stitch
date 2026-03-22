@@ -53,6 +53,7 @@ export default async function handler(req, res) {
     script,
     starting_image,
     image_model,
+    video_length_preset,
   } = req.body;
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -115,7 +116,7 @@ export default async function handler(req, res) {
       visual_style, visual_style_prompt, video_style, video_model,
       voice_id, caption_style, words_per_chunk: words_per_chunk || 3,
       lora_config: lora_config || [], script,
-      starting_image, image_model,
+      starting_image, image_model, video_length_preset,
       supabase,
       keys,
       jobId: job.id,
@@ -123,9 +124,7 @@ export default async function handler(req, res) {
       userId: req.user.id,
       nicheTemplate,
     }).catch(err => {
-      console.error('[campaigns/create] Shorts pipeline error:', err);
-      supabase.from('jobs').update({ status: 'failed', error: err.message }).eq('id', job.id);
-      supabase.from('campaigns').update({ status: 'failed' }).eq('id', campaign.id);
+      console.error('[campaigns/create] Shorts pipeline error (already marked failed in pipeline):', err);
     });
 
     return;
