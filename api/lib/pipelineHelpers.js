@@ -28,12 +28,14 @@ async function sleep(ms) {
 }
 
 export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs = 3000) {
+  const deadline = Date.now() + 300_000; // 5 minute absolute timeout
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(`${WAVESPEED_BASE}/predictions/${requestId}/result`, {
       headers: { 'Authorization': `Bearer ${apiKey}` },
     });
 
     if (!res.ok) {
+      if (Date.now() > deadline) throw new Error(`Wavespeed poll timeout after 5 minutes [${requestId}]`);
       await sleep(delayMs);
       continue;
     }
@@ -45,6 +47,7 @@ export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, d
     if (status === 'completed' && outputs?.[0]) return outputs[0];
     if (status === 'failed') throw new Error(`Wavespeed job failed: ${data.error || 'unknown'}`);
 
+    if (Date.now() > deadline) throw new Error(`Wavespeed poll timeout after 5 minutes [${requestId}]`);
     await sleep(delayMs);
   }
   throw new Error('Wavespeed polling timeout');
@@ -60,6 +63,7 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     ? requestIdOrUrl
     : `${FAL_BASE}/${queuePath}/requests/${requestIdOrUrl}`;
 
+  const deadline = Date.now() + 300_000; // 5 minute absolute timeout
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(pollUrl, {
       headers: {
@@ -69,6 +73,7 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     });
 
     if (!res.ok) {
+      if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
       await sleep(delayMs);
       continue;
     }
@@ -81,6 +86,7 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     if (!status && data.images) return data;
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
+    if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
     await sleep(delayMs);
   }
   throw new Error('FAL queue polling timeout');
