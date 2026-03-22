@@ -4,6 +4,16 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import WizardStepper from '@/components/ui/WizardStepper';
 import { ShortsWizardProvider, useShortsWizard } from '@/contexts/ShortsWizardContext';
+import NicheStep from '@/components/shorts/NicheStep';
+import TopicsStep from '@/components/shorts/TopicsStep';
+import ScriptStep from '@/components/shorts/ScriptStep';
+import LookFeelStep from '@/components/shorts/LookFeelStep';
+import MotionStyleStep from '@/components/shorts/MotionStyleStep';
+import VideoModelStep from '@/components/shorts/VideoModelStep';
+import VoiceMusicStep from '@/components/shorts/VoiceMusicStep';
+import CaptionsStep from '@/components/shorts/CaptionsStep';
+import PreviewImageStep from '@/components/shorts/PreviewImageStep';
+import ReviewGenerateStep from '@/components/shorts/ReviewGenerateStep';
 
 const STEPS = [
   { key: 'niche', label: 'Niche' },
@@ -33,6 +43,19 @@ function StepPlaceholder({ stepKey, label }) {
     </div>
   );
 }
+
+const STEP_COMPONENTS = {
+  niche: NicheStep,
+  style: LookFeelStep,
+  topic: TopicsStep,
+  length: null, // handled inline or merged with topic
+  script: ScriptStep,
+  voice: VoiceMusicStep,
+  music: null, // merged with voice
+  video: VideoModelStep,
+  captions: CaptionsStep,
+  review: ReviewGenerateStep,
+};
 
 function WizardContent() {
   const navigate = useNavigate();
@@ -99,7 +122,13 @@ function WizardContent() {
 
       {/* Step content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <StepPlaceholder stepKey={currentStepKey} label={STEPS[currentIndex].label} />
+        {(() => {
+          const StepComponent = STEP_COMPONENTS[currentStepKey];
+          if (StepComponent) {
+            return <StepComponent wizard={wizard} onNext={goNext} onBack={goBack} />;
+          }
+          return <StepPlaceholder stepKey={currentStepKey} label={STEPS[currentIndex].label} />;
+        })()}
       </div>
 
       {/* Bottom nav */}

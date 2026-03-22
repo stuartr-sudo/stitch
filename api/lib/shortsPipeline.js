@@ -235,7 +235,7 @@ export async function runShortsPipeline(opts) {
         currentModel = resolvedImageModel || 'default';
         console.log(`[shortsPipeline] Scene ${i + 1}: generating image (${imageStrategy}${resolvedImageModel ? ', model: ' + resolvedImageModel : ''})`);
         imageUrl = await withRetry(
-          () => generateImageV2(promptWithContinuity, '9:16', keys, supabase, resolvedImageModel, loraConfigs),
+          () => generateImageV2(resolvedImageModel || 'fal_flux', promptWithContinuity, '9:16', keys, supabase, { loras: loraConfigs }),
           { maxAttempts: 2, baseDelayMs: 2000 }
         );
 
@@ -265,7 +265,7 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (${clipDuration}s, model: ${videoModel})`);
 
       const clipUrl = await withRetry(
-        () => animateImageV2(imageUrl, motionPromptUsed, '9:16', clipDuration, keys, supabase, videoModel, loraConfigs),
+        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', clipDuration, keys, supabase, { loras: loraConfigs }),
         { maxAttempts: 2, baseDelayMs: 5000 }
       );
       sceneClips.push(clipUrl);
