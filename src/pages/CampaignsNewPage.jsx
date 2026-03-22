@@ -624,11 +624,10 @@ export default function CampaignsNewPage() {
                   <label className="text-sm font-medium text-slate-700 block">Brand</label>
                   <div className="flex items-center gap-3">
                     <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm">
-                      <option value="">Select brand...</option>
-                      {brands.map(b => {
-                        const hasKit = brandsWithKit.some(k => k.username === b.username);
-                        return <option key={b.username} value={b.username}>{b.brand_name || b.username}{hasKit ? ' ✓ Kit' : ''}</option>;
-                      })}
+                      <option value="">No brand (optional)</option>
+                      {brandsWithKit.map(b => (
+                        <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>
+                      ))}
                     </select>
                     <button onClick={() => setShowBrandKit(true)} className="text-xs text-[#2C666E] underline whitespace-nowrap">Edit Brand Kit</button>
                   </div>
