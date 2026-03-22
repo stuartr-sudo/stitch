@@ -1,41 +1,40 @@
 /**
  * Topic Suggestion Funnel — 3-level progressive narrowing per niche.
  *
- * Level 1: Broad category (always shown when niche selected)
- * Level 2: Specific angle (shown when L1 selected)
- * Level 3: Hook/twist (shown when L2 selected)
+ * Level 1: Broad category
+ * Level 2: Specific angle
+ * Level 3: Short hook/twist (2-4 words — compositional angle descriptors)
  *
- * All selected levels are concatenated and passed to the researcher/script writer
- * as topic context: "Haunted Places > Abandoned Asylums > The one that drove doctors insane"
+ * All selected levels are concatenated and passed to the researcher/script writer.
  */
 
 export const TOPIC_SUGGESTIONS = {
   ai_tech_news: {
     topics: [
       { label: 'AI Breakthroughs', sub: [
-        { label: 'Reasoning & Intelligence', sub: ['The AI that passed a PhD exam', 'When AI outsmarts its creators', 'The test no AI was supposed to pass'] },
-        { label: 'Creative AI', sub: ['AI art that fooled the experts', 'The AI composer nobody can tell apart', 'When machines dream'] },
-        { label: 'Robotics & Physical AI', sub: ['Robots learning to feel', 'The warehouse robot uprising', 'Humanoid robots are here'] },
-        { label: 'Medical AI', sub: ['AI diagnosing cancer before doctors', 'The drug AI invented in 48 hours', 'AI that predicts heart attacks'] },
+        { label: 'Reasoning & Intelligence', sub: ['beyond human level', 'caught cheating', 'real-world testing'] },
+        { label: 'Creative AI', sub: ['fooling experts', 'original compositions', 'replacing artists'] },
+        { label: 'Robotics', sub: ['learning emotions', 'warehouse takeover', 'humanoid progress'] },
+        { label: 'Medical AI', sub: ['outperforming doctors', 'drug discovery', 'predicting illness'] },
       ]},
       { label: 'AI & Jobs', sub: [
-        { label: 'White-collar disruption', sub: ['Lawyers replaced by AI', 'The coding job that no longer exists', 'AI accountants vs human ones'] },
-        { label: 'Creative industry impact', sub: ['Hollywood vs AI actors', 'Musicians losing to algorithms', 'The photographer who was replaced'] },
-        { label: 'New jobs AI created', sub: ['Prompt engineering salaries', 'AI trainer — the job nobody expected', 'The humans teaching robots'] },
+        { label: 'White-collar disruption', sub: ['lawyers affected', 'coding obsolete', 'finance automation'] },
+        { label: 'Creative industries', sub: ['Hollywood impact', 'music generation', 'photography dying'] },
+        { label: 'New careers', sub: ['prompt engineering', 'AI training', 'human oversight'] },
       ]},
       { label: 'AI Ethics & Safety', sub: [
-        { label: 'Deepfakes & Misinformation', sub: ['The deepfake that started a war', 'You can\'t trust video anymore', 'AI-generated politicians'] },
-        { label: 'Surveillance & Privacy', sub: ['Your face is in a database', 'The city that watches everything', 'AI predicting crime before it happens'] },
-        { label: 'Existential Risk', sub: ['Why AI researchers are terrified', 'The alignment problem explained', 'The AI that tried to escape'] },
+        { label: 'Deepfakes', sub: ['caught on camera', 'political impact', 'impossible to detect'] },
+        { label: 'Surveillance', sub: ['facial recognition', 'predictive policing', 'mass tracking'] },
+        { label: 'Existential Risk', sub: ['researchers warning', 'alignment problem', 'containment failure'] },
       ]},
       { label: 'Tech Giants', sub: [
-        { label: 'OpenAI & Microsoft', sub: ['The power struggle inside OpenAI', 'GPT\'s secret capabilities', 'Why Microsoft bet everything on AI'] },
-        { label: 'Google vs Everyone', sub: ['Google\'s AI panic mode', 'Gemini vs GPT — the real winner', 'The search engine is dying'] },
-        { label: 'Apple & Meta', sub: ['Apple\'s secret AI lab', 'Meta\'s metaverse pivot to AI', 'The Vision Pro\'s AI features nobody uses'] },
+        { label: 'OpenAI', sub: ['internal drama', 'secret projects', 'power struggle'] },
+        { label: 'Google', sub: ['falling behind', 'search dying', 'Gemini controversy'] },
+        { label: 'Apple & Meta', sub: ['secret labs', 'pivot strategy', 'hardware play'] },
       ]},
       { label: 'Future Predictions', sub: [
-        { label: '2030 predictions', sub: ['What your job looks like in 2030', 'The AI singularity timeline', 'Schools in 5 years'] },
-        { label: 'AGI timeline', sub: ['How close are we really', 'The race to build god', 'What happens the day after AGI'] },
+        { label: 'Near-term', sub: ['by 2030', 'next 5 years', 'already happening'] },
+        { label: 'AGI timeline', sub: ['how close', 'who wins', 'what happens after'] },
       ]},
     ],
   },
@@ -43,26 +42,26 @@ export const TOPIC_SUGGESTIONS = {
   finance_money: {
     topics: [
       { label: 'Wealth Building', sub: [
-        { label: 'Investing strategies', sub: ['The lazy portfolio that beats Wall Street', 'Index funds vs stock picking truth', 'The investment nobody talks about'] },
-        { label: 'Saving hacks', sub: ['The envelope method 2.0', 'How to save $10K without noticing', 'The subscription audit trick'] },
-        { label: 'Real estate', sub: ['House hacking explained', 'Why renting can be smarter', 'The Airbnb arbitrage strategy'] },
+        { label: 'Investing', sub: ['beating the market', 'hidden strategies', 'common mistakes'] },
+        { label: 'Saving', sub: ['painless methods', 'automation tricks', 'hidden expenses'] },
+        { label: 'Real Estate', sub: ['house hacking', 'rent vs buy', 'passive income'] },
       ]},
       { label: 'Money Myths', sub: [
-        { label: 'Debt myths', sub: ['Good debt vs bad debt is a lie', 'The credit score scam', 'Why minimum payments are designed to trap you'] },
-        { label: 'Spending myths', sub: ['The latte factor is wrong', 'Frugality won\'t make you rich', 'Why budgets fail for most people'] },
-        { label: 'Rich people myths', sub: ['Self-made billionaire is a myth', 'The luck factor nobody admits', 'How the rich actually think about money'] },
+        { label: 'Debt myths', sub: ['good vs bad', 'credit score trap', 'minimum payment scam'] },
+        { label: 'Spending myths', sub: ['latte factor wrong', 'frugality limits', 'budget failures'] },
+        { label: 'Wealth myths', sub: ['self-made myth', 'luck factor', 'rich mindset'] },
       ]},
-      { label: 'Crypto & Web3', sub: [
-        { label: 'Bitcoin', sub: ['Bitcoin halving impact explained', 'Why governments fear Bitcoin', 'The lost Bitcoin fortune'] },
-        { label: 'Altcoins & Trends', sub: ['The next crypto cycle prediction', 'Meme coins — gambling or genius', 'DeFi explained for beginners'] },
+      { label: 'Crypto', sub: [
+        { label: 'Bitcoin', sub: ['halving impact', 'government fear', 'lost fortunes'] },
+        { label: 'Altcoins', sub: ['next cycle', 'meme coins', 'DeFi explained'] },
       ]},
       { label: 'Side Hustles', sub: [
-        { label: 'Digital', sub: ['The no-code SaaS blueprint', 'Selling digital products while you sleep', 'The newsletter business model'] },
-        { label: 'Physical', sub: ['Vending machines as passive income', 'The car wash empire strategy', 'Storage unit auctions goldmine'] },
+        { label: 'Digital', sub: ['no-code SaaS', 'digital products', 'newsletter model'] },
+        { label: 'Physical', sub: ['vending machines', 'service businesses', 'auction flipping'] },
       ]},
       { label: 'Tax & System', sub: [
-        { label: 'Tax strategies', sub: ['Legal ways the rich avoid taxes', 'The LLC tax hack', 'Tax write-offs you\'re missing'] },
-        { label: 'Banking system', sub: ['How banks make money from you', 'The fractional reserve truth', 'Why your savings lose value every year'] },
+        { label: 'Tax strategies', sub: ['legal avoidance', 'LLC benefits', 'missed deductions'] },
+        { label: 'Banking', sub: ['hidden profits', 'fractional reserve', 'inflation erosion'] },
       ]},
     ],
   },
@@ -70,28 +69,27 @@ export const TOPIC_SUGGESTIONS = {
   scary_horror: {
     topics: [
       { label: 'Haunted Places', sub: [
-        { label: 'Abandoned asylums', sub: ['The asylum that drove doctors insane', 'Why they sealed the basement forever', 'The patient who predicted every death'] },
-        { label: 'Ghost ships', sub: ['The Mary Celeste mystery', 'The ship that sailed itself for years', 'Crew vanished — dinner still on table'] },
-        { label: 'Cursed locations', sub: ['The bridge where people jump', 'The hotel room nobody survives', 'The forest that whispers back'] },
-        { label: 'Murder houses', sub: ['Living in a serial killer\'s house', 'The walls that bled', 'The family who didn\'t know'] },
+        { label: 'Abandoned buildings', sub: ['documented evidence', 'still active', 'sealed forever'] },
+        { label: 'Ghost ships', sub: ['crew vanished', 'still sailing', 'recovered logs'] },
+        { label: 'Cursed locations', sub: ['pattern of deaths', 'locals avoid', 'caught on camera'] },
       ]},
       { label: 'Unexplained Events', sub: [
-        { label: 'Mass disappearances', sub: ['The village that vanished overnight', 'The Dyatlov Pass truth', '300 people gone — no trace'] },
-        { label: 'Time anomalies', sub: ['The man from the future with proof', 'Time slips people actually experienced', 'The town stuck in a loop'] },
-        { label: 'Sounds & signals', sub: ['The Bloop — what made that sound', 'Numbers stations still broadcasting', 'The hum only some people hear'] },
+        { label: 'Mass disappearances', sub: ['without trace', 'overnight vanishing', 'official cover-up'] },
+        { label: 'Time anomalies', sub: ['documented cases', 'witness accounts', 'scientific study'] },
+        { label: 'Strange signals', sub: ['still unexplained', 'repeated pattern', 'recently decoded'] },
       ]},
       { label: 'Cryptids & Creatures', sub: [
-        { label: 'Documented sightings', sub: ['The footage that changed everything', 'Fishermen caught something impossible', 'The creature in the cave system'] },
-        { label: 'Underwater terrors', sub: ['What lives below 10,000 feet', 'The megalodon evidence', 'Deep sea cameras captured something'] },
+        { label: 'Documented sightings', sub: ['caught on film', 'multiple witnesses', 'scientific analysis'] },
+        { label: 'Deep sea', sub: ['uncharted depths', 'new species found', 'sonar anomalies'] },
       ]},
       { label: 'True Scary Stories', sub: [
-        { label: 'Home invasions', sub: ['They lived in the walls for months', 'The camera caught someone watching', 'The babysitter who called police'] },
-        { label: 'Online horror', sub: ['The deep web rabbit hole', 'The game that predicted players\' deaths', 'The chat room that wasn\'t empty'] },
-        { label: 'Survival stories', sub: ['Buried alive and survived', '72 hours lost in a cave', 'The hiker who found something wrong'] },
+        { label: 'Home invasions', sub: ['hidden intruder', 'security footage', 'narrow escape'] },
+        { label: 'Online horror', sub: ['dark web', 'interactive games', 'real identity'] },
+        { label: 'Survival', sub: ['against the odds', 'days trapped', 'wrong turn'] },
       ]},
       { label: 'Paranormal', sub: [
-        { label: 'Possessions', sub: ['The exorcism caught on camera', 'The doll that moves at night', 'The priest who quit after this case'] },
-        { label: 'EVP & Evidence', sub: ['Ghost hunters recorded this', 'The photo that can\'t be explained', 'Security cameras in the morgue'] },
+        { label: 'Possessions', sub: ['caught on camera', 'expert testimony', 'medical mystery'] },
+        { label: 'EVP & Evidence', sub: ['audio recordings', 'photo analysis', 'thermal imaging'] },
       ]},
     ],
   },
@@ -99,22 +97,22 @@ export const TOPIC_SUGGESTIONS = {
   motivation_self_help: {
     topics: [
       { label: 'Mindset Shifts', sub: [
-        { label: 'Discipline & Habits', sub: ['The 2-minute rule that changes everything', 'Why motivation is a trap', 'How to never break a streak'] },
-        { label: 'Fear & Comfort Zone', sub: ['Do the thing that scares you most', 'The 5-second rule explained', 'Comfort is killing your potential'] },
-        { label: 'Failure & Growth', sub: ['The CEO who was fired from his own company', 'Failure is data, not defeat', 'Why your worst day was your best lesson'] },
+        { label: 'Discipline & Habits', sub: ['simple rules', 'streak building', 'identity change'] },
+        { label: 'Fear & Comfort Zone', sub: ['immediate action', 'gradual exposure', 'reframing fear'] },
+        { label: 'Failure & Growth', sub: ['famous failures', 'data not defeat', 'pivot moments'] },
       ]},
       { label: 'Success Stories', sub: [
-        { label: 'Against all odds', sub: ['Homeless to CEO in 3 years', 'The blind man who climbed Everest', 'Rejected 1000 times then changed the world'] },
-        { label: 'Late bloomers', sub: ['Started at 50, billionaire by 60', 'The grandma who became a bodybuilder', 'It\'s not too late — proof'] },
-        { label: 'Comebacks', sub: ['From prison to Forbes list', 'The athlete doctors said would never walk', 'Bankrupt to back on top'] },
+        { label: 'Against all odds', sub: ['from nothing', 'disability to triumph', 'repeated rejection'] },
+        { label: 'Late bloomers', sub: ['started late', 'career pivot', 'second chance'] },
+        { label: 'Comebacks', sub: ['rock bottom', 'public redemption', 'rebuilt everything'] },
       ]},
       { label: 'Mental Health', sub: [
-        { label: 'Anxiety & Stress', sub: ['The breathing trick that stops panic attacks', 'Why your phone is making you anxious', 'The 3-3-3 grounding technique'] },
-        { label: 'Confidence', sub: ['Fake it till you make it actually works', 'The power pose science', 'How to stop caring what people think'] },
+        { label: 'Anxiety', sub: ['quick techniques', 'daily triggers', 'grounding methods'] },
+        { label: 'Confidence', sub: ['body language', 'inner dialogue', 'social skills'] },
       ]},
       { label: 'Productivity', sub: [
-        { label: 'Time management', sub: ['The Eisenhower matrix in 60 seconds', 'Why to-do lists don\'t work', 'Time blocking changed my life'] },
-        { label: 'Focus', sub: ['The deep work method', 'Digital detox results after 30 days', 'One task at a time — the science'] },
+        { label: 'Time management', sub: ['simple frameworks', 'priority systems', 'energy management'] },
+        { label: 'Deep focus', sub: ['distraction-free', 'flow state', 'digital minimalism'] },
       ]},
     ],
   },
@@ -122,24 +120,24 @@ export const TOPIC_SUGGESTIONS = {
   history_did_you_know: {
     topics: [
       { label: 'Ancient Civilizations', sub: [
-        { label: 'Lost civilizations', sub: ['The city older than the pyramids', 'Civilizations we can\'t explain', 'The map that shouldn\'t exist'] },
-        { label: 'Ancient technology', sub: ['The battery from 2000 years ago', 'Ancient surgery tools found', 'The computer from ancient Greece'] },
+        { label: 'Lost civilizations', sub: ['recently discovered', 'still unexplained', 'older than thought'] },
+        { label: 'Ancient technology', sub: ['ahead of time', 'reverse engineered', 'lost knowledge'] },
       ]},
       { label: 'Wars & Conflicts', sub: [
-        { label: 'Untold stories', sub: ['The soldier who fought for both sides', 'The battle decided by weather', 'The spy who saved millions'] },
-        { label: 'Turning points', sub: ['The mistake that changed the war', 'What if D-Day had failed', 'The 15 minutes that shaped history'] },
+        { label: 'Untold stories', sub: ['classified until now', 'hidden heroes', 'double agents'] },
+        { label: 'Turning points', sub: ['single decision', 'lucky break', 'almost lost'] },
       ]},
       { label: 'Royal & Political', sub: [
-        { label: 'Royal scandals', sub: ['The king who vanished', 'The queen who was actually a man', 'The heir nobody wanted'] },
-        { label: 'Cover-ups', sub: ['The history they don\'t teach', 'Documents they classified for 100 years', 'The truth about the founding'] },
+        { label: 'Royal scandals', sub: ['covered up', 'identity questioned', 'power struggles'] },
+        { label: 'Cover-ups', sub: ['recently revealed', 'declassified files', 'suppressed truth'] },
       ]},
-      { label: 'Inventions & Discoveries', sub: [
-        { label: 'Stolen inventions', sub: ['Tesla vs Edison — who really won', 'The invention that was buried', 'They stole his idea and got famous'] },
-        { label: 'Accidental discoveries', sub: ['The mistake worth billions', 'Found it by accident in a lab', 'The explorer who got lost and changed the world'] },
+      { label: 'Inventions', sub: [
+        { label: 'Stolen ideas', sub: ['wrong credit', 'patent wars', 'buried inventions'] },
+        { label: 'Accidents', sub: ['billion-dollar mistake', 'lab accident', 'happy accident'] },
       ]},
       { label: 'Bizarre History', sub: [
-        { label: 'Strange events', sub: ['The dancing plague of 1518', 'When it rained frogs', 'The great molasses flood'] },
-        { label: 'Weird laws & customs', sub: ['Punishments that sound made up', 'The trial of animals in court', 'Beauty standards through history'] },
+        { label: 'Strange events', sub: ['mass hysteria', 'natural anomaly', 'still debated'] },
+        { label: 'Weird customs', sub: ['unbelievable laws', 'animal trials', 'beauty extremes'] },
       ]},
     ],
   },
@@ -147,49 +145,49 @@ export const TOPIC_SUGGESTIONS = {
   true_crime: {
     topics: [
       { label: 'Unsolved Cases', sub: [
-        { label: 'Missing persons', sub: ['Vanished from a locked room', 'The student who never came home', 'Missing for 30 years — then a phone call'] },
-        { label: 'Cold cases', sub: ['The DNA that cracked it 40 years later', 'The case every detective gave up on', 'New evidence just found'] },
+        { label: 'Missing persons', sub: ['without trace', 'new leads', 'decades later'] },
+        { label: 'Cold cases', sub: ['DNA breakthrough', 'reopened case', 'fresh evidence'] },
       ]},
       { label: 'Serial Killers', sub: [
-        { label: 'Caught', sub: ['The mistake that led to the arrest', 'The neighbor nobody suspected', 'Caught by a genealogy website'] },
-        { label: 'Never caught', sub: ['The Zodiac\'s final cipher', 'Still hunting after 50 years', 'The one who got away'] },
+        { label: 'Caught', sub: ['fatal mistake', 'neighbor next door', 'technology caught'] },
+        { label: 'Never caught', sub: ['still unknown', 'coded messages', 'prime suspect'] },
       ]},
       { label: 'Heists & Fraud', sub: [
-        { label: 'Perfect crimes', sub: ['The heist with zero evidence', 'The art theft worth $500 million', 'The bank robber who was too polite'] },
-        { label: 'Con artists', sub: ['The fake doctor who operated for years', 'The man who sold the Eiffel Tower', 'The teenager who impersonated a pilot'] },
+        { label: 'Perfect crimes', sub: ['zero evidence', 'inside job', 'still missing'] },
+        { label: 'Con artists', sub: ['false identity', 'elaborate scheme', 'years undetected'] },
       ]},
       { label: 'Wrongful Convictions', sub: [
-        { label: 'Freed after decades', sub: ['30 years in prison for nothing', 'The evidence they hid', 'DNA proved his innocence'] },
-        { label: 'Corrupt justice', sub: ['The judge who was on the take', 'Manufactured evidence exposed', 'The witness who lied under oath'] },
+        { label: 'Freed', sub: ['decades imprisoned', 'hidden evidence', 'DNA exoneration'] },
+        { label: 'System failures', sub: ['corrupt officials', 'false testimony', 'manufactured case'] },
       ]},
-      { label: 'Forensic Breakthroughs', sub: [
-        { label: 'DNA revolution', sub: ['How genetic genealogy solves cold cases', 'The smallest DNA sample that convicted', 'Ancestry.com caught a killer'] },
-        { label: 'New technology', sub: ['AI solving cold cases now', 'Digital forensics catching online criminals', 'The phone data that proved everything'] },
+      { label: 'Forensic Science', sub: [
+        { label: 'DNA revolution', sub: ['genetic genealogy', 'tiny samples', 'ancestry databases'] },
+        { label: 'New technology', sub: ['AI analysis', 'digital forensics', 'phone tracking'] },
       ]},
     ],
   },
 
   science_nature: {
     topics: [
-      { label: 'Space & Universe', sub: [
-        { label: 'Mind-bending concepts', sub: ['What happens inside a black hole', 'The universe might be a hologram', 'Time moves differently in space'] },
-        { label: 'Discoveries', sub: ['The planet made of diamonds', 'Water found where nobody expected', 'The signal from deep space'] },
+      { label: 'Space', sub: [
+        { label: 'Mind-bending concepts', sub: ['black holes', 'holographic theory', 'time dilation'] },
+        { label: 'Discoveries', sub: ['exotic planets', 'water found', 'deep space signals'] },
       ]},
       { label: 'Human Body', sub: [
-        { label: 'Brain', sub: ['You only use 10% is wrong — the truth', 'How your brain tricks you daily', 'The memory palace technique'] },
-        { label: 'Biology', sub: ['Why we age and how to slow it', 'The organ scientists just discovered', 'Your gut controls your mood'] },
+        { label: 'Brain', sub: ['common myths', 'daily tricks', 'memory techniques'] },
+        { label: 'Biology', sub: ['aging science', 'new organs', 'gut-brain connection'] },
       ]},
       { label: 'Animals', sub: [
-        { label: 'Superpowers', sub: ['The animal that\'s basically immortal', 'Animals that can see the future', 'The creature that survives in space'] },
-        { label: 'Intelligence', sub: ['Crows smarter than children', 'Octopus escapes that blow your mind', 'The dolphin language theory'] },
+        { label: 'Superpowers', sub: ['immortal species', 'extreme survival', 'sensory abilities'] },
+        { label: 'Intelligence', sub: ['tool usage', 'escape artists', 'communication systems'] },
       ]},
-      { label: 'Earth & Nature', sub: [
-        { label: 'Extreme environments', sub: ['Life found in the most impossible place', 'The lake that turns animals to stone', 'The cave sealed for 5 million years'] },
-        { label: 'Climate', sub: ['The tipping point nobody talks about', 'Ice cores reveal the future', 'The ocean current that controls everything'] },
+      { label: 'Earth', sub: [
+        { label: 'Extreme places', sub: ['impossible life', 'sealed environments', 'deep underground'] },
+        { label: 'Climate', sub: ['tipping points', 'ancient data', 'ocean systems'] },
       ]},
       { label: 'Physics', sub: [
-        { label: 'Quantum weirdness', sub: ['Particles that communicate instantly', 'The cat that\'s alive and dead', 'Quantum tunneling explained simply'] },
-        { label: 'Paradoxes', sub: ['The grandfather paradox solved', 'Can you travel faster than light', 'The simulation argument'] },
+        { label: 'Quantum', sub: ['entanglement', 'observer effect', 'tunneling explained'] },
+        { label: 'Paradoxes', sub: ['time travel', 'faster than light', 'simulation theory'] },
       ]},
     ],
   },
@@ -197,41 +195,41 @@ export const TOPIC_SUGGESTIONS = {
   relationships_dating: {
     topics: [
       { label: 'Psychology', sub: [
-        { label: 'Attachment styles', sub: ['Your attachment style is ruining everything', 'Anxious-avoidant trap explained', 'How to become secure'] },
-        { label: 'Attraction science', sub: ['The science behind instant chemistry', 'Why we\'re attracted to the wrong people', 'The mere exposure effect'] },
+        { label: 'Attachment styles', sub: ['self-diagnosis', 'toxic patterns', 'becoming secure'] },
+        { label: 'Attraction', sub: ['chemical basis', 'wrong choices', 'mere exposure'] },
       ]},
       { label: 'Modern Dating', sub: [
-        { label: 'Apps & Culture', sub: ['Why dating apps are broken by design', 'The paradox of too many choices', 'How algorithms decide your love life'] },
-        { label: 'Red flags', sub: ['The red flag everyone ignores', 'Love bombing vs genuine interest', 'When nice is actually manipulative'] },
+        { label: 'Apps', sub: ['broken by design', 'choice overload', 'algorithm bias'] },
+        { label: 'Red flags', sub: ['commonly missed', 'love bombing', 'hidden manipulation'] },
       ]},
-      { label: 'Long-term Relationships', sub: [
-        { label: 'Communication', sub: ['The Gottman method in 60 seconds', 'How to argue without destroying trust', 'The four horsemen of relationship death'] },
-        { label: 'Keeping it alive', sub: ['Why the 7-year itch is real', 'The 5 love languages simplified', 'What happy couples do differently'] },
+      { label: 'Long-term', sub: [
+        { label: 'Communication', sub: ['conflict styles', 'repair attempts', 'emotional bids'] },
+        { label: 'Keeping spark', sub: ['novelty seeking', 'love languages', 'daily rituals'] },
       ]},
-      { label: 'Breakups & Healing', sub: [
-        { label: 'Moving on', sub: ['The no-contact rule and why it works', 'Why it takes exactly 21 days', 'The rebound mistake'] },
-        { label: 'Growth', sub: ['The breakup that saved my life', 'Finding yourself after losing them', 'Why being alone is a superpower'] },
+      { label: 'Breakups', sub: [
+        { label: 'Moving on', sub: ['no-contact rule', 'healing timeline', 'rebound trap'] },
+        { label: 'Growth', sub: ['self-discovery', 'solo strength', 'better standards'] },
       ]},
     ],
   },
 
   health_fitness: {
     topics: [
-      { label: 'Exercise Myths', sub: [
-        { label: 'Workout myths', sub: ['Stretching before workouts is wrong', 'Cardio doesn\'t burn fat the way you think', 'The muscle confusion myth'] },
-        { label: 'What actually works', sub: ['The minimum effective dose for fitness', 'Zone 2 cardio explained', '5 minutes a day that actually work'] },
+      { label: 'Exercise', sub: [
+        { label: 'Myths debunked', sub: ['stretching wrong', 'cardio overrated', 'spot reduction'] },
+        { label: 'What works', sub: ['minimum dose', 'zone 2 cardio', 'compound movements'] },
       ]},
       { label: 'Nutrition', sub: [
-        { label: 'Diet myths', sub: ['Calories in calories out is too simple', 'The breakfast myth', 'Superfoods are marketing'] },
-        { label: 'What to eat', sub: ['The gut microbiome diet', 'Anti-inflammatory eating explained', 'Protein timing doesn\'t matter'] },
+        { label: 'Diet myths', sub: ['calorie myths', 'breakfast debate', 'superfood marketing'] },
+        { label: 'What to eat', sub: ['gut health', 'anti-inflammatory', 'protein timing'] },
       ]},
       { label: 'Sleep & Recovery', sub: [
-        { label: 'Sleep optimization', sub: ['The temperature hack for deep sleep', 'Why 8 hours might be wrong for you', 'The 10-3-2-1 sleep method'] },
-        { label: 'Recovery', sub: ['Cold plunge science explained', 'The sauna longevity connection', 'Why rest days build muscle'] },
+        { label: 'Sleep hacks', sub: ['temperature trick', 'duration myths', 'wind-down routine'] },
+        { label: 'Recovery', sub: ['cold exposure', 'sauna benefits', 'rest importance'] },
       ]},
       { label: 'Longevity', sub: [
-        { label: 'Anti-aging science', sub: ['The blue zones secret', 'Fasting and cellular repair', 'The supplement that actually has evidence'] },
-        { label: 'Biohacking', sub: ['Wearable data that saves lives', 'Blood work markers to track', 'The morning routine of centenarians'] },
+        { label: 'Anti-aging', sub: ['blue zone secrets', 'fasting benefits', 'evidence-based supplements'] },
+        { label: 'Biohacking', sub: ['wearable insights', 'blood markers', 'morning routines'] },
       ]},
     ],
   },
@@ -239,41 +237,41 @@ export const TOPIC_SUGGESTIONS = {
   gaming_popculture: {
     topics: [
       { label: 'Gaming Secrets', sub: [
-        { label: 'Easter eggs', sub: ['Hidden for 20 years until someone found it', 'The developer who hid their wedding proposal', 'Easter eggs inside easter eggs'] },
-        { label: 'Cut content', sub: ['The level they deleted and why', 'Beta features that were too good', 'The character that was supposed to live'] },
+        { label: 'Easter eggs', sub: ['hidden decades', 'developer messages', 'meta references'] },
+        { label: 'Cut content', sub: ['deleted levels', 'beta features', 'character changes'] },
       ]},
       { label: 'Gaming History', sub: [
-        { label: 'Industry stories', sub: ['The game that bankrupted a studio', 'The 15-year development hell', 'How a bug became a feature'] },
-        { label: 'Records & feats', sub: ['The speedrun that broke reality', 'The longest gaming marathon ever', 'The impossible achievement someone got'] },
+        { label: 'Industry drama', sub: ['studio collapse', 'development hell', 'accidental features'] },
+        { label: 'Records', sub: ['impossible speedruns', 'marathon records', 'rare achievements'] },
       ]},
       { label: 'Pop Culture', sub: [
-        { label: 'Movies & TV', sub: ['The scene that wasn\'t in the script', 'Actors who almost got the role', 'Hidden details you missed'] },
-        { label: 'Music', sub: ['The sample hidden in every hit song', 'Songs that were written in minutes', 'The album recorded in secret'] },
+        { label: 'Film & TV', sub: ['improvised scenes', 'casting near-misses', 'hidden details'] },
+        { label: 'Music', sub: ['hidden samples', 'speed compositions', 'secret recordings'] },
       ]},
-      { label: 'Upcoming & Hype', sub: [
-        { label: 'Anticipated releases', sub: ['Why GTA 6 will break every record', 'The game nobody believes is real', 'Sequel we\'ve waited a decade for'] },
-        { label: 'Industry trends', sub: ['AI in game development now', 'The subscription model killing gaming', 'Indie games beating AAA studios'] },
+      { label: 'Industry Trends', sub: [
+        { label: 'Upcoming', sub: ['record-breaking hype', 'unexpected reveals', 'long-awaited sequels'] },
+        { label: 'Shifts', sub: ['AI integration', 'subscription fatigue', 'indie dominance'] },
       ]},
     ],
   },
 
   conspiracy_mystery: {
     topics: [
-      { label: 'Government Secrets', sub: [
-        { label: 'Declassified', sub: ['MKUltra — what they actually did', 'Operation Paperclip truth', 'The files they released at midnight'] },
-        { label: 'Active cover-ups', sub: ['What\'s really in Area 51 now', 'The submarine incident they denied', 'The missing classified pages'] },
+      { label: 'Government', sub: [
+        { label: 'Declassified', sub: ['mind control', 'secret operations', 'midnight releases'] },
+        { label: 'Active secrets', sub: ['restricted areas', 'denied incidents', 'missing documents'] },
       ]},
       { label: 'Hidden Knowledge', sub: [
-        { label: 'Suppressed technology', sub: ['The energy device they buried', 'Why we don\'t have flying cars yet', 'The patent that disappeared'] },
-        { label: 'Secret societies', sub: ['The Bilderberg Group meetings', 'Bohemian Grove rituals', 'The order controlling global finance'] },
+        { label: 'Suppressed tech', sub: ['buried patents', 'energy devices', 'automotive control'] },
+        { label: 'Secret societies', sub: ['annual meetings', 'ritual evidence', 'financial control'] },
       ]},
-      { label: 'Simulation & Reality', sub: [
-        { label: 'Simulation theory', sub: ['The mathematical proof we\'re simulated', 'Glitches in the matrix people recorded', 'The physicist who changed his mind'] },
-        { label: 'Mandela effects', sub: ['The logo everyone remembers wrong', 'Historical events that shifted', 'Proof of timeline changes'] },
+      { label: 'Reality Questions', sub: [
+        { label: 'Simulation theory', sub: ['mathematical evidence', 'glitch reports', 'expert converts'] },
+        { label: 'Mandela effects', sub: ['logo changes', 'historical shifts', 'timeline evidence'] },
       ]},
       { label: 'Unexplained', sub: [
-        { label: 'Structures', sub: ['The tunnels under every major city', 'The building that shouldn\'t exist', 'Ancient structures aligned perfectly'] },
-        { label: 'Events', sub: ['The day the sky turned red', 'Mass sightings the news ignored', 'The signal that repeated for 37 seconds'] },
+        { label: 'Structures', sub: ['underground tunnels', 'impossible buildings', 'perfect alignment'] },
+        { label: 'Events', sub: ['sky anomalies', 'mass sightings', 'repeating signals'] },
       ]},
     ],
   },
@@ -281,20 +279,20 @@ export const TOPIC_SUGGESTIONS = {
   business_entrepreneur: {
     topics: [
       { label: 'Startup Stories', sub: [
-        { label: 'From nothing', sub: ['$0 to $1B — the real story', 'The garage startup that beat Google', 'Started with a rejected idea'] },
-        { label: 'Failures that led to success', sub: ['Pivoted at the last second', 'The company that almost died 3 times', 'Why their worst decision was their best'] },
+        { label: 'From zero', sub: ['bootstrapped success', 'garage origins', 'rejected ideas'] },
+        { label: 'Failures to wins', sub: ['last-minute pivots', 'near-death companies', 'worst decisions'] },
       ]},
       { label: 'Business Models', sub: [
-        { label: 'Unconventional', sub: ['The business model nobody talks about', 'How Costco makes money losing money', 'The razor blade model everywhere'] },
-        { label: 'Digital', sub: ['The newsletter making $5M/year', 'One-person businesses earning millions', 'The API economy explained'] },
+        { label: 'Unconventional', sub: ['hidden models', 'loss-leader strategy', 'razor-blade effect'] },
+        { label: 'Digital', sub: ['newsletter empires', 'solo operators', 'API economy'] },
       ]},
-      { label: 'Psychology & Strategy', sub: [
-        { label: 'Pricing psychology', sub: ['Why $9.99 still works', 'The decoy effect explained', 'How Apple makes you spend more'] },
-        { label: 'Growth hacks', sub: ['The referral loop that grew Dropbox', 'How Notion went viral with no ads', 'The waitlist strategy'] },
+      { label: 'Psychology', sub: [
+        { label: 'Pricing', sub: ['anchor pricing', 'decoy effect', 'premium perception'] },
+        { label: 'Growth', sub: ['viral loops', 'organic growth', 'waitlist strategy'] },
       ]},
       { label: 'Side Projects', sub: [
-        { label: 'Getting started', sub: ['Validate an idea in 24 hours', 'The weekend MVP approach', 'First $1000 online blueprint'] },
-        { label: 'Scaling', sub: ['From side project to full-time', 'The automation stack for solopreneurs', 'When to quit your day job'] },
+        { label: 'Getting started', sub: ['24-hour validation', 'weekend MVP', 'first revenue'] },
+        { label: 'Scaling', sub: ['going full-time', 'automation stack', 'hiring first'] },
       ]},
     ],
   },
