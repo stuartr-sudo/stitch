@@ -5,7 +5,6 @@
 
 const WAVESPEED_BASE = 'https://api.wavespeed.ai/api/v3';
 const FAL_BASE = 'https://queue.fal.run';
-const FAL_DIRECT = 'https://fal.run';
 
 // Default negative prompt for image generation (models that support it)
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';

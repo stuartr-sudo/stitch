@@ -25,7 +25,6 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { getUserKeys } from '../lib/getUserKeys.js';
 
 const FAL_BASE = 'https://queue.fal.run';
-const FAL_DIRECT = 'https://fal.run';
 const MAX_VIDEO_DURATION = 90;
 
 const SceneDefinitionSchema = z.object({
