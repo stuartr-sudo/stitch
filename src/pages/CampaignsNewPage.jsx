@@ -94,12 +94,23 @@ const NICHES = [
 ];
 
 const WIZARD_STEPS = [
-  { key: 'brand_niche', label: 'Brand, Niche & Topic' },
-  { key: 'topic_story', label: 'Starting Image' },
+  { key: 'niche', label: 'Niche & Theme' },
+  { key: 'topics', label: 'Topics' },
   { key: 'script', label: 'Script' },
   { key: 'look_feel', label: 'Look & Feel' },
-  { key: 'motion_sound', label: 'Motion & Sound' },
-  { key: 'generate', label: 'Generate' },
+  { key: 'motion', label: 'Motion Style' },
+  { key: 'video_model', label: 'Video Model' },
+  { key: 'voice', label: 'Voice & Music' },
+  { key: 'captions', label: 'Captions' },
+  { key: 'preview', label: 'Preview Image' },
+  { key: 'review', label: 'Review' },
+];
+
+const VIDEO_LENGTH_PRESETS = [
+  { value: 30, label: '30s' },
+  { value: 45, label: '45s' },
+  { value: 60, label: '60s' },
+  { value: 90, label: '90s' },
 ];
 
 function SceneEditor({ scene, index, onChange, onRemove, isOnly }) {
@@ -204,8 +215,9 @@ export default function CampaignsNewPage() {
   const storiesRef = useRef(null);
 
   // Wizard navigation
-  const [wizardStep, setWizardStep] = useState('brand_niche');
+  const [wizardStep, setWizardStep] = useState('niche');
   const [completedSteps, setCompletedSteps] = useState([]);
+  const [videoLengthPreset, setVideoLengthPreset] = useState(60);
 
   // Step 1
   const [showBrandKit, setShowBrandKit] = useState(false);
@@ -270,7 +282,7 @@ export default function CampaignsNewPage() {
   }, []);
 
   useEffect(() => {
-    if (wizardStep === 'motion_sound' && videoStylesList.length === 0) {
+    if ((wizardStep === 'motion' || wizardStep === 'voice') && videoStylesList.length === 0) {
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
       apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
     }
@@ -295,11 +307,15 @@ export default function CampaignsNewPage() {
   };
   const canGoNext = () => {
     switch (wizardStep) {
-      case 'brand_niche': return niche && topic.trim().length > 0;
-      case 'topic_story': return true; // Starting image is optional
+      case 'niche': return niche;
+      case 'topics': return topic.trim().length > 0;
       case 'script': return scriptScenes.length > 0;
       case 'look_feel': return visualStyle;
-      case 'motion_sound': return videoStyle && voiceId;
+      case 'motion': return videoStyle;
+      case 'video_model': return videoModel;
+      case 'voice': return voiceId;
+      case 'captions': return captionStyle;
+      case 'preview': return true; // preview image is optional
       default: return true;
     }
   };
@@ -442,7 +458,8 @@ export default function CampaignsNewPage() {
             video_style: videoStyle, video_model: videoModel, image_model: imageModel,
             voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
-            starting_image: previewImageUrl || startingImage || undefined,
+            video_length_preset: videoLengthPreset,
+            starting_image: previewImageUrl || undefined,
             script: scriptScenes.length > 0 ? { scenes: scriptScenes } : undefined,
           }),
         });
@@ -660,8 +677,8 @@ export default function CampaignsNewPage() {
             <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
               onStepClick={(key) => { if (completedSteps.includes(key)) setWizardStep(key); }} />
 
-            {/* Step 1: Brand, Niche & Topic */}
-            {wizardStep === 'brand_niche' && (
+            {/* Step 1: Niche & Theme */}
+            {wizardStep === 'niche' && (
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
                   <label className="text-sm font-medium text-slate-700 block">Brand</label>
@@ -691,6 +708,28 @@ export default function CampaignsNewPage() {
                         <div className="text-xl mb-1">{n.icon}</div>
                         <div className="text-xs font-medium text-slate-700">{n.label}</div>
                         <div className="text-[10px] text-slate-400">{n.scenes} scenes</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Topics */}
+            {wizardStep === 'topics' && (
+              <div className="space-y-6">
+                {/* Video Length Preset */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-3">
+                  <label className="text-sm font-medium text-slate-700 block">Video Length</label>
+                  <div className="flex gap-2">
+                    {VIDEO_LENGTH_PRESETS.map(p => (
+                      <button key={p.value} type="button" onClick={() => setVideoLengthPreset(p.value)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                          videoLengthPreset === p.value
+                            ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}>
+                        {p.label}
                       </button>
                     ))}
                   </div>
@@ -855,55 +894,6 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 2: Starting Image */}
-            {wizardStep === 'topic_story' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
-                  <label className="text-sm font-medium text-slate-700 block">Starting Image <span className="text-xs text-slate-400 font-normal">(optional — sets Scene 1's visual starting point)</span></label>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6">
-                    {startingImage ? (
-                      <div className="text-center space-y-3">
-                        <img src={startingImage} alt="Starting" className="max-h-40 mx-auto rounded-lg shadow-sm" />
-                        <button onClick={() => setStartingImage(null)} className="text-xs text-red-500 hover:underline">Remove image</button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-3">
-                          <button onClick={() => setShowLibraryForStart(true)}
-                            className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                            <Film className="w-5 h-5 text-slate-400" />
-                            <span className="text-xs text-slate-600">From Library</span>
-                          </button>
-                          <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors cursor-pointer">
-                            <Image className="w-5 h-5 text-slate-400" />
-                            <span className="text-xs text-slate-600">Upload</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = () => setStartingImage(reader.result);
-                              reader.readAsDataURL(file);
-                            }} />
-                          </label>
-                          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl">
-                            <div className="flex gap-1 w-full">
-                              <input id="startImgUrl" type="text" placeholder="URL..." className="flex-1 border rounded px-2 py-1 text-[10px] min-w-0" />
-                              <button onClick={() => {
-                                const url = document.getElementById('startImgUrl').value.trim();
-                                if (url) setStartingImage(url);
-                              }} className="px-2 py-1 text-[10px] bg-[#2C666E] text-white rounded hover:bg-[#235258] shrink-0">Add</button>
-                            </div>
-                            <span className="text-xs text-slate-600">Paste URL</span>
-                          </div>
-                        </div>
-                        <div className="text-center text-[10px] text-slate-400">Skip this step if you want the AI to generate Scene 1 from scratch</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Step 3: Script */}
             {wizardStep === 'script' && (
               <div className="space-y-4">
@@ -1039,8 +1029,8 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 5: Motion & Sound */}
-            {wizardStep === 'motion_sound' && (
+            {/* Step 5: Motion Style */}
+            {wizardStep === 'motion' && (
               <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Video Style</label>
@@ -1057,6 +1047,12 @@ export default function CampaignsNewPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Step 6: Video Model */}
+            {wizardStep === 'video_model' && (
+              <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Video Model</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1072,9 +1068,15 @@ export default function CampaignsNewPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Step 7: Voice & Music */}
+            {wizardStep === 'voice' && (
+              <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Voice</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
                     {voicesList.filter(v => v.source === 'preset').length > 0 && voicesList.filter(v => v.source === 'preset').map(v => (
                       <div key={v.id} onClick={() => setVoiceId(v.id)}
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
@@ -1107,9 +1109,15 @@ export default function CampaignsNewPage() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Step 8: Captions */}
+            {wizardStep === 'captions' && (
+              <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Caption Style</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {CAPTION_STYLES.map(c => (
                       <button key={c.key} onClick={() => setCaptionStyle(c.key)}
                         className={`rounded-xl border overflow-hidden transition-all ${captionStyle === c.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
@@ -1126,12 +1134,9 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 6: Generate */}
-            {wizardStep === 'generate' && (
+            {/* Step 9: Preview Image */}
+            {wizardStep === 'preview' && (
               <div className="space-y-4">
-                <label className="text-sm font-medium text-slate-700 block">Preview & Generate</label>
-
-                {/* Preview Image Section */}
                 <div className="bg-white rounded-2xl p-5 border shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -1165,8 +1170,13 @@ export default function CampaignsNewPage() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Summary */}
+            {/* Step 10: Review & Generate */}
+            {wizardStep === 'review' && (
+              <div className="space-y-4">
+                <label className="text-sm font-medium text-slate-700 block">Review & Generate</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: 'Brand', value: selectedBrand || 'None' },
@@ -1177,6 +1187,7 @@ export default function CampaignsNewPage() {
                     { label: 'Video Model', value: VIDEO_MODELS.find(m => m.value === videoModel)?.label || videoModel },
                     { label: 'Voice', value: voicesList.find(v => v.id === voiceId)?.name || voiceId },
                     { label: 'Captions', value: CAPTION_STYLES.find(c => c.key === captionStyle)?.label || captionStyle },
+                    { label: 'Length', value: `${videoLengthPreset}s` },
                   ].map(item => (
                     <div key={item.label} className="bg-slate-50 rounded-lg p-3">
                       <div className="text-[10px] text-slate-400 uppercase">{item.label}</div>
@@ -1190,18 +1201,24 @@ export default function CampaignsNewPage() {
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3">
                   <div className="text-[10px] text-slate-400 uppercase">Scenes</div>
-                  <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~60 seconds · 9:16 vertical</div>
+                  <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~{videoLengthPreset} seconds · 9:16 vertical</div>
                 </div>
+                {previewImageUrl && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-[10px] text-slate-400 uppercase mb-2">Scene 1 Preview</div>
+                    <img src={previewImageUrl} alt="Scene 1" className="max-h-40 rounded-lg" />
+                  </div>
+                )}
               </div>
             )}
 
             {/* Navigation */}
             <div className="flex justify-between pt-4 border-t">
-              {wizardStep !== 'brand_niche' ? (
+              {wizardStep !== 'niche' ? (
                 <button onClick={goBack} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
               ) : <div />}
-              {wizardStep !== 'generate' ? (
-                <button onClick={() => { if (wizardStep === 'topic_story' && scriptScenes.length === 0) handleGenerateScript(); goNext(); }}
+              {wizardStep !== 'review' ? (
+                <button onClick={goNext}
                   disabled={!canGoNext()} className="px-5 py-2 bg-[#2C666E] text-white rounded-xl text-sm font-medium hover:bg-[#235258] disabled:opacity-50">
                   Next →
                 </button>
