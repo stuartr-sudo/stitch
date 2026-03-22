@@ -240,7 +240,8 @@ export default function CampaignsNewPage() {
       const raw = d.usernames || [];
       const list = raw.map(u => typeof u === 'string' ? { username: u, brand_name: u } : u);
       setBrands(list);
-      if (list.length > 0) setSelectedBrand(list[0].username);
+      // Only auto-select for Ad mode; Shorts wizard uses brandsWithKit
+      if (list.length > 0 && contentType === 'ad') setSelectedBrand(list[0].username);
     }).catch(() => {});
 
     // Fetch brands that have a Brand Kit configured
@@ -471,7 +472,7 @@ export default function CampaignsNewPage() {
               Ad
             </button>
             <button
-              onClick={() => setContentType('shorts')}
+              onClick={() => { setContentType('shorts'); setSelectedBrand(''); }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 contentType === 'shorts' ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
