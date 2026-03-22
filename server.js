@@ -396,6 +396,12 @@ app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) 
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/storyboard/describe-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/describe-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
@@ -560,6 +566,30 @@ app.post('/api/campaigns/create', authenticateToken, async (req, res) => {
 
 app.get('/api/campaigns/export', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/export.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/campaigns/download-subtitles', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/download-subtitles.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/generate-captions', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/generate-captions.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/generate-thumbnails', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/generate-thumbnails.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/score-consistency', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/score-consistency.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
