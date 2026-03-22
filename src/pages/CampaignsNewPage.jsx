@@ -379,6 +379,7 @@ export default function CampaignsNewPage() {
         body: JSON.stringify({
           visual_prompt: scene1.visual_prompt,
           visual_style: visualStyle,
+          video_style: videoStyle,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
           image_model: imageModel,
           brand_username: selectedBrand || undefined,
