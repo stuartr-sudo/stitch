@@ -9,6 +9,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import CampaignsNewPage from './pages/CampaignsNewPage';
 import TemplatesPage from './pages/TemplatesPage';
 import CostDashboardPage from './pages/CostDashboardPage';
+import ShortsDraftPage from './pages/ShortsDraftPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -126,6 +127,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <CostDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/shorts/draft/:draftId"
+            element={
+              <ProtectedRoute>
+                <ShortsDraftPage />
               </ProtectedRoute>
             }
           />
