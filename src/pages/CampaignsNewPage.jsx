@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,7 +183,8 @@ export default function CampaignsNewPage() {
   ]);
   const [isCreating, setIsCreating] = useState(false);
 
-  const [contentType, setContentType] = useState('ad');
+  const [searchParams] = useSearchParams();
+  const [contentType, setContentType] = useState(searchParams.get('type') === 'shorts' ? 'shorts' : 'ad');
 
   // Shorts-specific state
   const [niche, setNiche] = useState('');

@@ -134,11 +134,7 @@ function App() {
 
           <Route
             path="/shorts/new"
-            element={
-              <ProtectedRoute>
-                <ShortsWizardPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/campaigns/new?type=shorts" replace />}
           />
           <Route
             path="/shorts/draft/:draftId"
