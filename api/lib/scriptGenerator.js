@@ -27,6 +27,7 @@ const ShortsScriptSchema = z.object({
   narration_full: z.string().describe('Complete voiceover text, all scenes concatenated naturally'),
   scenes: z.array(ScriptSceneSchema),
   music_mood: z.string().describe('Background music mood/genre description'),
+  scene_1_image_description: z.string().describe('Detailed visual description for generating the Scene 1 image. Describe the specific subject, setting, lighting, color palette, mood, and composition. This will be used as an AI image generation prompt.'),
 });
 
 /**
@@ -40,34 +41,52 @@ const ShortsScriptSchema = z.object({
  * @param {string} [params.brandUsername] - For cost logging
  * @returns {Promise<object>} Parsed ShortsScriptSchema result
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
   if (!nicheTemplate) throw new Error(`No template found for niche "${niche}". Cannot generate script.`);
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
-  const sceneStructure = nicheTemplate.scenes
+  // If targetDurationSeconds provided, adjust scene count from template
+  const sceneCounts = { 30: 3, 45: 4, 60: 5, 90: 7 };
+  let scenes = nicheTemplate.scenes;
+  let effectiveDuration = nicheTemplate.total_duration_seconds;
+
+  if (targetDurationSeconds && sceneCounts[targetDurationSeconds]) {
+    const targetSceneCount = sceneCounts[targetDurationSeconds];
+    effectiveDuration = targetDurationSeconds;
+    // Take first N scenes from template, adjusting to fit target duration
+    scenes = nicheTemplate.scenes.slice(0, targetSceneCount);
+    const perScene = Math.round(effectiveDuration / targetSceneCount);
+    scenes = scenes.map(s => ({ ...s, duration: perScene }));
+  }
+
+  const sceneStructure = scenes
     .map((s, i) => `Scene ${i + 1} [${s.role}] (${s.duration}s): ${s.hint}`)
     .join('\n');
 
-  const totalWords = Math.round(nicheTemplate.total_duration_seconds * 2.7); // ~2.7 words/sec for natural speech
+  const totalWords = Math.round(effectiveDuration * 2.7); // ~2.7 words/sec for natural speech
 
   const systemPrompt = `${nicheTemplate.script_system_prompt}
 
-TEMPLATE STRUCTURE (${nicheTemplate.scenes.length} scenes, ${nicheTemplate.total_duration_seconds}s total):
+TEMPLATE STRUCTURE (${scenes.length} scenes, ${effectiveDuration}s total):
 ${sceneStructure}
 
 VOICE PACING: ${nicheTemplate.voice_pacing}
 
 CRITICAL RULES:
-- Total narration must be ${totalWords - 15} to ${totalWords + 15} words (for ${nicheTemplate.total_duration_seconds} seconds at natural pace)
+- Total narration must be ${totalWords - 15} to ${totalWords + 15} words (for ${effectiveDuration} seconds at natural pace)
 - Each scene's narration_segment must match its target duration (~2.7 words per second)
 - narration_full = all narration_segments joined naturally (this is what gets spoken)
 - visual_prompt: Write vivid, specific AI image prompts (no text overlays, no words in images)
 - visual_prompt should describe cinematic scenes, environments, close-ups, or symbolic imagery
 - motion_prompt: Subtle camera movements only (slow pan, gentle zoom, drift)
 - NEVER include text, words, letters, numbers, or typography in visual_prompts
-- Every sentence must earn its place — zero filler words`;
+- Every sentence must earn its place -- zero filler words
+- NEVER use emdashes or endashes (no -- or - characters used as dashes). Use commas, periods, or semicolons instead.
+- FORBIDDEN cliche phrases (never use these): "buckle up", "let's dive in", "here's the thing", "what if I told you", "game-changer", "mind-blowing", "insane", "literally", "absolutely", "at the end of the day"
+- Write like a sharp, knowledgeable creator talking to a friend. Be specific, not generic.
+- scene_1_image_description: Write a rich, detailed image generation prompt for the first scene. Include specific subject, setting, lighting, color palette, mood, and composition.`;
 
   const storyContextBlock = storyContext
     ? `\n\nREAL STORY CONTEXT (use this as the basis for the script):\n${storyContext}`
@@ -78,8 +97,8 @@ CRITICAL RULES:
     : '';
 
   const userPrompt = topic
-    ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}${storyContextBlock}${visualDirectionsBlock}`
-    : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}${visualDirectionsBlock}`;
+    ? `Create a ${effectiveDuration}-second ${nicheTemplate.name} short about: ${topic}${storyContextBlock}${visualDirectionsBlock}`
+    : `Create a ${effectiveDuration}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}${visualDirectionsBlock}`;
 
   const completion = await openai.chat.completions.parse({
     model: 'gpt-4.1-mini-2025-04-14',

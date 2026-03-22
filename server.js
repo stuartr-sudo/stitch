@@ -358,6 +358,13 @@ app.post('/api/jobs/status', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Job polling (GET, with auth — used by Shorts wizard)
+app.get('/api/jobs/poll', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/poll.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Audio routes (with auth)
 app.post('/api/audio/voiceover', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('audio/voiceover.js');
