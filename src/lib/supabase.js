@@ -31,23 +31,3 @@ if (isValidUrl(supabaseUrl) && supabaseAnonKey && !supabaseAnonKey.includes('you
 }
 
 export { supabase };
-
-export const getCurrentUser = async () => {
-  if (!supabase) return null;
-  
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      return null;
-    }
-    
-    return {
-      id: session.user.id,
-      email: session.user.email,
-    };
-  } catch (err) {
-    console.error('getCurrentUser exception:', err);
-    return null;
-  }
-};
