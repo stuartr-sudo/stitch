@@ -78,16 +78,21 @@ export default async function handler(req, res) {
     if (campError) return res.status(500).json({ error: campError.message });
 
     // Create job for progress tracking
-    const { data: job } = await supabase
+    const { data: job, error: jobError } = await supabase
       .from('jobs')
       .insert({
         user_id: req.user.id,
         type: 'shorts_pipeline',
         status: 'running',
-        campaign_id: campaign.id,
+        input_json: { campaign_id: campaign.id },
       })
       .select()
       .single();
+
+    if (jobError) {
+      console.error('[campaigns/create] Job insert error:', jobError.message);
+      return res.status(500).json({ error: `Failed to create job: ${jobError.message}` });
+    }
 
     // Return immediately, run pipeline in background
     res.json({ success: true, campaign_id: campaign.id, job_id: job.id });
