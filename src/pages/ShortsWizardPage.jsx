@@ -16,16 +16,16 @@ import PreviewImageStep from '@/components/shorts/PreviewImageStep';
 import ReviewGenerateStep from '@/components/shorts/ReviewGenerateStep';
 
 const STEPS = [
-  { key: 'niche', label: 'Niche' },
-  { key: 'style', label: 'Visual Style' },
-  { key: 'topic', label: 'Topic' },
-  { key: 'length', label: 'Length' },
+  { key: 'niche', label: 'Niche & Theme' },
+  { key: 'topic', label: 'Topics' },
   { key: 'script', label: 'Script' },
-  { key: 'voice', label: 'Voice' },
-  { key: 'music', label: 'Music' },
+  { key: 'style', label: 'Look & Feel' },
+  { key: 'motion', label: 'Motion Style' },
   { key: 'video', label: 'Video Model' },
+  { key: 'voice', label: 'Voice & Music' },
   { key: 'captions', label: 'Captions' },
-  { key: 'review', label: 'Review' },
+  { key: 'preview', label: 'Preview Image' },
+  { key: 'review', label: 'Review & Generate' },
 ];
 
 function StepPlaceholder({ stepKey, label }) {
@@ -46,14 +46,14 @@ function StepPlaceholder({ stepKey, label }) {
 
 const STEP_COMPONENTS = {
   niche: NicheStep,
-  style: LookFeelStep,
   topic: TopicsStep,
-  length: null, // handled inline or merged with topic
   script: ScriptStep,
-  voice: VoiceMusicStep,
-  music: null, // merged with voice
+  style: LookFeelStep,
+  motion: MotionStyleStep,
   video: VideoModelStep,
+  voice: VoiceMusicStep,
   captions: CaptionsStep,
+  preview: PreviewImageStep,
   review: ReviewGenerateStep,
 };
 
