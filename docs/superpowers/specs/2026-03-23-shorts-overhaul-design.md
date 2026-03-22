@@ -110,16 +110,41 @@ export const VIDEO_MODELS = {
 **Generic dispatcher** (`api/lib/mediaGenerator.js`):
 
 ```js
+// Custom error class for structured error context
+class MediaGenerationError extends Error {
+  constructor(model, type, detail) {
+    super(`${type} generation failed [${model}]: ${detail}`);
+    this.model = model;
+    this.type = type;
+    this.detail = detail;
+  }
+}
+
+// Provider-specific URL base and auth headers
+const PROVIDER_CONFIG = {
+  fal: {
+    baseUrl: 'https://queue.fal.run',
+    buildHeaders: (keys) => ({ 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' }),
+    poll: pollFalQueue,
+  },
+  wavespeed: {
+    baseUrl: 'https://api.wavespeed.ai/api/v3',
+    buildHeaders: (keys) => ({ 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' }),
+    poll: pollWavespeedRequest, // different polling shape
+  },
+};
+
 export async function generateImage(modelKey, prompt, aspectRatio, keys, supabase, opts = {}) {
   const model = IMAGE_MODELS[modelKey];
   if (!model) throw new Error(`Unknown image model: ${modelKey}`);
 
+  const provider = PROVIDER_CONFIG[model.provider];
   const size = model.sizeMap?.[aspectRatio] || aspectRatio;
   const body = model.buildBody(prompt, size, opts);
 
-  const res = await fetch(`${FAL_BASE}/${model.endpoint}`, {
+  const res = await fetch(`${provider.baseUrl}/${model.endpoint}`, {
     method: 'POST',
-    headers: buildHeaders(model.provider, keys),
+    headers: provider.buildHeaders(keys),
     body: JSON.stringify(body),
   });
 
@@ -133,11 +158,11 @@ export async function generateImage(modelKey, prompt, aspectRatio, keys, supabas
   const directResult = model.parseResult(queueData);
   if (directResult) return uploadUrlToSupabase(directResult, supabase, 'pipeline/images');
 
-  // Otherwise poll
-  const output = await pollFalQueue(
-    queueData.response_url || queueData.request_id,
-    model.endpoint,
-    keys.falKey,
+  // Provider-specific polling (FAL uses pollFalQueue, Wavespeed uses pollWavespeedRequest)
+  const output = await provider.poll(
+    queueData.response_url || queueData.request_id || queueData.id || queueData.data?.id,
+    model.provider === 'fal' ? model.endpoint : keys.wavespeedKey,
+    model.provider === 'fal' ? keys.falKey : undefined,
     model.pollConfig.maxRetries,
     model.pollConfig.delayMs,
   );
@@ -148,7 +173,11 @@ export async function generateImage(modelKey, prompt, aspectRatio, keys, supabas
 }
 ```
 
-Same pattern for `animateImage()`. One code path for all models. ~60 lines replaces ~500.
+Same pattern for `animateImage()`. One code path for all models. ~80 lines replaces ~500.
+
+**Wavespeed handling**: The `PROVIDER_CONFIG` abstraction handles the two key differences between FAL and Wavespeed: (1) different base URL and auth header format, (2) different polling function. Each model's `buildBody` handles Wavespeed's different param names (e.g., `image` instead of `image_url`, numeric duration instead of string). Each model's `parseResult` handles Wavespeed's different response shape (e.g., direct `outputs[0]` instead of `video.url`).
+
+**Non-shorts callers**: `campaigns/create.js`'s manual campaign path (line 225) currently imports `generateImage`/`animateImage` from `pipelineHelpers.js`. These will become thin wrappers that delegate to `mediaGenerator.js`, maintaining backward compatibility without duplicating logic.
 
 ### 2. Pipeline Checkpointing & Error Handling
 
@@ -156,31 +185,44 @@ Same pattern for `animateImage()`. One code path for all models. ~60 lines repla
 
 **Solution**: Wrap the pipeline in structured error handling with per-scene checkpointing.
 
-**Per-scene checkpoint** — After each scene completes, save progress to the `jobs` table:
+**Per-scene checkpoint** — Inside the scene loop (after each scene's image + clip are generated and pushed to `sceneInputs`), write progress to the `jobs` table immediately:
 
 ```js
-// After each scene completes:
-await supabase.from('jobs').update({
-  completed_steps: 3, // still in image/clip phase
-  step_results: {
-    ...existingResults,
-    [`scene_${i}`]: {
-      image_url: imageUrl,
-      clip_url: clipUrl,
-      completed_at: new Date().toISOString(),
+for (let i = 0; i < scriptResult.scenes.length; i++) {
+  // ... generate image, animate clip, extract frame ...
+
+  sceneInputs.push({ image_url, clip_url, ... });
+
+  // CHECKPOINT: persist scene result immediately after completion
+  await supabase.from('jobs').update({
+    step_results: {
+      ...existingStepResults,
+      [`scene_${i}`]: {
+        image_url: imageUrl,
+        clip_url: clipUrl,
+        completed_at: new Date().toISOString(),
+      },
     },
-  },
-}).eq('id', jobId);
+    completed_steps: 3, // still in image/clip phase but per-scene progress is in step_results
+  }).eq('id', jobId);
+}
 ```
 
-**Pipeline-level try/catch** — The top-level `runShortsPipeline()` wraps everything:
+This ensures that if scene 5/6 fails, scenes 1-4 results are persisted and visible to the frontend progress UI.
+
+**Pipeline-level try/catch** — The `runShortsPipeline()` function is the SOLE owner of failure marking. The outer `.catch()` in `campaigns/create.js` only logs — it does NOT update the database (eliminating the race condition where two separate handlers try to mark the job as failed):
 
 ```js
+// In shortsPipeline.js:
 export async function runShortsPipeline(opts) {
+  let currentStep = 'init';
+  let currentSceneIndex = -1;
+  let currentModel = '';
+
   try {
-    // ... all 9 steps
+    // ... all 9 steps, updating currentStep/currentSceneIndex/currentModel as we go
   } catch (err) {
-    // Always mark job as failed with full context
+    // Pipeline owns ALL failure marking — awaited, with full context
     await opts.supabase.from('jobs').update({
       status: 'failed',
       error: err.message,
@@ -196,10 +238,15 @@ export async function runShortsPipeline(opts) {
     await opts.supabase.from('campaigns').update({
       status: 'failed',
     }).eq('id', opts.campaignId);
-
-    throw err; // re-throw for outer .catch()
+    // Do NOT re-throw — pipeline handles its own cleanup
   }
 }
+
+// In campaigns/create.js — outer .catch() only logs:
+runShortsPipeline({ ... }).catch(err => {
+  console.error('[campaigns/create] Shorts pipeline error (already marked failed):', err);
+  // No database updates here — pipeline handles it internally
+});
 ```
 
 **Polling timeout guard** — Add an absolute timeout to all polling:
@@ -210,6 +257,17 @@ const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 300_000);
 ```
 
+**Progress step mapping** — The pipeline has 9 internal steps, but steps 4+5 (images + clips) are interleaved per scene. The frontend progress UI maps this as:
+
+- Steps 1-3: Script, Voiceover, Timestamps (1 progress increment each)
+- Step 4: "Generating scenes" — shows scene-level progress from `step_results` (e.g., "Scene 3/6")
+- Steps 5-7: Music, Assembly, Captions (1 progress increment each)
+- Step 8: Finalize
+
+This gives 8 visible progress stages, with Step 4 having sub-progress.
+
+**Shorts pipeline jobs vs workflow engine** — Shorts pipeline jobs use the `jobs` table with `type = 'shorts_pipeline'` and are independent of the workflow engine (`workflowEngine.js`), which handles the article-to-video pipeline. They share the table but use different `type` values and do not interact.
+
 **Resume capability** — When a job has `step_results` with completed scenes, the pipeline can skip those scenes on retry. (Future enhancement, not MVP.)
 
 ### 3. Wizard Flow Redesign (10 Steps)
@@ -219,7 +277,7 @@ Replace the current 6-step wizard with a focused 10-step flow. Each step is its 
 | # | Step | Component | API | Notes |
 |---|------|-----------|-----|-------|
 | 1 | Niche & Theme | `NicheStep.jsx` | — | Pick niche (12), pick visual style (15 with thumbnails) |
-| 2 | Topics | `TopicsStep.jsx` | `/api/campaigns/topics` | Generate ideas, multi-select, set primary, video length preset (30/45/60/90s) |
+| 2 | Topics | `TopicsStep.jsx` | `/api/campaigns/topics` | Generate ideas, multi-select, set primary, video length preset (30/45/60/90s). Length preset is passed to `generateScript()` which adjusts scene count: 30s=3 scenes, 45s=4, 60s=5, 90s=7. Overrides `nicheTemplate.total_duration_seconds` for music duration. |
 | 3 | Script | `ScriptStep.jsx` | `/api/campaigns/preview-script` | Improved writing (no emdashes, less cliché). Shows Scene 1 image description explicitly. Editable. |
 | 4 | Look & Feel | `LookFeelStep.jsx` | — | Visual style with thumbnail previews. Verified to flow through to pipeline. |
 | 5 | Video Model | `VideoModelStep.jsx` | — | Model selection with pricing. All endpoints verified. |
@@ -314,7 +372,7 @@ No new tables needed. Minor column additions:
 
 ### 10. Aspect Ratio Fix
 
-The current `sizeMap` in `generateImage()` maps `'9:16'` to `'portrait_16_9'`. This needs verification per model — some FAL models may interpret this differently. The model registry standardizes this per-model so each model gets the correct size parameter.
+The current `sizeMap` in `generateImage()` maps `'9:16'` to `'portrait_16_9'`. **This mapping must be verified per model before entering the registry** — the example values shown in Section 1 are placeholders. During implementation, each model's FAL documentation must be checked to confirm the correct `image_size` enum value for 9:16 portrait orientation. The registry is the right place to fix this, but implementation must not copy the current potentially-wrong values without verification.
 
 ---
 
