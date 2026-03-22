@@ -24,8 +24,8 @@ export default async function handler(req, res) {
 
   const { niche, topic, brand_username, story_context } = req.body;
 
-  if (!brand_username || !niche) {
-    return res.status(400).json({ error: 'Missing niche or brand_username' });
+  if (!niche) {
+    return res.status(400).json({ error: 'Missing niche' });
   }
 
   const nicheTemplate = getShortsTemplate(niche);
@@ -35,8 +35,10 @@ export default async function handler(req, res) {
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  const userId = await resolveUserIdFromBrand(brand_username, supabase, req.user?.id);
-  if (!userId) return res.status(404).json({ error: 'Brand not found' });
+  const userId = brand_username
+    ? await resolveUserIdFromBrand(brand_username, supabase, req.user?.id)
+    : req.user?.id;
+  if (!userId) return res.status(404).json({ error: 'User not found' });
 
   const { data: userKeys } = await supabase
     .from('user_api_keys')

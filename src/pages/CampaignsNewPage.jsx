@@ -280,7 +280,7 @@ export default function CampaignsNewPage() {
   };
   const canGoNext = () => {
     switch (wizardStep) {
-      case 'brand_niche': return selectedBrand && niche && topic.trim().length > 0;
+      case 'brand_niche': return niche && topic.trim().length > 0;
       case 'topic_story': return true; // Starting image is optional
       case 'script': return scriptScenes.length > 0;
       case 'look_feel': return visualStyle;
@@ -325,7 +325,6 @@ export default function CampaignsNewPage() {
   };
 
   const handleResearch = async () => {
-    if (!selectedBrand) { toast.error('Select a brand first'); return; }
     if (!niche || !topic.trim()) {
       toast.error('Select a niche and enter a topic first');
       return;
