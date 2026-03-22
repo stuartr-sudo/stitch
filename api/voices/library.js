@@ -14,30 +14,8 @@ export default async function handler(req, res) {
 
   const elevenlabsKey = userKeys?.elevenlabs_key || process.env.ELEVENLABS_API_KEY;
 
+  // Only show free preset voices (no custom/paid voices from ElevenLabs API)
   const voices = VOICE_PRESETS.map(v => ({ ...v, source: 'preset' }));
-
-  if (elevenlabsKey) {
-    try {
-      const elRes = await fetch('https://api.elevenlabs.io/v1/voices', {
-        headers: { 'xi-api-key': elevenlabsKey },
-      });
-      if (elRes.ok) {
-        const data = await elRes.json();
-        const customVoices = (data.voices || [])
-          .filter(v => !VOICE_PRESETS.some(p => p.id === v.voice_id))
-          .map(v => ({
-            id: v.voice_id,
-            name: v.name,
-            description: v.labels?.description || v.labels?.accent || 'Custom voice',
-            source: 'custom',
-            niches: [],
-          }));
-        voices.push(...customVoices);
-      }
-    } catch (err) {
-      console.error('[voices/library] ElevenLabs fetch error:', err.message);
-    }
-  }
 
   res.json(voices);
 }

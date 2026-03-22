@@ -225,6 +225,7 @@ export default function CampaignsNewPage() {
 
   // Step 4
   const [imageModel, setImageModel] = useState('fal_flux');
+  const [sceneBuilderPills, setSceneBuilderPills] = useState([]);
 
   // Step 5
   const [videoStylesList, setVideoStylesList] = useState([]);
@@ -356,7 +357,7 @@ export default function CampaignsNewPage() {
     try {
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand }),
+        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand, visual_directions: sceneBuilderPills.length > 0 ? sceneBuilderPills : undefined }),
       });
       const data = await res.json();
       if (data.scenes) setScriptScenes(data.scenes);
@@ -385,7 +386,7 @@ export default function CampaignsNewPage() {
 
   const handleCreate = async (autoGenerate) => {
     if (contentType === 'shorts') {
-      if (!selectedBrand || !niche || !topic.trim() || !visualStyle || !videoStyle || !voiceId) {
+      if (!niche || !topic.trim() || !visualStyle || !videoStyle || !voiceId) {
         toast.error('Please complete all required steps'); return;
       }
       setIsCreating(true);
@@ -866,11 +867,38 @@ export default function CampaignsNewPage() {
             {wizardStep === 'script' && (
               <div className="space-y-4">
                 {scriptScenes.length === 0 && !scriptLoading && (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-slate-500 mb-3">Generate a script from your topic</p>
-                    <button onClick={handleGenerateScript} className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-sm font-medium hover:bg-[#235258]">
-                      Generate Script
-                    </button>
+                  <div className="space-y-4">
+                    {/* Scene Builder Helpers — shown BEFORE script generation to guide visual style */}
+                    <div className="border border-dashed border-slate-200 rounded-xl p-3">
+                      <label className="text-xs font-medium text-slate-500 block mb-1">Scene Builder Helpers</label>
+                      <p className="text-[10px] text-slate-400 mb-2">Click pills to build a visual direction — these will be included when generating your script scenes.</p>
+                      {SCENE_PILL_CATEGORIES.map(cat => (
+                        <div key={cat.label} className="mb-2">
+                          <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {cat.pills.map(pill => (
+                              <button key={pill} onClick={() => {
+                                setSceneBuilderPills(prev => prev.includes(pill) ? prev.filter(p => p !== pill) : [...prev, pill]);
+                              }} className={`text-[10px] px-2 py-1 rounded-full transition-colors ${sceneBuilderPills.includes(pill) ? 'bg-[#2C666E] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                                {pill}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {sceneBuilderPills.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-slate-100">
+                          <div className="text-[10px] text-slate-400 mb-1">Selected: {sceneBuilderPills.join(', ')}</div>
+                          <button onClick={() => setSceneBuilderPills([])} className="text-[10px] text-red-400 hover:underline">Clear all</button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center py-4">
+                      <p className="text-sm text-slate-500 mb-3">Generate a script from your topic{sceneBuilderPills.length > 0 ? ` with ${sceneBuilderPills.length} visual directions` : ''}</p>
+                      <button onClick={handleGenerateScript} className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-sm font-medium hover:bg-[#235258]">
+                        Generate Script
+                      </button>
+                    </div>
                   </div>
                 )}
                 {scriptLoading && (
@@ -915,28 +943,24 @@ export default function CampaignsNewPage() {
                         )}
                       </div>
                     ))}
-                    <div className="border border-dashed border-slate-200 rounded-xl p-3">
-                      <label className="text-xs font-medium text-slate-500 block mb-2">Scene Builder Helpers</label>
-                      {SCENE_PILL_CATEGORIES.map(cat => (
-                        <div key={cat.label} className="mb-2">
-                          <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
-                          <div className="flex flex-wrap gap-1">
-                            {cat.pills.map(pill => (
-                              <button key={pill} onClick={() => {
-                                if (expandedScene !== null) {
-                                  const updated = [...scriptScenes];
-                                  const s = updated[expandedScene];
-                                  updated[expandedScene] = { ...s, visual_prompt: ((s.visual_prompt || '') + ', ' + pill).replace(/^, /, '') };
-                                  setScriptScenes(updated);
-                                } else { toast.info('Click a scene to expand it first'); }
-                              }} className="text-[10px] px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
-                                {pill}
-                              </button>
-                            ))}
-                          </div>
+                    {/* Pill helpers for individual scene editing */}
+                    {expandedScene !== null && (
+                      <div className="border border-dashed border-slate-200 rounded-xl p-3">
+                        <label className="text-xs font-medium text-slate-500 block mb-2">Add to scene {expandedScene + 1} visual prompt</label>
+                        <div className="flex flex-wrap gap-1">
+                          {SCENE_PILL_CATEGORIES.flatMap(cat => cat.pills).slice(0, 20).map(pill => (
+                            <button key={pill} onClick={() => {
+                              const updated = [...scriptScenes];
+                              const s = updated[expandedScene];
+                              updated[expandedScene] = { ...s, visual_prompt: ((s.visual_prompt || '') + ', ' + pill).replace(/^, /, '') };
+                              setScriptScenes(updated);
+                            }} className="text-[10px] px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
+                              {pill}
+                            </button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

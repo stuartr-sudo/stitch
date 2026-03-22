@@ -88,6 +88,48 @@ export const VIDEO_STYLE_PRESETS = {
     thumb: 'https://v3b.fal.media/files/b/0a931549/gVmrP3xeHjdNrp3T2qOHk.jpg',
     prompt: 'high-quality anime art style animation, vibrant saturated color palette, expressive character animation with fluid motion, dynamic speed lines and impact frames, detailed background art with atmospheric perspective, cel-shaded lighting with crisp shadow edges, wind-blown hair and clothing movement, dramatic camera angles',
   },
+  faceless_cinematic: {
+    label: 'Faceless Cinematic',
+    category: 'faceless',
+    description: 'No people — dramatic landscapes, objects, and environments with cinematic framing',
+    prompt: 'cinematic establishing shots without any people or faces, sweeping landscape and environment cinematography, dramatic lighting with volumetric rays, slow controlled camera movement, atmospheric depth and haze, professional color grading with rich contrast, detailed textures on surfaces and materials, no human figures visible',
+  },
+  faceless_tech: {
+    label: 'Faceless Tech',
+    category: 'faceless',
+    description: 'No people — screens, circuits, data visualizations, and futuristic tech imagery',
+    prompt: 'technology-focused visuals without any people or faces, glowing screens and holographic displays, circuit boards and server rooms, data visualization and flowing code, cool blue and neon accent lighting, clean modern environments, close-up macro shots of tech components, futuristic laboratory aesthetic',
+  },
+  faceless_nature: {
+    label: 'Faceless Nature',
+    category: 'faceless',
+    description: 'No people — stunning nature footage, macro details, aerial landscapes',
+    prompt: 'breathtaking nature cinematography without any people or faces, macro close-ups of natural textures and organisms, aerial drone establishing shots, golden hour and blue hour lighting, time-lapse quality cloud and water movement, rich saturated earthy color palette, intimate botanical and geological details',
+  },
+  faceless_abstract: {
+    label: 'Faceless Abstract',
+    category: 'faceless',
+    description: 'No people — abstract shapes, particles, gradients, and motion graphics feel',
+    prompt: 'abstract visual art without any people or faces, flowing particle systems and geometric shapes, smooth gradient color transitions, organic fluid simulations, light trails and bokeh orbs, minimalist composition with negative space, ethereal atmospheric glow effects, hypnotic repeating patterns',
+  },
+  faceless_dark: {
+    label: 'Faceless Dark/Horror',
+    category: 'faceless',
+    description: 'No people — eerie environments, shadows, abandoned spaces, atmospheric dread',
+    prompt: 'dark atmospheric visuals without any people or faces, abandoned spaces and decaying architecture, deep shadows with minimal light sources, fog and mist obscuring details, desaturated cold color palette, subtle movement in darkness, eerie environmental textures, oppressive low-key lighting creating sense of dread',
+  },
+  motion_graphics: {
+    label: 'Motion Graphics',
+    category: 'faceless',
+    description: 'No people — infographic-style with bold shapes, icons, and kinetic typography feel',
+    prompt: 'clean motion graphics style without any people or faces, bold geometric shapes and flat design elements, smooth kinetic transitions between scenes, infographic-inspired data presentation, vibrant contrasting color blocks, isometric perspective illustrations, minimalist icons and symbols, professional broadcast quality',
+  },
+  stock_footage: {
+    label: 'Stock B-Roll',
+    category: 'faceless',
+    description: 'No people — generic professional B-roll style, versatile and clean',
+    prompt: 'professional stock footage style without any people or faces, clean well-lit environments, versatile generic scenes suitable for voiceover, smooth stabilized camera movement, neutral color grading, offices desks and workspaces, city skylines and traffic, everyday objects and environments shot professionally',
+  },
 };
 
 export function getVideoStylePrompt(key) {

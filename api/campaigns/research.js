@@ -34,8 +34,9 @@ const StorySchema = z.object({
 });
 
 // Search queries per niche for finding trending stories
+const currentYear = new Date().getFullYear();
 const NICHE_SEARCH_QUERIES = {
-  ai_tech_news: ['AI breakthrough news today', 'new AI technology 2024 2025', 'artificial intelligence latest developments'],
+  ai_tech_news: ['AI breakthrough news today', `new AI technology ${currentYear}`, 'artificial intelligence latest developments'],
   finance_money: ['stock market surprising news', 'money saving strategy viral', 'finance news unexpected'],
   motivation_self_help: ['incredible comeback story', 'against all odds success story', 'inspirational true story viral'],
   scary_horror: ['unexplained mystery real', 'creepy true story', 'paranormal event documented'],

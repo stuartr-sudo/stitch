@@ -40,7 +40,7 @@ const ShortsScriptSchema = z.object({
  * @param {string} [params.brandUsername] - For cost logging
  * @returns {Promise<object>} Parsed ShortsScriptSchema result
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
@@ -72,9 +72,13 @@ CRITICAL RULES:
     ? `\n\nREAL STORY CONTEXT (use this as the basis for the script):\n${storyContext}`
     : '';
 
+  const visualDirectionsBlock = visualDirections && visualDirections.length > 0
+    ? `\n\nVISUAL DIRECTIONS (incorporate these into scene visual_prompts):\n${visualDirections.join(', ')}`
+    : '';
+
   const userPrompt = topic
-    ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}${storyContextBlock}`
-    : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}`;
+    ? `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about: ${topic}${storyContextBlock}${visualDirectionsBlock}`
+    : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}${visualDirectionsBlock}`;
 
   const completion = await openai.chat.completions.parse({
     model: 'gpt-4.1-mini-2025-04-14',
