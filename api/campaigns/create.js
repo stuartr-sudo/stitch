@@ -56,8 +56,8 @@ export default async function handler(req, res) {
 
   // Shorts branch — must come before the manual/ad logic
   if (content_type === 'shorts') {
-    if (!niche || !brand_username) {
-      return res.status(400).json({ error: 'niche and brand_username are required for shorts' });
+    if (!niche) {
+      return res.status(400).json({ error: 'niche is required for shorts' });
     }
 
     const campaign_name = name;
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       .insert({
         user_id: req.user.id,
         name: campaign_name || `${niche} Short`,
-        brand_username,
+        brand_username: brand_username || null,
         content_type: 'shorts',
         status: 'generating',
       })
