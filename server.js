@@ -399,6 +399,7 @@ app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) 
 
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
+app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);
 app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campaigns/topics.js')).default);
 
 // Style/voice list routes (with auth)

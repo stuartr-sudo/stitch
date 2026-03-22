@@ -226,6 +226,8 @@ export default function CampaignsNewPage() {
   // Step 4
   const [imageModel, setImageModel] = useState('fal_flux');
   const [sceneBuilderPills, setSceneBuilderPills] = useState([]);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [previewImageLoading, setPreviewImageLoading] = useState(false);
 
   // Step 5
   const [videoStylesList, setVideoStylesList] = useState([]);
@@ -366,6 +368,29 @@ export default function CampaignsNewPage() {
     finally { setScriptLoading(false); }
   };
 
+  const handlePreviewImage = async () => {
+    const scene1 = scriptScenes[0];
+    if (!scene1?.visual_prompt) { toast.error('No script scenes — generate a script first'); return; }
+    setPreviewImageLoading(true);
+    setPreviewImageUrl(null);
+    try {
+      const res = await apiFetch('/api/campaigns/preview-image', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visual_prompt: scene1.visual_prompt,
+          visual_style: visualStyle,
+          lora_config: loraConfig.length > 0 ? loraConfig : undefined,
+          image_model: imageModel,
+          brand_username: selectedBrand || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.image_url) setPreviewImageUrl(data.image_url);
+      else toast.error(data.error || 'Image generation failed');
+    } catch { toast.error('Failed to generate preview image'); }
+    finally { setPreviewImageLoading(false); }
+  };
+
   const handleVoicePreview = async (vid) => {
     if (previewingVoice === vid) { previewAudioRef.current?.pause(); setPreviewingVoice(null); return; }
     setPreviewingVoice(vid);
@@ -389,6 +414,9 @@ export default function CampaignsNewPage() {
       if (!niche || !topic.trim() || !visualStyle || !videoStyle || !voiceId) {
         toast.error('Please complete all required steps'); return;
       }
+      if (!previewImageUrl) {
+        toast.error('Please generate and approve a preview image first'); return;
+      }
       setIsCreating(true);
       try {
         const res = await apiFetch('/api/campaigns/create', {
@@ -401,7 +429,7 @@ export default function CampaignsNewPage() {
             video_model: videoModel, image_model: imageModel,
             voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
-            starting_image: startingImage || undefined,
+            starting_image: previewImageUrl || startingImage || undefined,
             script: scriptScenes.length > 0 ? { scenes: scriptScenes } : undefined,
           }),
         });
@@ -1088,10 +1116,47 @@ export default function CampaignsNewPage() {
             {/* Step 6: Generate */}
             {wizardStep === 'generate' && (
               <div className="space-y-4">
-                <label className="text-sm font-medium text-slate-700 block">Review & Generate</label>
+                <label className="text-sm font-medium text-slate-700 block">Preview & Generate</label>
+
+                {/* Preview Image Section */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Scene 1 Preview</div>
+                      <div className="text-[10px] text-slate-400">Generate a preview of the first frame. Once approved, all scenes will chain from this image.</div>
+                    </div>
+                    <button onClick={handlePreviewImage} disabled={previewImageLoading || scriptScenes.length === 0}
+                      className="px-3 py-1.5 text-xs bg-[#2C666E] text-white rounded-lg hover:bg-[#235258] disabled:opacity-50">
+                      {previewImageLoading ? 'Generating...' : previewImageUrl ? '🔄 Regenerate' : 'Generate Preview'}
+                    </button>
+                  </div>
+                  {previewImageLoading && (
+                    <div className="flex items-center justify-center py-12 bg-slate-50 rounded-xl">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                      <span className="ml-2 text-sm text-slate-500">Generating scene 1 image...</span>
+                    </div>
+                  )}
+                  {previewImageUrl && !previewImageLoading && (
+                    <div className="space-y-2">
+                      <div className="flex justify-center">
+                        <img src={previewImageUrl} alt="Scene 1 preview" className="max-h-80 rounded-xl border shadow-sm object-contain" />
+                      </div>
+                      <div className="text-center">
+                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Preview approved — ready to generate</span>
+                      </div>
+                    </div>
+                  )}
+                  {!previewImageUrl && !previewImageLoading && (
+                    <div className="text-center py-8 bg-slate-50 rounded-xl text-sm text-slate-400">
+                      Click "Generate Preview" to see how scene 1 will look
+                    </div>
+                  )}
+                </div>
+
+                {/* Summary */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Brand', value: selectedBrand },
+                    { label: 'Brand', value: selectedBrand || 'None' },
                     { label: 'Niche', value: NICHES.find(n => n.key === niche)?.label || niche },
                     { label: 'Visual Style', value: visualStyle },
                     { label: 'Video Style', value: videoStylesList.find(s => s.key === videoStyle)?.label || videoStyle },
@@ -1114,12 +1179,6 @@ export default function CampaignsNewPage() {
                   <div className="text-[10px] text-slate-400 uppercase">Scenes</div>
                   <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~60 seconds · 9:16 vertical</div>
                 </div>
-                {loraConfig.length > 0 && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-400 uppercase">LoRA Models</div>
-                    <div className="text-sm text-slate-800">{loraConfig.map(l => l.triggerWord || l.name || l.id).join(', ')}</div>
-                  </div>
-                )}
               </div>
             )}
 
