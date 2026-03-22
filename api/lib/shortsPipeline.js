@@ -120,6 +120,16 @@ export async function runShortsPipeline(opts) {
       // Full prebuilt script object — use as-is
       console.log(`[shortsPipeline] Step 1: Using prebuilt script object`);
       scriptResult = prebuiltScript;
+      // Ensure narration_full exists (frontend may send only { scenes })
+      if (!scriptResult.narration_full && scriptResult.scenes) {
+        scriptResult.narration_full = scriptResult.scenes
+          .map(s => s.narration_segment || s.narration || '')
+          .filter(Boolean)
+          .join(' ');
+      }
+      if (!scriptResult.title) {
+        scriptResult.title = topic || 'Untitled Short';
+      }
     }
   } else {
     console.log(`[shortsPipeline] Step 1: Generating script niche="${niche}" topic="${topic || 'auto'}"`);
