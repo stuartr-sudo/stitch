@@ -77,13 +77,12 @@ CRITICAL RULES:
     : `Create a ${nicheTemplate.total_duration_seconds}-second ${nicheTemplate.name} short about a trending or fascinating topic in this niche. Pick something specific and surprising.${storyContextBlock}`;
 
   const completion = await openai.chat.completions.parse({
-    model: 'gpt-5-mini',
+    model: 'gpt-4.1-mini-2025-04-14',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
     response_format: zodResponseFormat(ShortsScriptSchema, 'shorts_script'),
-    temperature: 0.9, // Higher creativity for diverse topics
   });
 
   const script = completion.choices[0].message.parsed;

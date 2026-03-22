@@ -13,6 +13,7 @@ import WizardStepper from '@/components/ui/WizardStepper';
 import StyleGrid from '@/components/ui/StyleGrid';
 import LoRAPicker from '@/components/LoRAPicker';
 import BrandKitModal from '@/components/modals/BrandKitModal';
+import LibraryModal from '@/components/modals/LibraryModal';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
 import { SCENE_PILL_CATEGORIES } from '@/lib/scenePills';
@@ -195,7 +196,8 @@ export default function CampaignsNewPage() {
   const [loraConfig, setLoraConfig] = useState([]);
   const [researchedStories, setResearchedStories] = useState([]);
   const [researchLoading, setResearchLoading] = useState(false);
-  const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
+  const [selectedStoryIdxs, setSelectedStoryIdxs] = useState(new Set());
+  const [primaryStoryIdx, setPrimaryStoryIdx] = useState(null);
   const [savedStories, setSavedStories] = useState([]);
   const storiesRef = useRef(null);
 
@@ -214,6 +216,7 @@ export default function CampaignsNewPage() {
 
   // Step 2
   const [startingImage, setStartingImage] = useState(null);
+  const [showLibraryForStart, setShowLibraryForStart] = useState(false);
 
   // Step 3
   const [scriptScenes, setScriptScenes] = useState([]);
@@ -229,13 +232,21 @@ export default function CampaignsNewPage() {
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const previewAudioRef = useRef(null);
 
+  // Brands with Brand Kit (for Shorts wizard) and all brands (for Ad mode)
+  const [brandsWithKit, setBrandsWithKit] = useState([]);
+
   useEffect(() => {
     apiFetch('/api/brand/usernames').then(r => r.json()).then(d => {
       const raw = d.usernames || [];
-      // Normalize: API returns objects {username, brand_name} or plain strings
       const list = raw.map(u => typeof u === 'string' ? { username: u, brand_name: u } : u);
       setBrands(list);
       if (list.length > 0) setSelectedBrand(list[0].username);
+    }).catch(() => {});
+
+    // Fetch brands that have a Brand Kit configured
+    apiFetch('/api/brand/kit').then(r => r.json()).then(d => {
+      const kits = d.brands || [];
+      setBrandsWithKit(kits.map(k => ({ username: k.brand_username, brand_name: k.brand_name || k.brand_username })));
     }).catch(() => {});
 
     apiFetch('/api/templates/list').then(r => r.json()).then(d => {
@@ -328,7 +339,8 @@ export default function CampaignsNewPage() {
       const data = await res.json();
       if (data.stories) {
         setResearchedStories(data.stories);
-        setSelectedStoryIdx(null);
+        setSelectedStoryIdxs(new Set());
+        setPrimaryStoryIdx(null);
         setTimeout(() => storiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
       }
     } catch {
@@ -613,7 +625,7 @@ export default function CampaignsNewPage() {
                   <div className="flex items-center gap-3">
                     <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm">
                       <option value="">Select brand...</option>
-                      {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+                      {brandsWithKit.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
                     </select>
                     <button onClick={() => setShowBrandKit(true)} className="text-xs text-[#2C666E] underline whitespace-nowrap">Edit Brand Kit</button>
                   </div>
@@ -722,32 +734,56 @@ export default function CampaignsNewPage() {
                   {researchedStories.length > 0 && (
                     <div ref={storiesRef} className="space-y-2 mt-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">Trending Stories — select one</label>
-                        <span className="text-[10px] text-slate-400">{researchedStories.length} found</span>
+                        <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">Trending Stories — select stories & set primary</label>
+                        <span className="text-[10px] text-slate-400">{researchedStories.length} found · {selectedStoryIdxs.size} selected</span>
                       </div>
-                      {researchedStories.map((s, i) => (
-                        <button key={i} onClick={() => {
-                          setSelectedStoryIdx(i);
-                          setTopic(s.title);
-                          setStoryContext(s.story_context || s.summary || '');
-                          // Save to saved stories if not already there
-                          setSavedStories(prev => {
-                            if (prev.some(p => p.title === s.title)) return prev;
-                            return [...prev, { ...s, niche, selectedAt: new Date().toISOString() }];
-                          });
-                        }}
-                          className={`w-full text-left p-4 border-2 rounded-xl text-xs transition-all ${
-                            selectedStoryIdx === i
-                              ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]'
+                      {researchedStories.map((s, i) => {
+                        const isSelected = selectedStoryIdxs.has(i);
+                        const isPrimary = primaryStoryIdx === i;
+                        return (
+                          <div key={i} className={`p-4 border-2 rounded-xl text-xs transition-all ${
+                            isPrimary ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]'
+                              : isSelected ? 'border-[#2C666E]/50 bg-[#2C666E]/[0.02]'
                               : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                           }`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="font-semibold text-slate-800">{s.title}</div>
-                            {selectedStoryIdx === i && <span className="text-[#2C666E] text-xs shrink-0">Selected ✓</span>}
+                            <div className="flex items-start justify-between gap-2">
+                              <button onClick={() => {
+                                const next = new Set(selectedStoryIdxs);
+                                if (next.has(i)) {
+                                  next.delete(i);
+                                  if (primaryStoryIdx === i) setPrimaryStoryIdx(null);
+                                } else {
+                                  next.add(i);
+                                }
+                                setSelectedStoryIdxs(next);
+                                // Save story
+                                setSavedStories(prev => {
+                                  if (prev.some(p => p.title === s.title)) return prev;
+                                  return [...prev, { ...s, niche, selectedAt: new Date().toISOString() }];
+                                });
+                              }} className="flex items-center gap-2 text-left flex-1">
+                                <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'bg-[#2C666E] border-[#2C666E] text-white' : 'border-slate-300'
+                                }`}>{isSelected ? '✓' : ''}</span>
+                                <span className="font-semibold text-slate-800">{s.title}</span>
+                              </button>
+                              {isSelected && (
+                                <button onClick={() => {
+                                  setPrimaryStoryIdx(i);
+                                  setTopic(s.title);
+                                  setStoryContext(s.story_context || s.summary || '');
+                                }}
+                                  className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                    isPrimary ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'text-[#2C666E] border-[#2C666E]/30 hover:bg-[#2C666E]/10'
+                                  }`}>
+                                  {isPrimary ? 'Primary ★' : 'Set Primary'}
+                                </button>
+                              )}
+                            </div>
+                            <div className="text-slate-500 mt-1 leading-relaxed ml-6">{s.angle || s.summary}</div>
                           </div>
-                          <div className="text-slate-500 mt-1 leading-relaxed">{s.angle || s.summary}</div>
-                        </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
@@ -787,20 +823,15 @@ export default function CampaignsNewPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div>
-                          <label className="text-xs text-slate-500 block mb-1">Paste URL</label>
-                          <div className="flex gap-2">
-                            <input id="startImgUrl" type="text" placeholder="https://..." className="flex-1 border rounded-lg px-3 py-2 text-sm" />
-                            <button onClick={() => {
-                              const url = document.getElementById('startImgUrl').value.trim();
-                              if (url) setStartingImage(url);
-                            }} className="px-3 py-2 text-xs bg-[#2C666E] text-white rounded-lg hover:bg-[#235258]">Add</button>
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-[10px] text-slate-400 mb-2">— or —</div>
-                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-xs text-slate-600 transition-colors">
-                            <Image className="w-3.5 h-3.5" /> Upload from device
+                        <div className="grid grid-cols-3 gap-3">
+                          <button onClick={() => setShowLibraryForStart(true)}
+                            className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
+                            <Film className="w-5 h-5 text-slate-400" />
+                            <span className="text-xs text-slate-600">From Library</span>
+                          </button>
+                          <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors cursor-pointer">
+                            <Image className="w-5 h-5 text-slate-400" />
+                            <span className="text-xs text-slate-600">Upload</span>
                             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
@@ -809,6 +840,16 @@ export default function CampaignsNewPage() {
                               reader.readAsDataURL(file);
                             }} />
                           </label>
+                          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl">
+                            <div className="flex gap-1 w-full">
+                              <input id="startImgUrl" type="text" placeholder="URL..." className="flex-1 border rounded px-2 py-1 text-[10px] min-w-0" />
+                              <button onClick={() => {
+                                const url = document.getElementById('startImgUrl').value.trim();
+                                if (url) setStartingImage(url);
+                              }} className="px-2 py-1 text-[10px] bg-[#2C666E] text-white rounded hover:bg-[#235258] shrink-0">Add</button>
+                            </div>
+                            <span className="text-xs text-slate-600">Paste URL</span>
+                          </div>
                         </div>
                         <div className="text-center text-[10px] text-slate-400">Skip this step if you want the AI to generate Scene 1 from scratch</div>
                       </div>
@@ -1073,7 +1114,8 @@ export default function CampaignsNewPage() {
               )}
             </div>
 
-            {showBrandKit && <BrandKitModal isOpen={true} onClose={() => setShowBrandKit(false)} />}
+            {showBrandKit && <BrandKitModal isOpen={true} onClose={() => { setShowBrandKit(false); /* Refresh brands with kit */ apiFetch('/api/brand/kit').then(r => r.json()).then(d => { const kits = d.brands || []; setBrandsWithKit(kits.map(k => ({ username: k.brand_username, brand_name: k.brand_name || k.brand_username }))); }).catch(() => {}); }} />}
+    {showLibraryForStart && <LibraryModal isOpen={true} onClose={() => setShowLibraryForStart(false)} onSelect={(item) => { setStartingImage(item.url || item.public_url); setShowLibraryForStart(false); }} mediaType="image" />}
           </div>
         )}
       </main>

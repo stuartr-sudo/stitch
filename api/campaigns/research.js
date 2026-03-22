@@ -177,7 +177,7 @@ Provide rich story_context for each so a script writer has all the facts they ne
     console.log(`[shorts/research] Generating ${count} stories (real articles: ${hasRealArticles ? realArticles.length : 'none'})`);
 
     const completion = await openai.chat.completions.parse({
-      model: 'gpt-5-mini',
+      model: 'gpt-4.1-mini-2025-04-14',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
