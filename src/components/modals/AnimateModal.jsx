@@ -132,12 +132,12 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
     setShowImageLibrary(false);
   };
 
-  const pollForResult = useCallback(async (id, currentMode) => {
+  const pollForResult = useCallback(async (id, currentMode, urls = {}) => {
     try {
       const response = await apiFetch('/api/animate/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: id, mode: currentMode }),
+        body: JSON.stringify({ requestId: id, mode: currentMode, statusUrl: urls.statusUrl, responseUrl: urls.responseUrl }),
       });
 
       if (!response.ok) return;
@@ -159,7 +159,7 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
           setGenerationStatus(`In queue (position ${data.queuePosition})...`);
         }
         pollIntervalRef.current = setTimeout(() => {
-          pollForResult(id, currentMode);
+          pollForResult(id, currentMode, urls);
         }, 5000);
       }
     } catch (error) {
@@ -201,7 +201,7 @@ export default function AnimateModal({ isOpen, onClose, onInsert, isEmbedded = f
       if (data.requestId) {
         setRequestId(data.requestId);
         setGenerationStatus('Animating your video (2-5 minutes)...');
-        pollForResult(data.requestId, mode);
+        pollForResult(data.requestId, mode, { statusUrl: data.statusUrl, responseUrl: data.responseUrl });
       }
     } catch (error) {
       console.error('[Animate] Generation error:', error);

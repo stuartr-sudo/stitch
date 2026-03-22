@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { requestId, mode = 'move' } = req.body;
+    const { requestId, mode = 'move', statusUrl, responseUrl } = req.body;
 
     if (!requestId) return res.status(400).json({ error: 'Missing requestId' });
 
@@ -25,10 +25,17 @@ export default async function handler(req, res) {
 
     const headers = { 'Authorization': `Key ${FAL_KEY}` };
 
-    const statusResponse = await fetch(
-      `https://queue.fal.run/${endpoint}/requests/${requestId}/status?logs=1`,
-      { headers }
-    );
+    // Build URLs — prefer client-provided URLs (from queue submission) since FAL
+    // truncates long endpoint paths (e.g. fal-ai/wan/v2.2-14b/animate/move → fal-ai/wan)
+    const checkUrl = statusUrl
+      ? `${statusUrl}?logs=1`
+      : `https://queue.fal.run/${endpoint}/requests/${requestId}/status?logs=1`;
+    const resultFetchUrl = responseUrl
+      || `https://queue.fal.run/${endpoint}/requests/${requestId}`;
+
+    console.log('[Animate/Result] Polling:', checkUrl);
+
+    const statusResponse = await fetch(checkUrl, { headers });
 
     if (!statusResponse.ok) {
       const errorText = await statusResponse.text();
@@ -41,10 +48,7 @@ export default async function handler(req, res) {
     console.log('[Animate/Result] Queue status:', queueStatus);
 
     if (queueStatus === 'COMPLETED') {
-      const resultResponse = await fetch(
-        `https://queue.fal.run/${endpoint}/requests/${requestId}`,
-        { headers }
-      );
+      const resultResponse = await fetch(resultFetchUrl, { headers });
 
       if (!resultResponse.ok) {
         return res.status(resultResponse.status).json({ error: 'Failed to fetch result' });

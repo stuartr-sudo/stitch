@@ -3,12 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 
 const BEATOVEN_MODELS = ['beatoven/music-generation', 'beatoven/sound-effect-generation'];
 
-const pollForQueueResult = async (requestId, model, falKey, maxRetries = 120, retryDelay = 500) => {
+const pollForQueueResult = async (requestIdOrUrl, model, falKey, maxRetries = 120, retryDelay = 500) => {
+  const pollUrl = requestIdOrUrl.startsWith?.('http')
+    ? requestIdOrUrl
+    : `https://queue.fal.run/${model}/requests/${requestIdOrUrl}`;
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
     try {
       const statusResponse = await fetch(
-        `https://queue.fal.run/${model}/requests/${requestId}`,
+        pollUrl,
         {
           method: 'GET',
           headers: {
@@ -129,7 +132,7 @@ export default async function handler(req, res) {
     if (isBeatovenQueue) {
       const requestId = data.request_id;
       if (!requestId) throw new Error('No request_id returned from queue');
-      audioUrl = await pollForQueueResult(requestId, model, falKey);
+      audioUrl = await pollForQueueResult(data.response_url || requestId, model, falKey);
     } else {
       audioUrl = data.audio?.url;
     }

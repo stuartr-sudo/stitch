@@ -20,7 +20,7 @@ async function sleep(ms) {
 
 async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs = 3000) {
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(`${WAVESPEED_BASE}/predictions/${requestId}`, {
+    const res = await fetch(`${WAVESPEED_BASE}/predictions/${requestId}/result`, {
       headers: { 'Authorization': `Bearer ${apiKey}` },
     });
 
@@ -41,9 +41,18 @@ async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs 
   throw new Error('Wavespeed polling timeout');
 }
 
-export async function pollFalQueue(requestId, model, falKey, maxRetries = 120, delayMs = 2000) {
+export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 120, delayMs = 2000) {
+  // Use response_url if a full URL is passed, otherwise construct from model path.
+  // FAL queue URLs use only the first 2 path segments of the model path.
+  // e.g. "fal-ai/bytedance/seedream/v4/text-to-image" → "fal-ai/bytedance"
+  const segments = model.split('/');
+  const queuePath = segments.length > 2 ? segments.slice(0, 2).join('/') : model;
+  const pollUrl = requestIdOrUrl.startsWith('http')
+    ? requestIdOrUrl
+    : `${FAL_BASE}/${queuePath}/requests/${requestIdOrUrl}`;
+
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(`${FAL_BASE}/${model}/requests/${requestId}`, {
+    const res = await fetch(pollUrl, {
       headers: {
         'Authorization': `Key ${falKey}`,
         'Content-Type': 'application/json',
@@ -59,6 +68,8 @@ export async function pollFalQueue(requestId, model, falKey, maxRetries = 120, d
     const status = data.status;
 
     if (status === 'COMPLETED') return data.output;
+    // response_url returns the result directly when done (no status field)
+    if (!status && data.images) return data;
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
     await sleep(delayMs);
@@ -259,7 +270,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     });
     if (!res.ok) throw new Error(`FAL FLUX 2 image gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, falModel, keys.falKey);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, falModel, keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL FLUX 2');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -273,8 +284,10 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     });
     if (!res.ok) throw new Error(`FAL SeedDream image gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return queueData.images[0].url;
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
+    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
+    // Use response_url from FAL (shorter path that actually works for bytedance models)
+    const pollTarget = queueData.response_url || queueData.request_id;
+    const output = await pollFalQueue(pollTarget, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL SeedDream');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -290,7 +303,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     if (!res.ok) throw new Error(`FAL Imagen 4 image gen failed: ${await res.text()}`);
     const queueData = await res.json();
     if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/imagen4/preview/fast', keys.falKey);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/imagen4/preview/fast', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL Imagen 4');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -306,7 +319,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     if (!res.ok) throw new Error(`FAL Kling Image gen failed: ${await res.text()}`);
     const queueData = await res.json();
     if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-image/v3/text-to-image', keys.falKey);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-image/v3/text-to-image', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL Kling Image');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -322,7 +335,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     if (!res.ok) throw new Error(`FAL Grok Imagine image gen failed: ${await res.text()}`);
     const queueData = await res.json();
     if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.request_id, 'xai/grok-imagine-image', keys.falKey);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'xai/grok-imagine-image', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL Grok Imagine');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -338,7 +351,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
     if (!res.ok) throw new Error(`FAL Ideogram image gen failed: ${await res.text()}`);
     const queueData = await res.json();
     if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/ideogram/v2', keys.falKey);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ideogram/v2', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL Ideogram');
     return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -382,7 +395,7 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
       });
       if (!res.ok) throw new Error(`FAL FLUX 2 LoRA image gen failed: ${await res.text()}`);
       const queueData = await res.json();
-      const output = await pollFalQueue(queueData.request_id, 'fal-ai/flux-2/lora', keys.falKey);
+      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/flux-2/lora', keys.falKey);
       const imageUrl = output?.images?.[0]?.url;
       if (!imageUrl) throw new Error('No image URL from FAL FLUX 2 LoRA');
       return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
@@ -399,7 +412,8 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
 
     if (queueData.images?.[0]?.url) return queueData.images[0].url;
 
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
+    const pollTarget2 = queueData.response_url || queueData.request_id;
+    const output = await pollFalQueue(pollTarget2, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
     const imageUrl = output?.images?.[0]?.url;
     if (!imageUrl) throw new Error('No image URL from FAL SeedDream');
 
@@ -433,7 +447,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Veo 3 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/veo3/fast', keys.falKey, 150, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/veo3/fast', keys.falKey, 150, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Veo 3');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -448,7 +462,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Veo 2 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/veo2/image-to-video', keys.falKey, 150, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/veo2/image-to-video', keys.falKey, 150, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Veo 2');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -463,7 +477,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Kling V3 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/v3/pro/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v3/pro/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Kling V3');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -478,7 +492,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Kling O3 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/o3/pro/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/o3/pro/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Kling O3');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -493,7 +507,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Wan 2.5 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/wan-25-preview/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/wan-25-preview/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Wan 2.5');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -508,7 +522,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Wan Pro video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/wan-pro/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/wan-pro/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Wan Pro');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -523,7 +537,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL PixVerse video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/pixverse/v4.5/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/pixverse/v4.5/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL PixVerse');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -537,7 +551,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Hailuo video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/minimax/video-01/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/minimax/video-01/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Hailuo');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -551,7 +565,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     });
     if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);
     const queueData = await res.json();
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Kling');
     return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
@@ -601,7 +615,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);
     const queueData = await res.json();
 
-    const output = await pollFalQueue(queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
     const videoUrl = output?.video?.url;
     if (!videoUrl) throw new Error('No video URL from FAL Kling');
 
@@ -681,7 +695,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   if (!res.ok) throw new Error(`FAL ffmpeg short assembly failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
   const videoUrl = output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg short assembly');
 
@@ -716,7 +730,7 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       if (!res.ok) { console.warn('[pipelineHelpers] ElevenLabs Music gen failed, skipping:', await res.text()); return null; }
       const queueData = await res.json();
       if (!queueData.request_id) return null;
-      const output = await pollFalQueue(queueData.request_id, 'fal-ai/elevenlabs/music', keys.falKey, 120, 3000);
+      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/elevenlabs/music', keys.falKey, 120, 3000);
       const audioUrl = output?.audio?.url;
       if (!audioUrl) return null;
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
@@ -732,7 +746,7 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       if (!res.ok) { console.warn('[pipelineHelpers] Lyria 2 Music gen failed, skipping:', await res.text()); return null; }
       const queueData = await res.json();
       if (!queueData.request_id) return null;
-      const output = await pollFalQueue(queueData.request_id, 'fal-ai/lyria2', keys.falKey, 120, 3000);
+      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/lyria2', keys.falKey, 120, 3000);
       const audioUrl = output?.audio?.url;
       if (!audioUrl) return null;
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
@@ -758,7 +772,7 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
     const queueData = await res.json();
     if (!queueData.request_id) return null;
 
-    const output = await pollFalQueue(queueData.request_id, 'beatoven/music-generation', keys.falKey, 120, 2000);
+    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'beatoven/music-generation', keys.falKey, 120, 2000);
     const audioUrl = output?.audio?.url;
     if (!audioUrl) return null;
     return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
@@ -799,7 +813,7 @@ export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
   // Some FAL endpoints return the result directly; others require polling
   if (queueData.image_url) return queueData.image_url;
 
-  const output = await pollFalQueue(queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 30, 2000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 30, 2000);
   const imageUrl = output?.image_url;
   if (!imageUrl) throw new Error('No image URL from frame extraction');
   return imageUrl;
@@ -899,7 +913,7 @@ export async function concatVideos(videoUrls, audioUrl, falKey, supabase) {
   if (!res.ok) throw new Error(`FAL ffmpeg concat failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
   const videoUrl = output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg concat');
 

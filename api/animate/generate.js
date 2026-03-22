@@ -65,6 +65,8 @@ export default async function handler(req, res) {
         requestId,
         mode,
         status: data.status || 'IN_QUEUE',
+        statusUrl: data.status_url || null,
+        responseUrl: data.response_url || null,
       });
     }
 

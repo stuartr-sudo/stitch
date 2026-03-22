@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       audio_url,
       task: 'transcribe',
       chunk_level: 'word',
-      version: 'large-v3',
+      version: '3',
     }),
   });
 

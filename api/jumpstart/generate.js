@@ -824,17 +824,20 @@ async function upscaleImage(imageUrl, FAL_KEY) {
       // May be queued — check for request_id
       const data = await submitRes.json().catch(() => null);
       if (data?.request_id) {
+        // Use response_url/status_url from FAL (avoids path-truncation bugs with multi-segment model IDs)
+        const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
+        const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
         // Poll queue
         for (let i = 0; i < 60; i++) {
           await new Promise(r => setTimeout(r, 2000));
           const statusRes = await fetch(
-            `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`,
+            statusUrl,
             { headers: { 'Authorization': `Key ${FAL_KEY}` } }
           );
           const status = await statusRes.json();
           if (status.status === 'COMPLETED') {
             const resultRes = await fetch(
-              `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`,
+              responseUrl,
               { headers: { 'Authorization': `Key ${FAL_KEY}` } }
             );
             const result = await resultRes.json();
@@ -860,16 +863,19 @@ async function upscaleImage(imageUrl, FAL_KEY) {
 
     // Queued result
     if (data.request_id) {
+      // Use response_url/status_url from FAL (avoids path-truncation bugs with multi-segment model IDs)
+      const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
+      const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 2000));
         const statusRes = await fetch(
-          `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`,
+          statusUrl,
           { headers: { 'Authorization': `Key ${FAL_KEY}` } }
         );
         const status = await statusRes.json();
         if (status.status === 'COMPLETED') {
           const resultRes = await fetch(
-            `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`,
+            responseUrl,
             { headers: { 'Authorization': `Key ${FAL_KEY}` } }
           );
           const result = await resultRes.json();

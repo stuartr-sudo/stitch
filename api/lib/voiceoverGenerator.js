@@ -101,7 +101,7 @@ export async function generateTimestamps(audioUrl, falKey) {
       audio_url: audioUrl,
       task: 'transcribe',
       chunk_level: 'word',
-      version: 'large-v3',
+      version: '3',
     }),
   });
 

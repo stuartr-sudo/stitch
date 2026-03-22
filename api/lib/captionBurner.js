@@ -164,7 +164,7 @@ export async function burnCaptions(videoUrl, wordTimestamps, falKey, supabase, c
   const queueData = await res.json();
 
   // Poll for completion
-  const output = await pollFalCaptionQueue(queueData.request_id, falKey, 120, 3000);
+  const output = await pollFalCaptionQueue(queueData.response_url || queueData.request_id, falKey, 120, 3000);
   const outputUrl = output?.video?.url || output?.output_url;
   if (!outputUrl) throw new Error('No video URL from FFmpeg caption burn');
 
@@ -180,9 +180,12 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function pollFalCaptionQueue(requestId, falKey, maxRetries = 120, delayMs = 3000) {
+async function pollFalCaptionQueue(requestIdOrUrl, falKey, maxRetries = 120, delayMs = 3000) {
+  const pollUrl = requestIdOrUrl.startsWith?.('http')
+    ? requestIdOrUrl
+    : `${FAL_BASE}/fal-ai/ffmpeg-api/requests/${requestIdOrUrl}`;
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/requests/${requestId}`, {
+    const res = await fetch(pollUrl, {
       headers: {
         'Authorization': `Key ${falKey}`,
         'Content-Type': 'application/json',

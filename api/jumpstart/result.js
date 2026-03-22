@@ -4,6 +4,16 @@
  */
 import { getUserKeys } from '../lib/getUserKeys.js';
 
+/**
+ * Truncate a FAL model path to its first 2 segments for queue polling URLs.
+ * e.g. "fal-ai/kling-video/v2.5-turbo/pro/image-to-video" -> "fal-ai/kling-video"
+ *      "xai/grok-imagine-video/image-to-video" -> "xai/grok-imagine-video"
+ */
+function falQueuePath(endpoint) {
+  const parts = endpoint.split('/');
+  return parts.slice(0, 2).join('/');
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -116,7 +126,7 @@ async function checkGrokResult(req, res, requestId, FAL_KEY) {
 
   // FAL uses a status endpoint for queued requests
   const pollResponse = await fetch(
-    `https://queue.fal.run/xai/grok-imagine-video/image-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -162,7 +172,7 @@ async function checkGrokResult(req, res, requestId, FAL_KEY) {
  */
 async function getGrokResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/xai/grok-imagine-video/image-to-video/requests/${requestId}`,
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -213,7 +223,7 @@ async function checkSeedanceResult(req, res, requestId, FAL_KEY) {
 
   // FAL uses a status endpoint for queued requests
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/bytedance/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -259,7 +269,7 @@ async function checkSeedanceResult(req, res, requestId, FAL_KEY) {
  */
 async function getSeedanceResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/bytedance/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -305,7 +315,7 @@ async function checkVeo3Result(req, res, requestId, FAL_KEY) {
 
   // FAL uses a status endpoint for queued requests
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/reference-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -351,7 +361,7 @@ async function checkVeo3Result(req, res, requestId, FAL_KEY) {
  */
 async function getVeo3Result(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/reference-to-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -395,7 +405,7 @@ async function checkVeo3FastResult(req, res, requestId, FAL_KEY) {
   }
 
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/image-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -440,7 +450,7 @@ async function checkVeo3FastResult(req, res, requestId, FAL_KEY) {
  */
 async function getVeo3FastResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/image-to-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -484,7 +494,7 @@ async function checkVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
   }
 
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -529,7 +539,7 @@ async function checkVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
  */
 async function getVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -573,7 +583,7 @@ async function checkVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
   }
 
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/extend-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -618,7 +628,7 @@ async function checkVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
  */
 async function getVeo3FastExtendResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/fast/extend-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -662,7 +672,7 @@ async function checkKlingResult(req, res, requestId, FAL_KEY) {
   }
 
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/kling-video/v2.5-turbo/pro/image-to-video/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/kling-video/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -707,7 +717,7 @@ async function checkKlingResult(req, res, requestId, FAL_KEY) {
  */
 async function getKlingResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/kling-video/v2.5-turbo/pro/image-to-video/requests/${requestId}`,
+    `https://queue.fal.run/fal-ai/kling-video/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -752,7 +762,7 @@ async function checkGrokEditResult(req, res, requestId, FAL_KEY) {
 
   // FAL uses a status endpoint for queued requests
   const pollResponse = await fetch(
-    `https://queue.fal.run/xai/grok-imagine-video/edit-video/requests/${requestId}/status`,
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}/status`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -798,7 +808,7 @@ async function checkGrokEditResult(req, res, requestId, FAL_KEY) {
  */
 async function getGrokEditResult(req, res, requestId, FAL_KEY) {
   const resultResponse = await fetch(
-    `https://queue.fal.run/xai/grok-imagine-video/edit-video/requests/${requestId}`,
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}`,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -844,14 +854,14 @@ async function getGrokEditResult(req, res, requestId, FAL_KEY) {
  */
 async function checkLtxResult(req, res, requestId, FAL_KEY) {
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}/status`,
+    `https://queue.fal.run/fal-ai/ltx-2-19b/requests/${requestId}/status`,
     { headers: { 'Authorization': `Key ${FAL_KEY}` } }
   );
 
   if (!pollResponse.ok) {
     if (pollResponse.status === 404) {
       const resultResponse = await fetch(
-        `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}`,
+        `https://queue.fal.run/fal-ai/ltx-2-19b/requests/${requestId}`,
         { headers: { 'Authorization': `Key ${FAL_KEY}` } }
       );
       const data = await resultResponse.json();
@@ -867,7 +877,7 @@ async function checkLtxResult(req, res, requestId, FAL_KEY) {
 
   if (status === 'completed') {
     const resultResponse = await fetch(
-      `https://queue.fal.run/fal-ai/ltx-2-19b/distilled/audio-to-video/lora/requests/${requestId}`,
+      `https://queue.fal.run/fal-ai/ltx-2-19b/requests/${requestId}`,
       { headers: { 'Authorization': `Key ${FAL_KEY}` } }
     );
     const resultData = await resultResponse.json();
@@ -892,8 +902,9 @@ async function checkFalResult(req, res, requestId, FAL_KEY, endpoint, model) {
     return res.status(400).json({ error: 'FAL API key not configured.' });
   }
 
+  const queueEndpoint = falQueuePath(endpoint);
   const pollResponse = await fetch(
-    `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
+    `https://queue.fal.run/${queueEndpoint}/requests/${requestId}/status`,
     { headers: { 'Authorization': `Key ${FAL_KEY}` } }
   );
 
@@ -925,8 +936,9 @@ async function checkFalResult(req, res, requestId, FAL_KEY, endpoint, model) {
 }
 
 async function getFalResult(req, res, requestId, FAL_KEY, endpoint, model) {
+  const queueEndpoint = falQueuePath(endpoint);
   const resultResponse = await fetch(
-    `https://queue.fal.run/${endpoint}/requests/${requestId}`,
+    `https://queue.fal.run/${queueEndpoint}/requests/${requestId}`,
     { headers: { 'Authorization': `Key ${FAL_KEY}` } }
   );
 

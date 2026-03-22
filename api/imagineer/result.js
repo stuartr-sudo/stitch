@@ -44,12 +44,19 @@ export default async function handler(req, res) {
     const endpoint = ENDPOINT_MAP[model] || 'fal-ai/nano-banana-2';
     const headers = { 'Authorization': `Key ${FAL_KEY}` };
 
+    // FAL queue URLs use only the first 2 path segments of the model path.
+    // e.g. "fal-ai/bytedance/seedream/v4/text-to-image" → "fal-ai/bytedance"
+    const endpointSegments = endpoint.split('/');
+    const queuePath = endpointSegments.length > 2
+      ? endpointSegments.slice(0, 2).join('/')
+      : endpoint;
+
     // Build URLs — prefer client-provided URLs (from queue submission), fall back to constructed
     const checkUrl = statusUrl
       ? `${statusUrl}?logs=1`
-      : `https://queue.fal.run/${endpoint}/requests/${requestId}/status?logs=1`;
+      : `https://queue.fal.run/${queuePath}/requests/${requestId}/status?logs=1`;
     const resultFetchUrl = responseUrl
-      || `https://queue.fal.run/${endpoint}/requests/${requestId}`;
+      || `https://queue.fal.run/${queuePath}/requests/${requestId}`;
 
     console.log('[Imagineer/Result] Polling:', checkUrl);
 

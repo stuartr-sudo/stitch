@@ -89,14 +89,18 @@ Built-in template examples for reference:
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function pollFalQueue(requestId, model, falKey, maxRetries = 60, delayMs = 2000) {
+async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 60, delayMs = 2000) {
+  const pollUrl = requestIdOrUrl.startsWith?.('http')
+    ? requestIdOrUrl
+    : `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(`${FAL_BASE}/${model}/requests/${requestId}`, {
+    const res = await fetch(pollUrl, {
       headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
     });
     if (!res.ok) { await sleep(delayMs); continue; }
     const data = await res.json();
     if (data.status === 'COMPLETED') return data.output;
+    if (!data.status && (data.images || data.image_url || data.video || data.audio)) return data;
     if (data.status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
     await sleep(delayMs);
   }
@@ -116,7 +120,7 @@ async function extractFrame(videoUrl, frameTime, falKey) {
   if (!res.ok) throw new Error(`Frame extraction failed: ${await res.text()}`);
   const queueData = await res.json();
   if (queueData.image_url) return queueData.image_url;
-  const output = await pollFalQueue(queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 20, 2000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 20, 2000);
   return output?.image_url || null;
 }
 
@@ -128,11 +132,11 @@ async function transcribeAudio(videoUrl, falKey) {
   const res = await fetch(`${FAL_BASE}/fal-ai/whisper`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_url: videoUrl, task: 'transcribe', language: 'en' }),
+    body: JSON.stringify({ audio_url: videoUrl, task: 'transcribe', language: 'en', version: '3' }),
   });
   if (!res.ok) throw new Error(`Whisper transcription failed: ${await res.text()}`);
   const queueData = await res.json();
-  const output = await pollFalQueue(queueData.request_id, 'fal-ai/whisper', falKey, 60, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/whisper', falKey, 60, 3000);
   return output?.text || output?.transcription || '';
 }
 

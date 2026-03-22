@@ -297,7 +297,7 @@ export async function runShortsPipeline(opts) {
   const totalDuration = nicheTemplate?.total_duration_seconds || 60;
 
   musicUrl = await withRetry(
-    () => generateMusic(musicMood, keys, { duration_seconds: totalDuration + 5 }),
+    () => generateMusic(musicMood, totalDuration + 5, keys, supabase),
     { maxAttempts: 2, baseDelayMs: 5000 }
   );
 
