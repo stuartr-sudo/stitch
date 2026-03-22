@@ -325,6 +325,7 @@ export default function CampaignsNewPage() {
   };
 
   const handleResearch = async () => {
+    if (!selectedBrand) { toast.error('Select a brand first'); return; }
     if (!niche || !topic.trim()) {
       toast.error('Select a niche and enter a topic first');
       return;
@@ -625,7 +626,10 @@ export default function CampaignsNewPage() {
                   <div className="flex items-center gap-3">
                     <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm">
                       <option value="">Select brand...</option>
-                      {brandsWithKit.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+                      {brands.map(b => {
+                        const hasKit = brandsWithKit.some(k => k.username === b.username);
+                        return <option key={b.username} value={b.username}>{b.brand_name || b.username}{hasKit ? ' ✓ Kit' : ''}</option>;
+                      })}
                     </select>
                     <button onClick={() => setShowBrandKit(true)} className="text-xs text-[#2C666E] underline whitespace-nowrap">Edit Brand Kit</button>
                   </div>
