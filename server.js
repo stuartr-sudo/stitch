@@ -545,6 +545,12 @@ app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
 });
 
 // Create campaign manually (with auth)
+app.post('/api/campaigns/regenerate-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/regenerate-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.post('/api/campaigns/create', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/create.js');
   if (handler) return handler(req, res);

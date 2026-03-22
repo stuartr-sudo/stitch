@@ -195,6 +195,9 @@ export default function CampaignsNewPage() {
   const [loraConfig, setLoraConfig] = useState([]);
   const [researchedStories, setResearchedStories] = useState([]);
   const [researchLoading, setResearchLoading] = useState(false);
+  const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
+  const [savedStories, setSavedStories] = useState([]);
+  const storiesRef = useRef(null);
 
   // Wizard navigation
   const [wizardStep, setWizardStep] = useState('brand_niche');
@@ -323,7 +326,11 @@ export default function CampaignsNewPage() {
         body: JSON.stringify({ niche, topic: topic.trim(), brand_username: selectedBrand }),
       });
       const data = await res.json();
-      if (data.stories) setResearchedStories(data.stories);
+      if (data.stories) {
+        setResearchedStories(data.stories);
+        setSelectedStoryIdx(null);
+        setTimeout(() => storiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      }
     } catch {
       toast.error('Research failed');
     } finally {
@@ -713,16 +720,55 @@ export default function CampaignsNewPage() {
                     );
                   })()}
                   {researchedStories.length > 0 && (
-                    <div className="space-y-1 mt-2">
-                      <label className="text-[10px] font-medium text-slate-400 uppercase">Trending Stories</label>
+                    <div ref={storiesRef} className="space-y-2 mt-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">Trending Stories — select one</label>
+                        <span className="text-[10px] text-slate-400">{researchedStories.length} found</span>
+                      </div>
                       {researchedStories.map((s, i) => (
-                        <button key={i} onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
-                          className="w-full text-left p-3 border rounded-lg text-xs hover:bg-slate-50 transition-colors">
-                          <div className="font-medium text-slate-800">{s.title}</div>
-                          <div className="text-slate-500 mt-0.5">{s.angle || s.summary}</div>
+                        <button key={i} onClick={() => {
+                          setSelectedStoryIdx(i);
+                          setTopic(s.title);
+                          setStoryContext(s.story_context || s.summary || '');
+                          // Save to saved stories if not already there
+                          setSavedStories(prev => {
+                            if (prev.some(p => p.title === s.title)) return prev;
+                            return [...prev, { ...s, niche, selectedAt: new Date().toISOString() }];
+                          });
+                        }}
+                          className={`w-full text-left p-4 border-2 rounded-xl text-xs transition-all ${
+                            selectedStoryIdx === i
+                              ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]'
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          }`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-semibold text-slate-800">{s.title}</div>
+                            {selectedStoryIdx === i && <span className="text-[#2C666E] text-xs shrink-0">Selected ✓</span>}
+                          </div>
+                          <div className="text-slate-500 mt-1 leading-relaxed">{s.angle || s.summary}</div>
                         </button>
                       ))}
                     </div>
+                  )}
+
+                  {/* Saved stories from previous research */}
+                  {savedStories.length > 0 && researchedStories.length === 0 && (
+                    <details className="mt-3">
+                      <summary className="text-[10px] font-medium text-slate-400 uppercase cursor-pointer hover:text-slate-600">
+                        Previous Research ({savedStories.length} saved)
+                      </summary>
+                      <div className="space-y-1 mt-2">
+                        {savedStories.map((s, i) => (
+                          <button key={i} onClick={() => { setTopic(s.title); setStoryContext(s.story_context || s.summary || ''); }}
+                            className={`w-full text-left p-3 border rounded-lg text-xs transition-colors ${
+                              topic === s.title ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:bg-slate-50'
+                            }`}>
+                            <div className="font-medium text-slate-700">{s.title}</div>
+                            <div className="text-slate-400 mt-0.5 text-[10px]">{s.niche}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </details>
                   )}
                 </div>
               </div>
