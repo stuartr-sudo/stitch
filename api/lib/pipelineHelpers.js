@@ -3,6 +3,8 @@
  * These call external AI APIs directly and handle all polling internally.
  */
 
+import { generateImageV2, animateImageV2 } from './mediaGenerator.js';
+
 const WAVESPEED_BASE = 'https://api.wavespeed.ai/api/v3';
 const FAL_BASE = 'https://queue.fal.run';
 
@@ -25,7 +27,7 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs = 3000) {
+export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, delayMs = 3000) {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(`${WAVESPEED_BASE}/predictions/${requestId}/result`, {
       headers: { 'Authorization': `Bearer ${apiKey}` },
@@ -244,190 +246,30 @@ export function selectModelForScene(sceneRole, modelPrefs, loraConfigs) {
  * @returns {Promise<string>} public image URL
  */
 export async function generateImage(prompt, aspectRatio, keys, supabase, model, loraConfig = null) {
-  // Normalize loraConfig to an array for stacking support (backward compat with single object)
-  const loraConfigs = !loraConfig ? []
-    : Array.isArray(loraConfig) ? loraConfig
-    : [loraConfig];
+  const loraConfigs = !loraConfig ? [] : Array.isArray(loraConfig) ? loraConfig : [loraConfig];
+  const hasLoras = loraConfigs.length > 0;
+  const lorasPayload = loraConfigs.filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 }));
 
-  // Prepend all LoRA trigger words so trained visual subjects appear in the generated image.
+  // Prepend trigger words
   const triggerPrefix = loraConfigs.map(c => c.triggerWord).filter(Boolean).join(', ');
   const finalPrompt = triggerPrefix ? `${triggerPrefix}, ${prompt}` : prompt;
 
-  // Build loras array for fal.ai (supports up to 4 simultaneous LoRAs)
-  const lorasPayload = loraConfigs
-    .filter(c => c.loraUrl)
-    .map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 }));
-  const hasLoras = lorasPayload.length > 0;
-
-  const sizeMap = { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9', '2:3': 'portrait_4_3' };
-
-  // Route to FLUX 2 with LoRA when LoRAs are present or explicitly requested
-  if (model === 'fal_flux' && keys.falKey) {
-    const falModel = 'fal-ai/flux-2/lora';
-    const body = {
-      prompt: finalPrompt,
-      image_size: sizeMap[aspectRatio] || 'portrait_16_9',
-      num_inference_steps: 28,
-      ...(hasLoras && { loras: lorasPayload }),
-    };
-    const res = await fetch(`${FAL_BASE}/${falModel}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(`FAL FLUX 2 image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, falModel, keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL FLUX 2');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  if (model === 'fal_seedream' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/bytedance/seedream/v4.5/text-to-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, enable_safety_checker: true }),
-    });
-    if (!res.ok) throw new Error(`FAL SeedDream image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    // Use response_url from FAL (shorter path that actually works for bytedance models)
-    const pollTarget = queueData.response_url || queueData.request_id;
-    const output = await pollFalQueue(pollTarget, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL SeedDream');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  // --- Imagen 4 (Google) via FAL ---
-  if (model === 'fal_imagen4' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/imagen4/preview/fast`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
-    });
-    if (!res.ok) throw new Error(`FAL Imagen 4 image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/imagen4/preview/fast', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL Imagen 4');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  // --- Kling Image V3 via FAL ---
-  if (model === 'fal_kling_img' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/kling-image/v3/text-to-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, negative_prompt: DEFAULT_NEGATIVE_PROMPT }),
-    });
-    if (!res.ok) throw new Error(`FAL Kling Image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-image/v3/text-to-image', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL Kling Image');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  // --- Grok Imagine (xAI) via FAL ---
-  if (model === 'fal_grok' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/xai/grok-imagine-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1 }),
-    });
-    if (!res.ok) throw new Error(`FAL Grok Imagine image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'xai/grok-imagine-image', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL Grok Imagine');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  // --- Ideogram V2 via FAL ---
-  if (model === 'fal_ideogram' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/ideogram/v2`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, negative_prompt: DEFAULT_NEGATIVE_PROMPT }),
-    });
-    if (!res.ok) throw new Error(`FAL Ideogram image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    if (queueData.images?.[0]?.url) return await uploadUrlToSupabase(queueData.images[0].url, supabase, 'pipeline/images');
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ideogram/v2', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL Ideogram');
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  // Default: Wavespeed first (fastest), FAL SeedDream fallback.
-  // Wavespeed doesn't support LoRA weights — if LoRAs are configured, skip to FAL FLUX instead.
-  if (keys.wavespeedKey && !model?.startsWith('fal_') && !hasLoras) {
-    const res = await fetch(`${WAVESPEED_BASE}/google/nano-banana-pro/text-to-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, aspect_ratio: aspectRatio, num_images: 1 }),
-    });
-
-    if (!res.ok) throw new Error(`Wavespeed image gen failed: ${await res.text()}`);
-    const data = await res.json();
-
-    let imageUrl = data.outputs?.[0] || data.data?.outputs?.[0];
-    if (!imageUrl) {
-      const requestId = data.id || data.data?.id;
-      if (!requestId) throw new Error('No request ID from Wavespeed image gen');
-      imageUrl = await pollWavespeedRequest(requestId, keys.wavespeedKey);
-    }
-
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
-  }
-
-  if (keys.falKey) {
-    // Use FLUX 2 LoRA when LoRAs are configured, otherwise fall back to SeedDream
+  // Resolve model key (matches original routing logic)
+  let modelKey = model;
+  if (!modelKey) {
     if (hasLoras) {
-      const body = {
-        prompt: finalPrompt,
-        image_size: sizeMap[aspectRatio] || 'portrait_16_9',
-        num_inference_steps: 28,
-        loras: lorasPayload,
-      };
-      const res = await fetch(`${FAL_BASE}/fal-ai/flux-2/lora`, {
-        method: 'POST',
-        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`FAL FLUX 2 LoRA image gen failed: ${await res.text()}`);
-      const queueData = await res.json();
-      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/flux-2/lora', keys.falKey);
-      const imageUrl = output?.images?.[0]?.url;
-      if (!imageUrl) throw new Error('No image URL from FAL FLUX 2 LoRA');
-      return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
+      modelKey = 'fal_flux';
+    } else if (keys.wavespeedKey) {
+      modelKey = 'wavespeed';
+    } else {
+      modelKey = 'fal_seedream';
     }
-
-    const res = await fetch(`${FAL_BASE}/fal-ai/bytedance/seedream/v4.5/text-to-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt, image_size: sizeMap[aspectRatio] || 'portrait_16_9', num_images: 1, enable_safety_checker: true }),
-    });
-
-    if (!res.ok) throw new Error(`FAL image gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-
-    if (queueData.images?.[0]?.url) return queueData.images[0].url;
-
-    const pollTarget2 = queueData.response_url || queueData.request_id;
-    const output = await pollFalQueue(pollTarget2, 'fal-ai/bytedance/seedream/v4.5/text-to-image', keys.falKey);
-    const imageUrl = output?.images?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL from FAL SeedDream');
-
-    return await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/images');
   }
 
-  throw new Error('No image generation API key configured (need wavespeedKey or falKey)');
+  return generateImageV2(modelKey, finalPrompt, aspectRatio, keys, supabase, {
+    loras: lorasPayload,
+    originalAspectRatio: aspectRatio,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -445,191 +287,19 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
  * @returns {Promise<string>} public video URL
  */
 export async function animateImage(imageUrl, motionPrompt, aspectRatio, durationSeconds = 5, keys, supabase, model, loraConfigs = []) {
-  // --- Veo 3 Fast (Google) via FAL ---
-  if (model === 'fal_veo3' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/veo3/fast`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Veo 3 video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/veo3/fast', keys.falKey, 150, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Veo 3');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
+  let modelKey = model;
+  if (!modelKey) {
+    modelKey = keys.wavespeedKey ? 'wavespeed_wan' : 'fal_kling';
   }
 
-  // --- Veo 2 (Google) via FAL ---
-  if (model === 'fal_veo2' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/veo2/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Veo 2 video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/veo2/image-to-video', keys.falKey, 150, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Veo 2');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
+  const lorasPayload = (loraConfigs || []).filter(c => c.loraUrl).map(c => ({
+    loraUrl: c.loraUrl,
+    scale: Math.min(c.scale ?? 0.7, 0.8),
+  }));
 
-  // --- Kling V3 Pro via FAL ---
-  if (model === 'fal_kling_v3' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v3/pro/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Kling V3 video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v3/pro/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Kling V3');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  // --- Kling O3 Pro via FAL ---
-  if (model === 'fal_kling_o3' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/o3/pro/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Kling O3 video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/o3/pro/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Kling O3');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  // --- Wan 2.5 Preview via FAL ---
-  if (model === 'fal_wan25' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/wan-25-preview/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Wan 2.5 video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/wan-25-preview/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Wan 2.5');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  // --- Wan Pro via FAL ---
-  if (model === 'fal_wan_pro' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/wan-pro/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Wan Pro video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/wan-pro/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Wan Pro');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  // --- PixVerse V4.5 via FAL ---
-  if (model === 'fal_pixverse' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/pixverse/v4.5/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL PixVerse video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/pixverse/v4.5/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL PixVerse');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  if (model === 'fal_hailuo' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/minimax/video-01/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt }),
-    });
-    if (!res.ok) throw new Error(`FAL Hailuo video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/minimax/video-01/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Hailuo');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  if (model === 'fal_kling' && keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v2/master/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-    if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Kling');
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  // Default: Wavespeed WAN first, FAL Kling fallback
-  if (keys.wavespeedKey && !model?.startsWith('fal_')) {
-    const res = await fetch(`${WAVESPEED_BASE}/wavespeed-ai/wan-2.2-spicy/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${keys.wavespeedKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: imageUrl,
-        prompt: motionPrompt,
-        aspect_ratio: aspectRatio,
-        duration: durationSeconds,
-        resolution: '720p',
-        seed: -1,
-        ...(loraConfigs.length > 0 && {
-          loras: loraConfigs.filter(c => c.loraUrl).map(c => ({
-            url: c.loraUrl,
-            scale: Math.min(c.scale ?? 0.7, 0.8), // cap at 0.8 for video stability
-          })),
-        }),
-      }),
-    });
-
-    if (!res.ok) throw new Error(`Wavespeed video gen failed: ${await res.text()}`);
-    const data = await res.json();
-
-    let videoUrl = data.outputs?.[0] || data.data?.outputs?.[0];
-    if (!videoUrl) {
-      const requestId = data.id || data.data?.id;
-      if (!requestId) throw new Error('No request ID from Wavespeed video gen');
-      videoUrl = await pollWavespeedRequest(requestId, keys.wavespeedKey, 90, 4000);
-    }
-
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  if (keys.falKey) {
-    const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v2/master/image-to-video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: falDuration(durationSeconds), aspect_ratio: aspectRatio }),
-    });
-
-    if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);
-    const queueData = await res.json();
-
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/kling-video/v2/master/image-to-video', keys.falKey, 120, 4000);
-    const videoUrl = output?.video?.url;
-    if (!videoUrl) throw new Error('No video URL from FAL Kling');
-
-    return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/videos');
-  }
-
-  throw new Error('No video generation API key configured');
+  return animateImageV2(modelKey, imageUrl, motionPrompt, aspectRatio, durationSeconds, keys, supabase, {
+    loras: lorasPayload,
+  });
 }
 
 // ---------------------------------------------------------------------------
