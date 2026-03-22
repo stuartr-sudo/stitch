@@ -15,7 +15,7 @@ import { generateImage } from '../lib/pipelineHelpers.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { visual_prompt, visual_style, video_style, lora_config, image_model, brand_username } = req.body;
+  const { visual_prompt, visual_style, visual_style_prompt, video_style, lora_config, image_model, brand_username } = req.body;
   if (!visual_prompt) return res.status(400).json({ error: 'visual_prompt is required' });
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   // Build prompt — same logic as shortsPipeline
-  const visualSuffix = getVisualStyleSuffix(visual_style) || '';
+  const visualSuffix = getVisualStyleSuffix(visual_style) || (visual_style_prompt ? `, ${visual_style_prompt}` : '');
   const videoStylePrompt = getVideoStylePrompt(video_style) || '';
   const loraConfigs = lora_config || [];
   const triggerPrefix = loraConfigs.map(c => c.triggerWord).filter(Boolean).join(', ');

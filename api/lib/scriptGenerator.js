@@ -42,6 +42,7 @@ const ShortsScriptSchema = z.object({
  */
 export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
+  if (!nicheTemplate) throw new Error(`No template found for niche "${niche}". Cannot generate script.`);
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 

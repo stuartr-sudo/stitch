@@ -21,6 +21,8 @@ import { generateImage, animateImage, generateMusic, concatVideos } from '../lib
 import { getStyleSuffix } from '../lib/stylePresets.js';
 import { groupPlatformsByRatio } from '../lib/videoTemplates.js';
 import { runShortsPipeline } from '../lib/shortsPipeline.js';
+import { getShortsTemplate } from '../lib/shortsTemplates.js';
+import { getUserKeys } from '../lib/getUserKeys.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -41,6 +43,7 @@ export default async function handler(req, res) {
     topic,
     story_context,
     visual_style,
+    visual_style_prompt,
     video_style,
     video_model,
     voice_id,
@@ -60,7 +63,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'niche is required for shorts' });
     }
 
-    const campaign_name = name;
+    // Resolve niche template — required for script generation
+    const nicheTemplate = getShortsTemplate(niche);
+    if (!nicheTemplate) {
+      return res.status(400).json({ error: `Unknown niche: "${niche}". No template found.` });
+    }
+
+    const campaign_name = name || req.body.campaign_name;
 
     // Create campaign with content_type
     const { data: campaign, error: campError } = await supabase
@@ -97,24 +106,13 @@ export default async function handler(req, res) {
     // Return immediately, run pipeline in background
     res.json({ success: true, campaign_id: campaign.id, job_id: job.id });
 
-    // Resolve API keys — same pattern as shorts/generate.js
-    const { data: userKeys } = await supabase
-      .from('user_api_keys')
-      .select('fal_key, wavespeed_key, openai_key, elevenlabs_key')
-      .eq('user_id', req.user.id)
-      .maybeSingle();
-
-    const keys = {
-      falKey: userKeys?.fal_key || process.env.FAL_KEY,
-      wavespeedKey: userKeys?.wavespeed_key || process.env.WAVESPEED_API_KEY,
-      openaiKey: userKeys?.openai_key || process.env.OPENAI_API_KEY,
-      elevenlabsKey: userKeys?.elevenlabs_key || process.env.ELEVENLABS_API_KEY,
-    };
+    // Resolve API keys
+    const keys = await getUserKeys(req.user.id, req.user.email);
 
     // Background pipeline
     runShortsPipeline({
       niche, topic, story_context, brand_username,
-      visual_style, video_style, video_model,
+      visual_style, visual_style_prompt, video_style, video_model,
       voice_id, caption_style, words_per_chunk: words_per_chunk || 3,
       lora_config: lora_config || [], script,
       starting_image, image_model,
@@ -123,6 +121,7 @@ export default async function handler(req, res) {
       jobId: job.id,
       campaignId: campaign.id,
       userId: req.user.id,
+      nicheTemplate,
     }).catch(err => {
       console.error('[campaigns/create] Shorts pipeline error:', err);
       supabase.from('jobs').update({ status: 'failed', error: err.message }).eq('id', job.id);

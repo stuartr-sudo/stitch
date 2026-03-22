@@ -65,6 +65,7 @@ export async function runShortsPipeline(opts) {
     story_context: storyContext,
     brand_username,
     visual_style: visualStyle,
+    visual_style_prompt: visualStylePrompt,
     video_style: videoStyle,
     video_model: videoModel = 'fal_kling',
     voice_id: voiceId,
@@ -87,7 +88,8 @@ export async function runShortsPipeline(opts) {
 
   // Determine image strategy based on visual_style
   const imageStrategy = getImageStrategy(visualStyle);
-  const visualSuffix = getVisualStyleSuffix(visualStyle);
+  // Use backend VISUAL_STYLES lookup first, fall back to frontend's promptText
+  const visualSuffix = getVisualStyleSuffix(visualStyle) || (visualStylePrompt ? `, ${visualStylePrompt}` : '');
   const hasLoras = Array.isArray(loraConfigs) && loraConfigs.length > 0;
 
   if (hasLoras) {

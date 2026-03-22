@@ -9,6 +9,14 @@ const FAL_BASE = 'https://queue.fal.run';
 // Default negative prompt for image generation (models that support it)
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
 
+// Kling API accepts only '4s', '6s', or '8s' — clamp and format
+function klingDuration(seconds) {
+  const n = Number(seconds) || 5;
+  if (n <= 5) return '4s';
+  if (n <= 7) return '6s';
+  return '8s';
+}
+
 // ---------------------------------------------------------------------------
 // Internal polling utilities
 // ---------------------------------------------------------------------------
@@ -472,7 +480,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v3/pro/image-to-video`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: klingDuration(durationSeconds), aspect_ratio: aspectRatio }),
     });
     if (!res.ok) throw new Error(`FAL Kling V3 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
@@ -487,7 +495,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/o3/pro/image-to-video`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: klingDuration(durationSeconds), aspect_ratio: aspectRatio }),
     });
     if (!res.ok) throw new Error(`FAL Kling O3 video gen failed: ${await res.text()}`);
     const queueData = await res.json();
@@ -560,7 +568,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v2/master/image-to-video`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: klingDuration(durationSeconds), aspect_ratio: aspectRatio }),
     });
     if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);
     const queueData = await res.json();
@@ -608,7 +616,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
     const res = await fetch(`${FAL_BASE}/fal-ai/kling-video/v2/master/image-to-video`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: String(durationSeconds), aspect_ratio: aspectRatio }),
+      body: JSON.stringify({ image_url: imageUrl, prompt: motionPrompt, duration: klingDuration(durationSeconds), aspect_ratio: aspectRatio }),
     });
 
     if (!res.ok) throw new Error(`FAL Kling video gen failed: ${await res.text()}`);

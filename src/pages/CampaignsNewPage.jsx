@@ -11,6 +11,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import WizardStepper from '@/components/ui/WizardStepper';
 import StyleGrid from '@/components/ui/StyleGrid';
+import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 import LoRAPicker from '@/components/LoRAPicker';
 import BrandKitModal from '@/components/modals/BrandKitModal';
 import LibraryModal from '@/components/modals/LibraryModal';
@@ -229,6 +230,15 @@ export default function CampaignsNewPage() {
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [previewImageLoading, setPreviewImageLoading] = useState(false);
 
+  // Resolve visual style promptText for backend
+  const getVisualStylePrompt = (key) => {
+    for (const cat of STYLE_CATEGORIES) {
+      const found = cat.styles.find(s => s.value === key);
+      if (found) return found.promptText;
+    }
+    return '';
+  };
+
   // Step 5
   const [videoStylesList, setVideoStylesList] = useState([]);
   const [voicesList, setVoicesList] = useState([]);
@@ -379,6 +389,7 @@ export default function CampaignsNewPage() {
         body: JSON.stringify({
           visual_prompt: scene1.visual_prompt,
           visual_style: visualStyle,
+          visual_style_prompt: getVisualStylePrompt(visualStyle),
           video_style: videoStyle,
           lora_config: loraConfig.length > 0 ? loraConfig : undefined,
           image_model: imageModel,
@@ -423,11 +434,11 @@ export default function CampaignsNewPage() {
         const res = await apiFetch('/api/campaigns/create', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content_type: 'shorts', campaign_name: topic.slice(0, 60),
+            content_type: 'shorts', name: topic.slice(0, 60),
             brand_username: selectedBrand, niche, topic: topic.trim(),
             story_context: storyContext || undefined,
-            visual_style: visualStyle, video_style: videoStyle,
-            video_model: videoModel, image_model: imageModel,
+            visual_style: visualStyle, visual_style_prompt: getVisualStylePrompt(visualStyle),
+            video_style: videoStyle, video_model: videoModel, image_model: imageModel,
             voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
             starting_image: previewImageUrl || startingImage || undefined,
