@@ -50,16 +50,24 @@ const NICHE_SEARCH_QUERIES = {
   business_entrepreneur: ['startup story unexpected', 'business strategy unconventional success', 'entrepreneur breakthrough story'],
 };
 
-async function searchRealStories(niche, nicheName) {
+async function searchRealStories(niche, nicheName, topic) {
   const searchApiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
   if (!searchApiKey) {
     console.warn('[shorts/research] No SEARCHAPI_KEY or SERP_API_KEY — falling back to GPT-only');
     return null;
   }
 
-  const queries = NICHE_SEARCH_QUERIES[niche] || [`${nicheName} trending story`, `${nicheName} viral news`];
-  // Pick a random query for variety
-  const query = queries[Math.floor(Math.random() * queries.length)];
+  // If user provided a specific topic, use it directly as the search query
+  // The topic comes in as "Category — Angle — Hook" from the 3-level funnel
+  let query;
+  if (topic && topic.trim()) {
+    // Strip the " — " separators and build a focused search query
+    const topicParts = topic.split(/\s*—\s*/).filter(Boolean);
+    query = topicParts.join(' ') + ' news';
+  } else {
+    const queries = NICHE_SEARCH_QUERIES[niche] || [`${nicheName} trending story`, `${nicheName} viral news`];
+    query = queries[Math.floor(Math.random() * queries.length)];
+  }
 
   try {
     const url = new URL('https://www.searchapi.io/api/v1/search');
@@ -105,7 +113,7 @@ async function searchRealStories(niche, nicheName) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, brand_username, count = 5 } = req.body;
+  const { niche, topic, brand_username, count = 5 } = req.body;
 
   if (!niche) {
     return res.status(400).json({ error: 'Missing niche' });
@@ -136,10 +144,15 @@ export default async function handler(req, res) {
 
   try {
     // Step 1: Search for real trending stories via SearchAPI
-    const realArticles = await searchRealStories(niche, nicheTemplate.name);
+    const realArticles = await searchRealStories(niche, nicheTemplate.name, topic);
     const hasRealArticles = realArticles && realArticles.length > 0;
 
     // Step 2: Use GPT to structure stories (with real articles as context if available)
+    // Build a topic focus instruction if the user selected specific topics
+    const topicFocus = topic && topic.trim()
+      ? `\n\nIMPORTANT: The user specifically wants stories about "${topic.replace(/\s*—\s*/g, ' → ')}". Every story MUST be directly related to this topic. Do NOT return generic ${nicheTemplate.name} stories — stay tightly focused on the user's chosen topic.`
+      : '';
+
     const systemPrompt = hasRealArticles
       ? `You are a viral content researcher for ${nicheTemplate.name} short-form videos.
 
@@ -149,7 +162,7 @@ For each story:
 - Use the REAL facts from the articles — do NOT make up information
 - Find the most surprising or counterintuitive angle
 - The story_context field should include all key facts, names, dates from the article
-- Make the title punchy and click-worthy for 60-second vertical videos`
+- Make the title punchy and click-worthy for 60-second vertical videos${topicFocus}`
       : `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos.
 
 Your job is to surface specific, real stories that would make excellent 60-second vertical videos.
@@ -159,25 +172,28 @@ For each story:
 - Be SPECIFIC: real names, dates, places — not "a man in the 1980s"
 - Pick stories with a clear narrative arc: setup → conflict → resolution
 - Prioritize counterintuitive angles: the thing most people don't know
-- The story_context field should be rich enough that a script writer could use it without any additional research`;
+- The story_context field should be rich enough that a script writer could use it without any additional research${topicFocus}`;
+
+    const topicClause = topic && topic.trim()
+      ? ` specifically about "${topic.replace(/\s*—\s*/g, ' → ')}"`
+      : '';
 
     const userPrompt = hasRealArticles
       ? `Here are real trending articles in the ${nicheTemplate.name} space:
 
 ${realArticles.map((a, i) => `${i + 1}. "${a.title}" (${a.source}, ${a.date})\n   ${a.snippet}`).join('\n\n')}
 
-Transform the ${count} best stories into viral short-form video concepts. Each should work as a self-contained 60-second video with a clear hook, narrative arc, and surprising element.`
-      : `Find ${count} compelling story ideas for a ${nicheTemplate.name} short-form video channel.
+Transform the ${count} best stories into viral short-form video concepts${topicClause}. Each should work as a self-contained 60-second video with a clear hook, narrative arc, and surprising element.${topicClause ? ' Discard any articles that are not related to the topic.' : ''}`
+      : `Find ${count} compelling story ideas for a ${nicheTemplate.name} short-form video channel${topicClause}.
 
 Each story should be:
 - Self-contained in 60 seconds
 - Based on real events or well-documented cases
-- Have a surprising or counterintuitive element
-- Relevant to the ${nicheTemplate.name} niche
+- Have a surprising or counterintuitive element${topicClause ? `\n- Directly related to ${topic.replace(/\s*—\s*/g, ' / ')}` : `\n- Relevant to the ${nicheTemplate.name} niche`}
 
 Provide rich story_context for each so a script writer has all the facts they need.`;
 
-    console.log(`[shorts/research] Generating ${count} stories (real articles: ${hasRealArticles ? realArticles.length : 'none'})`);
+    console.log(`[shorts/research] Generating ${count} stories for topic="${topic || '(none)'}" (real articles: ${hasRealArticles ? realArticles.length : 'none'})`);
 
     const completion = await openai.chat.completions.parse({
       model: 'gpt-4.1-mini-2025-04-14',

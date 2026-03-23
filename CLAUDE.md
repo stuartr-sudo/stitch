@@ -62,6 +62,16 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Cohesive Prompt Builder** (`api/prompt/build-cohesive.js`): GPT-powered prompt assembly service. Accepts structured creative inputs (description, style, props, negative prompt, brand guide, lighting, camera angle, mood, etc.) from any tool and uses OpenAI to compose a single optimized generation prompt. Used by Imagineer T2I, I2I editing, Turnaround, and Storyboard.
 
+## Other API Subsystems
+
+**Smoosh** (`api/smoosh/`): Image combination/blending tool. **Lens** (`api/lens/`): Image generation endpoint. **Trip** (`api/trip/`): Video restyle. **TryStyle** (`api/trystyle/`): Style try-on with polling. **Audio** (`api/audio/`): Captions, music, and voiceover generation endpoints. **Voice** (`api/voice/` + `api/voices/`): Voice preview and ElevenLabs voice library browsing.
+
+**Cost Logger** (`api/lib/costLogger.js`): Tracks per-user API spend across all providers. Called from generation endpoints with model, token counts, and username. Dashboard at `CostDashboardPage.jsx`.
+
+**Shorts Templates** (`api/lib/shortsTemplates.js`): Niche definitions for the Shorts pipeline — each niche has a name, description, and default config. Used by `api/campaigns/research.js` to validate niche and by the script generator for tone/style.
+
+**YouTube Tokens** (`api/lib/youtubeTokens.js`): OAuth token management for YouTube publishing. Handles refresh flow. Used by Scheduled Publisher.
+
 ## Environment
 
 All env vars documented in `.env.example`. Canonical names:
@@ -71,6 +81,9 @@ All env vars documented in `.env.example`. Canonical names:
 - `OWNER_EMAIL` — email used for API key fallback (getUserKeys checks this)
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (backend)
 - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (frontend — must be prefixed `VITE_`)
+- `SEARCHAPI_KEY` (or `SERP_API_KEY`) — Shorts Researcher real-time news search
+- `FIRECRAWL_API_KEY` — blog/URL scraping for article→video webhook
+- `WEBHOOK_SECRET` — shared secret for `/api/webhooks/content` auth
 
 ## Gotchas
 
