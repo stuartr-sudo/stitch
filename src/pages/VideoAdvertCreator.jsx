@@ -60,7 +60,7 @@ import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
-import OpenAiBalanceChip from '@/components/OpenAiBalanceChip';
+import ProviderStatusChip from '@/components/ProviderStatusChip';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
 import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
 import StoryboardPlannerModal from '@/components/modals/StoryboardPlannerWizard';
@@ -445,7 +445,7 @@ export default function VideoAdvertCreator() {
                 Publish
               </Button>
               <div className="h-4 w-px bg-gray-300 hidden md:block mx-1"></div>
-              <OpenAiBalanceChip />
+              <ProviderStatusChip />
               <Button
                 variant="ghost"
                 size="sm"
