@@ -44,7 +44,11 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Script Generator** (`api/lib/scriptGenerator.js`): OpenAI structured output for Shorts scripts. Produces scenes with narration, visual descriptions, and scene 1 image description. Supports `targetDurationSeconds` for length presets (30s/45s/60s/90s).
 
-**Visual Styles** (`api/lib/visualStyles.js`): 14 visual style presets (Cinematic, Anime, Film Noir, Faceless variants, etc.) with prompt fragments, thumbnails, and descriptions. Frontend mirror: `src/lib/visualStylePresets.js`.
+**Visual Styles** (`api/lib/visualStyles.js`): 14 visual style presets across 3 categories — Illustration (Pixel Art, Ghibli, Pixar, Cartoon, 8-bit, Manga, Comic Book, Pixar 3D), Realistic (Photorealistic, Cinematic, Documentary), Painting (Watercolor, Oil, Impressionist). Thumbnails in `public/assets/styles/`. Frontend mirror: `src/lib/visualStylePresets.js`.
+
+**Topic Suggestions** (`src/lib/topicSuggestions.js`): 3-level progressive topic funnel per niche (Category → Angle → Hook). Selected levels concatenate into the topic string passed to the researcher/script generator. All 20 niches have custom funnels.
+
+**Scene Builder Pills** (`src/lib/scenePills.js`): Niche-aware visual direction helpers for the script step. `getScenePillsForNiche(niche)` returns curated environment, object, and atmosphere pills per niche plus shared camera pills. Selected pills are passed as `visual_directions` to the script generator.
 
 **Workflow Engine** (`api/lib/workflowEngine.js`): Persistent state machine for long-running jobs (article→video pipeline). Steps: scrape → analyze → match_templates → create_campaign → generate_assets → concat → upload → finalize. State stored in `jobs` table. Supports pause/resume/retry.
 
@@ -68,7 +72,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Cost Logger** (`api/lib/costLogger.js`): Tracks per-user API spend across all providers. Called from generation endpoints with model, token counts, and username. Dashboard at `CostDashboardPage.jsx`.
 
-**Shorts Templates** (`api/lib/shortsTemplates.js`): Niche definitions for the Shorts pipeline — each niche has a name, description, and default config. Used by `api/campaigns/research.js` to validate niche and by the script generator for tone/style.
+**Shorts Templates** (`api/lib/shortsTemplates.js`): 20 niche definitions for the Shorts pipeline — each has scene structure, music mood, voice pacing, default voice, script system prompt, and visual style. Niches range from AI/Tech to Paranormal/UFO. Used by `api/campaigns/research.js` to validate niche and by the script generator for tone/style. Frontend niche cards with topic counts live in the `NICHES` array in `CampaignsNewPage.jsx`.
 
 **YouTube Tokens** (`api/lib/youtubeTokens.js`): OAuth token management for YouTube publishing. Handles refresh flow. Used by Scheduled Publisher.
 
@@ -101,6 +105,7 @@ All env vars documented in `.env.example`. Canonical names:
 - Imagineer edit models (Nano Banana 2 Edit, Seedream Edit) use synchronous `fal.run` (not `queue.fal.run`) because queue polling is unreliable for edit endpoints. The turnaround endpoint has automatic model fallback on 5xx errors.
 - Imagineer has its own `STYLE_PROMPTS` map (~100 styles) in `api/imagineer/generate.js` — these are separate from the 14 visual styles in `api/lib/visualStyles.js` (which are for Shorts only). Don't confuse the two.
 - The `/api/imagineer/result` poller uses a model-to-endpoint map and truncates FAL paths to 2 segments for queue URLs. Edit models get a `-edit` suffix appended to the model ID so the poller resolves the correct endpoint.
+- CampaignsNewPage `handleGenerateScript` must check `res.ok` and `data.error` before accessing `data.script.scenes`. The preview-script API returns `{ script, niche }` on success but `{ error }` on failure — without the check, errors fall through silently and the UI does nothing.
 
 ## Deployment
 
