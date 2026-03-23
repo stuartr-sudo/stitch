@@ -64,6 +64,8 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Turnaround Sheet** (`api/imagineer/turnaround.js` + `TurnaroundSheetWizard.jsx`): Generates a 4×6 character turnaround grid (24 poses) in a single image. 6-step wizard: Character → Style & Model → Props → Refinements → Results → Cell Editor. Edit models use synchronous `fal.run` with automatic fallback chain; generate models use `queue.fal.run` with frontend polling. Supports 6 models, categorized props, negative prompt conflict resolution, and brand style guides.
 
+**Provider Health Dashboard** (`api/providers/health.js` + `src/pages/CostDashboardPage.jsx` + `src/components/ProviderStatusChip.jsx`): Multi-provider API monitoring. `/api/providers/health` checks all 3 provider keys in parallel — OpenAI (costs API + models fallback), FAL.ai (queue endpoint check), Wavespeed (predictions check). Header chip shows 3 colored dots (green/amber/red per provider), clicks through to `/costs` dashboard. Dashboard shows per-provider cards (status, spend, calls, billing link), stacked daily spend chart, model breakdown, and operation breakdown. Spend data from `cost_ledger` table; OpenAI also has real API spend via admin keys. Old `api/openai/balance.js` still exists for backward compat.
+
 **Cohesive Prompt Builder** (`api/prompt/build-cohesive.js`): GPT-powered prompt assembly service. Accepts structured creative inputs (description, style, props, negative prompt, brand guide, lighting, camera angle, mood, etc.) from any tool and uses OpenAI to compose a single optimized generation prompt. Used by Imagineer T2I, I2I editing, Turnaround, and Storyboard.
 
 ## Other API Subsystems
@@ -91,6 +93,7 @@ All env vars documented in `.env.example`. Canonical names:
 
 ## Gotchas
 
+- `public/` directory contents are copied to `dist/` by Vite on build and served as static assets. In dev, Vite serves them directly. Style thumbnails live at `public/assets/styles/`.
 - `.env` lines must each have their own newline — concatenated lines silently break dotenv parsing.
 - `api/lora/seed-library.js` is a CLI script (`node api/lora/seed-library.js`), not an Express handler. Don't register it as a route.
 - Migrations are loose SQL files at project root (`supabase-migration-v*.sql`), not managed by Supabase CLI.
@@ -105,6 +108,7 @@ All env vars documented in `.env.example`. Canonical names:
 - Imagineer edit models (Nano Banana 2 Edit, Seedream Edit) use synchronous `fal.run` (not `queue.fal.run`) because queue polling is unreliable for edit endpoints. The turnaround endpoint has automatic model fallback on 5xx errors.
 - Imagineer has its own `STYLE_PROMPTS` map (~100 styles) in `api/imagineer/generate.js` — these are separate from the 14 visual styles in `api/lib/visualStyles.js` (which are for Shorts only). Don't confuse the two.
 - The `/api/imagineer/result` poller uses a model-to-endpoint map and truncates FAL paths to 2 segments for queue URLs. Edit models get a `-edit` suffix appended to the model ID so the poller resolves the correct endpoint.
+- `cost_ledger` categories map to providers on the dashboard: `openai` → OpenAI, `fal` → FAL.ai, `wavespeed` → Wavespeed, `elevenlabs` → FAL.ai (goes through FAL proxy). Use these exact category strings when calling `logCost()`.
 - CampaignsNewPage `handleGenerateScript` must check `res.ok` and `data.error` before accessing `data.script.scenes`. The preview-script API returns `{ script, niche }` on success but `{ error }` on failure — without the check, errors fall through silently and the UI does nothing.
 
 ## Deployment
