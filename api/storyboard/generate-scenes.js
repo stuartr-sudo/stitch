@@ -53,6 +53,7 @@ export default async function handler(req, res) {
 
     const {
       description,
+      storyBeats = [],        // from story chat step
       numScenes = 4,
       style = 'cinematic',
       defaultDuration = 5,
@@ -66,11 +67,22 @@ export default async function handler(req, res) {
       brandStyleGuide = null,
     } = req.body;
 
-    if (!description) {
-      return res.status(400).json({ error: 'Missing story description' });
+    if (!description && storyBeats.length === 0) {
+      return res.status(400).json({ error: 'Missing story description or story beats' });
     }
 
-    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${description.substring(0, 80)}..." (${elements.length} elements, ${sceneGuides.length} guides, style: "${style?.substring(0, 60)}")`);
+    // If no explicit description but we have beats, construct one
+    const effectiveDescription = description || storyBeats.map(b => b.summary).join('. ');
+
+    // Build story beats context from conversational story builder
+    let storyBeatContext = '';
+    if (storyBeats.length > 0) {
+      storyBeatContext = storyBeats.map(beat =>
+        `Scene ${beat.sceneNumber}: ${beat.summary} (Setting: ${beat.setting}, Action: ${beat.keyAction}, Emotion: ${beat.emotion})`
+      ).join('\n');
+    }
+
+    console.log(`[Storyboard] Generating ${numScenes} scenes for: "${effectiveDescription.substring(0, 80)}..." (${elements.length} elements, ${sceneGuides.length} guides, ${storyBeats.length} beats, style: "${style?.substring(0, 60)}")`);
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
@@ -103,7 +115,7 @@ export default async function handler(req, res) {
 
     const systemPrompt = `You are an expert AI video prompt engineer. Your job is to write detailed visual prompts that AI video generation models can render into beautiful footage.
 
-STORY OVERVIEW: ${description}
+STORY OVERVIEW: ${effectiveDescription}
 ${overallMood ? `OVERALL MOOD: ${overallMood}` : ''}
 VISUAL STYLE TO APPLY TO EVERY SCENE: ${style}
 DEFAULT DURATION PER SCENE: ${defaultDuration} seconds
@@ -113,6 +125,7 @@ ${sceneGuideInstructions ? `\nPER-SCENE DIRECTIONS FROM THE USER — follow thes
 ${props?.length > 0 ? `\nPROPS & ACCESSORIES to include naturally in scenes: ${props.join(', ')}` : ''}
 ${negativePrompt ? `\nTHINGS TO AVOID in all scenes: ${negativePrompt}` : ''}
 ${brandStyleGuide ? buildBrandStyleContext(brandStyleGuide) : ''}
+${storyBeatContext ? `\nSTORY BEATS FROM CREATIVE SESSION — follow these story beats closely:\n${storyBeatContext}` : ''}
 
 PROMPT WRITING RULES:
 
