@@ -71,11 +71,12 @@ All env vars documented in `.env.example`. Canonical names:
 - Some routes return immediately and do background work (e.g., `generate-thumbnails`). Check for `res.json()` before async blocks.
 - Webhook routes (`/api/webhooks/content`, `/api/article/from-url`, `/api/article/bulk`) skip auth — they use webhook secrets or brand_username verification instead.
 - Video model duration formats differ by provider: Veo uses `'5s'`/`'8s'` (string with suffix), Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.
-- Shorts wizard lives at `/shorts/new` (10-step flow) and `/shorts/draft/:draftId` (review page). The old `/campaigns/new` page also supports shorts via `?type=shorts`.
+- `/shorts/new` redirects to `/campaigns/new?type=shorts` — the actual wizard lives in `CampaignsNewPage.jsx` (not `ShortsWizardPage.jsx`, which is dead code). Draft review at `/shorts/draft/:draftId`.
+- LoRA configs from the frontend use `{ loraUrl, triggerWord, scale }` but FAL expects `{ path, scale }`. The pipeline transforms this — don't pass raw loraConfigs to `generateImageV2` without mapping `loraUrl` → `path`.
 - `generate_audio` is only supported by Kling v3, Kling O3, and Veo 3. Passing it to other video models will cause errors. The frontend toggle only shows for these models.
 - `api/lib/modelRegistry.js` image models use either `image_size` (Flux, SeeDream, Ideogram) or `aspect_ratio` (Imagen4, Kling Image, Grok) — check the registry's `buildBody()` before adding new models.
 
 ## Deployment
 
 - **Primary**: Fly.io (`fly.toml`) — Sydney region, Express serves both API and built frontend on port 3000.
-- **Frontend fallback**: Vercel (`vercel.json`) — Vite build with SPA rewrites.
+- **Fly.io only** — Never use Vercel.
