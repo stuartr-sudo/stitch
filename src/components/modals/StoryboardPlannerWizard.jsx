@@ -41,18 +41,16 @@ import BrandStyleGuideSelector, { extractBrandStyleData } from '@/components/ui/
 import { STYLE_OPTIONS, LIGHTING_OPTIONS as BUILDER_LIGHTING, COLOR_GRADE_OPTIONS } from '@/components/ui/PromptBuilder';
 import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets';
 import WizardStepper from '@/components/ui/WizardStepper';
+import StoryChat from '@/components/storyboard/StoryChat';
+import SceneCard from '@/components/storyboard/SceneCard';
+import { SCENE_MODELS } from '@/components/storyboard/SceneModelSelector';
+import CharactersKling from '@/components/storyboard/CharactersKling';
+import CharactersVeo from '@/components/storyboard/CharactersVeo';
+import GenerateScene from '@/components/storyboard/GenerateScene';
 
 // ── Constants ──
 
-const STORYBOARD_MODELS = [
-  { id: 'kling-r2v-pro', label: 'Kling O3 Pro (R2V)', description: 'Best character consistency', supportsRefs: true },
-  { id: 'kling-r2v-standard', label: 'Kling O3 Standard (R2V)', description: 'Faster, lower cost', supportsRefs: true },
-  { id: 'seedance-pro', label: 'Seedance 1.5 Pro', description: 'High quality, audio support' },
-  { id: 'veo3-fast', label: 'Veo 3.1 Fast', description: 'Google, flexible duration' },
-  { id: 'grok-imagine', label: 'Grok Imagine (xAI)', description: 'Good quality with audio' },
-  { id: 'kling-video', label: 'Kling 2.5 Turbo Pro', description: 'Cinematic motion' },
-  { id: 'wavespeed-wan', label: 'Wavespeed WAN 2.2', description: 'Fast generation' },
-];
+// STORYBOARD_MODELS removed — now imported from SceneModelSelector (SCENE_MODELS) and set per-scene
 
 const CAMERA_ANGLES = [
   'wide', 'medium', 'close-up', 'extreme close-up', 'bird-eye',
@@ -68,11 +66,10 @@ const MOODS = ['Joyful/Happy', 'Dramatic', 'Peaceful/Calm', 'Mysterious', 'Energ
 
 const WIZARD_STEPS = [
   { key: 'story', label: 'Story & Mood' },
+  { key: 'story-chat', label: 'Story Builder' },
   { key: 'style', label: 'Visual Style' },
-  { key: 'characters', label: 'Characters' },
   { key: 'scene-builder', label: 'Scene Builder' },
-  { key: 'settings', label: 'Frame & Model' },
-  { key: 'scenes', label: 'Scenes' },
+  { key: 'characters', label: 'Characters' },
   { key: 'generating', label: 'Generate' },
 ];
 
@@ -135,8 +132,24 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const [numScenes, setNumScenes] = useState(4);
   const [style, setStyle] = useState('cinematic');
   const [defaultDuration, setDefaultDuration] = useState(5);
-  const [model, setModel] = useState('kling-r2v-pro');
   const [aspectRatio, setAspectRatio] = useState('16:9');
+
+  // Step 1 settings
+  const [storyboardName, setStoryboardName] = useState('');
+  const [resolution, setResolution] = useState('720p');
+  const [enableAudioDefault, setEnableAudioDefault] = useState(false);
+
+  // Step 2 story chat output
+  const [storyBeats, setStoryBeats] = useState([]);
+  const [storyTitle, setStoryTitle] = useState('');
+  const [storyChatOverview, setStoryChatOverview] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
+
+  // Scene builder state
+  const [expandedScene, setExpandedScene] = useState(0);
+
+  // Veo 3.1 reference images (separate from Kling elements)
+  const [veoReferenceImages, setVeoReferenceImages] = useState([]);
 
   // Props, neg prompts, brand style
   const [selectedProps, setSelectedProps] = useState([]);
@@ -239,6 +252,15 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       setGenerating(false);
       setGenerationCancelled(false);
       cancelRef.current = false;
+      setStoryboardName('');
+      setResolution('720p');
+      setEnableAudioDefault(false);
+      setStoryBeats([]);
+      setStoryTitle('');
+      setStoryChatOverview('');
+      setChatHistory([]);
+      setExpandedScene(0);
+      setVeoReferenceImages([]);
     }
   }, [isOpen]);
 
@@ -255,6 +277,41 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const updateSceneGuide = (index, updates) => {
     setSceneGuides(prev => prev.map((g, i) => i === index ? { ...g, ...updates } : g));
   };
+
+  // Cascade scene 1 values to subsequent scenes (only if their field is still empty/default)
+  const handleSceneGuideChange = (sceneIndex, field, value) => {
+    const updated = [...sceneGuides];
+    updated[sceneIndex] = { ...updated[sceneIndex], [field]: value };
+
+    if (sceneIndex === 0) {
+      const cascadeFields = ['environment', 'environmentDetail', 'lighting', 'cameraAngle', 'cameraMovement', 'expression', 'actionType', 'model', 'resolution', 'enableAudio'];
+      if (cascadeFields.includes(field)) {
+        for (let i = 1; i < updated.length; i++) {
+          if (!updated[i][field] || updated[i][field] === '') {
+            updated[i] = { ...updated[i], [field]: value };
+          }
+        }
+      }
+    }
+
+    setSceneGuides(updated);
+  };
+
+  // Determine if Characters step is needed
+  const needsCharacters = sceneGuides.some(sg => {
+    const modelInfo = SCENE_MODELS.find(m => m.id === sg.model);
+    return modelInfo?.supportsRefs;
+  });
+  const hasKlingRefs = sceneGuides.some(sg =>
+    sg.model === 'kling-r2v-pro' || sg.model === 'kling-r2v-standard'
+  );
+  const hasVeoRefs = sceneGuides.some(sg => sg.model === 'veo3');
+
+  // Filter visible steps — skip characters if no ref models selected
+  const visibleSteps = WIZARD_STEPS.filter(s => {
+    if (s.key === 'characters') return needsCharacters;
+    return true;
+  });
 
   // ── Library browser ──
   const loadLibrary = async () => {
@@ -494,8 +551,9 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
 
   // ── AI Scene Generation ──
   const generateSceneBreakdown = async () => {
-    if (!storyOverview.trim()) {
-      toast.error('Please provide a story overview');
+    const storyDesc = storyChatOverview || storyOverview;
+    if (!storyDesc.trim() && storyBeats.length === 0) {
+      toast.error('Please complete the Story Builder first');
       return;
     }
     setGeneratingScenes(true);
@@ -504,7 +562,8 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description: storyOverview,
+          description: storyDesc,
+          storyBeats,
           numScenes,
           style: getPromptText(style) || style,
           defaultDuration,
@@ -513,7 +572,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           elements: elements
             .filter(el => el.refs.length > 0 || el.description)
             .map((el, i) => ({ index: i + 1, description: el.description })),
-          hasStartFrame: !!startFrameUrl,
+          hasStartFrame: !!sceneGuides[0]?.startImageUrl,
           startFrameDescription: startFrameDescription || '',
           props: getPropsLabels(selectedProps),
           negativePrompt: getCombinedNegativePrompt(selectedNegPills, negFreetext),
@@ -523,7 +582,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Failed to generate scenes');
 
-      setStoryboardTitle(data.title);
+      setStoryboardTitle(data.title || storyTitle || storyboardName);
       setScenes(data.scenes.map((s, i) => ({
         ...s,
         id: `scene-${Date.now()}-${i}`,
@@ -532,8 +591,6 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         lastFrameUrl: null,
         startFrameUrl: null,
       })));
-      setStep('scenes');
-      markStepCompleted('settings');
       toast.success(`Generated ${data.scenes.length} scenes`);
     } catch (err) {
       toast.error(err.message);
@@ -601,9 +658,16 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const upscaledElementsCache = useRef(null);
 
   const generateSingleScene = async (scene, startFrameUrlForScene) => {
-    const selectedModel = STORYBOARD_MODELS.find(m => m.id === model);
+    // Use per-scene model from scene guides
+    const guideIndex = scene.sceneNumber - 1;
+    const sceneGuide = sceneGuides[guideIndex] || {};
+    const sceneModel = sceneGuide.model || 'veo3';
+    const sceneResolution = sceneGuide.resolution || resolution;
+    const sceneEnableAudio = sceneGuide.enableAudio ?? enableAudioDefault;
+
+    const selectedModel = SCENE_MODELS.find(m => m.id === sceneModel);
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
-    const isR2V = selectedModel?.supportsRefs && elementsWithRefs.length > 0;
+    const isR2V = (sceneModel === 'kling-r2v-pro' || sceneModel === 'kling-r2v-standard') && elementsWithRefs.length > 0;
 
     const styleText = getPromptText(style);
     let prompt = scene.visualPrompt;
@@ -620,12 +684,28 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
 
     const formData = new FormData();
     formData.append('prompt', prompt);
-    formData.append('model', model);
+    formData.append('model', sceneModel);
     formData.append('duration', String(scene.durationSeconds));
     formData.append('aspectRatio', aspectRatio);
-    formData.append('resolution', '720p');
+    formData.append('resolution', sceneResolution);
+    formData.append('enableAudio', String(sceneEnableAudio));
 
-    const imageUrl = startFrameUrlForScene || elementsWithRefs[0]?.refs[0] || null;
+    // For Veo 3.1 Reference-to-Video, pass reference images as additionalImages
+    if (sceneModel === 'veo3' && veoReferenceImages.length > 0) {
+      formData.append('additionalImages', JSON.stringify(veoReferenceImages));
+    }
+
+    // For first-last-frame, pass end image
+    if (sceneModel === 'veo3-first-last' && sceneGuide.endImageUrl) {
+      formData.append('endImageUrl', sceneGuide.endImageUrl);
+    }
+
+    // For V2V, pass video URL
+    if ((sceneModel === 'kling-o3-v2v-pro' || sceneModel === 'kling-o3-v2v-standard') && sceneGuide.videoSourceUrl) {
+      formData.append('videoUrl', sceneGuide.videoSourceUrl);
+    }
+
+    const imageUrl = startFrameUrlForScene || sceneGuide.startImageUrl || elementsWithRefs[0]?.refs[0] || null;
     if (!imageUrl) {
       throw new Error('No start image available. Add a starting scene image or character reference images.');
     }
@@ -665,11 +745,77 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     if (data.videoUrl) return data.videoUrl;
     if (data.requestId) {
       setPollingScene(scene.id);
-      const videoUrl = await pollForResult(data.requestId, data.model || model);
+      const videoUrl = await pollForResult(data.requestId, data.model || sceneModel);
       setPollingScene(null);
       return videoUrl;
     }
     throw new Error(data.error || 'Generation failed');
+  };
+
+  // Wrapper used by GenerateScene card for single scene generation
+  const generateSingleSceneWrapper = async (scene, startFrame) => {
+    updateScene(scene.id, { status: 'generating', startFrameUrl: startFrame });
+    setGenerating(true);
+    try {
+      const videoUrl = await generateSingleScene(scene, startFrame);
+      let lastFrame = null;
+      try {
+        lastFrame = await extractLastFrame(videoUrl);
+      } catch (err) {
+        console.warn('[Storyboard] Frame extraction failed:', err.message);
+      }
+      updateScene(scene.id, { status: 'done', videoUrl, lastFrameUrl: lastFrame });
+      toast.success(`Scene ${scene.sceneNumber} generated`);
+      apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl, type: 'video', title: `[Storyboard] Scene ${scene.sceneNumber} - ${storyboardTitle || storyTitle}`, source: 'storyboard' }),
+      }).catch(() => {});
+    } catch (err) {
+      if (err.message !== 'Cancelled') {
+        updateScene(scene.id, { status: 'error' });
+        toast.error(`Scene ${scene.sceneNumber} failed: ${err.message}`);
+      }
+    }
+    setGenerating(false);
+  };
+
+  // V2V refinement
+  const openV2VRefinement = async (scene, videoUrl) => {
+    updateScene(scene.id, { status: 'generating' });
+    try {
+      const formData = new FormData();
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+      formData.append('image', blob, 'frame.jpg');
+      formData.append('videoUrl', videoUrl);
+      formData.append('prompt', scene.visualPrompt || scene.motionPrompt || 'Enhance and refine this video');
+      formData.append('model', 'kling-o3-v2v-pro');
+      formData.append('duration', String(scene.durationSeconds || defaultDuration));
+      formData.append('aspectRatio', aspectRatio);
+
+      const res = await apiFetch('/api/jumpstart/generate', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.status === 'completed' && data.videoUrl) {
+        updateScene(scene.id, { videoUrl: data.videoUrl, status: 'done' });
+        toast.success(`Scene ${scene.sceneNumber} refined!`);
+      } else if (data.requestId) {
+        setPollingScene(scene.id);
+        const refinedUrl = await pollForResult(data.requestId, data.model || 'kling-o3-v2v-pro');
+        setPollingScene(null);
+        if (refinedUrl) {
+          updateScene(scene.id, { videoUrl: refinedUrl, status: 'done' });
+          toast.success(`Scene ${scene.sceneNumber} refined!`);
+        }
+      } else if (data.videoUrl) {
+        updateScene(scene.id, { videoUrl: data.videoUrl, status: 'done' });
+        toast.success(`Scene ${scene.sceneNumber} refined!`);
+      }
+    } catch (err) {
+      updateScene(scene.id, { status: 'done' }); // Keep old video on error
+      toast.error('V2V refinement failed: ' + err.message);
+    }
   };
 
   const generateNextScene = async () => {
@@ -691,7 +837,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       frameUrl = prev.lastFrameUrl || null;
     }
     if (!frameUrl) {
-      frameUrl = startFrameUrl || null;
+      frameUrl = sceneGuides[0]?.startImageUrl || startFrameUrl || null;
     }
 
     updateScene(scene.id, { status: 'generating', startFrameUrl: frameUrl });
@@ -758,7 +904,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         frameUrl = prev.lastFrameUrl || null;
       }
       if (!frameUrl) {
-        frameUrl = startFrameUrl || null;
+        frameUrl = sceneGuides[0]?.startImageUrl || startFrameUrl || null;
       }
 
       updateScene(scene.id, { status: 'generating', startFrameUrl: frameUrl });
@@ -820,7 +966,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         const prev = scenes[sceneIndex - 1];
         startFrame = prev.lastFrameUrl || null;
       } else {
-        startFrame = startFrameUrl || null;
+        startFrame = sceneGuides[0]?.startImageUrl || startFrameUrl || null;
       }
 
       const videoUrl = await generateSingleScene(scene, startFrame);
@@ -870,25 +1016,21 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     setCompletedSteps(prev => prev.includes(stepKey) ? prev : [...prev, stepKey]);
   };
 
+  const currentStepIndex = visibleSteps.findIndex(s => s.key === step);
+  const canGoNext = currentStepIndex < visibleSteps.length - 1;
+  const canGoBack = currentStepIndex > 0;
+
   const handleNext = () => {
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (currentIdx < 0) return;
+    if (!canGoNext) return;
 
     // Mark current step as completed
     markStepCompleted(step);
 
-    if (step === 'settings') {
-      // "Generate Scenes" — trigger generation and advance to scenes step
-      generateSceneBreakdown();
-      return;
-    }
+    const nextStep = visibleSteps[currentStepIndex + 1];
 
-    if (step === 'scenes') {
-      // Move to generating step, start generation
-      setStep('generating');
-      markStepCompleted('scenes');
-      generateNextScene();
-      return;
+    // If transitioning to 'generating', trigger scene breakdown first
+    if (nextStep.key === 'generating' && scenes.length === 0) {
+      generateSceneBreakdown();
     }
 
     if (step === 'generating') {
@@ -897,41 +1039,31 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       return;
     }
 
-    // Default: advance to next step
-    const nextStep = WIZARD_STEPS[currentIdx + 1];
-    if (nextStep) {
-      setStep(nextStep.key);
-    }
+    setStep(nextStep.key);
   };
 
   const handleBack = () => {
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (currentIdx <= 0) return;
-    const prevStep = WIZARD_STEPS[currentIdx - 1];
-    if (prevStep) {
-      setStep(prevStep.key);
-    }
+    if (!canGoBack) return;
+    setStep(visibleSteps[currentStepIndex - 1].key);
   };
 
   const handleStepClick = (key) => {
-    const targetIdx = WIZARD_STEPS.findIndex(s => s.key === key);
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.key === step);
-    if (targetIdx < currentIdx) {
+    const targetIdx = visibleSteps.findIndex(s => s.key === key);
+    if (targetIdx < currentStepIndex) {
       setStep(key);
     }
   };
 
   // Determine the subtitle based on step
   const getSubtitle = () => {
-    const found = WIZARD_STEPS.find(s => s.key === step);
-    return found ? `Step ${WIZARD_STEPS.indexOf(found) + 1} of ${WIZARD_STEPS.length}: ${found.label}` : '';
+    const found = visibleSteps.find(s => s.key === step);
+    return found ? `Step ${visibleSteps.indexOf(found) + 1} of ${visibleSteps.length}: ${found.label}` : '';
   };
 
   // Determine if Next button should be disabled
   const isNextDisabled = () => {
-    if (step === 'story' && !storyOverview.trim()) return true;
-    if (step === 'settings' && generatingScenes) return true;
-    if (step === 'scenes' && scenes.length === 0) return true;
+    if (step === 'story') return false; // All fields optional except handled by chat
+    if (step === 'story-chat' && storyBeats.length === 0) return true;
     if (step === 'generating' && (generating || completedScenesCount === 0)) return true;
     return false;
   };
@@ -946,7 +1078,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       icon={<Clapperboard className="w-5 h-5" />}
     >
       <WizardStepper
-        steps={WIZARD_STEPS}
+        steps={visibleSteps}
         currentStep={step}
         completedSteps={completedSteps}
         onStepClick={handleStepClick}
@@ -958,57 +1090,138 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         {step === 'story' && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Story Overview</label>
-              <textarea
-                value={storyOverview}
-                onChange={(e) => setStoryOverview(e.target.value)}
-                placeholder="e.g., 'A puppy learns about driveway safety while riding a scooter through town'"
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#2C666E] focus:border-transparent resize-none"
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Storyboard Name</label>
+              <Input
+                value={storyboardName}
+                onChange={(e) => setStoryboardName(e.target.value)}
+                placeholder="e.g., 'Puppy Safety Adventure'"
+                className="text-sm"
               />
             </div>
 
-            <PillSelector label="Overall Mood" options={MOODS} value={overallMood} onChange={setOverallMood} />
-
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Number of Scenes</label>
-                <select
+                <input
+                  type="range"
+                  min={2}
+                  max={8}
                   value={numScenes}
                   onChange={(e) => setNumScenes(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {[2, 3, 4, 5, 6, 7, 8].map(n => (
-                    <option key={n} value={n}>{n} scenes</option>
-                  ))}
-                </select>
+                  className="w-full accent-[#2C666E]"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>2</span>
+                  <span className="font-medium text-[#2C666E]">{numScenes} scenes</span>
+                  <span>8</span>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration per Scene</label>
-                <select
+                <input
+                  type="range"
+                  min={3}
+                  max={10}
                   value={defaultDuration}
                   onChange={(e) => setDefaultDuration(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {[3, 4, 5, 6, 8, 10].map(n => (
-                    <option key={n} value={n}>{n} seconds</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Aspect Ratio</label>
-                <select
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  {['16:9', '9:16', '1:1', '4:3'].map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                  className="w-full accent-[#2C666E]"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>3s</span>
+                  <span className="font-medium text-[#2C666E]">{defaultDuration}s</span>
+                  <span>10s</span>
+                </div>
               </div>
             </div>
+
+            <div>
+              <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Aspect Ratio</label>
+              <div className="flex gap-1.5">
+                {['16:9', '9:16', '1:1', '4:3'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setAspectRatio(r)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      aspectRatio === r
+                        ? 'bg-[#2C666E] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Resolution</label>
+              <div className="flex gap-1.5">
+                {['720p', '1080p', '4k'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setResolution(r)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      resolution === r
+                        ? 'bg-[#2C666E] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableAudioDefault}
+                onChange={(e) => setEnableAudioDefault(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#2C666E] focus:ring-[#2C666E]"
+              />
+              <span className="text-sm text-gray-700">Enable native audio generation (supported models only)</span>
+            </label>
+
+            <PillSelector label="Overall Mood" options={MOODS} value={overallMood} onChange={setOverallMood} />
+
+            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
           </div>
+        )}
+
+        {/* ── Step 2: Story Builder Chat ── */}
+        {step === 'story-chat' && (
+          <StoryChat
+            numScenes={numScenes}
+            mood={overallMood}
+            duration={defaultDuration}
+            onComplete={({ storyBeats: beats, storyTitle: title, storyOverview: overview, chatHistory: history }) => {
+              setStoryBeats(beats);
+              setStoryTitle(title);
+              setStoryChatOverview(overview);
+              setChatHistory(history);
+              // Pre-populate scene guides from beats
+              const newGuides = beats.map((beat, i) => ({
+                sceneNumber: i + 1,
+                action: beat.keyAction || '',
+                environment: '',
+                environmentDetail: '',
+                actionType: '',
+                expression: '',
+                lighting: '',
+                cameraAngle: '',
+                cameraMovement: '',
+                model: 'veo3',
+                resolution: resolution,
+                enableAudio: enableAudioDefault,
+                startImageUrl: null,
+                videoSourceUrl: null,
+                endImageUrl: null,
+              }));
+              setSceneGuides(newGuides);
+            }}
+          />
         )}
 
         {/* ── Step 2: Visual Style ── */}
@@ -1061,154 +1274,41 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           </div>
         )}
 
-        {/* ── Step 3: Characters ── */}
+        {/* ── Step 5: Characters (conditional — only if ref models selected) ── */}
         {step === 'characters' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
+          <div className="space-y-4">
+            {hasKlingRefs && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-800">Character Elements</h3>
-                <p className="text-sm text-gray-400 mt-0.5">
-                  Each element becomes @Element1, @Element2, etc. in your scene prompts. Max 3 reference images each.
-                </p>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Kling R2V Characters (@Element)</h3>
+                <CharactersKling
+                  elements={elements}
+                  onChange={setElements}
+                  onOpenImagineer={(elIndex) => {
+                    setActiveElementIndex(elIndex);
+                    setShowImagineerForStartFrame(true);
+                  }}
+                  onOpenLibrary={(elIndex) => {
+                    setActiveElementIndex(elIndex);
+                    setShowLibrary(true);
+                    loadLibrary();
+                  }}
+                />
               </div>
-              {elements.length < 4 && (
-                <Button variant="outline" size="sm" onClick={addElement} className="text-sm">
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Element
-                </Button>
-              )}
-            </div>
+            )}
+            {hasVeoRefs && (
+              <div className={hasKlingRefs ? 'mt-6 pt-6 border-t border-gray-200' : ''}>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Veo 3.1 Reference Images</h3>
+                <p className="text-xs text-gray-500 mb-3">These images are passed as reference URLs for subject consistency across all Veo 3.1 scenes.</p>
+                <CharactersVeo
+                  referenceImages={veoReferenceImages}
+                  onChange={setVeoReferenceImages}
+                  onOpenLibrary={() => { setShowLibrary(true); loadLibrary(); }}
+                  onOpenImagineer={() => setShowImagineerForStartFrame(true)}
+                />
+              </div>
+            )}
 
-            {/* Element tabs */}
-            <div className="flex gap-1.5">
-              {elements.map((el, i) => (
-                <button
-                  key={el.id}
-                  onClick={() => setActiveElementIndex(i)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 ${
-                    i === activeElementIndex
-                      ? 'bg-[#2C666E] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  @Element{i + 1}
-                  {el.refs.length > 0 && <span className="text-xs opacity-70">({el.refs.length})</span>}
-                  {elements.length > 1 && (
-                    <span
-                      onClick={(e) => { e.stopPropagation(); removeElement(i); }}
-                      className="ml-0.5 hover:text-red-300"
-                    >
-                      <X className="w-3 h-3" />
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Active element content */}
-            {elements[activeElementIndex] && (() => {
-              const el = elements[activeElementIndex];
-              const elIdx = activeElementIndex;
-              return (
-                <div className="border rounded-lg p-5 bg-white space-y-4">
-                  {/* Description */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm text-gray-500 uppercase tracking-wide font-medium">Description</label>
-                      {el.refs.length > 0 && (
-                        <button
-                          onClick={() => describeCharacterFromImage(el.refs[0], elIdx)}
-                          disabled={el.analyzing}
-                          className="flex items-center gap-1 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50"
-                        >
-                          {el.analyzing
-                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
-                            : <><Sparkles className="w-3.5 h-3.5" /> Auto-describe</>}
-                        </button>
-                      )}
-                    </div>
-                    <textarea
-                      value={el.description}
-                      onChange={(e) => updateElement(elIdx, { description: e.target.value })}
-                      placeholder={el.analyzing ? 'Analyzing...' : "e.g., 'Young woman, red hair, green eyes, brown leather jacket'"}
-                      rows={3}
-                      className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none ${el.analyzing ? 'bg-gray-50 animate-pulse' : ''}`}
-                    />
-                  </div>
-
-                  {/* Reference images */}
-                  <div>
-                    <label className="text-sm text-gray-500 uppercase tracking-wide mb-2 block font-medium">
-                      Reference Images ({el.refs.length}/3)
-                    </label>
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={el.refs.length >= 3}
-                        className="text-sm"
-                      >
-                        <Upload className="w-3.5 h-3.5 mr-1" /> Upload
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={openLibrary}
-                        disabled={el.refs.length >= 3}
-                        className="text-sm"
-                      >
-                        <FolderOpen className="w-3.5 h-3.5 mr-1" /> Library
-                      </Button>
-                    </div>
-                    {el.refs.length > 0 && (
-                      <div className="flex flex-wrap gap-3">
-                        {el.refs.map((url, i) => (
-                          <div key={i} className="relative group">
-                            <img
-                              src={url}
-                              alt={`ref ${i + 1}`}
-                              onClick={() => updateElement(elIdx, { frontalIndex: i })}
-                              title={i === el.frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
-                              className={`w-20 h-20 rounded-lg object-cover cursor-pointer transition-all ${
-                                i === el.frontalIndex
-                                  ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
-                                  : 'border border-gray-200 hover:border-gray-400'
-                              }`}
-                            />
-                            {i === el.frontalIndex && (
-                              <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-[#2C666E] text-white rounded-full text-[9px] flex items-center justify-center font-bold">F</span>
-                            )}
-                            <button
-                              onClick={() => {
-                                const newRefs = el.refs.filter((_, j) => j !== i);
-                                const newFrontal = el.frontalIndex >= newRefs.length ? 0 : (i < el.frontalIndex ? el.frontalIndex - 1 : el.frontalIndex);
-                                updateElement(elIdx, { refs: newRefs, frontalIndex: newFrontal });
-                              }}
-                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                        {el.refs.length > 1 && (
-                          <p className="w-full text-sm text-gray-400 mt-1">Click to set frontal ref (F)</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Library browser overlay */}
+            {/* Library browser overlay (kept for Kling imports) */}
             {showLibrary && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1303,180 +1403,83 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
 
         {/* ── Step 4: Scene Builder ── */}
         {step === 'scene-builder' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-800 mb-1">Scene-by-Scene Builder</h3>
-              <p className="text-sm text-gray-400">Guide the AI with per-scene details. These are optional hints to shape each scene.</p>
-            </div>
-
-            <div className="space-y-4 overflow-y-auto pr-1">
-              {sceneGuides.map((guide, i) => (
-                <div key={i} className="border rounded-lg p-5 bg-white space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-[#2C666E]">Scene {i + 1}</span>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500 uppercase tracking-wide mb-1 block font-medium">What happens?</label>
-                    <textarea
-                      value={guide.action}
-                      onChange={(e) => updateSceneGuide(i, { action: e.target.value })}
-                      placeholder="e.g., 'The puppy rides the scooter past a driveway and looks both ways'"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <PillSelector label="Environment" options={ENVIRONMENTS} value={guide.environment} onChange={(v) => updateSceneGuide(i, { environment: v })} />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Environment Detail</label>
-                      <input
-                        value={guide.environmentDetail}
-                        onChange={(e) => updateSceneGuide(i, { environmentDetail: e.target.value })}
-                        placeholder="e.g., 'suburban road with parked cars'"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                      />
-                    </div>
-                  </div>
-                  <PillSelector label="Character Action" options={ACTION_TYPES} value={guide.actionType} onChange={(v) => updateSceneGuide(i, { actionType: v })} />
-                  <PillSelector label="Expression" options={EXPRESSIONS} value={guide.expression} onChange={(v) => updateSceneGuide(i, { expression: v })} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <PillSelector label="Lighting" options={LIGHTING_OPTIONS} value={guide.lighting} onChange={(v) => updateSceneGuide(i, { lighting: v })} />
-                    <div>
-                      <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Camera Angle</label>
-                      <select
-                        value={guide.cameraAngle}
-                        onChange={(e) => updateSceneGuide(i, { cameraAngle: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                      >
-                        <option value="">Select...</option>
-                        {CAMERA_ANGLES.map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <PillSelector label="Camera Movement" options={CAMERA_MOVEMENTS} value={guide.cameraMovement} onChange={(v) => updateSceneGuide(i, { cameraMovement: v })} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 5: Frame & Model ── */}
-        {step === 'settings' && (
-          <div className="space-y-6">
-            {/* Starting Scene Image */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Starting Scene Image</label>
-              <p className="text-sm text-gray-400 mb-3">Sets the visual environment for Scene 1. Subsequent scenes chain from the previous scene's last frame.</p>
-
-              {startFrameUrl ? (
-                <div className="relative group">
-                  <img
-                    src={startFrameUrl}
-                    alt="Starting scene"
-                    className="w-full h-52 rounded-lg object-cover border border-gray-200"
-                  />
-                  <button
-                    onClick={() => setStartFrameUrl(null)}
-                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <span className="absolute bottom-2 left-2 bg-black/60 text-white text-sm px-2 py-1 rounded flex items-center gap-1">
-                    {analyzingStartFrame ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing scene...</> : startFrameDescription ? 'Scene analyzed' : 'Start Frame'}
-                  </span>
-                </div>
-              ) : (generatingStartFrame || pollingStartFrame) ? (
-                <div className="w-full h-52 rounded-lg border-2 border-dashed border-[#2C666E]/30 bg-[#2C666E]/5 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
-                  <span className="text-sm text-[#2C666E]">
-                    {pollingStartFrame ? 'Generating image...' : 'Processing...'}
-                  </span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowImagineerForStartFrame(true)}
-                      className="text-sm flex-1"
-                    >
-                      <Sparkles className="w-4 h-4 mr-1.5" /> Generate
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowLibraryForStartFrame(true)}
-                      className="text-sm flex-1"
-                    >
-                      <FolderOpen className="w-4 h-4 mr-1.5" /> Library
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowUrlImport(!showUrlImport)}
-                      className="text-sm flex-1"
-                    >
-                      <Link className="w-4 h-4 mr-1.5" /> URL
-                    </Button>
-                  </div>
-                  {showUrlImport && (
-                    <div className="flex gap-2">
-                      <Input
-                        value={importUrl}
-                        onChange={(e) => setImportUrl(e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        className="text-sm flex-1"
-                        onKeyDown={(e) => e.key === 'Enter' && handleImportUrl()}
-                      />
-                      <Button
-                        onClick={handleImportUrl}
-                        disabled={importingUrl || !importUrl.trim()}
-                        className="text-sm bg-[#2C666E] text-white"
-                      >
-                        {importingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Import'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Video Model */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                {STORYBOARD_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>{m.label} — {m.description}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Props & Accessories */}
-            <PropsPillSelector selected={selectedProps} onChange={setSelectedProps} />
-
-            {/* Negative Prompts */}
-            <NegPromptPillSelector
-              selectedPills={selectedNegPills}
-              onPillsChange={setSelectedNegPills}
-              freetext={negFreetext}
-              onFreetextChange={setNegFreetext}
-            />
-
-            {/* Brand Style Guide */}
-            <BrandStyleGuideSelector value={selectedBrand} onChange={setSelectedBrand} />
-          </div>
-        )}
-
-        {/* ── Step 6: Scenes (AI-generated scene cards) ── */}
-        {step === 'scenes' && (
           <div className="space-y-3">
-            {storyboardTitle && (
-              <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
-            )}
+            <div className="text-sm text-gray-500 mb-2">
+              Configure each scene. Scene 1 settings cascade as defaults to subsequent scenes.
+            </div>
+            {sceneGuides.map((guide, i) => (
+              <SceneCard
+                key={i}
+                scene={guide}
+                storyBeat={storyBeats[i]}
+                onChange={(field, value) => handleSceneGuideChange(i, field, value)}
+                isFirst={i === 0}
+                expanded={expandedScene === i}
+                onToggleExpand={() => setExpandedScene(expandedScene === i ? -1 : i)}
+                onUploadStartImage={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const url = URL.createObjectURL(file);
+                    handleSceneGuideChange(i, 'startImageUrl', url);
+                  };
+                  input.click();
+                }}
+                onImportFromLibrary={() => {
+                  setShowLibraryForStartFrame(true);
+                }}
+                onUploadVideoSource={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'video/*';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const url = URL.createObjectURL(file);
+                    handleSceneGuideChange(i, 'videoSourceUrl', url);
+                  };
+                  input.click();
+                }}
+                onUploadEndImage={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const url = URL.createObjectURL(file);
+                    handleSceneGuideChange(i, 'endImageUrl', url);
+                  };
+                  input.click();
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── Step 6: Generate ── */}
+        {step === 'generating' && (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-500">
+                {scenes.filter(s => s.status === 'done').length} / {scenes.length} scenes complete
+              </span>
+              <div className="flex gap-2">
+                {!generating && scenes.some(s => s.status === 'pending') && (
+                  <Button onClick={generateAllRemaining} size="sm" className="bg-[#2C666E] hover:bg-[#1e4d54]">
+                    Generate All Remaining
+                  </Button>
+                )}
+                {generating && (
+                  <Button onClick={() => { cancelRef.current = true; }} size="sm" variant="outline" className="text-red-600 border-red-200">
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </div>
 
             {generatingScenes && (
               <div className="flex items-center justify-center gap-2 py-8">
@@ -1486,145 +1489,19 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             )}
 
             {scenes.map((scene, i) => (
-              <div key={scene.id} className="border rounded-lg p-3 bg-white space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-[#2C666E]">Scene {i + 1}</span>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => moveScene(i, -1)} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => moveScene(i, 1)} disabled={i === scenes.length - 1} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => removeScene(scene.id)} className="p-0.5 text-red-400 hover:text-red-600">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm text-gray-500 uppercase tracking-wide">Visual Prompt</label>
-                  <textarea
-                    value={scene.visualPrompt}
-                    onChange={(e) => updateScene(scene.id, { visualPrompt: e.target.value })}
-                    className="w-full h-16 px-2 py-1 border border-gray-200 rounded text-sm resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-sm text-gray-500 uppercase tracking-wide">Motion</label>
-                    <input
-                      value={scene.motionPrompt}
-                      onChange={(e) => updateScene(scene.id, { motionPrompt: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                      placeholder="Camera motion..."
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500 uppercase tracking-wide">Duration</label>
-                    <select
-                      value={scene.durationSeconds}
-                      onChange={(e) => updateScene(scene.id, { durationSeconds: parseInt(e.target.value) })}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                    >
-                      {[3, 4, 5, 6, 8, 10].map(n => (
-                        <option key={n} value={n}>{n}s</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500 uppercase tracking-wide">Camera</label>
-                    <select
-                      value={scene.cameraAngle}
-                      onChange={(e) => updateScene(scene.id, { cameraAngle: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                    >
-                      {CAMERA_ANGLES.map(a => (
-                        <option key={a} value={a}>{a}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {scene.narrativeNote && (
-                  <p className="text-sm text-gray-400 italic">{scene.narrativeNote}</p>
-                )}
-              </div>
-            ))}
-
-            {!generatingScenes && (
-              <Button variant="outline" size="sm" onClick={addScene} className="w-full text-sm">
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Scene
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* ── Step 7: Generate ── */}
-        {step === 'generating' && (
-          <div className="space-y-3">
-            <div className="text-center mb-2">
-              <h3 className="text-sm font-semibold text-gray-800">{storyboardTitle}</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {completedScenesCount} / {scenes.length} scenes generated
-                {failedScenes > 0 && ` · ${failedScenes} failed`}
-              </p>
-              <div className="w-full h-2 bg-gray-100 rounded-full mt-2">
-                <div
-                  className="h-full bg-[#2C666E] rounded-full transition-all"
-                  style={{ width: `${(completedScenesCount / scenes.length) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            {scenes.map((scene, i) => (
-              <div key={scene.id} className={`rounded-lg border overflow-hidden ${
-                scene.status === 'generating' ? 'border-[#2C666E] bg-blue-50' :
-                scene.status === 'done' ? 'border-green-200' :
-                scene.status === 'error' ? 'border-red-200 bg-red-50' :
-                'border-gray-200'
-              }`}>
-                {scene.status === 'done' && scene.videoUrl && (
-                  <video
-                    src={scene.videoUrl}
-                    controls
-                    className="w-full aspect-video bg-black"
-                    muted
-                  />
-                )}
-
-                <div className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
-                      {scene.status === 'generating' ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
-                      ) : scene.status === 'done' ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      ) : scene.status === 'error' ? (
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <span className="text-sm text-gray-400 font-medium">{i + 1}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-700">Scene {i + 1}</p>
-                      <p className="text-sm text-gray-400 truncate">{scene.narrativeNote || scene.visualPrompt.substring(0, 60)}</p>
-                    </div>
-                  </div>
-                  {(scene.status === 'done' || scene.status === 'error') && !generating && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => regenerateScene(scene.id)}
-                      className="text-sm h-7 px-3"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 mr-1" /> Redo
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              <GenerateScene
+                key={scene.id}
+                scene={scene}
+                onGenerate={() => generateSingleSceneWrapper(scene, i > 0 ? scenes[i-1]?.lastFrameUrl : sceneGuides[0]?.startImageUrl)}
+                onRetry={() => {
+                  updateScene(scene.id, { status: 'pending', videoUrl: null });
+                  generateSingleSceneWrapper(scene, i > 0 ? scenes[i-1]?.lastFrameUrl : sceneGuides[0]?.startImageUrl);
+                }}
+                onRefineWithV2V={(videoUrl) => openV2VRefinement(scene, videoUrl)}
+                isGenerating={scene.status === 'generating'}
+                isPending={scene.status === 'pending'}
+              />
+                    ))}
           </div>
         )}
 
@@ -1634,53 +1511,13 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         <div className="flex justify-between w-full">
           {/* Left side: Back button */}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleBack} disabled={step === 'story'}>
+            <Button variant="outline" onClick={handleBack} disabled={visibleSteps.findIndex(s => s.key === step) <= 0}>
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           </div>
 
-          {/* Right side: Next button + contextual actions */}
+          {/* Right side */}
           <div className="flex gap-2">
-            {/* Extra actions for specific steps */}
-            {step === 'scenes' && scenes.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={generateSceneBreakdown}
-                disabled={generatingScenes}
-              >
-                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Regenerate
-              </Button>
-            )}
-
-            {step === 'generating' && generating && (
-              <Button
-                variant="outline"
-                onClick={cancelGeneration}
-                className="text-red-600 border-red-300"
-              >
-                <Pause className="w-4 h-4 mr-1" /> Cancel
-              </Button>
-            )}
-
-            {step === 'generating' && !generating && completedScenesCount < scenes.length && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={generateAllRemaining}
-                >
-                  <Play className="w-3.5 h-3.5 mr-1" /> Generate All Remaining
-                </Button>
-                <Button
-                  onClick={generateNextScene}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-                >
-                  Generate Scene {completedScenesCount + 1} <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </>
-            )}
-
             {step === 'generating' && !generating && completedScenesCount > 0 && completedScenesCount === scenes.length && (
               <Button
                 onClick={sendToTimeline}
@@ -1690,21 +1527,24 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
               </Button>
             )}
 
-            {/* Standard Next button (not shown on generating step which has its own buttons) */}
+            {step === 'generating' && !generating && completedScenesCount < scenes.length && scenes.length > 0 && (
+              <Button
+                onClick={generateNextScene}
+                className="bg-[#2C666E] hover:bg-[#07393C] text-white"
+              >
+                Generate Scene {completedScenesCount + 1} <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
+
+            {/* Standard Next button (not shown on generating step) */}
             {step !== 'generating' && (
               <Button
                 onClick={handleNext}
                 disabled={isNextDisabled()}
                 className="bg-[#2C666E] hover:bg-[#07393C] text-white"
               >
-                {step === 'settings' ? (
-                  generatingScenes ? (
-                    <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Generating...</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4 mr-1" /> Generate Scenes</>
-                  )
-                ) : step === 'scenes' ? (
-                  <><Play className="w-4 h-4 mr-1" /> Start Generating</>
+                {step === 'story-chat' ? (
+                  <>Next <ChevronRight className="w-4 h-4 ml-1" /></>
                 ) : (
                   <>Next <ChevronRight className="w-4 h-4 ml-1" /></>
                 )}
