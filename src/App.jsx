@@ -11,6 +11,8 @@ import TemplatesPage from './pages/TemplatesPage';
 import CostDashboardPage from './pages/CostDashboardPage';
 import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
+import ProposalPage from './pages/ProposalPage';
+import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -85,6 +87,10 @@ function App() {
 
           {/* Legacy /setup alias */}
           <Route path="/setup" element={<Navigate to="/" replace />} />
+
+          {/* Public proposal pages — no auth, isolated from app */}
+          <Route path="/proposals" element={<ProposalsIndexPage />} />
+          <Route path="/proposal/hamilton-city-council" element={<ProposalPage />} />
 
           {/* Protected studio */}
           <Route
