@@ -9,6 +9,7 @@ npm run start      # Express API (port 3003) + Vite dev server (port 4390) concu
 npm run server     # Express API only (port 3003)
 npm run dev        # Vite frontend only (port 4390)
 npm run build      # Production build → dist/
+fly deploy         # Deploy to Fly.io (Sydney region)
 ```
 
 No test runner or linter is configured.
@@ -47,6 +48,8 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Workflow Engine** (`api/lib/workflowEngine.js`): Persistent state machine for long-running jobs (article→video pipeline). Steps: scrape → analyze → match_templates → create_campaign → generate_assets → concat → upload → finalize. State stored in `jobs` table. Supports pause/resume/retry.
 
+**Voiceover Generator** (`api/lib/voiceoverGenerator.js`): ElevenLabs TTS via FAL.ai proxy (`fal-ai/elevenlabs/tts/eleven-v3`) — only needs `FAL_KEY`, no separate ElevenLabs subscription. Includes legacy voice ID → FAL voice name mapping. Also exports Whisper-based word-level timestamp generation for caption sync.
+
 **Scheduled Publisher** (`api/lib/scheduledPublisher.js`): Polls for drafts with scheduled publish times and pushes to YouTube.
 
 ## Environment
@@ -55,7 +58,6 @@ All env vars documented in `.env.example`. Canonical names:
 - `WAVESPEED_API_KEY` (never `WAVESPEED_KEY`)
 - `FAL_KEY`
 - `OPENAI_API_KEY`
-- `ELEVENLABS_API_KEY`
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (backend)
 - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (frontend — must be prefixed `VITE_`)
 
@@ -69,6 +71,7 @@ All env vars documented in `.env.example`. Canonical names:
 - Webhook routes (`/api/webhooks/content`, `/api/article/from-url`, `/api/article/bulk`) skip auth — they use webhook secrets or brand_username verification instead.
 - Video model duration formats differ by provider: Veo uses `'5s'`/`'8s'` (string with suffix), Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.
 - Shorts wizard lives at `/shorts/new` (10-step flow) and `/shorts/draft/:draftId` (review page). The old `/campaigns/new` page also supports shorts via `?type=shorts`.
+- `generate_audio` is only supported by Kling v3, Kling O3, and Veo 3. Passing it to other video models will cause errors. The frontend toggle only shows for these models.
 - `api/lib/modelRegistry.js` image models use either `image_size` (Flux, SeeDream, Ideogram) or `aspect_ratio` (Imagen4, Kling Image, Grok) — check the registry's `buildBody()` before adding new models.
 
 ## Deployment

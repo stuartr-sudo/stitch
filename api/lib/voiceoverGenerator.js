@@ -10,20 +10,24 @@
 
 import { pollFalQueue } from './pipelineHelpers.js';
 
-// Map legacy ElevenLabs voice IDs to FAL voice names
+// Map legacy ElevenLabs voice IDs to FAL-compatible voice names.
+// FAL only supports: Aria, Roger, Sarah, Laura, Charlie, George, Callum,
+// River, Liam, Charlotte, Alice, Matilda, Will, Jessica, Eric, Chris,
+// Brian, Daniel, Lily, Bill, Rachel, Adam.
+// Legacy names that don't exist on FAL are mapped to similar FAL voices.
 const VOICE_ID_TO_NAME = {
-  'pNInz6obpgDQGcFmaJgB': 'Adam',
-  '21m00Tcm4TlvDq8ikWAM': 'Rachel',
-  'EXAVITQu4vr4xnSDxMaL': 'Bella',
-  'ErXwobaYiN019PkySvjV': 'Antoni',
-  'MF3mGyEYCl7XYWbV9V6O': 'Elli',
-  'TxGEqnHWrfWFTfGW9XjX': 'Josh',
-  'VR6AewLTigWG4xSOukaG': 'Arnold',
-  'AZnzlk1XvdvUeBnXmlld': 'Domi',
-  'jBpfuIE2acCO8z3wKNLl': 'Gigi',
-  'yoZ06aMxZJJ28mfd3POQ': 'Sam',
-  '2EiwWnXFnvU5JabPnv8n': 'Clyde',
-  'onwK4e9ZLuTAKqWW03F9': 'Daniel',
+  'pNInz6obpgDQGcFmaJgB': 'Adam',       // Adam → Adam (exists on FAL)
+  '21m00Tcm4TlvDq8ikWAM': 'Rachel',      // Rachel → Rachel (exists on FAL)
+  'EXAVITQu4vr4xnSDxMaL': 'Laura',       // Bella → Laura (similar warm female)
+  'ErXwobaYiN019PkySvjV': 'Brian',        // Antoni → Brian (similar warm male)
+  'MF3mGyEYCl7XYWbV9V6O': 'Charlotte',    // Elli → Charlotte (similar young female)
+  'TxGEqnHWrfWFTfGW9XjX': 'Charlie',      // Josh → Charlie (similar young male)
+  'VR6AewLTigWG4xSOukaG': 'George',       // Arnold → George (similar deep male)
+  'AZnzlk1XvdvUeBnXmlld': 'Alice',        // Domi → Alice (similar female)
+  'jBpfuIE2acCO8z3wKNLl': 'Lily',         // Gigi → Lily (similar female)
+  'yoZ06aMxZJJ28mfd3POQ': 'Liam',         // Sam → Liam (similar male)
+  '2EiwWnXFnvU5JabPnv8n': 'Roger',        // Clyde → Roger (similar deep male)
+  'onwK4e9ZLuTAKqWW03F9': 'Daniel',       // Daniel → Daniel (exists on FAL)
 };
 
 /**

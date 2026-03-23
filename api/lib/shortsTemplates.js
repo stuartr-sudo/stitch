@@ -417,41 +417,56 @@ export function listShortsNiches() {
 /**
  * ElevenLabs voice presets — curated voices for faceless shorts.
  */
+// Voice IDs are FAL voice names (used directly with fal-ai/elevenlabs/tts/eleven-v3).
+// Valid FAL voices: Aria, Roger, Sarah, Laura, Charlie, George, Callum, River,
+// Liam, Charlotte, Alice, Matilda, Will, Jessica, Eric, Chris, Brian, Daniel, Lily, Bill, Rachel, Adam.
 export const VOICE_PRESETS = [
   {
-    id: 'pNInz6obpgDQGcFmaJgB',
+    id: 'Adam',
     name: 'Adam',
     description: 'Deep, authoritative male — tech, finance',
     niches: ['ai_tech_news', 'finance_money', 'history_did_you_know', 'conspiracy_mystery', 'business_entrepreneur'],
   },
   {
-    id: 'ErXwobaYiN019PkySvjV',
-    name: 'Antoni',
+    id: 'Brian',
+    name: 'Brian',
     description: 'Warm, inspiring male — motivation, stories',
     niches: ['motivation_self_help', 'relationships_dating'],
   },
   {
-    id: '2EiwWnXFnvU5JabPnv8n',
-    name: 'Clyde',
+    id: 'Roger',
+    name: 'Roger',
     description: 'Deep gravelly male — horror, mystery',
     niches: ['scary_horror', 'true_crime'],
   },
   {
-    id: '21m00Tcm4TlvDq8ikWAM',
+    id: 'Rachel',
     name: 'Rachel',
     description: 'Calm, eerie female — horror, ASMR',
     niches: ['scary_horror', 'true_crime', 'conspiracy_mystery'],
   },
   {
-    id: 'TxGEqnHWrfWFTfGW9XjX',
-    name: 'Josh',
+    id: 'Charlie',
+    name: 'Charlie',
     description: 'Young energetic male — tech, motivation, gaming',
     niches: ['ai_tech_news', 'motivation_self_help', 'science_nature', 'health_fitness', 'gaming_popculture'],
   },
   {
-    id: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
+    id: 'Laura',
+    name: 'Laura',
     description: 'Young clear female — general, finance',
     niches: ['finance_money', 'ai_tech_news', 'health_fitness', 'relationships_dating'],
+  },
+  {
+    id: 'Aria',
+    name: 'Aria',
+    description: 'Expressive, versatile female — all niches',
+    niches: ['ai_tech_news', 'motivation_self_help', 'science_nature', 'health_fitness', 'finance_money'],
+  },
+  {
+    id: 'George',
+    name: 'George',
+    description: 'Deep, commanding male — history, documentary',
+    niches: ['history_did_you_know', 'science_nature', 'conspiracy_mystery', 'business_entrepreneur'],
   },
 ];
