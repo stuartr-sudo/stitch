@@ -63,7 +63,9 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     ? requestIdOrUrl
     : `${FAL_BASE}/${queuePath}/requests/${requestIdOrUrl}`;
 
-  const deadline = Date.now() + 300_000; // 5 minute absolute timeout
+  // Absolute timeout: derived from poll params, min 5 min, max 10 min
+  const computedMs = Math.min(maxRetries * delayMs, 600_000);
+  const deadline = Date.now() + Math.max(computedMs, 300_000);
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(pollUrl, {
       headers: {

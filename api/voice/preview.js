@@ -7,9 +7,9 @@
  * Body: { voice_id: string, text?: string }
  */
 
-import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { pollFalQueue } from '../lib/pipelineHelpers.js';
+import { resolveVoiceName } from '../lib/voiceoverGenerator.js';
 
 const DEFAULT_PREVIEW_TEXT = 'Hey, this is what I sound like. Pretty cool, right?';
 
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         text: text || DEFAULT_PREVIEW_TEXT,
-        voice: voice_id,
+        voice: resolveVoiceName(voice_id),
         stability: 0.5,
       }),
     });

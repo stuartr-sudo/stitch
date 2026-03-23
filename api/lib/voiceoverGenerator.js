@@ -34,7 +34,7 @@ const VOICE_ID_TO_NAME = {
  * Resolve a voice identifier to a FAL voice name.
  * Accepts: FAL voice name ("Aria"), legacy ElevenLabs ID, or falls back to "Rachel".
  */
-function resolveVoiceName(voiceId) {
+export function resolveVoiceName(voiceId) {
   if (!voiceId) return 'Rachel';
   // If it's already a known FAL voice name, use it directly
   const falVoices = ['Aria','Roger','Sarah','Laura','Charlie','George','Callum','River','Liam','Charlotte','Alice','Matilda','Will','Jessica','Eric','Chris','Brian','Daniel','Lily','Bill','Rachel','Adam'];
@@ -128,6 +128,10 @@ export async function generateTimestamps(audioUrl, falKey) {
 
   console.log(`[voiceover] Generating word timestamps via Whisper...`);
 
+  // 90-second timeout for Whisper (synchronous endpoint, can be slow for long audio)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
   const res = await fetch('https://fal.run/fal-ai/whisper', {
     method: 'POST',
     headers: {
@@ -140,7 +144,9 @@ export async function generateTimestamps(audioUrl, falKey) {
       chunk_level: 'word',
       version: '3',
     }),
+    signal: controller.signal,
   });
+  clearTimeout(timeoutId);
 
   if (!res.ok) {
     const errorText = await res.text();

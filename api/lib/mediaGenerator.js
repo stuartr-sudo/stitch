@@ -31,7 +31,9 @@ const PROVIDER_CONFIG = {
     async poll(queueData, model, keys, pollConfig) {
       const requestId = model.parseRequestId?.(queueData) || queueData.id || queueData.data?.id;
       if (!requestId) throw new Error('No request ID from Wavespeed');
-      return pollWavespeedRequest(requestId, keys.wavespeedKey, pollConfig.maxRetries, pollConfig.delayMs);
+      // pollWavespeedRequest returns a raw URL string — wrap it so parseResult() works
+      const rawUrl = await pollWavespeedRequest(requestId, keys.wavespeedKey, pollConfig.maxRetries, pollConfig.delayMs);
+      return { outputs: [rawUrl], data: { outputs: [rawUrl] } };
     },
   },
 };

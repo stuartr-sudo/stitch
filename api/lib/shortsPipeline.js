@@ -182,7 +182,10 @@ export async function runShortsPipeline(opts) {
     await updateJob({ current_step: 'generating_timestamps', completed_steps: 2 });
     console.log('[shortsPipeline] Step 3: Generating word-level timestamps via Whisper');
 
-    const tsResult = await generateTimestamps(voiceoverUrl, keys.falKey);
+    const tsResult = await withRetry(
+      () => generateTimestamps(voiceoverUrl, keys.falKey),
+      { maxAttempts: 2, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[shortsPipeline] Whisper retry ${a}: ${e.message}`) }
+    );
     wordTimestamps = tsResult.words;
     sceneWordMap = mapWordsToScenes(wordTimestamps, scriptResult.scenes);
     console.log(`[shortsPipeline] ${wordTimestamps.length} words mapped to ${sceneWordMap.length} scenes`);
@@ -237,7 +240,9 @@ export async function runShortsPipeline(opts) {
         currentModel = resolvedImageModel || 'default';
         console.log(`[shortsPipeline] Scene ${i + 1}: generating image (${imageStrategy}${resolvedImageModel ? ', model: ' + resolvedImageModel : ''})`);
         imageUrl = await withRetry(
-          () => generateImageV2(resolvedImageModel || 'fal_flux', promptWithContinuity, '9:16', keys, supabase, { loras: loraConfigs }),
+          () => generateImageV2(resolvedImageModel || 'fal_flux', promptWithContinuity, '9:16', keys, supabase, {
+            loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+          }),
           { maxAttempts: 2, baseDelayMs: 2000 }
         );
 

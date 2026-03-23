@@ -49,7 +49,7 @@ export const SHORTS_SCENE_ROLES = {
  *   - scenes: role, target duration, visual/motion hints for GPT
  *   - music_mood: prompt for background music generation
  *   - voice_pacing: instruction for GPT narration scripting
- *   - default_voice: ElevenLabs voice ID
+ *   - default_voice: FAL voice name (e.g. 'Adam', 'Brian', 'Roger')
  *   - visual_style: recommended VISUAL_STYLE_PRESETS key
  */
 export const SHORTS_TEMPLATES = {
@@ -69,7 +69,7 @@ export const SHORTS_TEMPLATES = {
     ],
     music_mood: 'futuristic ambient electronic, pulsing synths, tech-forward, driving energy, no vocals',
     voice_pacing: 'Fast-paced, authoritative news-anchor energy. Short punchy sentences. Pattern interrupts every 10 seconds.',
-    default_voice: 'pNInz6obpgDQGcFmaJgB', // Adam — deep authoritative male
+    default_voice: 'Adam',
     visual_style: 'cinematic',
     script_system_prompt: `You are a tech journalist creating a viral 60-second news breakdown.
 Rules:
@@ -96,7 +96,7 @@ Rules:
     ],
     music_mood: 'confident motivational background, subtle piano and ambient pads, professional, no vocals',
     voice_pacing: 'Confident and calm, like a trusted financial advisor. Clear actionable language. Build credibility through specific numbers.',
-    default_voice: 'pNInz6obpgDQGcFmaJgB', // Adam
+    default_voice: 'Adam',
     visual_style: 'cinematic',
     script_system_prompt: `You are a financial educator creating a viral 55-second money strategy video.
 Rules:
@@ -123,7 +123,7 @@ Rules:
     ],
     music_mood: 'emotional inspirational orchestral, building from quiet piano to soaring strings, cinematic hope, no vocals',
     voice_pacing: 'Slow and deliberate at emotional moments, building intensity. Pauses for impact. Like a storyteller around a campfire.',
-    default_voice: 'ErXwobaYiN019PkySvjV', // Antoni — warm inspiring male
+    default_voice: 'Brian',
     visual_style: 'cinematic',
     script_system_prompt: `You are a master storyteller creating a viral 55-second motivation video.
 Rules:
@@ -152,7 +152,7 @@ Rules:
     ],
     music_mood: 'dark ambient horror, low drones, distant echoes, unsettling tension, creeping dread, no vocals',
     voice_pacing: 'Slow and hushed, building dread. Whisper-like at tense moments. Sudden pace changes at reveals. Like reading a scary story at midnight.',
-    default_voice: '2EiwWnXFnvU5JabPnv8n', // Clyde — deep gravelly male
+    default_voice: 'Roger',
     visual_style: 'documentary',
     script_system_prompt: `You are a horror storyteller creating a viral 60-second scary story.
 Rules:
@@ -182,7 +182,7 @@ Rules:
     ],
     music_mood: 'epic orchestral ambient, historical documentary feel, building tension, no vocals',
     voice_pacing: 'Storyteller energy — measured pace with dramatic pauses. Build wonder and surprise.',
-    default_voice: 'pNInz6obpgDQGcFmaJgB', // Adam — deep authoritative male
+    default_voice: 'Adam',
     visual_style: 'cinematic',
     script_system_prompt: `You are a history storyteller creating a viral 60-second video.
 Rules:
@@ -210,7 +210,7 @@ Rules:
     ],
     music_mood: 'suspenseful investigative documentary, sparse piano, distant heartbeat, tension-building, no vocals',
     voice_pacing: 'Measured and deliberate like a documentary narrator. Build dread with facts. Let silences breathe.',
-    default_voice: '2EiwWnXFnvU5JabPnv8n', // Clyde — deep gravelly male
+    default_voice: 'Roger',
     visual_style: 'documentary',
     script_system_prompt: `You are a true crime documentarian creating a viral 60-second case breakdown.
 Rules:
@@ -239,7 +239,7 @@ Rules:
     ],
     music_mood: 'ethereal cosmic ambient, wonder and discovery, gentle electronic textures, expansive, no vocals',
     voice_pacing: 'Curious and enthusiastic like a passionate science teacher. Build from simple to mind-blowing. Use analogies.',
-    default_voice: 'TxGEqnHWrfWFTfGW9XjX', // Josh — young energetic male
+    default_voice: 'Charlie',
     visual_style: 'cinematic',
     script_system_prompt: `You are a science communicator creating a viral 60-second educational video.
 Rules:
@@ -267,7 +267,7 @@ Rules:
     ],
     music_mood: 'warm intimate acoustic, gentle guitar or piano, emotionally resonant but not sad, understated, no vocals',
     voice_pacing: 'Warm and conversational, like a trusted friend who studied psychology. Empathetic tone. No judgment.',
-    default_voice: 'ErXwobaYiN019PkySvjV', // Antoni — warm inspiring male
+    default_voice: 'Brian',
     visual_style: 'cinematic',
     script_system_prompt: `You are a relationship psychology educator creating a viral 55-second video.
 Rules:
@@ -296,7 +296,7 @@ Rules:
     ],
     music_mood: 'energetic motivational, upbeat electronic with driving beat, positive energy, no vocals',
     voice_pacing: 'Energetic and direct, like a knowledgeable personal trainer. Cut through myths with confidence. Use numbers.',
-    default_voice: 'TxGEqnHWrfWFTfGW9XjX', // Josh — young energetic male
+    default_voice: 'Charlie',
     visual_style: 'cinematic',
     script_system_prompt: `You are a health and fitness educator creating a viral 55-second video.
 Rules:
@@ -325,7 +325,7 @@ Rules:
     ],
     music_mood: 'dynamic gaming-inspired, electronic with melodic elements, nostalgic yet modern, building energy, no vocals',
     voice_pacing: 'Enthusiastic fan energy — excited but knowledgeable. Like the most passionate person at a gaming convention.',
-    default_voice: 'TxGEqnHWrfWFTfGW9XjX', // Josh — young energetic male
+    default_voice: 'Charlie',
     visual_style: 'cinematic',
     script_system_prompt: `You are a gaming and pop culture expert creating a viral 60-second deep-dive video.
 Rules:
@@ -354,7 +354,7 @@ Rules:
     ],
     music_mood: 'mysterious investigative, layered synths with a subtle unease, tension without being horror, no vocals',
     voice_pacing: 'Measured and curious, like a journalist uncovering something. Not sensationalist — let the facts speak.',
-    default_voice: 'pNInz6obpgDQGcFmaJgB', // Adam — deep authoritative male
+    default_voice: 'Adam',
     visual_style: 'documentary',
     script_system_prompt: `You are an investigative journalist creating a viral 60-second mystery breakdown.
 Rules:
@@ -383,7 +383,7 @@ Rules:
     ],
     music_mood: 'confident determined background, driving electronic with subtle intensity, forward-moving energy, no vocals',
     voice_pacing: 'Direct and high-energy, like a successful founder on a podcast. No corporate fluff. Talk straight.',
-    default_voice: 'pNInz6obpgDQGcFmaJgB', // Adam — deep authoritative male
+    default_voice: 'Adam',
     visual_style: 'cinematic',
     script_system_prompt: `You are a serial entrepreneur creating a viral 55-second business strategy video.
 Rules:

@@ -317,7 +317,7 @@ export default function CampaignsNewPage() {
       case 'video_model': return videoModel;
       case 'voice': return voiceId;
       case 'captions': return captionStyle;
-      case 'preview': return true; // preview image is optional
+      case 'preview': return !!previewImageUrl; // must generate starting image
       default: return true;
     }
   };
@@ -468,7 +468,7 @@ export default function CampaignsNewPage() {
           }),
         });
         const data = await res.json();
-        if (data.success) { toast.success('Short generation started!'); navigate('/campaigns'); }
+        if (data.success) { toast.success('Short generation started!'); navigate(data.campaign_id ? `/shorts/draft/${data.campaign_id}` : '/campaigns'); }
         else toast.error(data.error || 'Failed');
       } catch { toast.error('Failed to create short'); }
       finally { setIsCreating(false); }
