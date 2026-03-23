@@ -479,6 +479,7 @@ async function handleVeo3(req, res, params) {
     resolution: resolution,
     generate_audio: enableAudio !== false, // Default true
     auto_fix: false,
+    safety_tolerance: '4',
   };
 
   console.log('[JumpStart/Veo3] Request:', { 
@@ -551,8 +552,9 @@ async function handleVeo3Fast(req, res, params) {
     resolution: resolution,
     generate_audio: enableAudio !== false,
     auto_fix: false,
+    safety_tolerance: '4',
   };
-  
+
   // Add negative prompt if provided
   if (negativePrompt) {
     requestBody.negative_prompt = negativePrompt;
@@ -631,8 +633,9 @@ async function handleVeo3FirstLast(req, res, params) {
     resolution: resolution,
     generate_audio: enableAudio !== false,
     auto_fix: false,
+    safety_tolerance: '4',
   };
-  
+
   // Add negative prompt if provided
   if (negativePrompt) {
     requestBody.negative_prompt = negativePrompt;
