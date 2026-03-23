@@ -403,7 +403,6 @@ Rules:
 - Tell a mini founder story to illustrate the point
 - End with one clear next action the viewer can take today`,
   },
-};
 
   [SHORTS_NICHE_TYPES.FOOD_COOKING]: {
     name: 'Food / Cooking',
@@ -638,6 +637,7 @@ Rules:
 - Tone: serious and curious, never tabloid or conspiratorial
 - End with what remains unexplained`,
   },
+};
 
 /**
  * Get a shorts template by niche key.
