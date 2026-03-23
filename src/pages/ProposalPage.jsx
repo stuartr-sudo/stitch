@@ -54,6 +54,54 @@ const EPISODES = [
   },
 ];
 
+const TIERS = [
+  {
+    name: 'Base',
+    price: '$25,000',
+    recommended: false,
+    features: [
+      { text: '7 animated episodes', included: true },
+      { text: 'Interactive learning beats', included: true },
+      { text: "Movin' Martin website with admin backend", included: true },
+      { text: 'Digital delivery (MP4, web-optimised)', included: true },
+      { text: 'Professional voiceover', included: false },
+      { text: 'Voice lipsync animation', included: false },
+      { text: 'Original music & sound effects', included: false },
+      { text: 'Workbook integration guide', included: false },
+    ],
+  },
+  {
+    name: 'Premium',
+    price: '$30,000',
+    recommended: true,
+    features: [
+      { text: '7 animated episodes', included: true },
+      { text: 'Interactive learning beats', included: true },
+      { text: "Movin' Martin website with admin backend", included: true },
+      { text: 'Digital delivery (MP4, web-optimised)', included: true },
+      { text: 'Professional voiceover', included: true },
+      { text: 'Voice lipsync animation', included: true },
+      { text: 'Original music & sound effects', included: false },
+      { text: 'Workbook integration guide', included: false },
+    ],
+  },
+  {
+    name: 'Deluxe',
+    price: '$35,000',
+    recommended: false,
+    features: [
+      { text: '7 animated episodes', included: true },
+      { text: 'Interactive learning beats', included: true },
+      { text: "Movin' Martin website with admin backend", included: true },
+      { text: 'Digital delivery (MP4, web-optimised)', included: true },
+      { text: 'Professional voiceover', included: true },
+      { text: 'Voice lipsync animation', included: true },
+      { text: 'Original music & sound effects', included: true },
+      { text: 'Workbook integration guide', included: true },
+    ],
+  },
+];
+
 function useScrollAnimation() {
   useEffect(() => {
     const elements = document.querySelectorAll('[data-animate]');
@@ -398,9 +446,83 @@ export default function ProposalPage() {
         </div>
       </section>
 
-      {/* Section 6: Pricing — Task 7 */}
-      {/* Section 7: About — Task 8 */}
-      {/* Section 8: Footer — Task 8 */}
+      {/* Section 6: Pricing */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <h2 className="text-3xl font-bold mb-2 text-center">Investment</h2>
+        <p className="text-[#94a3b8] mb-10 text-center">All prices exclusive of GST</p>
+        <div className="grid md:grid-cols-3 gap-6">
+          {TIERS.map((tier) => (
+            <div
+              key={tier.name}
+              className={`bg-white/5 border rounded-2xl p-8 ${
+                tier.recommended
+                  ? 'border-[#2C666E] ring-1 ring-[#2C666E]'
+                  : 'border-white/10'
+              }`}
+            >
+              {tier.recommended && (
+                <span className="bg-[#2C666E] text-white text-xs px-3 py-1 rounded-full inline-block mb-4">
+                  Recommended
+                </span>
+              )}
+              <p className="text-xl font-semibold text-white">{tier.name}</p>
+              <p className="text-4xl font-bold text-white mt-2">
+                {tier.price}
+                <span className="text-sm text-[#94a3b8] font-normal ml-1">+ GST</span>
+              </p>
+              <div className="border-t border-white/10 my-6" />
+              <ul className="flex flex-col gap-3">
+                {tier.features.map((feature) => (
+                  <li key={feature.text} className="flex items-start gap-3">
+                    {feature.included ? (
+                      <span className="text-[#2C666E] font-bold shrink-0">✓</span>
+                    ) : (
+                      <span className="text-[#94a3b8] shrink-0">—</span>
+                    )}
+                    <span className={feature.included ? 'text-white' : 'text-[#94a3b8]'}>
+                      {feature.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 7: About Stitch Studios */}
+      <section className="py-24 px-6 max-w-3xl mx-auto text-center" data-animate>
+        <StitchLogo />
+        <p className="text-xl text-[#94a3b8] mt-6 mb-8">
+          Stitching stories together through animation
+        </p>
+        <h2 className="text-3xl font-bold mb-8">Let&apos;s bring Movin&apos; Martin to life</h2>
+        <div className="flex flex-col gap-2 mb-2">
+          <p className="text-white">Stuart Anderson</p>
+          <a
+            href="mailto:hello@stitchstudios.app"
+            className="text-[#90DDF0] hover:underline"
+          >
+            hello@stitchstudios.app
+          </a>
+          <p className="text-[#94a3b8]">+64 21 000 0000</p>
+        </div>
+        <a
+          href="mailto:hello@stitchstudios.app"
+          className="inline-block bg-[#2C666E] hover:bg-[#2C666E]/80 text-white px-8 py-3 rounded-xl font-semibold mt-6 transition-colors"
+        >
+          Get in Touch
+        </a>
+      </section>
+
+      {/* Section 8: Footer */}
+      <footer className="border-t border-white/10 py-8 px-6 text-center">
+        <p className="text-[#94a3b8] text-xs mb-2">
+          This proposal is confidential and prepared exclusively for Hamilton City Council
+        </p>
+        <p className="text-[#94a3b8] text-xs mb-1">© 2026 Stitch Studios LLC</p>
+        <p className="text-[#94a3b8] text-xs">Prepared March 2026</p>
+      </footer>
     </div>
   );
 }
