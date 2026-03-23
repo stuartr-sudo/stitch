@@ -1,5 +1,59 @@
 import React, { useEffect } from 'react';
 
+const EPISODES = [
+  {
+    number: 1,
+    title: 'Character Introduction',
+    duration: '30–45 sec',
+    description: "Meet Movin' Martin — establishes the character, sets the tone for the series.",
+    phrases: ["Get movin' with Movin' Martin!"],
+    badge: 'First Episode',
+  },
+  {
+    number: 2,
+    title: 'Keeping Safe on Our Wheels',
+    duration: '~30 sec',
+    description: 'Safety gear essentials for bikes, scooters, and skateboards.',
+    phrases: ['Be bright, be seen'],
+  },
+  {
+    number: 3,
+    title: 'Check Before You Step',
+    duration: '~30 sec',
+    description: 'Pedestrian crossing safety — look, listen, and think before stepping out.',
+    phrases: ['Check before you step!', 'Stop, look and listen'],
+  },
+  {
+    number: 4,
+    title: 'Sneaky Driveways',
+    duration: '~30 sec',
+    description: 'Awareness around driveways and reversing vehicles.',
+    phrases: ['Stay alert, be aware'],
+  },
+  {
+    number: 5,
+    title: 'Foot Path Safety',
+    duration: '~30 sec',
+    description: 'Sharing paths safely with pedestrians, cyclists, and scooter riders.',
+    phrases: ['Cross like a boss!'],
+  },
+  {
+    number: 6,
+    title: 'Walk or Wheels Superstar',
+    duration: '~30 sec',
+    description: 'Promoting active travel to school — walking, biking, scooting.',
+    phrases: ['Walk or Wheels Superstar!'],
+  },
+  {
+    number: 7,
+    title: 'Full Feature Compilation Film',
+    duration: '~3:30 min',
+    description: 'All episodes combined into one complete film for assembly or classroom viewing.',
+    phrases: [],
+    isCompilation: true,
+  },
+];
+
 function useScrollAnimation() {
   useEffect(() => {
     const elements = document.querySelectorAll('[data-animate]');
@@ -190,10 +244,160 @@ export default function ProposalPage() {
         </div>
       </section>
 
-      {/* Section 2: Project Vision — Task 3 */}
-      {/* Section 3: Episode Guide — Task 4 */}
-      {/* Section 4: Sample Work — Task 5 */}
-      {/* Section 5: The Approach — Task 6 */}
+      {/* Section 2: Project Vision */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <div className="grid md:grid-cols-2 gap-12">
+          {/* Left column */}
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-white">Project Vision</h2>
+            <p className="text-[#94a3b8] leading-relaxed">
+              An AI-powered animated series featuring Movin&apos; Martin — a lovable dog mascot who
+              promotes road safety and active travel for primary school children. The series combines
+              interactive learning moments inspired by Dora the Explorer, where Martin pauses to ask
+              questions, reinforced by companion workbooks for classroom use. A unique focus on active
+              travel — walking, biking, and scooting to school — sets this apart from existing road
+              safety programmes.
+            </p>
+          </div>
+
+          {/* Right column: stat cards */}
+          <div className="flex flex-col gap-3">
+            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
+              <p className="text-white font-bold">7 Episodes</p>
+              <p className="text-[#94a3b8] text-sm">Character intro + 5 themed + compilation</p>
+            </div>
+            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
+              <p className="text-white font-bold">3:30 Feature Film</p>
+              <p className="text-[#94a3b8] text-sm">Full compilation edit</p>
+            </div>
+            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
+              <p className="text-white font-bold">Primary School</p>
+              <p className="text-[#94a3b8] text-sm">Ages 5–12 target audience</p>
+            </div>
+            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
+              <p className="text-white font-bold">Workbook Integration</p>
+              <p className="text-[#94a3b8] text-sm">Reinforced classroom learning</p>
+            </div>
+            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
+              <p className="text-white font-bold">Active Travel Focus</p>
+              <p className="text-[#94a3b8] text-sm">Walking, biking, scooting to school</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 3: Episode Guide */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <h2 className="text-3xl font-bold mb-2">Episode Guide</h2>
+        <p className="text-[#94a3b8] mb-10">
+          Seven deliverables — six standalone episodes plus a full compilation film
+        </p>
+        <div className="grid md:grid-cols-2 gap-6">
+          {EPISODES.map((ep) => (
+            <div
+              key={ep.number}
+              className={`bg-white/5 border rounded-2xl p-6 relative ${
+                ep.isCompilation
+                  ? 'md:col-span-2 border-[#2C666E]/50'
+                  : 'border-white/10'
+              }`}
+            >
+              {ep.badge && (
+                <span className="absolute top-4 right-4 bg-[#2C666E] text-white text-xs px-3 py-1 rounded-full">
+                  {ep.badge}
+                </span>
+              )}
+              <p className="text-[#94a3b8] text-sm">Episode {ep.number}</p>
+              <p className="text-lg font-semibold text-white">{ep.title}</p>
+              <span className="inline-block bg-[#2C666E]/20 text-[#90DDF0] text-sm px-3 py-1 rounded-full mt-2">
+                {ep.duration}
+              </span>
+              <p className="text-sm text-[#94a3b8] mt-3">{ep.description}</p>
+              {ep.phrases.length > 0 && (
+                <div className="inline-flex gap-2 flex-wrap mt-3">
+                  {ep.phrases.map((phrase) => (
+                    <span
+                      key={phrase}
+                      className="bg-white/10 text-white/70 text-xs px-2 py-1 rounded-full"
+                    >
+                      {phrase}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <video
+                className="rounded-xl w-full mt-4"
+                controls
+                poster="#"
+                src="#placeholder"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 4: Sample Work */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <h2 className="text-3xl font-bold mb-2">Sample Work</h2>
+        <p className="text-[#94a3b8] mb-10">Examples from our animation pipeline</p>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden"
+            >
+              <video className="w-full aspect-video" controls poster="#" src="#placeholder" />
+              <p className="p-4 text-xs text-[#94a3b8]">
+                Sample animation — final style will be tailored to Movin&apos; Martin
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 5: The Approach */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <h2 className="text-3xl font-bold mb-12 text-center">The Approach</h2>
+        <div className="relative grid md:grid-cols-3 gap-8">
+          {/* Desktop connecting dashed line behind the number circles */}
+          <div
+            className="hidden md:block absolute top-6 left-[calc(16.66%+24px)] right-[calc(16.66%+24px)] border-t-2 border-dashed border-[#2C666E]/40"
+            aria-hidden="true"
+          />
+          {[
+            {
+              n: 1,
+              title: 'Story & Script',
+              description:
+                'AI-assisted scriptwriting with interactive learning beats. Each episode structured around a key road safety message with pause-and-ask moments.',
+            },
+            {
+              n: 2,
+              title: 'Animation',
+              description:
+                'AI-powered visual generation with consistent character design. Movin\u2019 Martin maintains a cohesive look and personality throughout.',
+            },
+            {
+              n: 3,
+              title: 'Polish',
+              description:
+                'Professional voiceover, background music, sound effects, captions, and final edit. Ready for classroom and online distribution.',
+            },
+          ].map((step) => (
+            <div
+              key={step.n}
+              className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-xl font-bold mx-auto mb-4 relative z-10">
+                {step.n}
+              </div>
+              <p className="text-lg font-semibold mb-3 text-white">{step.title}</p>
+              <p className="text-sm text-[#94a3b8] leading-relaxed">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Section 6: Pricing — Task 7 */}
       {/* Section 7: About — Task 8 */}
       {/* Section 8: Footer — Task 8 */}
