@@ -205,8 +205,9 @@ export default function ProposalPage() {
   useScrollAnimation();
 
   return (
-    <div className="bg-[#0f172a] text-white font-[Inter]">
+    <div className="min-h-screen text-white font-[Inter]" style={{ backgroundColor: '#0f172a' }}>
       <style>{`
+        html, body { background-color: #0f172a !important; }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }

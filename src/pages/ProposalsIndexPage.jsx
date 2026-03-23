@@ -93,7 +93,8 @@ const proposals = [
 
 export default function ProposalsIndexPage() {
   return (
-    <div className="bg-[#0f172a] text-white min-h-screen font-[Inter] flex flex-col">
+    <div className="text-white min-h-screen font-[Inter] flex flex-col" style={{ backgroundColor: '#0f172a' }}>
+      <style>{`html, body { background-color: #0f172a !important; }`}</style>
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center px-6 py-16 max-w-2xl mx-auto w-full">
         {/* Logo */}
