@@ -409,6 +409,11 @@ app.post('/api/storyboard/describe-scene', authenticateToken, async (req, res) =
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/storyboard/story-chat', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/story-chat.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
 
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
