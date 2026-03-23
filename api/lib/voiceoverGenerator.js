@@ -1,72 +1,105 @@
 /**
- * ElevenLabs Text-to-Speech integration for voiceover generation.
+ * ElevenLabs Text-to-Speech via FAL.ai proxy.
  *
- * Calls the ElevenLabs API directly (not through FAL) to access
- * all voice models, voice IDs, and advanced settings.
+ * Uses fal-ai/elevenlabs/tts/eleven-v3 so we only need a FAL key,
+ * no separate ElevenLabs subscription required.
  *
  * The generated audio is uploaded to Supabase storage and its
  * public URL is returned.
  */
 
+import { pollFalQueue } from './pipelineHelpers.js';
+
+// Map legacy ElevenLabs voice IDs to FAL voice names
+const VOICE_ID_TO_NAME = {
+  'pNInz6obpgDQGcFmaJgB': 'Adam',
+  '21m00Tcm4TlvDq8ikWAM': 'Rachel',
+  'EXAVITQu4vr4xnSDxMaL': 'Bella',
+  'ErXwobaYiN019PkySvjV': 'Antoni',
+  'MF3mGyEYCl7XYWbV9V6O': 'Elli',
+  'TxGEqnHWrfWFTfGW9XjX': 'Josh',
+  'VR6AewLTigWG4xSOukaG': 'Arnold',
+  'AZnzlk1XvdvUeBnXmlld': 'Domi',
+  'jBpfuIE2acCO8z3wKNLl': 'Gigi',
+  'yoZ06aMxZJJ28mfd3POQ': 'Sam',
+  '2EiwWnXFnvU5JabPnv8n': 'Clyde',
+  'onwK4e9ZLuTAKqWW03F9': 'Daniel',
+};
+
 /**
- * Generate voiceover audio from text using ElevenLabs TTS.
+ * Resolve a voice identifier to a FAL voice name.
+ * Accepts: FAL voice name ("Aria"), legacy ElevenLabs ID, or falls back to "Rachel".
+ */
+function resolveVoiceName(voiceId) {
+  if (!voiceId) return 'Rachel';
+  // If it's already a known FAL voice name, use it directly
+  const falVoices = ['Aria','Roger','Sarah','Laura','Charlie','George','Callum','River','Liam','Charlotte','Alice','Matilda','Will','Jessica','Eric','Chris','Brian','Daniel','Lily','Bill','Rachel','Adam'];
+  if (falVoices.includes(voiceId)) return voiceId;
+  // Try legacy ID mapping
+  return VOICE_ID_TO_NAME[voiceId] || 'Rachel';
+}
+
+/**
+ * Generate voiceover audio from text using FAL.ai ElevenLabs TTS.
  *
  * @param {string} text - The narration text to convert to speech
- * @param {object} keys - { elevenlabsKey }
+ * @param {object} keys - { falKey }
  * @param {object} supabase - Supabase client
  * @param {object} [options]
- * @param {string} [options.voiceId='pNInz6obpgDQGcFmaJgB'] - ElevenLabs voice ID (default: Adam)
- * @param {string} [options.modelId='eleven_multilingual_v2'] - TTS model
+ * @param {string} [options.voiceId='Rachel'] - Voice name or legacy ElevenLabs ID
  * @param {number} [options.stability=0.5] - Voice stability (0-1)
- * @param {number} [options.similarityBoost=0.75] - Voice similarity boost (0-1)
- * @param {number} [options.style=0.0] - Style exaggeration (0-1)
- * @param {boolean} [options.useSpeakerBoost=true] - Speaker boost for clarity
  * @returns {Promise<string>} Public URL of the generated MP3
  */
 export async function generateVoiceover(text, keys, supabase, options = {}) {
   const {
-    voiceId = 'pNInz6obpgDQGcFmaJgB',
-    modelId = 'eleven_multilingual_v2',
+    voiceId = 'Rachel',
     stability = 0.5,
-    similarityBoost = 0.75,
-    style = 0.0,
-    useSpeakerBoost = true,
   } = options;
 
-  const elevenlabsKey = keys.elevenlabsKey;
-  if (!elevenlabsKey) throw new Error('ElevenLabs API key required for voiceover generation');
+  const falKey = keys.falKey;
+  if (!falKey) throw new Error('FAL API key required for voiceover generation');
   if (!text?.trim()) throw new Error('Text is required for voiceover generation');
 
-  console.log(`[voiceover] Generating TTS: ${text.length} chars, voice=${voiceId}, model=${modelId}`);
+  const voice = resolveVoiceName(voiceId);
+  console.log(`[voiceover] Generating TTS via FAL: ${text.length} chars, voice=${voice}`);
 
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+  // Submit to FAL queue
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3', {
     method: 'POST',
     headers: {
-      'xi-api-key': elevenlabsKey,
+      'Authorization': `Key ${falKey}`,
       'Content-Type': 'application/json',
-      'Accept': 'audio/mpeg',
     },
     body: JSON.stringify({
       text,
-      model_id: modelId,
-      voice_settings: {
-        stability,
-        similarity_boost: similarityBoost,
-        style,
-        use_speaker_boost: useSpeakerBoost,
-      },
+      voice,
+      stability,
     }),
   });
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`ElevenLabs TTS failed (${res.status}): ${errorText}`);
+  if (!submitRes.ok) {
+    const errorText = await submitRes.text();
+    throw new Error(`FAL TTS submit failed (${submitRes.status}): ${errorText}`);
   }
 
-  const audioBuffer = Buffer.from(await res.arrayBuffer());
-  console.log(`[voiceover] TTS complete: ${audioBuffer.length} bytes`);
+  const { request_id } = await submitRes.json();
+  console.log(`[voiceover] FAL TTS queued: ${request_id}`);
 
-  // Upload to Supabase storage
+  // Poll for completion
+  const result = await pollFalQueue(request_id, 'fal-ai/elevenlabs/tts/eleven-v3', falKey, 60, 2000);
+
+  const audioUrl = result?.audio?.url;
+  if (!audioUrl) throw new Error('FAL TTS returned no audio URL');
+
+  console.log(`[voiceover] TTS complete, downloading from FAL...`);
+
+  // Download and re-upload to Supabase
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) throw new Error(`Failed to download TTS audio: ${audioRes.status}`);
+
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+  console.log(`[voiceover] TTS audio: ${audioBuffer.length} bytes`);
+
   const fileName = `pipeline/voiceover/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
   const { error: uploadError } = await supabase.storage
     .from('media')
