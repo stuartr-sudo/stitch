@@ -16,7 +16,7 @@ No test runner or linter is configured.
 
 ## Architecture
 
-Full-stack AI video ad creator. React 18 frontend talks to an Express API backend, both backed by Supabase (Postgres + Auth + Storage). Video/image generation delegates to Wavespeed, FAL.ai, OpenAI, and ElevenLabs.
+Full-stack AI video ad creator. React 18 frontend talks to an Express API backend, both backed by Supabase (Postgres + Auth + Storage). Video/image generation delegates to Wavespeed, FAL.ai, and OpenAI. TTS voiceover uses ElevenLabs via FAL.ai proxy (no direct ElevenLabs key needed).
 
 **Frontend** (`src/`): Vite + React + Tailwind + Radix UI. Path alias `@` → `src/`. All API calls go through `src/lib/api.js` which injects Supabase JWT automatically. Auth state managed via `src/contexts/AuthContext.jsx`. UI components follow shadcn/ui patterns (CVA + Radix) in `src/components/ui/`.
 
@@ -58,6 +58,7 @@ All env vars documented in `.env.example`. Canonical names:
 - `WAVESPEED_API_KEY` (never `WAVESPEED_KEY`)
 - `FAL_KEY`
 - `OPENAI_API_KEY`
+- `OWNER_EMAIL` — email used for API key fallback (getUserKeys checks this)
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (backend)
 - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (frontend — must be prefixed `VITE_`)
 

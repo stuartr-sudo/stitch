@@ -1,61 +1,60 @@
 /**
  * POST /api/voice/preview
  *
- * Generate a short voice preview clip using ElevenLabs TTS.
+ * Generate a short voice preview clip using FAL.ai ElevenLabs TTS proxy.
  * Returns raw audio/mpeg so the client can play it directly.
  *
- * Body: { voice_id: string, brand_username?: string }
+ * Body: { voice_id: string, text?: string }
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
+import { getUserKeys } from '../lib/getUserKeys.js';
+import { pollFalQueue } from '../lib/pipelineHelpers.js';
 
-const PREVIEW_TEXT = 'Hey, this is what I sound like. Pretty cool, right?';
+const DEFAULT_PREVIEW_TEXT = 'Hey, this is what I sound like. Pretty cool, right?';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { voice_id, brand_username } = req.body;
+  const { voice_id, text } = req.body;
   if (!voice_id) return res.status(400).json({ error: 'voice_id is required' });
 
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  const userId = brand_username
-    ? await resolveUserIdFromBrand(brand_username, supabase, req.user?.id)
-    : req.user?.id;
-
-  if (!userId) return res.status(404).json({ error: 'User not found' });
-
-  const { data: userKeys } = await supabase
-    .from('user_api_keys')
-    .select('elevenlabs_key')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const elevenlabsKey = userKeys?.elevenlabs_key || process.env.ELEVENLABS_API_KEY;
-  if (!elevenlabsKey) return res.status(400).json({ error: 'ElevenLabs API key required' });
+  const keys = await getUserKeys(req.user.id, req.user.email);
+  if (!keys.falKey) return res.status(400).json({ error: 'FAL API key required for voice preview' });
 
   try {
-    const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+    // Submit to FAL queue
+    const submitRes = await fetch('https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3', {
       method: 'POST',
       headers: {
-        'xi-api-key': elevenlabsKey,
+        'Authorization': `Key ${keys.falKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
-        text: PREVIEW_TEXT,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        text: text || DEFAULT_PREVIEW_TEXT,
+        voice: voice_id,
+        stability: 0.5,
       }),
     });
 
-    if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      return res.status(ttsRes.status).json({ error: `ElevenLabs error: ${errText}` });
+    if (!submitRes.ok) {
+      const errText = await submitRes.text();
+      return res.status(submitRes.status).json({ error: `FAL TTS error: ${errText}` });
     }
 
-    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+    const { request_id } = await submitRes.json();
+
+    // Poll for completion (short timeout for preview)
+    const result = await pollFalQueue(request_id, 'fal-ai/elevenlabs/tts/eleven-v3', keys.falKey, 30, 1500);
+
+    const audioUrl = result?.audio?.url;
+    if (!audioUrl) return res.status(500).json({ error: 'No audio URL returned from FAL TTS' });
+
+    // Download and stream back to client
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) return res.status(500).json({ error: `Failed to fetch audio: ${audioRes.status}` });
+
+    const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', audioBuffer.length);
     return res.send(audioBuffer);

@@ -1,8 +1,8 @@
 /**
- * Voiceover endpoint — generates TTS audio via ElevenLabs.
+ * Voiceover endpoint — generates TTS audio via FAL.ai ElevenLabs proxy.
  *
  * POST /api/audio/voiceover
- * Body: { text, voiceId?, modelId?, stability?, similarityBoost?, style?, useSpeakerBoost? }
+ * Body: { text, voiceId?, stability? }
  */
 
 import { generateVoiceover } from '../lib/voiceoverGenerator.js';
@@ -18,24 +18,17 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { text, voiceId, modelId, stability, similarityBoost, style, useSpeakerBoost } = req.body;
+    const { text, voiceId, stability } = req.body;
     if (!text?.trim()) return res.status(400).json({ error: 'text is required' });
 
-    const username = req.headers['x-username'];
-    if (!username) return res.status(401).json({ error: 'Missing x-username header' });
-
-    const keys = await getUserKeys(username);
-    if (!keys.elevenlabsKey) {
-      return res.status(400).json({ error: 'ElevenLabs API key not configured. Add it in Settings.' });
+    const keys = await getUserKeys(req.user.id, req.user.email);
+    if (!keys.falKey) {
+      return res.status(400).json({ error: 'FAL API key required for voiceover generation.' });
     }
 
     const audioUrl = await generateVoiceover(text, keys, supabase, {
       voiceId,
-      modelId,
       stability,
-      similarityBoost,
-      style,
-      useSpeakerBoost,
     });
 
     return res.json({ url: audioUrl });
