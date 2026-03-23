@@ -613,6 +613,13 @@ app.get('/api/costs/summary', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// OpenAI balance check (with auth)
+app.get('/api/openai/balance', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('openai/balance.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Jobs pause/resume/retry (with auth)
 app.post('/api/jobs/pause', authenticateToken, async (req, res) => {
   const { jobId } = req.body;
