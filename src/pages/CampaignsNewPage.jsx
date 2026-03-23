@@ -17,7 +17,7 @@ import BrandKitModal from '@/components/modals/BrandKitModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
-import { SCENE_PILL_CATEGORIES } from '@/lib/scenePills';
+import { SCENE_PILL_CATEGORIES, getScenePillsForNiche } from '@/lib/scenePills';
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 
 const STYLE_PRESETS = [
@@ -90,6 +90,38 @@ const NICHES = [
   { key: 'business_entrepreneur', label: 'Business & Startups', icon: '💼', scenes: 7, topics: [
     'How a $0 startup became worth billions', 'The business model nobody talks about', 'Why 90% of startups fail',
     'The psychology behind Apple\'s pricing', 'How to validate an idea in 24 hours', 'Side project to $10K/month',
+  ]},
+  { key: 'food_cooking', label: 'Food & Cooking', icon: '🍳', scenes: 7, topics: [
+    'The ingredient restaurants hide from you', 'Why Gordon Ramsay hates this dish', 'Street food that costs $1 but tastes like $100',
+    'The chemistry behind perfect pasta', 'Foods you\'ve been cooking wrong your whole life', 'Why MSG isn\'t actually bad for you',
+  ]},
+  { key: 'travel_adventure', label: 'Travel & Adventure', icon: '✈️', scenes: 7, topics: [
+    'The cheapest way to fly first class', 'Islands where nobody goes', 'The most dangerous tourist attraction on Earth',
+    'Hidden cities you didn\'t know existed', 'Travel scams that catch everyone', 'The country that pays you to visit',
+  ]},
+  { key: 'psychology_mindblown', label: 'Psychology & Mind', icon: '🧩', scenes: 7, topics: [
+    'The dark psychology of social media', 'Why your brain lies to you daily', 'The experiment that shocked the world',
+    'Cognitive biases controlling your decisions', 'The psychology of serial killers', 'Why you can\'t remember your childhood',
+  ]},
+  { key: 'space_cosmos', label: 'Space & Cosmos', icon: '🚀', scenes: 8, topics: [
+    'What NASA won\'t tell you about Mars', 'The sound of a black hole', 'Why we can\'t go back to the Moon',
+    'Alien signals that science can\'t explain', 'The planet made of diamonds', 'What happens if you fall into Jupiter',
+  ]},
+  { key: 'animals_wildlife', label: 'Animals & Wildlife', icon: '🐾', scenes: 7, topics: [
+    'The animal that can\'t die', 'Why octopuses are basically aliens', 'The smartest animal you\'ve never heard of',
+    'Predators with insane superpowers', 'Animals that went extinct and came back', 'The deep sea creature that defies biology',
+  ]},
+  { key: 'sports_athletes', label: 'Sports & Athletes', icon: '⚽', scenes: 7, topics: [
+    'The greatest comeback in sports history', 'Athletes who cheated and got away with it', 'The training routine that seems insane',
+    'Underdogs who shocked the world', 'Sports records that will never be broken', 'The match that changed the rules forever',
+  ]},
+  { key: 'education_learning', label: 'Education & Facts', icon: '📚', scenes: 7, topics: [
+    'Things school should have taught you', 'The smartest person who ever lived', 'Facts that sound fake but are 100% real',
+    'Why the education system is failing', 'The language nobody can decode', 'Memory tricks used by world champions',
+  ]},
+  { key: 'paranormal_ufo', label: 'Paranormal & UFO', icon: '👽', scenes: 8, topics: [
+    'The Pentagon\'s UFO footage explained', 'Encounters too credible to ignore', 'The town that sees UFOs every night',
+    'Abduction stories with physical evidence', 'Government whistleblowers on alien tech', 'The signal from space that repeated',
   ]},
 ];
 
@@ -384,17 +416,29 @@ export default function CampaignsNewPage() {
   };
 
   const handleGenerateScript = async () => {
+    if (!niche) { toast.error('Select a niche first'); return; }
+    if (!topic.trim()) { toast.error('Enter a topic first'); return; }
     setScriptLoading(true);
     try {
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand, visual_directions: sceneBuilderPills.length > 0 ? sceneBuilderPills : undefined }),
+        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand, visual_directions: sceneBuilderPills.length > 0 ? sceneBuilderPills : undefined, videoLengthPreset }),
       });
       const data = await res.json();
-      if (data.scenes) setScriptScenes(data.scenes);
-      else if (data.script?.scenes) setScriptScenes(data.script.scenes);
-    } catch { toast.error('Script generation failed'); }
-    finally { setScriptLoading(false); }
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Script generation failed');
+        return;
+      }
+      const scenes = data.scenes || data.script?.scenes;
+      if (scenes && scenes.length > 0) {
+        setScriptScenes(scenes);
+      } else {
+        toast.error('Script generated but no scenes returned — try again');
+      }
+    } catch (err) {
+      console.error('Script generation error:', err);
+      toast.error('Script generation failed — check your connection');
+    } finally { setScriptLoading(false); }
   };
 
   const handlePreviewImage = async () => {
@@ -907,7 +951,7 @@ export default function CampaignsNewPage() {
                     <div className="border border-dashed border-slate-200 rounded-xl p-3">
                       <label className="text-xs font-medium text-slate-500 block mb-1">Scene Builder Helpers</label>
                       <p className="text-[10px] text-slate-400 mb-2">Click pills to build a visual direction — these will be included when generating your script scenes.</p>
-                      {SCENE_PILL_CATEGORIES.map(cat => (
+                      {getScenePillsForNiche(niche).map(cat => (
                         <div key={cat.label} className="mb-2">
                           <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
                           <div className="flex flex-wrap gap-1">
@@ -983,7 +1027,7 @@ export default function CampaignsNewPage() {
                       <div className="border border-dashed border-slate-200 rounded-xl p-3">
                         <label className="text-xs font-medium text-slate-500 block mb-2">Add to scene {expandedScene + 1} visual prompt</label>
                         <div className="flex flex-wrap gap-1">
-                          {SCENE_PILL_CATEGORIES.flatMap(cat => cat.pills).slice(0, 20).map(pill => (
+                          {getScenePillsForNiche(niche).flatMap(cat => cat.pills).slice(0, 20).map(pill => (
                             <button key={pill} onClick={() => {
                               const updated = [...scriptScenes];
                               const s = updated[expandedScene];

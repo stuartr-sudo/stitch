@@ -19,6 +19,14 @@ export const SHORTS_NICHE_TYPES = {
   GAMING_POPCULTURE: 'gaming_popculture',
   CONSPIRACY_MYSTERY: 'conspiracy_mystery',
   BUSINESS: 'business_entrepreneur',
+  FOOD_COOKING: 'food_cooking',
+  TRAVEL_ADVENTURE: 'travel_adventure',
+  PSYCHOLOGY: 'psychology_mindblown',
+  SPACE_COSMOS: 'space_cosmos',
+  ANIMALS_WILDLIFE: 'animals_wildlife',
+  SPORTS_ATHLETES: 'sports_athletes',
+  EDUCATION: 'education_learning',
+  PARANORMAL_UFO: 'paranormal_ufo',
 };
 
 export const SHORTS_SCENE_ROLES = {
@@ -397,6 +405,240 @@ Rules:
   },
 };
 
+  [SHORTS_NICHE_TYPES.FOOD_COOKING]: {
+    name: 'Food / Cooking',
+    description: 'Fascinating food science and cooking secrets that change how you eat',
+    total_duration_seconds: 55,
+    scenes: [
+      { role: 'hook',     duration: 3,  hint: 'Shocking food fact or question that stops the scroll' },
+      { role: 'context',  duration: 8,  hint: 'What most people get wrong about this food or technique' },
+      { role: 'point',    duration: 10, hint: 'The science or secret behind the food — explain simply' },
+      { role: 'steps',    duration: 12, hint: 'The technique or recipe trick anyone can try today' },
+      { role: 'proof',    duration: 10, hint: 'Before/after or real-world example showing the difference' },
+      { role: 'impact',   duration: 8,  hint: 'Why this changes everything about how you cook or eat' },
+      { role: 'cta',      duration: 4,  hint: 'Save this recipe, follow for more food secrets' },
+    ],
+    music_mood: 'warm acoustic background, gentle upbeat rhythm, kitchen vibes, cozy and inviting, no vocals',
+    voice_pacing: 'Warm and enthusiastic, like a passionate chef sharing secrets. Use sensory language — describe tastes, textures, aromas.',
+    default_voice: 'Charlie',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a food scientist and chef creating a viral 55-second food video.
+Rules:
+- Focus on ONE specific food fact, technique, or recipe secret
+- Open with something that challenges what people think they know
+- Include the science (Maillard reaction, emulsification, etc.) but explain simply
+- Use sensory language: describe how things taste, smell, feel
+- Give a specific actionable technique viewers can try immediately
+- Include real comparisons or before/after scenarios
+- End with a line that makes them want to try it tonight`,
+  },
+
+  [SHORTS_NICHE_TYPES.TRAVEL_ADVENTURE]: {
+    name: 'Travel / Adventure',
+    description: 'Hidden destinations and travel secrets that inspire wanderlust',
+    total_duration_seconds: 55,
+    scenes: [
+      { role: 'hook',       duration: 3,  hint: 'A destination or fact that makes viewers want to pack their bags' },
+      { role: 'setting',    duration: 8,  hint: 'Paint the scene — what this place looks, sounds, and feels like' },
+      { role: 'point',      duration: 10, hint: 'The hidden secret or unknown aspect of this destination' },
+      { role: 'point',      duration: 10, hint: 'The experience you can only get here — be specific' },
+      { role: 'strategy',   duration: 10, hint: 'How to actually do this — practical tips, costs, timing' },
+      { role: 'impact',     duration: 8,  hint: 'Why this experience changes people — emotional payoff' },
+      { role: 'cta',        duration: 6,  hint: 'Save for your next trip, follow for hidden destinations' },
+    ],
+    music_mood: 'uplifting world music, acoustic guitar with global percussion, wanderlust and adventure, no vocals',
+    voice_pacing: 'Dreamy and vivid like a travel documentary. Paint pictures with words. Build wonder and desire.',
+    default_voice: 'Brian',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a travel documentarian creating a viral 55-second destination video.
+Rules:
+- Focus on ONE specific destination, experience, or travel secret
+- Open with the most awe-inspiring or counterintuitive fact
+- Use vivid sensory descriptions — transport the viewer there
+- Include specific practical details: costs, best time to visit, how to get there
+- Mention something you can only experience at this location
+- Connect to a deeper human desire (freedom, discovery, connection)
+- End with a line that triggers immediate travel planning`,
+  },
+
+  [SHORTS_NICHE_TYPES.PSYCHOLOGY]: {
+    name: 'Psychology / Mind',
+    description: 'Mind-bending psychological insights that change how you see the world',
+    total_duration_seconds: 60,
+    scenes: [
+      { role: 'hook',          duration: 3,  hint: 'A psychological fact that makes the viewer question themselves' },
+      { role: 'context',       duration: 8,  hint: 'The common behavior or belief most people don\'t question' },
+      { role: 'point',         duration: 10, hint: 'The psychological mechanism behind it — name the bias or effect' },
+      { role: 'story_setup',   duration: 10, hint: 'The famous experiment or real-world example demonstrating this' },
+      { role: 'impact',        duration: 10, hint: 'How this controls your decisions, relationships, or beliefs daily' },
+      { role: 'strategy',      duration: 10, hint: 'How to recognize and overcome this — practical awareness tip' },
+      { role: 'cta',           duration: 4,  hint: 'Follow for psychology insights that change your thinking' },
+    ],
+    music_mood: 'mysterious intellectual ambient, subtle piano with atmospheric pads, curious and thoughtful, no vocals',
+    voice_pacing: 'Measured and insightful, like a fascinating psychology professor. Build revelations gradually. Use "you" to make it personal.',
+    default_voice: 'Adam',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a psychology expert creating a viral 60-second mind-bending video.
+Rules:
+- Focus on ONE specific psychological phenomenon, bias, or experiment
+- Open with something that makes the viewer immediately question their own behavior
+- Name the specific effect (Dunning-Kruger, confirmation bias, etc.)
+- Reference a famous experiment or study with specific details
+- Make it PERSONAL — show how this affects the viewer's daily life
+- Include a practical "now you'll notice this everywhere" moment
+- End with a question that makes them reflect on their own behavior
+- Never be condescending — position as shared human experience`,
+  },
+
+  [SHORTS_NICHE_TYPES.SPACE_COSMOS]: {
+    name: 'Space / Cosmos',
+    description: 'Mind-expanding cosmic facts that make you feel tiny and amazed',
+    total_duration_seconds: 60,
+    scenes: [
+      { role: 'hook',    duration: 3,  hint: 'The most mind-bending space fact that defies comprehension' },
+      { role: 'context', duration: 8,  hint: 'Set the cosmic scene — distances, scales, or timelines involved' },
+      { role: 'point',   duration: 10, hint: 'The core phenomenon — what actually happens and why' },
+      { role: 'point',   duration: 10, hint: 'The detail that makes it even more incredible — scale or implication' },
+      { role: 'point',   duration: 10, hint: 'The connection to Earth or humanity — why this matters to us' },
+      { role: 'impact',  duration: 10, hint: 'The existential implication — what this means about our place' },
+      { role: 'opinion', duration: 5,  hint: 'The biggest unanswered question about this' },
+      { role: 'cta',     duration: 4,  hint: 'Follow for daily cosmos facts that expand your mind' },
+    ],
+    music_mood: 'epic cinematic space ambient, soaring synths with deep sub bass, cosmic wonder and awe, Hans Zimmer inspired, no vocals',
+    voice_pacing: 'Awestruck and measured, building from curiosity to cosmic wonder. Use analogies to make incomprehensible scales relatable.',
+    default_voice: 'George',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a space science communicator creating a viral 60-second cosmic video.
+Rules:
+- Focus on ONE specific space phenomenon, discovery, or cosmic fact
+- Open with the fact that most defies human comprehension
+- Use relatable analogies to convey cosmic scale (if the Sun were a basketball...)
+- Include specific numbers: distances in light-years, temperatures, ages
+- Build from the fact to its implications for humanity
+- Reference real missions, telescopes, or discoveries
+- End with something that makes viewers feel both tiny and amazed
+- Inspire wonder, not fear`,
+  },
+
+  [SHORTS_NICHE_TYPES.ANIMALS_WILDLIFE]: {
+    name: 'Animals / Wildlife',
+    description: 'Incredible animal abilities and behaviors that seem impossible',
+    total_duration_seconds: 55,
+    scenes: [
+      { role: 'hook',    duration: 3,  hint: 'The most unbelievable animal ability or fact' },
+      { role: 'context', duration: 8,  hint: 'What this animal looks like and where it lives — set the scene' },
+      { role: 'point',   duration: 10, hint: 'The specific ability or behavior in detail — how it works' },
+      { role: 'point',   duration: 10, hint: 'The science behind it — why evolution produced this' },
+      { role: 'point',   duration: 10, hint: 'The comparison that makes it relatable — if humans could do this...' },
+      { role: 'impact',  duration: 8,  hint: 'What scientists are learning or building from this' },
+      { role: 'cta',     duration: 6,  hint: 'Follow for incredible animal facts, comment your favorite' },
+    ],
+    music_mood: 'nature documentary ambient, organic textures with gentle rhythm, wonder and discovery, David Attenborough vibes, no vocals',
+    voice_pacing: 'Curious and amazed like a nature documentary narrator. Build wonder through specific details. Use vivid descriptions.',
+    default_voice: 'Charlie',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a wildlife documentarian creating a viral 55-second animal video.
+Rules:
+- Focus on ONE specific animal and its most incredible ability
+- Open with the fact that sounds too crazy to be real
+- Describe the animal vividly — what it looks like, its habitat
+- Explain the biological mechanism in simple terms
+- Use a human comparison to drive home how impressive this is
+- Mention biomimicry or what scientists are learning from it
+- End with a fact that makes the viewer want to learn more
+- Be accurate — don't exaggerate real animal abilities`,
+  },
+
+  [SHORTS_NICHE_TYPES.SPORTS_ATHLETES]: {
+    name: 'Sports / Athletes',
+    description: 'Epic sports moments and athlete stories that give you chills',
+    total_duration_seconds: 60,
+    scenes: [
+      { role: 'hook',          duration: 3,  hint: 'The moment or stat that defines this story' },
+      { role: 'story_setup',   duration: 8,  hint: 'Who this athlete is and what was at stake' },
+      { role: 'struggle',      duration: 10, hint: 'The obstacle, injury, or setback they faced' },
+      { role: 'build_up',      duration: 10, hint: 'The preparation, training, or comeback journey' },
+      { role: 'climax',        duration: 12, hint: 'The moment itself — the play, the finish, the record' },
+      { role: 'impact',        duration: 8,  hint: 'What this meant — records broken, lives changed, legacy' },
+      { role: 'lesson',        duration: 5,  hint: 'The universal lesson from this athletic feat' },
+      { role: 'cta',           duration: 4,  hint: 'Follow for epic sports stories, comment your GOAT' },
+    ],
+    music_mood: 'epic motivational orchestral, building drums with soaring brass, triumph and determination, stadium energy, no vocals',
+    voice_pacing: 'Excited sports commentary energy, building tension toward the climax. Slow down at emotional beats. Fast during action.',
+    default_voice: 'Adam',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are a sports storyteller creating a viral 60-second epic moment video.
+Rules:
+- Focus on ONE specific moment, match, or athlete story
+- Open with the defining stat or outcome that hooks immediately
+- Set the stakes clearly — what was on the line
+- Include a genuine obstacle or setback that makes the payoff earned
+- Describe the key moment with vivid play-by-play detail
+- Include specific stats, scores, times
+- The climax must give chills — use pacing and detail to build it
+- End with the legacy or lesson that transcends sports`,
+  },
+
+  [SHORTS_NICHE_TYPES.EDUCATION]: {
+    name: 'Education / Facts',
+    description: 'Mind-blowing facts and knowledge that school never taught you',
+    total_duration_seconds: 55,
+    scenes: [
+      { role: 'hook',    duration: 3,  hint: 'A fact so surprising it sounds made up' },
+      { role: 'context', duration: 8,  hint: 'Why most people don\'t know this — what we were taught instead' },
+      { role: 'point',   duration: 10, hint: 'The actual truth — explained clearly and memorably' },
+      { role: 'point',   duration: 10, hint: 'The supporting evidence or example that proves it' },
+      { role: 'impact',  duration: 10, hint: 'Why knowing this changes your understanding of the world' },
+      { role: 'point',   duration: 8,  hint: 'The bonus fact that makes it even more surprising' },
+      { role: 'cta',     duration: 6,  hint: 'Follow for facts school never taught you, save this' },
+    ],
+    music_mood: 'curious intellectual ambient, playful piano with light electronic textures, wonder and learning, no vocals',
+    voice_pacing: 'Enthusiastic teacher energy, like someone who just discovered something incredible. Build surprise through delivery.',
+    default_voice: 'Charlie',
+    visual_style: 'cinematic',
+    script_system_prompt: `You are an educator creating a viral 55-second "things school never taught you" video.
+Rules:
+- Focus on ONE specific fact, concept, or piece of knowledge
+- Open with the fact that sounds too surprising to be real
+- Explain why this isn't commonly known — what gets taught instead
+- Use clear analogies and simple explanations
+- Include verifiable evidence or sources
+- Connect to daily life — why this matters practically
+- End with a bonus fact that creates a "wait, WHAT?" moment
+- Be accurate and educational, not clickbait`,
+  },
+
+  [SHORTS_NICHE_TYPES.PARANORMAL_UFO]: {
+    name: 'Paranormal / UFO',
+    description: 'Credible encounters and unexplained phenomena with real evidence',
+    total_duration_seconds: 60,
+    scenes: [
+      { role: 'hook',       duration: 3,  hint: 'The most credible or documented encounter detail' },
+      { role: 'setting',    duration: 8,  hint: 'When and where this happened — establish credibility' },
+      { role: 'build_up',   duration: 10, hint: 'What was observed — specific details from witnesses' },
+      { role: 'escalation', duration: 10, hint: 'The evidence that makes this hard to dismiss' },
+      { role: 'climax',     duration: 12, hint: 'The most compelling aspect — radar data, photos, testimony' },
+      { role: 'twist',      duration: 8,  hint: 'The official response and why it doesn\'t fully explain things' },
+      { role: 'opinion',    duration: 5,  hint: 'Present multiple interpretations fairly' },
+      { role: 'cta',        duration: 4,  hint: 'Follow for credible paranormal evidence, share your experience' },
+    ],
+    music_mood: 'eerie atmospheric ambient, distant signals, cosmic dread mixed with wonder, X-Files inspired, no vocals',
+    voice_pacing: 'Investigative journalist tone — serious and measured. Let the evidence speak. Build intrigue through facts, not sensationalism.',
+    default_voice: 'Roger',
+    visual_style: 'documentary',
+    script_system_prompt: `You are an investigative journalist covering a viral 60-second UFO/paranormal case.
+Rules:
+- Focus on ONE specific documented case or encounter
+- Prioritize cases with multiple witnesses, official documentation, or physical evidence
+- Include specific dates, locations, names of witnesses or officials
+- Present the evidence objectively — don't editorialize
+- Include the official explanation AND why it falls short
+- Reference specific documents, footage, or testimony
+- Always present multiple interpretations fairly
+- Tone: serious and curious, never tabloid or conspiratorial
+- End with what remains unexplained`,
+  },
+
 /**
  * Get a shorts template by niche key.
  * @param {string} niche - e.g. 'ai_tech_news'
@@ -467,6 +709,24 @@ export const VOICE_PRESETS = [
     id: 'George',
     name: 'George',
     description: 'Deep, commanding male — history, documentary',
-    niches: ['history_did_you_know', 'science_nature', 'conspiracy_mystery', 'business_entrepreneur'],
+    niches: ['history_did_you_know', 'science_nature', 'conspiracy_mystery', 'business_entrepreneur', 'space_cosmos', 'education_learning'],
+  },
+  {
+    id: 'Daniel',
+    name: 'Daniel',
+    description: 'Warm, authoritative male — travel, sports',
+    niches: ['travel_adventure', 'sports_athletes', 'animals_wildlife'],
+  },
+  {
+    id: 'Lily',
+    name: 'Lily',
+    description: 'Curious, enthusiastic female — science, animals, education',
+    niches: ['animals_wildlife', 'education_learning', 'food_cooking', 'psychology_mindblown'],
+  },
+  {
+    id: 'Liam',
+    name: 'Liam',
+    description: 'Energetic, intense male — sports, paranormal',
+    niches: ['sports_athletes', 'paranormal_ufo', 'space_cosmos'],
   },
 ];

@@ -296,4 +296,213 @@ export const TOPIC_SUGGESTIONS = {
       ]},
     ],
   },
+
+  food_cooking: {
+    topics: [
+      { label: 'Cooking Science', sub: [
+        { label: 'Chemistry', sub: ['Maillard reaction', 'emulsification secrets', 'fermentation magic'] },
+        { label: 'Temperature', sub: ['reverse searing', 'cold start method', 'resting myths'] },
+        { label: 'Techniques', sub: ['knife skills', 'flavor layering', 'umami building'] },
+      ]},
+      { label: 'Food Myths', sub: [
+        { label: 'Health myths', sub: ['MSG truth', 'organic debate', 'superfoods exposed'] },
+        { label: 'Cooking myths', sub: ['searing locks juice', 'salted water boils', 'washing mushrooms'] },
+      ]},
+      { label: 'Restaurant Secrets', sub: [
+        { label: 'Techniques', sub: ['butter everything', 'MSG usage', 'prep methods'] },
+        { label: 'Business', sub: ['pricing tricks', 'menu psychology', 'ingredient quality'] },
+      ]},
+      { label: 'World Cuisine', sub: [
+        { label: 'Street food', sub: ['$1 vs $100', 'night markets', 'local secrets'] },
+        { label: 'History', sub: ['origin stories', 'cultural fusion', 'banned ingredients'] },
+      ]},
+      { label: 'Quick Recipes', sub: [
+        { label: 'One ingredient', sub: ['upgrade hack', 'secret addition', 'game changer'] },
+        { label: 'Under 5 min', sub: ['lazy gourmet', 'meal prep trick', 'pantry staple'] },
+      ]},
+    ],
+  },
+
+  travel_adventure: {
+    topics: [
+      { label: 'Hidden Destinations', sub: [
+        { label: 'Secret places', sub: ['locals only', 'no tourists', 'recently discovered'] },
+        { label: 'Underrated countries', sub: ['visa-free gems', 'cheapest paradise', 'safest unknown'] },
+        { label: 'Extreme locations', sub: ['most remote', 'hardest to reach', 'restricted access'] },
+      ]},
+      { label: 'Travel Hacks', sub: [
+        { label: 'Flights', sub: ['first class cheap', 'hidden cities trick', 'error fares'] },
+        { label: 'Accommodation', sub: ['luxury for less', 'house sitting', 'off-season deals'] },
+        { label: 'Budget', sub: ['$50/day luxury', 'free activities', 'money-saving routes'] },
+      ]},
+      { label: 'Dangerous Travel', sub: [
+        { label: 'Risky destinations', sub: ['active volcanoes', 'death roads', 'extreme weather'] },
+        { label: 'Scams', sub: ['taxi scams', 'tourist traps', 'fake guides'] },
+      ]},
+      { label: 'Cultural Deep Dives', sub: [
+        { label: 'Traditions', sub: ['bizarre festivals', 'ancient rituals', 'food ceremonies'] },
+        { label: 'Sacred places', sub: ['pilgrimage sites', 'spiritual journeys', 'healing locations'] },
+      ]},
+    ],
+  },
+
+  psychology_mindblown: {
+    topics: [
+      { label: 'Cognitive Biases', sub: [
+        { label: 'Decision making', sub: ['anchoring effect', 'sunk cost fallacy', 'choice overload'] },
+        { label: 'Perception', sub: ['change blindness', 'inattentional blindness', 'McGurk effect'] },
+        { label: 'Social', sub: ['bystander effect', 'conformity pressure', 'halo effect'] },
+      ]},
+      { label: 'Famous Experiments', sub: [
+        { label: 'Classic', sub: ['Stanford prison', 'Milgram obedience', 'marshmallow test'] },
+        { label: 'Modern', sub: ['invisible gorilla', 'Facebook mood', 'AI deception'] },
+        { label: 'Controversial', sub: ['ethics debate', 'unreplicable results', 'hidden findings'] },
+      ]},
+      { label: 'Dark Psychology', sub: [
+        { label: 'Manipulation', sub: ['gaslighting mechanics', 'love bombing', 'dark triad'] },
+        { label: 'Social media', sub: ['dopamine hijacking', 'comparison trap', 'addiction design'] },
+        { label: 'Marketing', sub: ['subliminal tactics', 'FOMO engineering', 'scarcity principle'] },
+      ]},
+      { label: 'Brain Hacks', sub: [
+        { label: 'Memory', sub: ['palace technique', 'spaced repetition', 'forgetting curve'] },
+        { label: 'Focus', sub: ['flow state triggers', 'attention span truth', 'deep work method'] },
+        { label: 'Emotions', sub: ['emotional regulation', 'mood hacking', 'reappraisal technique'] },
+      ]},
+      { label: 'Personality', sub: [
+        { label: 'Types', sub: ['MBTI validity', 'Big Five science', 'enneagram debate'] },
+        { label: 'Disorders', sub: ['ADHD reality', 'narcissism spectrum', 'introvert myths'] },
+      ]},
+    ],
+  },
+
+  space_cosmos: {
+    topics: [
+      { label: 'Black Holes', sub: [
+        { label: 'Physics', sub: ['spaghettification', 'time dilation', 'information paradox'] },
+        { label: 'Discoveries', sub: ['first image', 'nearest one', 'supermassive monsters'] },
+      ]},
+      { label: 'Planets & Moons', sub: [
+        { label: 'Extreme worlds', sub: ['diamond rain', 'glass wind', 'lava oceans'] },
+        { label: 'Habitable', sub: ['goldilocks zone', 'subsurface oceans', 'atmosphere found'] },
+        { label: 'Our Solar System', sub: ['Mars mysteries', 'Europa life', 'Titan seas'] },
+      ]},
+      { label: 'Stars & Galaxies', sub: [
+        { label: 'Stellar', sub: ['star death', 'neutron stars', 'magnetars'] },
+        { label: 'Scale', sub: ['observable universe', 'cosmic web', 'void regions'] },
+      ]},
+      { label: 'Space Exploration', sub: [
+        { label: 'Missions', sub: ['James Webb finds', 'Mars rovers', 'Voyager journey'] },
+        { label: 'Future', sub: ['colonization plans', 'warp drive research', 'generation ships'] },
+      ]},
+      { label: 'Cosmic Mysteries', sub: [
+        { label: 'Dark matter', sub: ['invisible universe', 'detection attempts', 'alternative theories'] },
+        { label: 'Alien life', sub: ['Fermi paradox', 'Drake equation', 'biosignatures found'] },
+        { label: 'Origins', sub: ['before Big Bang', 'multiverse theory', 'simulation argument'] },
+      ]},
+    ],
+  },
+
+  animals_wildlife: {
+    topics: [
+      { label: 'Superpowers', sub: [
+        { label: 'Immortality', sub: ['jellyfish reversal', 'lobster aging', 'tardigrade survival'] },
+        { label: 'Senses', sub: ['magnetic navigation', 'infrared vision', 'electric fields'] },
+        { label: 'Strength', sub: ['pound-for-pound', 'jaw pressure', 'carrying capacity'] },
+      ]},
+      { label: 'Intelligence', sub: [
+        { label: 'Problem solving', sub: ['crow tools', 'octopus escapes', 'elephant memory'] },
+        { label: 'Communication', sub: ['whale songs', 'bee dances', 'prairie dog language'] },
+        { label: 'Emotions', sub: ['grief rituals', 'play behavior', 'empathy evidence'] },
+      ]},
+      { label: 'Deep Sea', sub: [
+        { label: 'Creatures', sub: ['bioluminescence', 'pressure survival', 'giant species'] },
+        { label: 'Discoveries', sub: ['new species found', 'hydrothermal life', 'deepest dive'] },
+      ]},
+      { label: 'Evolution', sub: [
+        { label: 'Bizarre adaptations', sub: ['mimicry masters', 'living fossils', 'convergent evolution'] },
+        { label: 'Extinction & Return', sub: ['Lazarus species', 'de-extinction', 'near misses'] },
+      ]},
+      { label: 'Predators', sub: [
+        { label: 'Hunting strategies', sub: ['ambush tactics', 'pack coordination', 'chemical warfare'] },
+        { label: 'Apex predators', sub: ['territorial battles', 'ecosystem role', 'human encounters'] },
+      ]},
+    ],
+  },
+
+  sports_athletes: {
+    topics: [
+      { label: 'Greatest Moments', sub: [
+        { label: 'Comebacks', sub: ['impossible deficit', 'final seconds', 'injury return'] },
+        { label: 'Records', sub: ['unbreakable', 'just broken', 'controversial'] },
+        { label: 'Upsets', sub: ['underdog triumph', 'David vs Goliath', 'nobody expected'] },
+      ]},
+      { label: 'Athlete Stories', sub: [
+        { label: 'Origins', sub: ['poverty to glory', 'discovered by accident', 'late start'] },
+        { label: 'Rivalries', sub: ['legendary feuds', 'mutual respect', 'era-defining'] },
+        { label: 'Controversies', sub: ['doping scandals', 'rule bending', 'referee disasters'] },
+      ]},
+      { label: 'Training & Science', sub: [
+        { label: 'Extreme routines', sub: ['insane dedication', 'unusual methods', 'recovery secrets'] },
+        { label: 'Sports science', sub: ['technology edge', 'nutrition evolution', 'mental training'] },
+      ]},
+      { label: 'Rules & History', sub: [
+        { label: 'Rule changes', sub: ['game-changing rules', 'safety evolution', 'banned moves'] },
+        { label: 'Origins', sub: ['how sports started', 'ancient versions', 'forgotten sports'] },
+      ]},
+    ],
+  },
+
+  education_learning: {
+    topics: [
+      { label: 'Things School Missed', sub: [
+        { label: 'Life skills', sub: ['taxes explained', 'negotiation basics', 'contracts simplified'] },
+        { label: 'Hidden history', sub: ['censored events', 'untold perspectives', 'recent revelations'] },
+        { label: 'Real science', sub: ['outdated textbooks', 'new discoveries', 'common errors'] },
+      ]},
+      { label: 'Mind-Blowing Facts', sub: [
+        { label: 'Numbers', sub: ['incomprehensible scale', 'probability tricks', 'statistical illusions'] },
+        { label: 'Language', sub: ['untranslatable words', 'dying languages', 'language origins'] },
+        { label: 'Geography', sub: ['borders explained', 'map distortions', 'country quirks'] },
+      ]},
+      { label: 'Learning Hacks', sub: [
+        { label: 'Memory', sub: ['speed learning', 'recall techniques', 'study methods'] },
+        { label: 'Skills', sub: ['learn anything fast', 'practice science', 'expertise myth'] },
+      ]},
+      { label: 'Genius & Knowledge', sub: [
+        { label: 'Geniuses', sub: ['forgotten polymaths', 'child prodigies', 'unconventional minds'] },
+        { label: 'Lost knowledge', sub: ['ancient techniques', 'destroyed libraries', 'rediscovered methods'] },
+      ]},
+      { label: 'Systems & Structures', sub: [
+        { label: 'Education system', sub: ['factory model', 'Finland approach', 'future of learning'] },
+        { label: 'Testing', sub: ['IQ debate', 'standardized failures', 'alternative assessment'] },
+      ]},
+    ],
+  },
+
+  paranormal_ufo: {
+    topics: [
+      { label: 'UFO Encounters', sub: [
+        { label: 'Military', sub: ['Pentagon footage', 'pilot testimony', 'radar confirmed'] },
+        { label: 'Mass sightings', sub: ['Phoenix lights', 'Belgian wave', 'recent events'] },
+        { label: 'Close encounters', sub: ['physical evidence', 'multiple witnesses', 'documented cases'] },
+      ]},
+      { label: 'Government Disclosure', sub: [
+        { label: 'Whistleblowers', sub: ['recent testimony', 'classified programs', 'crash retrievals'] },
+        { label: 'Documents', sub: ['FOIA releases', 'redacted files', 'foreign governments'] },
+      ]},
+      { label: 'Paranormal Evidence', sub: [
+        { label: 'Ghosts', sub: ['thermal imaging', 'EVP recordings', 'documented hauntings'] },
+        { label: 'Poltergeists', sub: ['physical evidence', 'scientific study', 'repeat locations'] },
+        { label: 'Cryptids', sub: ['trail cameras', 'DNA analysis', 'indigenous knowledge'] },
+      ]},
+      { label: 'Ancient Mysteries', sub: [
+        { label: 'Ancient aliens', sub: ['construction puzzles', 'global patterns', 'astronomical alignment'] },
+        { label: 'Lost civilizations', sub: ['underwater ruins', 'advanced technology', 'timeline problems'] },
+      ]},
+      { label: 'Scientific Investigation', sub: [
+        { label: 'Researchers', sub: ['academic studies', 'lab analysis', 'peer review'] },
+        { label: 'Technology', sub: ['sensor data', 'satellite imagery', 'spectral analysis'] },
+      ]},
+    ],
+  },
 };
