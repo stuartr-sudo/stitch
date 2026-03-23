@@ -34,7 +34,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **API Key Resolution** (`api/lib/getUserKeys.js`): Queries `user_api_keys` table, falls back to server env vars if user email matches `OWNER_EMAIL`. Route handlers should call `getUserKeys()` instead of reading `process.env` directly for AI provider keys.
 
-**Model Registry** (`api/lib/modelRegistry.js`): Declarative config for all AI models — 7 image models (Flux, SeeDream, Imagen4, Kling Image, Grok, Ideogram, Wavespeed) and 10 video models (Kling v2/v3/O3, Veo2/3, Wan 2.5/Pro, PixVerse, Hailuo, Wavespeed Wan). Each entry has `provider`, `endpoint`, `buildBody()`, `parseResult()`, and `pollConfig`. New models go here, not in if-else chains.
+**Model Registry** (`api/lib/modelRegistry.js`): Declarative config for all AI models — 7 image models (Flux 2, SeedDream v4.5, Imagen 4, Kling Image v3, Grok Imagine, Ideogram v2, Wavespeed) and 10 video models (Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Veo 2, Veo 3, Wan 2.5, Wan Pro, PixVerse v4.5, Hailuo/MiniMax, Wavespeed WAN). Each entry has `provider`, `endpoint`, `buildBody()`, `parseResult()`, and `pollConfig`. New models go here, not in if-else chains.
 
 **Media Generator** (`api/lib/mediaGenerator.js`): Generic dispatcher — `generateImageV2()` and `animateImageV2()` look up the model in the registry and handle provider-specific auth/polling. Replaces ~360 lines of per-model branching.
 
@@ -51,6 +51,16 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 **Voiceover Generator** (`api/lib/voiceoverGenerator.js`): ElevenLabs TTS via FAL.ai proxy (`fal-ai/elevenlabs/tts/eleven-v3`) — only needs `FAL_KEY`, no separate ElevenLabs subscription. Includes legacy voice ID → FAL voice name mapping. Also exports Whisper-based word-level timestamp generation for caption sync.
 
 **Scheduled Publisher** (`api/lib/scheduledPublisher.js`): Polls for drafts with scheduled publish times and pushes to YouTube.
+
+**Storyboard Planner** (`src/components/modals/StoryboardPlannerWizard.jsx` + `api/storyboard/` + `src/components/storyboard/`): 6-step wizard for multi-scene video sequences. Story & Mood → Story Builder (conversational AI chat) → Visual Style → Scene Builder → Characters (conditional) → Generate. The Story Builder (`/api/storyboard/story-chat`) uses GPT-4.1 mini to guide users through their story scene by scene, then extracts structured beats via Zod. Scene Builder has per-scene model/mode selection — each scene can use a different video model (Veo 3.1 Reference-to-Video, Veo 3.1 First-Last-Frame, Kling O3 R2V, Kling O3 V2V, etc.). Scene 1 settings cascade as defaults to subsequent scenes. Characters step only appears when reference models are selected and shows model-aware UI: Kling R2V uses @Element1-4 system (`CharactersKling.jsx`), Veo 3.1 uses flat `image_urls` array (`CharactersVeo.jsx`). Generates videos sequentially with frame chaining. Video generation goes through JumpStart endpoints, not the Shorts pipeline.
+
+**JumpStart** (`api/jumpstart/`): Image/video generation endpoints used by both the Video Ad Creator and Storyboard Planner. 6 endpoints: `generate` (FormData with image blob), `result` (poll async), `save-video`, `edit`, `extend`, `erase`. Models are selected client-side and passed as form field — the backend dispatches to the appropriate provider. Supports Veo 3.1 variants (reference-to-video, fast, first-last-frame), Kling O3 R2V (character references), Kling O3 V2V (video-to-video restyle/refinement), Seedance, Grok, and Wavespeed WAN.
+
+**Imagineer** (`src/components/modals/ImagineerModal.jsx` + `api/imagineer/`): AI image generation and editing suite with two modes — Text-to-Image (4-step wizard: Subject → Style → Enhance → Output) and Image-to-Image (edit existing images). T2I models: Nano Banana 2, Seedream v4, Flux 2 (LoRA). I2I models add Wavespeed Nano Ultra and Qwen Image Edit for multi-image blending. Has its own 100+ style presets map in `generate.js` (separate from `api/lib/visualStyles.js` which is Shorts-only). Reference images are analyzed via GPT-4.1 mini vision (`describe-character.js`). All structured inputs are assembled into prompts by the shared Cohesive Prompt Builder.
+
+**Turnaround Sheet** (`api/imagineer/turnaround.js` + `TurnaroundSheetWizard.jsx`): Generates a 4×6 character turnaround grid (24 poses) in a single image. 6-step wizard: Character → Style & Model → Props → Refinements → Results → Cell Editor. Edit models use synchronous `fal.run` with automatic fallback chain; generate models use `queue.fal.run` with frontend polling. Supports 6 models, categorized props, negative prompt conflict resolution, and brand style guides.
+
+**Cohesive Prompt Builder** (`api/prompt/build-cohesive.js`): GPT-powered prompt assembly service. Accepts structured creative inputs (description, style, props, negative prompt, brand guide, lighting, camera angle, mood, etc.) from any tool and uses OpenAI to compose a single optimized generation prompt. Used by Imagineer T2I, I2I editing, Turnaround, and Storyboard.
 
 ## Environment
 
@@ -73,8 +83,11 @@ All env vars documented in `.env.example`. Canonical names:
 - Video model duration formats differ by provider: Veo uses `'5s'`/`'8s'` (string with suffix), Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.
 - `/shorts/new` redirects to `/campaigns/new?type=shorts` — the actual wizard lives in `CampaignsNewPage.jsx` (not `ShortsWizardPage.jsx`, which is dead code). Draft review at `/shorts/draft/:draftId`.
 - LoRA configs from the frontend use `{ loraUrl, triggerWord, scale }` but FAL expects `{ path, scale }`. The pipeline transforms this — don't pass raw loraConfigs to `generateImageV2` without mapping `loraUrl` → `path`.
-- `generate_audio` is only supported by Kling v3, Kling O3, and Veo 3. Passing it to other video models will cause errors. The frontend toggle only shows for these models.
+- `generate_audio` is only supported by Kling v3, Kling O3, Veo 3, and Veo 3.1 variants. Passing it to other video models will cause errors. The frontend toggle only shows for these models. In the Storyboard Planner, audio is controlled per-scene based on the selected model's `supportsAudio` flag in `SCENE_MODELS`.
 - `api/lib/modelRegistry.js` image models use either `image_size` (Flux, SeeDream, Ideogram) or `aspect_ratio` (Imagen4, Kling Image, Grok) — check the registry's `buildBody()` before adding new models.
+- Imagineer edit models (Nano Banana 2 Edit, Seedream Edit) use synchronous `fal.run` (not `queue.fal.run`) because queue polling is unreliable for edit endpoints. The turnaround endpoint has automatic model fallback on 5xx errors.
+- Imagineer has its own `STYLE_PROMPTS` map (~100 styles) in `api/imagineer/generate.js` — these are separate from the 14 visual styles in `api/lib/visualStyles.js` (which are for Shorts only). Don't confuse the two.
+- The `/api/imagineer/result` poller uses a model-to-endpoint map and truncates FAL paths to 2 segments for queue URLs. Edit models get a `-edit` suffix appended to the model ID so the poller resolves the correct endpoint.
 
 ## Deployment
 
