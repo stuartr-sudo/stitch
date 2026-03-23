@@ -218,6 +218,8 @@ export default function CampaignsNewPage() {
   const [wizardStep, setWizardStep] = useState('niche');
   const [completedSteps, setCompletedSteps] = useState([]);
   const [videoLengthPreset, setVideoLengthPreset] = useState(60);
+  const [generateAudio, setGenerateAudio] = useState(false);
+  const [enableBackgroundMusic, setEnableBackgroundMusic] = useState(true);
 
   // Step 1
   const [showBrandKit, setShowBrandKit] = useState(false);
@@ -459,6 +461,8 @@ export default function CampaignsNewPage() {
             voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
             video_length_preset: videoLengthPreset,
+            generate_audio: generateAudio,
+            enable_background_music: enableBackgroundMusic,
             starting_image: previewImageUrl || undefined,
             script: scriptScenes.length > 0 ? { scenes: scriptScenes } : undefined,
           }),
@@ -1068,6 +1072,20 @@ export default function CampaignsNewPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Native audio toggle — only for models that support it */}
+                {['fal_kling_v3', 'fal_kling_o3', 'fal_veo3'].includes(videoModel) && (
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Generate native audio</div>
+                      <div className="text-xs text-slate-500">Model generates audio with video (extra cost)</div>
+                    </div>
+                    <button onClick={() => setGenerateAudio(!generateAudio)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${generateAudio ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${generateAudio ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1108,6 +1126,18 @@ export default function CampaignsNewPage() {
                       </>
                     )}
                   </div>
+                </div>
+
+                {/* Background music toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">Background music</div>
+                    <div className="text-xs text-slate-500">AI-generated mood music layered behind voiceover</div>
+                  </div>
+                  <button onClick={() => setEnableBackgroundMusic(!enableBackgroundMusic)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableBackgroundMusic ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enableBackgroundMusic ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
               </div>
             )}

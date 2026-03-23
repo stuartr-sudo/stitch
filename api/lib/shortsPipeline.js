@@ -76,6 +76,8 @@ export async function runShortsPipeline(opts) {
     starting_image,
     image_model,
     video_length_preset,
+    generate_audio: generateAudioFlag = false,
+    enable_background_music: enableBackgroundMusic = true,
     supabase,
     keys,
     jobId,
@@ -265,7 +267,7 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (${clipDuration}s, model: ${videoModel})`);
 
       const clipUrl = await withRetry(
-        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', clipDuration, keys, supabase, { loras: loraConfigs }),
+        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', clipDuration, keys, supabase, { loras: loraConfigs, generate_audio: generateAudioFlag }),
         { maxAttempts: 2, baseDelayMs: 5000 }
       );
       sceneClips.push(clipUrl);
@@ -316,29 +318,33 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Scene ${i + 1}/${scriptResult.scenes.length} complete`);
     }
 
-    // ── Step 6: Generate Music ────────────────────────────────────────────────────
+    // ── Step 6: Generate Music (optional) ───────────────────────────────────────
     currentStep = 'generating_music';
     currentModel = 'minimax-music';
-    let musicUrl;
+    let musicUrl = null;
     await updateJob({ current_step: 'generating_music', completed_steps: 5 });
-    console.log('[shortsPipeline] Step 6: Generating background music');
 
-    const musicMood = scriptResult.music_mood || nicheTemplate?.music_mood || 'upbeat background music';
-    const totalDuration = video_length_preset || nicheTemplate?.total_duration_seconds || 60;
+    if (enableBackgroundMusic) {
+      console.log('[shortsPipeline] Step 6: Generating background music');
+      const musicMood = scriptResult.music_mood || nicheTemplate?.music_mood || 'upbeat background music';
+      const totalDuration = video_length_preset || nicheTemplate?.total_duration_seconds || 60;
 
-    musicUrl = await withRetry(
-      () => generateMusic(musicMood, totalDuration + 5, keys, supabase),
-      { maxAttempts: 2, baseDelayMs: 5000 }
-    );
+      musicUrl = await withRetry(
+        () => generateMusic(musicMood, totalDuration + 5, keys, supabase),
+        { maxAttempts: 2, baseDelayMs: 5000 }
+      );
 
-    if (musicUrl) {
-      logCost({
-        username: brand_username,
-        category: 'fal',
-        operation: 'shorts_music',
-        model: 'minimax-music',
-        metadata: { track_count: 1 },
-      });
+      if (musicUrl) {
+        logCost({
+          username: brand_username,
+          category: 'fal',
+          operation: 'shorts_music',
+          model: 'minimax-music',
+          metadata: { track_count: 1 },
+        });
+      }
+    } else {
+      console.log('[shortsPipeline] Step 6: Background music disabled, skipping');
     }
 
     // ── Step 7: Assemble Video ────────────────────────────────────────────────────
