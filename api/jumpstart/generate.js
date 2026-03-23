@@ -177,6 +177,12 @@ export default async function handler(req, res) {
         imageUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, endImageUrl,
         referenceImages, r2vElements, r2vElementsPreUpscaled, enableAudio, model, frontalImageUrl, FAL_KEY
       });
+    } else if (model === 'kling-o3-v2v-pro' || model === 'kling-o3-v2v-standard') {
+      const videoUrl = fields.videoUrl?.[0] || null;
+      return await handleKlingO3V2V(req, res, {
+        imageUrl, videoUrl, prompt, duration, aspectRatio, negativePrompt,
+        cfgScale, enableAudio, model, FAL_KEY
+      });
     } else if (model === 'ltx-iclora') {
       // LTX-Video ICLoRA — in-context LoRA for subject-consistent video
       const icLoraType = fields.icLoraType?.[0] || 'pose';
@@ -1089,6 +1095,78 @@ async function handleLtxICLoRA(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from LTX ICLoRA API' });
+}
+
+/**
+ * Handle Kling O3 Video-to-Video (FAL.ai)
+ * Used for: restyling source video, refining generated scenes
+ * Endpoints: fal-ai/kling-video/o3/pro/video-to-video, fal-ai/kling-video/o3/standard/video-to-video
+ */
+async function handleKlingO3V2V(req, res, params) {
+  const { imageUrl, videoUrl, prompt, duration, aspectRatio, negativePrompt, cfgScale, enableAudio, model, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured.' });
+  }
+
+  if (!videoUrl) {
+    return res.status(400).json({ error: 'Video URL required for video-to-video generation' });
+  }
+
+  const tier = model === 'kling-o3-v2v-pro' ? 'pro' : 'standard';
+  const endpoint = `fal-ai/kling-video/o3/${tier}/video-to-video`;
+
+  console.log(`[JumpStart/KlingO3V2V] Submitting to ${endpoint}...`);
+  console.log('[JumpStart/KlingO3V2V] Settings:', { duration, aspectRatio, enableAudio });
+
+  const requestBody = {
+    prompt,
+    video_url: videoUrl,
+    duration: String(duration),
+    aspect_ratio: aspectRatio,
+  };
+
+  if (negativePrompt) requestBody.negative_prompt = negativePrompt;
+  if (cfgScale && cfgScale !== 0.5) requestBody.cfg_scale = cfgScale;
+  if (enableAudio) requestBody.generate_audio = true;
+
+  const submitResponse = await fetch(`https://fal.run/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/KlingO3V2V] Error:', errorText);
+    return res.status(500).json({ error: 'Kling O3 V2V error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/KlingO3V2V] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId,
+      model,
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Kling O3 V2V' });
 }
 
 export const config = {

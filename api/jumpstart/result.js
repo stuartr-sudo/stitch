@@ -35,6 +35,9 @@ export default async function handler(req, res) {
     } else if (model === 'kling-r2v-pro' || model === 'kling-r2v-standard') {
       const tier = model === 'kling-r2v-pro' ? 'pro' : 'standard';
       return await checkFalResult(req, res, requestId, FAL_KEY, `fal-ai/kling-video/o3/${tier}/reference-to-video`, model);
+    } else if (model === 'kling-o3-v2v-pro' || model === 'kling-o3-v2v-standard') {
+      const tier = model === 'kling-o3-v2v-pro' ? 'pro' : 'standard';
+      return await checkFalResult(req, res, requestId, FAL_KEY, `fal-ai/kling-video/o3/${tier}/video-to-video`, model);
     } else if (model === 'ltx-iclora') {
       // Try distilled image-to-video first (most common path)
       return await checkFalResult(req, res, requestId, FAL_KEY, 'fal-ai/ltx-2-19b/distilled/image-to-video/lora', model);
