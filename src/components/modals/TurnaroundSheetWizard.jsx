@@ -585,8 +585,13 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   const handleGenerate = async () => {
     if (!characters.every(c => c.name.trim() && c.description.trim())) {
-      toast.error("Every character needs a name and description.");
-      return;
+      // If single character with description but no name, auto-name it
+      if (characters.length === 1 && characters[0].description.trim() && !characters[0].name.trim()) {
+        updateCharacter(characters[0].id, 'name', 'Character 1');
+      } else {
+        toast.error("Every character needs a name and description.");
+        return;
+      }
     }
     if (selectedStyles.length === 0) { toast.error("Select at least one style."); return; }
     if (selectedPoseSets.length === 0) { toast.error("Select at least one pose set."); return; }
@@ -1877,11 +1882,20 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       onClose={() => setShowLibrary(false)}
       onSelect={(item) => {
         const charId = typeof showLibrary === 'string' ? showLibrary : characters[0]?.id;
-        updateCharacter(charId, 'referenceImageUrl', item.url);
-        updateCharacter(charId, 'referencePreview', item.url);
+        if (charId) {
+          updateCharacter(charId, 'referenceImageUrl', item.url);
+          updateCharacter(charId, 'referencePreview', item.thumbnail_url || item.url);
+          // If the library item has a description/prompt, offer to auto-fill
+          if (item.prompt || item.alt_text) {
+            const char = characters.find(c => c.id === charId);
+            if (char && !char.description.trim()) {
+              updateCharacter(charId, 'description', item.prompt || item.alt_text);
+            }
+          }
+        }
         setShowLibrary(false);
         toast.success('Reference image selected — analyzing character...');
-        describeCharacter(charId, item.url);
+        if (charId) describeCharacter(charId, item.url);
       }}
       mediaType="images"
     />
