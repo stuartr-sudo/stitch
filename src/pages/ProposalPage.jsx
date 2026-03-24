@@ -156,8 +156,48 @@ export default function ProposalPage() {
 
       {/* Section 1: Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 py-24">
-        <div className="mb-14">
-          <StitchLogo />
+        {/* Partnership logos — grid ensures × is dead-center on page */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-8 mb-14 w-full px-6">
+          <div className="flex justify-end">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/9/92/Hamilton_City_Council_logo.svg"
+              alt="Hamilton City Council"
+              style={{ height: 44, width: 'auto' }}
+            />
+          </div>
+          <span className="text-[#cbd5e1] text-2xl font-light">&times;</span>
+          <div className="flex justify-start">
+            <div className="flex items-center gap-3">
+              <svg
+                width="36"
+                height="44"
+                viewBox="0 0 64 80"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="shrink-0"
+              >
+                <line x1="32" y1="4" x2="32" y2="18" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" />
+                <ellipse cx="32" cy="8" rx="2.5" ry="4" stroke="#2C666E" strokeWidth="1.5" fill="none" />
+                <path d="M30 16 L32 22 L34 16" stroke="#2C666E" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+                <path d="M32 22 C48 24 48 36 32 40" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 4" fill="none" />
+                <path d="M32 40 C16 44 16 56 32 60" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 4" fill="none" />
+                <circle cx="32" cy="22" r="2" fill="#2C666E" />
+                <circle cx="46" cy="30" r="1.5" fill="#2C666E" opacity="0.4" />
+                <circle cx="32" cy="40" r="2" fill="#2C666E" />
+                <circle cx="18" cy="50" r="1.5" fill="#2C666E" opacity="0.4" />
+                <circle cx="32" cy="60" r="2" fill="#2C666E" />
+              </svg>
+              <div className="flex flex-col">
+                <span className="text-[#0f172a] font-bold tracking-[0.25em] uppercase text-base leading-tight">
+                  Stitch Studios
+                </span>
+                <span className="text-[#64748b] tracking-[0.15em] uppercase text-[10px]">
+                  Animation &amp; Media
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <p className="text-[#64748b] text-sm tracking-wide mb-2">
@@ -179,17 +219,6 @@ export default function ProposalPage() {
           Animated Road Safety &amp; Active Travel Series
         </p>
         <p className="text-[#94a3b8] text-sm tracking-wide mb-12">March 2026</p>
-
-        {/* Partnership visual */}
-        <div className="flex items-center gap-6 mb-8">
-          <img
-            src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/images/proposals/hamilton-cc-logo.png"
-            alt="Hamilton City Council"
-            className="h-14 object-contain"
-          />
-          <span className="text-[#94a3b8] text-2xl font-light">&times;</span>
-          <StitchLogo size="small" />
-        </div>
 
         <div
           className="absolute bottom-8 flex flex-col items-center gap-1"
