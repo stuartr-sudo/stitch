@@ -86,11 +86,15 @@ export async function generateVoiceover(text, keys, supabase, options = {}) {
     throw new Error(`FAL TTS submit failed (${submitRes.status}): ${errorText}`);
   }
 
-  const { request_id } = await submitRes.json();
+  const submitData = await submitRes.json();
+  const request_id = submitData.request_id;
+  // Use response_url from FAL (full path) to avoid 2-segment truncation in pollFalQueue
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3/requests/${request_id}`;
   console.log(`[voiceover] FAL TTS queued: ${request_id}`);
 
-  // Poll for completion
-  const result = await pollFalQueue(request_id, 'fal-ai/elevenlabs/tts/eleven-v3', falKey, 60, 2000);
+  // Poll for completion — pass full URL to bypass model path truncation
+  const result = await pollFalQueue(responseUrl, 'fal-ai/elevenlabs/tts/eleven-v3', falKey, 60, 2000);
 
   const audioUrl = result?.audio?.url;
   if (!audioUrl) throw new Error('FAL TTS returned no audio URL');
