@@ -1,56 +1,35 @@
 import React, { useEffect } from 'react';
 
-const EPISODES = [
+const PROCESS_STEPS = [
   {
-    number: 1,
-    title: 'Character Introduction',
-    duration: '30–45 sec',
-    description: "Meet Movin' Martin — establishes the character, sets the tone for the series.",
-    phrases: ["Get movin' with Movin' Martin!"],
-    badge: 'First Episode',
+    phase: 'Discovery',
+    duration: 'Week 1',
+    description: 'Initial consultation to understand your goals, review existing Movin\' Martin materials, and align on creative direction, tone, and key messaging for each episode.',
   },
   {
-    number: 2,
-    title: 'Keeping Safe on Our Wheels',
-    duration: '~30 sec',
-    description: 'Safety gear essentials for bikes, scooters, and skateboards.',
-    phrases: ['Be bright, be seen'],
+    phase: 'Character Design',
+    duration: 'Week 2',
+    description: 'Design and refine the animated Movin\' Martin character to ensure a consistent, appealing look across all episodes. Includes style frames for approval.',
   },
   {
-    number: 3,
-    title: 'Check Before You Step',
-    duration: '~30 sec',
-    description: 'Pedestrian crossing safety — look, listen, and think before stepping out.',
-    phrases: ['Check before you step!', 'Stop, look and listen'],
+    phase: 'Scriptwriting & Storyboarding',
+    duration: 'Week 2-3',
+    description: 'Develop scripts for all episodes with interactive learning beats, pause-and-ask moments, and road safety messaging. Scripts reviewed and approved before production begins.',
   },
   {
-    number: 4,
-    title: 'Sneaky Driveways',
-    duration: '~30 sec',
-    description: 'Awareness around driveways and reversing vehicles.',
-    phrases: ['Stay alert, be aware'],
+    phase: 'Animation Production',
+    duration: 'Week 3-6',
+    description: 'Full animation of all episodes, incorporating approved scripts and character designs. Regular check-ins with progress previews at key milestones.',
   },
   {
-    number: 5,
-    title: 'Foot Path Safety',
-    duration: '~30 sec',
-    description: 'Sharing paths safely with pedestrians, cyclists, and scooter riders.',
-    phrases: ['Cross like a boss!'],
+    phase: 'Review & Revisions',
+    duration: 'Week 6-7',
+    description: 'Two rounds of revisions per episode. Audio, music, captions, and final polish applied. Compilation film assembled from completed episodes.',
   },
   {
-    number: 6,
-    title: 'Walk or Wheels Superstar',
-    duration: '~30 sec',
-    description: 'Promoting active travel to school — walking, biking, scooting.',
-    phrases: ['Walk or Wheels Superstar!'],
-  },
-  {
-    number: 7,
-    title: 'Full Feature Compilation Film',
-    duration: '~3:30 min',
-    description: 'All episodes combined into one complete film for assembly or classroom viewing.',
-    phrases: [],
-    isCompilation: true,
+    phase: 'Delivery & Handover',
+    duration: 'Week 8',
+    description: 'Final delivery of all assets in MP4 and web-optimised formats. Website launch with admin backend. Training session for content management.',
   },
 ];
 
@@ -59,45 +38,38 @@ const TIERS = [
     name: 'Base',
     price: '$25,000',
     recommended: false,
+    inherits: null,
     features: [
-      { text: '7 animated episodes', included: true },
-      { text: 'Interactive learning beats', included: true },
-      { text: "Movin' Martin website with admin backend", included: true },
-      { text: 'Digital delivery (MP4, web-optimised)', included: true },
-      { text: 'Professional voiceover', included: false },
-      { text: 'Voice lipsync animation', included: false },
-      { text: 'Original music & sound effects', included: false },
-      { text: 'Workbook integration guide', included: false },
+      '7 animated episodes',
+      'Interactive learning beats',
+      "Movin' Martin website with admin backend",
+      'Workbook integration guide',
+      'Original music and sound effects',
+      'Digital delivery (MP4, web-optimised)',
     ],
   },
   {
     name: 'Premium',
     price: '$30,000',
     recommended: true,
+    inherits: 'Base',
     features: [
-      { text: '7 animated episodes', included: true },
-      { text: 'Interactive learning beats', included: true },
-      { text: "Movin' Martin website with admin backend", included: true },
-      { text: 'Digital delivery (MP4, web-optimised)', included: true },
-      { text: 'Professional voiceover', included: true },
-      { text: 'Voice lipsync animation', included: true },
-      { text: 'Original music & sound effects', included: false },
-      { text: 'Workbook integration guide', included: false },
+      'Professional quality voiceover',
+      'Voice lipsync animation',
+      'Social media cut-downs',
+      'Multilingual subtitles (incl. te reo Maori)',
     ],
   },
   {
     name: 'Deluxe',
-    price: '$35,000',
+    price: '$45,000',
     recommended: false,
+    inherits: 'Premium',
     features: [
-      { text: '7 animated episodes', included: true },
-      { text: 'Interactive learning beats', included: true },
-      { text: "Movin' Martin website with admin backend", included: true },
-      { text: 'Digital delivery (MP4, web-optimised)', included: true },
-      { text: 'Professional voiceover', included: true },
-      { text: 'Voice lipsync animation', included: true },
-      { text: 'Original music & sound effects', included: true },
-      { text: 'Workbook integration guide', included: true },
+      'Interactive web quizzes and games',
+      'Additional character designs',
+      'Seasonal content updates',
+      'Teacher lesson plan pack if required (NZ curriculum)',
     ],
   },
 ];
@@ -120,80 +92,41 @@ function useScrollAnimation() {
   }, []);
 }
 
-function StitchLogo() {
+function StitchLogo({ size = 'large' }) {
+  const isLarge = size === 'large';
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* SVG mark: needle + dashed S-curve stitch path */}
       <svg
-        width="96"
-        height="120"
+        width={isLarge ? 96 : 64}
+        height={isLarge ? 120 : 80}
         viewBox="0 0 64 80"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
         {/* Needle body */}
-        <line
-          x1="32"
-          y1="4"
-          x2="32"
-          y2="18"
-          stroke="#90DDF0"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-        {/* Needle eye (small oval hole near top) */}
-        <ellipse
-          cx="32"
-          cy="8"
-          rx="2.5"
-          ry="4"
-          stroke="#90DDF0"
-          strokeWidth="1.5"
-          fill="none"
-        />
-        {/* Needle tip (pointed bottom) */}
-        <path
-          d="M30 16 L32 22 L34 16"
-          stroke="#90DDF0"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          fill="none"
-        />
-
-        {/* Dashed S-curve stitch path */}
-        {/* Upper arc of S: curves right from top-center to mid */}
-        <path
-          d="M32 22 C48 24 48 36 32 40"
-          stroke="#2C666E"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray="4 4"
-          fill="none"
-        />
-        {/* Lower arc of S: curves left from mid to bottom */}
-        <path
-          d="M32 40 C16 44 16 56 32 60"
-          stroke="#2C666E"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray="4 4"
-          fill="none"
-        />
-        {/* Small stitch dots at key anchor points to reinforce stitching look */}
+        <line x1="32" y1="4" x2="32" y2="18" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" />
+        {/* Needle eye */}
+        <ellipse cx="32" cy="8" rx="2.5" ry="4" stroke="#2C666E" strokeWidth="1.5" fill="none" />
+        {/* Needle tip */}
+        <path d="M30 16 L32 22 L34 16" stroke="#2C666E" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+        {/* S-curve upper arc */}
+        <path d="M32 22 C48 24 48 36 32 40" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 4" fill="none" />
+        {/* S-curve lower arc */}
+        <path d="M32 40 C16 44 16 56 32 60" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 4" fill="none" />
+        {/* Anchor dots */}
         <circle cx="32" cy="22" r="2" fill="#2C666E" />
-        <circle cx="46" cy="30" r="1.5" fill="#2C666E" opacity="0.6" />
+        <circle cx="46" cy="30" r="1.5" fill="#2C666E" opacity="0.4" />
         <circle cx="32" cy="40" r="2" fill="#2C666E" />
-        <circle cx="18" cy="50" r="1.5" fill="#2C666E" opacity="0.6" />
+        <circle cx="18" cy="50" r="1.5" fill="#2C666E" opacity="0.4" />
         <circle cx="32" cy="60" r="2" fill="#2C666E" />
       </svg>
 
-      {/* Wordmark */}
       <div className="flex flex-col items-center gap-1.5">
-        <span className="text-white text-2xl font-bold tracking-[0.3em] uppercase">
+        <span className={`text-[#0f172a] font-bold tracking-[0.3em] uppercase ${isLarge ? 'text-2xl' : 'text-lg'}`}>
           Stitch Studios
         </span>
-        <span className="text-[#94a3b8] text-sm tracking-[0.2em] uppercase">
+        <span className={`text-[#64748b] tracking-[0.2em] uppercase ${isLarge ? 'text-sm' : 'text-xs'}`}>
           Animation &amp; Media
         </span>
       </div>
@@ -205,9 +138,10 @@ export default function ProposalPage() {
   useScrollAnimation();
 
   return (
-    <div className="min-h-screen text-white font-[Inter]" style={{ backgroundColor: '#0f172a' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#ffffff', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
-        html, body { background-color: #0f172a !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        html, body { background-color: #ffffff !important; }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
@@ -221,74 +155,52 @@ export default function ProposalPage() {
       `}</style>
 
       {/* Section 1: Hero */}
-      <section className="min-h-screen flex flex-col items-center justify-center relative bg-gradient-to-b from-[#0f172a] to-[#1e293b] px-6 py-24">
-        {/* Logo */}
+      <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 py-24">
         <div className="mb-14">
           <StitchLogo />
         </div>
 
-        {/* "Prepared for" label */}
-        <p className="text-[#94a3b8] text-sm tracking-wide mb-2">
+        <p className="text-[#64748b] text-sm tracking-wide mb-2">
           Prepared exclusively for
         </p>
-
-        {/* Client name */}
-        <p className="text-white text-2xl font-bold mb-6">
+        <p className="text-[#0f172a] text-2xl font-bold mb-1">
           Hamilton City Council
         </p>
-
-        {/* Teal divider */}
-        <div className="w-16 h-0.5 bg-[#2C666E] mx-auto my-6" />
-
-        {/* Project name */}
-        <h1 className="text-4xl md:text-5xl font-bold text-white text-center leading-tight mb-4">
-          Movin&apos; Martin
-        </h1>
-
-        {/* Project subtitle */}
-        <p className="text-xl text-[#94a3b8] text-center mb-6">
-          Animated Road Safety &amp; Active Travel Series
+        <p className="text-[#64748b] text-sm mb-6">
+          Attn: Tracey Grayson, School Travel Coordinator
         </p>
 
-        {/* Date */}
-        <p className="text-[#94a3b8] text-sm tracking-wide">March 2026</p>
+        <div className="w-16 h-0.5 bg-[#2C666E] mx-auto my-6" />
 
-        {/* Scroll-down chevron */}
+        <h1 className="text-4xl md:text-5xl font-bold text-[#0f172a] text-center leading-tight mb-4">
+          Movin&apos; Martin
+        </h1>
+        <p className="text-xl text-[#64748b] text-center mb-6">
+          Animated Road Safety &amp; Active Travel Series
+        </p>
+        <p className="text-[#94a3b8] text-sm tracking-wide mb-12">March 2026</p>
+
+        {/* Partnership visual */}
+        <div className="flex items-center gap-6 mb-8">
+          <img
+            src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/images/proposals/hamilton-cc-logo.png"
+            alt="Hamilton City Council"
+            className="h-14 object-contain"
+          />
+          <span className="text-[#94a3b8] text-2xl font-light">&times;</span>
+          <StitchLogo size="small" />
+        </div>
+
         <div
           className="absolute bottom-8 flex flex-col items-center gap-1"
           style={{ animation: 'bounce 2s ease-in-out infinite' }}
           aria-hidden="true"
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M6 9L12 15L18 9"
-              stroke="#2C666E"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9L12 15L18 9" stroke="#2C666E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M6 9L12 15L18 9"
-              stroke="#2C666E"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.4"
-            />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9L12 15L18 9" stroke="#2C666E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.3" />
           </svg>
         </div>
       </section>
@@ -296,169 +208,159 @@ export default function ProposalPage() {
       {/* Section 2: Project Vision */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
         <div className="grid md:grid-cols-2 gap-12">
-          {/* Left column */}
           <div>
-            <h2 className="text-3xl font-bold mb-6 text-white">Project Vision</h2>
-            <p className="text-[#94a3b8] leading-relaxed">
-              An AI-powered animated series featuring Movin&apos; Martin — a lovable dog mascot who
+            <h2 className="text-3xl font-bold mb-6 text-[#0f172a]">Project Vision</h2>
+            <p className="text-[#64748b] leading-relaxed">
+              An animated series featuring Movin&apos; Martin, a lovable dog mascot who
               promotes road safety and active travel for primary school children. The series combines
               interactive learning moments inspired by Dora the Explorer, where Martin pauses to ask
               questions, reinforced by companion workbooks for classroom use. A unique focus on active
-              travel — walking, biking, and scooting to school — sets this apart from existing road
+              travel (walking, biking, and scooting to school) sets this apart from existing road
               safety programmes.
             </p>
           </div>
 
-          {/* Right column: stat cards */}
           <div className="flex flex-col gap-3">
-            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
-              <p className="text-white font-bold">7 Episodes</p>
-              <p className="text-[#94a3b8] text-sm">Character intro + 5 themed + compilation</p>
-            </div>
-            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
-              <p className="text-white font-bold">3:30 Feature Film</p>
-              <p className="text-[#94a3b8] text-sm">Full compilation edit</p>
-            </div>
-            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
-              <p className="text-white font-bold">Primary School</p>
-              <p className="text-[#94a3b8] text-sm">Ages 5–12 target audience</p>
-            </div>
-            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
-              <p className="text-white font-bold">Workbook Integration</p>
-              <p className="text-[#94a3b8] text-sm">Reinforced classroom learning</p>
-            </div>
-            <div className="bg-white/5 border border-[#2C666E]/30 rounded-xl p-4">
-              <p className="text-white font-bold">Active Travel Focus</p>
-              <p className="text-[#94a3b8] text-sm">Walking, biking, scooting to school</p>
-            </div>
+            {[
+              { label: '7 Episodes', sub: 'Character intro + 5 themed + compilation' },
+              { label: '3:30 Feature Film', sub: 'Full compilation edit' },
+              { label: 'Primary School', sub: 'Ages 5 to 12 target audience' },
+              { label: 'Workbook Integration', sub: 'Reinforced classroom learning' },
+              { label: 'Active Travel Focus', sub: 'Walking, biking, scooting to school' },
+              { label: "Movin' Martin Website", sub: 'Public site with admin backend for content management' },
+            ].map((card) => (
+              <div key={card.label} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4">
+                <p className="text-[#0f172a] font-bold">{card.label}</p>
+                <p className="text-[#64748b] text-sm">{card.sub}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Section 3: Episode Guide */}
-      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <h2 className="text-3xl font-bold mb-2">Episode Guide</h2>
-        <p className="text-[#94a3b8] mb-10">
-          Seven deliverables — six standalone episodes plus a full compilation film
-        </p>
-        <div className="grid md:grid-cols-2 gap-6">
-          {EPISODES.map((ep) => (
-            <div
-              key={ep.number}
-              className={`bg-white/5 border rounded-2xl p-6 relative ${
-                ep.isCompilation
-                  ? 'md:col-span-2 border-[#2C666E]/50'
-                  : 'border-white/10'
-              }`}
-            >
-              {ep.badge && (
-                <span className="absolute top-4 right-4 bg-[#2C666E] text-white text-xs px-3 py-1 rounded-full">
-                  {ep.badge}
-                </span>
-              )}
-              <p className="text-[#94a3b8] text-sm">Episode {ep.number}</p>
-              <p className="text-lg font-semibold text-white">{ep.title}</p>
-              <span className="inline-block bg-[#2C666E]/20 text-[#90DDF0] text-sm px-3 py-1 rounded-full mt-2">
-                {ep.duration}
-              </span>
-              <p className="text-sm text-[#94a3b8] mt-3">{ep.description}</p>
-              {ep.phrases.length > 0 && (
-                <div className="inline-flex gap-2 flex-wrap mt-3">
-                  {ep.phrases.map((phrase) => (
-                    <span
-                      key={phrase}
-                      className="bg-white/10 text-white/70 text-xs px-2 py-1 rounded-full"
-                    >
-                      {phrase}
-                    </span>
-                  ))}
+      {/* Section 3: Process & Timeline */}
+      <section className="py-24 px-6 max-w-6xl mx-auto bg-[#f8fafc] -mx-0" data-animate style={{ maxWidth: '100%' }}>
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold mb-2 text-[#0f172a]">Process &amp; Timeline</h2>
+          <p className="text-[#64748b] mb-10">
+            A clear, structured workflow from kickoff to final delivery
+          </p>
+          <div className="relative">
+            {/* Vertical timeline line (desktop only) */}
+            <div className="hidden md:block absolute left-[39px] top-4 bottom-4 w-0.5 bg-[#2C666E]/20" aria-hidden="true" />
+            <div className="flex flex-col gap-6">
+              {PROCESS_STEPS.map((step, i) => (
+                <div key={step.phase} className="flex gap-6 items-start">
+                  {/* Step number circle */}
+                  <div className="w-20 shrink-0 hidden md:flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold relative z-10">
+                      {i + 1}
+                    </div>
+                  </div>
+                  {/* Step card */}
+                  <div className="flex-1 bg-white border border-[#e2e8f0] rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="md:hidden w-8 h-8 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold shrink-0">
+                        {i + 1}
+                      </span>
+                      <h3 className="text-lg font-semibold text-[#0f172a]">{step.phase}</h3>
+                      <span className="inline-block bg-[#2C666E]/10 text-[#2C666E] text-sm px-3 py-1 rounded-full font-medium">
+                        {step.duration}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#64748b] leading-relaxed">{step.description}</p>
+                  </div>
                 </div>
-              )}
-              <video
-                className="rounded-xl w-full mt-4"
-                controls
-                poster="#"
-                src="#placeholder"
-              />
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
       {/* Section 4: Sample Work */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <h2 className="text-3xl font-bold mb-2">Sample Work</h2>
-        <p className="text-[#94a3b8] mb-10">Examples from our animation pipeline</p>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
+        <h2 className="text-3xl font-bold mb-2 text-[#0f172a]">Sample Work</h2>
+        <p className="text-[#64748b] mb-10">Examples from our animation pipeline</p>
+        <div className="grid md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden"
+              className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm"
             >
-              <video className="w-full aspect-video" controls poster="#" src="#placeholder" />
-              <p className="p-4 text-xs text-[#94a3b8]">
-                Sample animation — final style will be tailored to Movin&apos; Martin
+              <video className="w-full aspect-video bg-[#f1f5f9]" controls poster="#" src="#placeholder" />
+              <p className="p-4 text-xs text-[#64748b]">
+                Sample animation. Final style will be tailored to Movin&apos; Martin
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Section 5: The Approach */}
+      {/* Section 5: Client Feedback Portal */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <h2 className="text-3xl font-bold mb-12 text-center">The Approach</h2>
-        <div className="relative grid md:grid-cols-3 gap-8">
-          {/* Desktop connecting dashed line behind the number circles */}
-          <div
-            className="hidden md:block absolute top-6 left-[calc(16.66%+24px)] right-[calc(16.66%+24px)] border-t-2 border-dashed border-[#2C666E]/40"
-            aria-hidden="true"
-          />
-          {[
-            {
-              n: 1,
-              title: 'Story & Script',
-              description:
-                'AI-assisted scriptwriting with interactive learning beats. Each episode structured around a key road safety message with pause-and-ask moments.',
-            },
-            {
-              n: 2,
-              title: 'Animation',
-              description:
-                'AI-powered visual generation with consistent character design. Movin\u2019 Martin maintains a cohesive look and personality throughout.',
-            },
-            {
-              n: 3,
-              title: 'Polish',
-              description:
-                'Professional voiceover, background music, sound effects, captions, and final edit. Ready for classroom and online distribution.',
-            },
-          ].map((step) => (
-            <div
-              key={step.n}
-              className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center"
-            >
-              <div className="w-12 h-12 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-xl font-bold mx-auto mb-4 relative z-10">
-                {step.n}
-              </div>
-              <p className="text-lg font-semibold mb-3 text-white">{step.title}</p>
-              <p className="text-sm text-[#94a3b8] leading-relaxed">{step.description}</p>
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#0f172a]">Dedicated, Interactive Feedback Portal</h2>
+            <p className="text-[#64748b] leading-relaxed mb-6">
+              You will have access to a dedicated, interactive feedback interface where you can review
+              each episode, submit edit requests, and track progress in real time. Every piece of
+              feedback is logged as a task on your project dashboard, so nothing gets missed.
+            </p>
+            <ul className="flex flex-col gap-4">
+              {[
+                { title: 'Submit Edit Requests', desc: 'Flag specific scenes or moments with detailed notes on what to change.' },
+                { title: 'Task Tracking Dashboard', desc: 'Every request is tracked as a task with status updates from pending through to complete.' },
+                { title: 'Version History', desc: 'Review previous versions alongside the latest cut, so you can see exactly what changed.' },
+                { title: 'Approval Workflow', desc: 'Sign off on each episode when you are happy. No episode goes to final delivery without your approval.' },
+              ].map((item) => (
+                <li key={item.title} className="flex gap-3 items-start">
+                  <span className="text-[#2C666E] font-bold shrink-0 mt-0.5">&#10003;</span>
+                  <div>
+                    <p className="text-[#0f172a] font-semibold text-sm">{item.title}</p>
+                    <p className="text-[#64748b] text-sm">{item.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-3 h-3 rounded-full bg-red-400" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400" />
+              <div className="w-3 h-3 rounded-full bg-green-400" />
+              <span className="text-[#94a3b8] text-xs ml-2">feedback.stitchstudios.app</span>
             </div>
-          ))}
+            <div className="flex flex-col gap-3">
+              {[
+                { task: 'Ep 2: Make helmet more visible in opening shot', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
+                { task: 'Ep 1: Adjust Martin\'s walking speed', status: 'Complete', color: 'bg-green-100 text-green-700' },
+                { task: 'Ep 3: Add road marking to crossing scene', status: 'Pending', color: 'bg-[#f1f5f9] text-[#64748b]' },
+                { task: 'Ep 5: Widen shared path in background', status: 'Pending', color: 'bg-[#f1f5f9] text-[#64748b]' },
+              ].map((item) => (
+                <div key={item.task} className="flex items-center justify-between bg-white border border-[#e2e8f0] rounded-lg px-4 py-3">
+                  <p className="text-sm text-[#0f172a] truncate mr-4">{item.task}</p>
+                  <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${item.color}`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Section 6: Pricing */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <h2 className="text-3xl font-bold mb-2 text-center">Investment</h2>
-        <p className="text-[#94a3b8] mb-10 text-center">All prices exclusive of GST</p>
+        <h2 className="text-3xl font-bold mb-2 text-center text-[#0f172a]">Investment</h2>
+        <p className="text-[#64748b] mb-10 text-center">All prices exclusive of GST</p>
         <div className="grid md:grid-cols-3 gap-6">
           {TIERS.map((tier) => (
             <div
               key={tier.name}
-              className={`bg-white/5 border rounded-2xl p-8 ${
+              className={`bg-white border rounded-2xl p-8 shadow-sm ${
                 tier.recommended
                   ? 'border-[#2C666E] ring-1 ring-[#2C666E]'
-                  : 'border-white/10'
+                  : 'border-[#e2e8f0]'
               }`}
             >
               {tier.recommended && (
@@ -466,23 +368,22 @@ export default function ProposalPage() {
                   Recommended
                 </span>
               )}
-              <p className="text-xl font-semibold text-white">{tier.name}</p>
-              <p className="text-4xl font-bold text-white mt-2">
+              <p className="text-xl font-semibold text-[#0f172a]">{tier.name}</p>
+              <p className="text-4xl font-bold text-[#0f172a] mt-2">
                 {tier.price}
-                <span className="text-sm text-[#94a3b8] font-normal ml-1">+ GST</span>
+                <span className="text-sm text-[#64748b] font-normal ml-1">+ GST</span>
               </p>
-              <div className="border-t border-white/10 my-6" />
+              <div className="border-t border-[#e2e8f0] my-6" />
+              {tier.inherits && (
+                <p className="text-sm text-[#64748b] mb-4 font-medium">
+                  Everything in {tier.inherits}, plus:
+                </p>
+              )}
               <ul className="flex flex-col gap-3">
                 {tier.features.map((feature) => (
-                  <li key={feature.text} className="flex items-start gap-3">
-                    {feature.included ? (
-                      <span className="text-[#2C666E] font-bold shrink-0">✓</span>
-                    ) : (
-                      <span className="text-[#94a3b8] shrink-0">—</span>
-                    )}
-                    <span className={feature.included ? 'text-white' : 'text-[#94a3b8]'}>
-                      {feature.text}
-                    </span>
+                  <li key={feature} className="flex items-start gap-3">
+                    <span className="text-[#2C666E] font-bold shrink-0">&#10003;</span>
+                    <span className="text-[#0f172a]">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -492,32 +393,73 @@ export default function ProposalPage() {
       </section>
 
       {/* Section 7: About Stitch Studios */}
-      <section className="py-24 px-6 max-w-3xl mx-auto text-center" data-animate>
-        <StitchLogo />
-        <p className="text-xl text-[#94a3b8] mt-6 mb-8">
-          Stitching stories together through animation
-        </p>
-        <h2 className="text-3xl font-bold mb-8">Let&apos;s bring Movin&apos; Martin to life</h2>
-        <div className="flex flex-col gap-2 mb-2">
-          <p className="text-white">Stuart Anderson</p>
-          <a
-            href="mailto:hello@stitchstudios.app"
-            className="text-[#90DDF0] hover:underline"
-          >
-            hello@stitchstudios.app
-          </a>
-          <p className="text-[#94a3b8]">+64 21 000 0000</p>
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <StitchLogo size="small" />
+            <p className="text-xl text-[#64748b] mt-6 mb-6">
+              Stitching stories together through animation
+            </p>
+            <p className="text-[#64748b] leading-relaxed mb-6">
+              Stitch Studios uses proprietary animation technology to deliver unparalleled quality
+              and consistency at speed. Our pipeline enables rapid iteration, consistent character
+              design across episodes, and a level of creative control that traditional animation
+              workflows simply cannot match.
+            </p>
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <img
+                  src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/images/proposals/stuart-asta-profile.png"
+                  alt="Stuart Asta"
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+                <div>
+                  <p className="text-[#0f172a] font-semibold">Stuart Asta</p>
+                  <p className="text-[#64748b] text-sm">Founder, Stitch Studios</p>
+                </div>
+              </div>
+              <p className="text-[#64748b] text-sm leading-relaxed">
+                Professional developer and educator, working as a consultant to enhance team
+                understanding and adoption of emerging technology. Stuart brings a unique blend of
+                technical expertise and creative vision to every project.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <a href="mailto:stuartr@sewo.io" className="text-[#2C666E] hover:underline">
+                stuartr@sewo.io
+              </a>
+              <p className="text-[#64748b]">+64 27 522 8673</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-8">
+            <h2 className="text-3xl font-bold text-[#0f172a] text-center">
+              Let&apos;s bring Movin&apos; Martin to life
+            </h2>
+            <div className="flex flex-col gap-4 w-full">
+              {[
+                { label: 'Proprietary Technology', desc: 'Custom animation pipeline built for speed and consistency' },
+                { label: 'Rapid Iteration', desc: 'Fast turnarounds on revisions with real-time preview capability' },
+                { label: 'Character Consistency', desc: 'Movin\' Martin looks and feels the same across every episode' },
+                { label: 'Full Service', desc: 'Script to screen, including website, voiceover, and music' },
+              ].map((item) => (
+                <div key={item.label} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4">
+                  <p className="text-[#0f172a] font-semibold text-sm">{item.label}</p>
+                  <p className="text-[#64748b] text-sm">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+            <a
+              href="mailto:stuartr@sewo.io"
+              className="inline-block bg-[#2C666E] hover:bg-[#235158] text-white px-8 py-3 rounded-xl font-semibold transition-colors"
+            >
+              Get in Touch
+            </a>
+          </div>
         </div>
-        <a
-          href="mailto:hello@stitchstudios.app"
-          className="inline-block bg-[#2C666E] hover:bg-[#2C666E]/80 text-white px-8 py-3 rounded-xl font-semibold mt-6 transition-colors"
-        >
-          Get in Touch
-        </a>
       </section>
 
       {/* Section 8: Footer */}
-      <footer className="border-t border-white/10 py-8 px-6 text-center">
+      <footer className="border-t border-[#e2e8f0] py-8 px-6 text-center">
         <p className="text-[#94a3b8] text-xs mb-2">
           This proposal is confidential and prepared exclusively for Hamilton City Council
         </p>
