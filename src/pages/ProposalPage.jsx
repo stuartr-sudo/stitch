@@ -2,33 +2,28 @@ import React, { useEffect, useState } from 'react';
 
 const PROCESS_STEPS = [
   {
-    phase: 'Discovery',
+    phase: 'Discovery & Character Design',
     duration: 'Week 1',
-    description: 'Initial consultation to understand your goals, review existing Movin\' Martin materials, and align on creative direction, tone, and key messaging for each episode.',
-  },
-  {
-    phase: 'Character Design',
-    duration: 'Week 2',
-    description: 'Design and refine the animated Movin\' Martin character to ensure a consistent, appealing look across all episodes. Includes style frames for approval.',
+    description: 'Initial consultation to understand your goals, review existing Movin\' Martin materials, and align on creative direction. Design and refine the animated character with style frames for approval.',
   },
   {
     phase: 'Scriptwriting & Storyboarding',
-    duration: 'Week 2-3',
+    duration: 'Week 1',
     description: 'Develop scripts for all episodes with interactive learning beats, pause-and-ask moments, and road safety messaging. Scripts reviewed and approved before production begins.',
   },
   {
     phase: 'Animation Production',
-    duration: 'Week 3-6',
+    duration: 'Week 1-2',
     description: 'Full animation of all episodes, incorporating approved scripts and character designs. Regular check-ins with progress previews at key milestones.',
   },
   {
     phase: 'Review & Revisions',
-    duration: 'Week 6-7',
+    duration: 'Week 2-3',
     description: 'Two rounds of revisions per episode. Audio, music, captions, and final polish applied. Compilation film assembled from completed episodes.',
   },
   {
     phase: 'Delivery & Handover',
-    duration: 'Week 8',
+    duration: 'Week 3',
     description: 'Final delivery of all assets in MP4 and web-optimised formats. Website launch with admin backend. Training session for content management.',
   },
 ];
