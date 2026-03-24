@@ -22,21 +22,109 @@ import {
   Grid3X3,
   Layers,
   X,
+  Tag,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
 
 /**
+ * TagDropdown - Inline tag assignment popover shown on MediaCard hover
+ */
+function TagDropdown({ item, allTags, onAssign, onUnassign, onCreate, onClose }) {
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const itemTagIds = new Set((item._tags || []).map(t => t.id));
+
+  const handleToggle = (tag) => {
+    if (itemTagIds.has(tag.id)) {
+      onUnassign(item.id, tag.id);
+    } else {
+      onAssign([item.id], [tag.id]);
+    }
+  };
+
+  const handleCreate = async () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    setIsCreating(true);
+    const tag = await onCreate(name);
+    if (tag) {
+      await onAssign([item.id], [tag.id]);
+      setNewTagName('');
+    }
+    setIsCreating(false);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="absolute top-8 right-0 z-50 w-52 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="text-[10px] text-zinc-500 uppercase tracking-wider px-1 mb-1.5">Tags</p>
+      <div className="max-h-40 overflow-y-auto space-y-0.5 mb-2">
+        {allTags.length === 0 && (
+          <p className="text-xs text-zinc-500 px-1 py-1">No tags yet — create one below</p>
+        )}
+        {allTags.map(tag => (
+          <button
+            key={tag.id}
+            onClick={() => handleToggle(tag)}
+            className={`w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
+              itemTagIds.has(tag.id)
+                ? 'bg-teal-600/30 text-teal-300'
+                : 'text-zinc-300 hover:bg-zinc-700'
+            }`}
+          >
+            <span>{tag.name}</span>
+            {itemTagIds.has(tag.id) && <CheckCircle2 className="w-3 h-3" />}
+          </button>
+        ))}
+      </div>
+      <div className="border-t border-zinc-700 pt-2 flex gap-1">
+        <input
+          className="flex-1 bg-zinc-700 text-zinc-200 text-xs px-2 py-1 rounded outline-none placeholder:text-zinc-500"
+          placeholder="New tag..."
+          value={newTagName}
+          onChange={(e) => setNewTagName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+        />
+        <button
+          onClick={handleCreate}
+          disabled={isCreating || !newTagName.trim()}
+          className="p-1.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded transition-colors"
+        >
+          {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * MediaCard - Individual media item with video playback support
  * Displays media in their natural aspect ratios
  */
-function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMultiSelected }) {
+function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMultiSelected, allTags, onAssignTags, onUnassignTag, onCreateTag }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0, aspectRatio: 'landscape' });
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   const mediaUrl = item.url || item.image_url || item.video_url || item.audio_url;
   const thumbnailUrl = item.thumbnail_url || mediaUrl;
@@ -117,7 +205,7 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
       }`}
       onClick={handleItemSelect}
       onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
+      onMouseLeave={() => { setShowControls(false); }}
     >
       <div className={`${isAudio ? 'h-24' : getAspectClass()} bg-slate-900 relative flex items-center justify-center`}>
         {isAudio ? (
@@ -253,6 +341,28 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
 
         {/* Action Buttons */}
         <div className={`absolute top-2 right-2 flex gap-1 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          {/* Tag button */}
+          <div className="relative">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 w-7 p-0"
+              onClick={(e) => { e.stopPropagation(); setShowTagDropdown(prev => !prev); }}
+              title="Manage tags"
+            >
+              <Tag className="w-3.5 h-3.5" />
+            </Button>
+            {showTagDropdown && (
+              <TagDropdown
+                item={item}
+                allTags={allTags}
+                onAssign={onAssignTags}
+                onUnassign={onUnassignTag}
+                onCreate={onCreateTag}
+                onClose={() => setShowTagDropdown(false)}
+              />
+            )}
+          </div>
           <Button size="sm" variant="secondary" className="h-7 w-7 p-0" asChild>
             <a href={mediaUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -282,6 +392,17 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
         <p className="text-[10px] text-slate-400">
           {new Date(item.created_at).toLocaleDateString()}
         </p>
+        {/* Tag chips */}
+        {item._tags?.length > 0 && (
+          <div className="flex flex-wrap gap-0.5 mt-1 px-1">
+            {item._tags.slice(0, 3).map(t => (
+              <span key={t.id} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-400">{t.name}</span>
+            ))}
+            {item._tags.length > 3 && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-500">+{item._tags.length - 3}</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -290,14 +411,19 @@ function MediaCard({ item, isSelected, onSelect, onDelete, multiSelectMode, isMu
 /**
  * MediaGrid — renders the filtered grid of items
  */
-function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoading, canLoadMore, isLoadingMore, onLoadMore, multiSelectMode, multiSelectedIds }) {
+function MediaGrid({ items, searchQuery, activeTags, selectedItem, onSelect, onDelete, isLoading, canLoadMore, isLoadingMore, onLoadMore, multiSelectMode, multiSelectedIds, allTags, onAssignTags, onUnassignTag, onCreateTag }) {
   const filtered = items.filter(item => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      item.title?.toLowerCase().includes(q) ||
-      item.prompt?.toLowerCase().includes(q)
-    );
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = (item.title || item.alt_text || item.prompt || '').toLowerCase().includes(q);
+      const matchesTag = item._tags?.some(t => t.name.toLowerCase().includes(q));
+      if (!matchesTitle && !matchesTag) return false;
+    }
+    if (activeTags.size > 0) {
+      const itemTagIds = new Set((item._tags || []).map(t => t.id));
+      if (![...activeTags].some(tid => itemTagIds.has(tid))) return false;
+    }
+    return true;
   });
 
   if (isLoading) {
@@ -330,6 +456,10 @@ function MediaGrid({ items, searchQuery, selectedItem, onSelect, onDelete, isLoa
             onDelete={onDelete}
             multiSelectMode={multiSelectMode}
             isMultiSelected={multiSelectedIds?.has(item.id)}
+            allTags={allTags}
+            onAssignTags={onAssignTags}
+            onUnassignTag={onUnassignTag}
+            onCreateTag={onCreateTag}
           />
         ))}
       </div>
@@ -373,13 +503,19 @@ export default function LibraryModal({
   const [hasMore, setHasMore] = useState({ images: true, videos: true, audio: true });
   const [offsets, setOffsets] = useState({ images: 0, videos: 0, audio: 0 });
 
+  // Tags
+  const [tags, setTags] = useState([]);
+  const [activeTags, setActiveTags] = useState(new Set());
+
   // Multi-select mode for creating turnaround sheets
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
   const [creatingSheet, setCreatingSheet] = useState(false);
 
+  const open = isOpen || isEmbedded;
+
   useEffect(() => {
-    if (isOpen || isEmbedded) {
+    if (open) {
       setItems([]);
       setOffsets({ images: 0, videos: 0, audio: 0 });
       setHasMore({ images: true, videos: true, audio: true });
@@ -387,15 +523,56 @@ export default function LibraryModal({
     }
   }, [isOpen, isEmbedded]);
 
+  // Fetch all tags
+  const fetchTags = async () => {
+    try {
+      const res = await apiFetch('/api/library/tags');
+      const data = await res.json();
+      if (data.tags) setTags(data.tags);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    fetchTags();
+  }, [open]);
+
+  // Batch-load tags for a set of items (images only — tags only apply to image_library_items)
+  const loadTagsForItems = async (items) => {
+    if (!supabase || items.length === 0) return items;
+    const imageItems = items.filter(i => i.type === 'image');
+    if (imageItems.length === 0) return items;
+    const ids = imageItems.map(i => i.id);
+    try {
+      const { data: links } = await supabase
+        .from('image_tag_links')
+        .select('image_id, tag_id, image_tags(id, name)')
+        .in('image_id', ids);
+
+      const tagMap = {};
+      for (const link of (links || [])) {
+        if (!tagMap[link.image_id]) tagMap[link.image_id] = [];
+        if (link.image_tags) tagMap[link.image_id].push(link.image_tags);
+      }
+
+      return items.map(item => ({
+        ...item,
+        _tags: item.type === 'image' ? (tagMap[item.id] || []) : [],
+      }));
+    } catch {
+      return items;
+    }
+  };
+
   const loadLibrary = async (isInitial = false) => {
     if (isInitial) setIsLoading(true);
     else setIsLoadingMore(true);
 
     if (!supabase) {
       setItems([
-        { id: 1, type: 'image', url: 'https://picsum.photos/400/300?random=1', title: 'Sample Image 1', created_at: new Date().toISOString() },
-        { id: 2, type: 'image', url: 'https://picsum.photos/400/300?random=2', title: 'Sample Image 2', created_at: new Date().toISOString() },
-        { id: 3, type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Sample Video', created_at: new Date().toISOString() },
+        { id: 1, type: 'image', url: 'https://picsum.photos/400/300?random=1', title: 'Sample Image 1', created_at: new Date().toISOString(), _tags: [] },
+        { id: 2, type: 'image', url: 'https://picsum.photos/400/300?random=2', title: 'Sample Image 2', created_at: new Date().toISOString(), _tags: [] },
+        { id: 3, type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Sample Video', created_at: new Date().toISOString(), _tags: [] },
       ]);
       setIsLoading(false);
       return;
@@ -456,13 +633,16 @@ export default function LibraryModal({
 
       results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+      // Batch-load tags for image items
+      const withTags = await loadTagsForItems(results);
+
       if (isInitial) {
-        setItems(results);
+        setItems(withTags);
       } else {
         setItems(prev => {
           // Deduplicate by type+id
           const existingKeys = new Set(prev.map(i => `${i.type}-${i.id}`));
-          const newItems = results.filter(r => !existingKeys.has(`${r.type}-${r.id}`));
+          const newItems = withTags.filter(r => !existingKeys.has(`${r.type}-${r.id}`));
           return [...prev, ...newItems].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         });
       }
@@ -477,6 +657,78 @@ export default function LibraryModal({
       setIsLoadingMore(false);
     }
   };
+
+  // Refresh tags on an item in local state after assign/unassign
+  const refreshItemTags = async (imageId) => {
+    if (!supabase) return;
+    try {
+      const { data: links } = await supabase
+        .from('image_tag_links')
+        .select('image_id, tag_id, image_tags(id, name)')
+        .eq('image_id', imageId);
+      const newTags = (links || []).map(l => l.image_tags).filter(Boolean);
+      setItems(prev => prev.map(item =>
+        item.id === imageId && item.type === 'image'
+          ? { ...item, _tags: newTags }
+          : item
+      ));
+    } catch {}
+  };
+
+  // ─── Tag CRUD ────────────────────────────────────────────────────────────
+
+  const handleAssignTags = async (imageIds, tagIds) => {
+    try {
+      const res = await apiFetch('/api/library/tags/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageIds, tagIds }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { toast.error('Failed to assign tags'); return; }
+      await fetchTags();
+      // Refresh each affected item's tags in local state
+      for (const id of imageIds) await refreshItemTags(id);
+    } catch (err) {
+      toast.error('Failed to assign tags: ' + err.message);
+    }
+  };
+
+  const handleUnassignTag = async (imageId, tagId) => {
+    try {
+      const res = await apiFetch('/api/library/tags/unassign', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId, tagId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { toast.error('Failed to remove tag'); return; }
+      await fetchTags();
+      await refreshItemTags(imageId);
+    } catch (err) {
+      toast.error('Failed to remove tag: ' + err.message);
+    }
+  };
+
+  const handleCreateTag = async (name) => {
+    try {
+      const res = await apiFetch('/api/library/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (data.tag) {
+        setTags(prev => [data.tag, ...prev]);
+        return data.tag;
+      }
+    } catch (err) {
+      toast.error('Failed to create tag: ' + err.message);
+    }
+    return null;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const canLoadMore = hasMore.images || hasMore.videos || hasMore.audio;
 
@@ -624,7 +876,7 @@ export default function LibraryModal({
 
   const content = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-      {/* Search bar + tab filters */}
+      {/* Search bar + tag filter + tab filters */}
       <div className="flex-shrink-0 px-5 py-3 border-b space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
@@ -650,6 +902,35 @@ export default function LibraryModal({
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
           </Button>
         </div>
+
+        {/* Tag filter bar */}
+        {tags.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {tags.map(tag => (
+              <button
+                key={tag.id}
+                onClick={() => setActiveTags(prev => {
+                  const next = new Set(prev);
+                  next.has(tag.id) ? next.delete(tag.id) : next.add(tag.id);
+                  return next;
+                })}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors ${
+                  activeTags.has(tag.id) ? 'bg-teal-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                }`}
+              >
+                {tag.name}{tag.count > 0 && <span className={`ml-1 ${activeTags.has(tag.id) ? 'text-teal-200' : 'text-zinc-400'}`}>{tag.count}</span>}
+              </button>
+            ))}
+            {activeTags.size > 0 && (
+              <button
+                onClick={() => setActiveTags(new Set())}
+                className="shrink-0 px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors bg-zinc-800 text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+        )}
 
         <TabsList className="w-full justify-start bg-slate-100/80 p-1 rounded-lg">
           <TabsTrigger value="all" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
@@ -682,6 +963,7 @@ export default function LibraryModal({
             <MediaGrid
               items={getFilteredByTab(tab)}
               searchQuery={searchQuery}
+              activeTags={activeTags}
               selectedItem={selectedItem}
               onSelect={handleSelect}
               onDelete={handleDelete}
@@ -691,6 +973,10 @@ export default function LibraryModal({
               onLoadMore={() => loadLibrary(false)}
               multiSelectMode={multiSelectMode}
               multiSelectedIds={multiSelectedIds}
+              allTags={tags}
+              onAssignTags={handleAssignTags}
+              onUnassignTag={handleUnassignTag}
+              onCreateTag={handleCreateTag}
             />
           </TabsContent>
         ))}
