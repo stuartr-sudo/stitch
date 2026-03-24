@@ -245,6 +245,11 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [activeSheetId, setActiveSheetId] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // Gallery filters
+  const [filterCharacter, setFilterCharacter] = useState(new Set());
+  const [filterStyle, setFilterStyle] = useState(new Set());
+  const [filterPoseSet, setFilterPoseSet] = useState(new Set());
+
   // Slice & select
   const [showGrid, setShowGrid] = useState(true);
   const [selectedCells, setSelectedCells] = useState(new Set());
@@ -323,6 +328,30 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       !c.referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
     );
 
+  // ─── Gallery filter helpers ────────────────────────────────────────────────
+
+  const toggleFilter = (current, setter, value) => {
+    setter(prev => {
+      const next = new Set(prev);
+      next.has(value) ? next.delete(value) : next.add(value);
+      return next;
+    });
+  };
+
+  const filteredSheets = sheets.filter(s => {
+    if (filterCharacter.size > 0 && !filterCharacter.has(s.character?.name)) return false;
+    if (filterStyle.size > 0 && !filterStyle.has(s.style)) return false;
+    if (filterPoseSet.size > 0 && !filterPoseSet.has(s.poseSet)) return false;
+    return true;
+  });
+
+  const groupedByCharacter = {};
+  for (const sheet of filteredSheets) {
+    const name = sheet.character?.name || 'Character';
+    if (!groupedByCharacter[name]) groupedByCharacter[name] = [];
+    groupedByCharacter[name].push(sheet);
+  }
+
   // ─── Wizard navigation ────────────────────────────────────────────────────
 
   const currentStepIndex = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
@@ -369,6 +398,9 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       setSelectedBrand(null);
       setSheets([]);
       setActiveSheetId(null);
+      setFilterCharacter(new Set());
+      setFilterStyle(new Set());
+      setFilterPoseSet(new Set());
       setShowGrid(true);
       setSelectedCells(new Set());
       setCellImages([]);
@@ -1350,74 +1382,146 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         {wizardStep === 'results' && !activeSheetId && (
           <>
             <div className="flex-1 overflow-y-auto p-5">
-              <div className={`grid ${sheets.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-2'} gap-4`}>
-                {sheets.map(sheet => (
-                  <div key={sheet.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-700">{sheet.styleText}</span>
-                      {sheet.generating && (
-                        <span className="text-[10px] text-[#2C666E] font-medium flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" /> Generating...
-                        </span>
+              {/* Filter bar — only show when multiple dimensions exist */}
+              {(characters.length > 1 || selectedStyles.length > 1 || selectedPoseSets.length > 1) && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {[...new Set(sheets.map(s => s.character?.name))].filter(Boolean).map(name => (
+                    <button key={`c-${name}`} onClick={() => toggleFilter(filterCharacter, setFilterCharacter, name)}
+                      className={`px-2.5 py-1 rounded-full text-xs ${filterCharacter.has(name) ? 'bg-teal-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+                      {name}
+                    </button>
+                  ))}
+                  {selectedStyles.length > 1 && [...new Set(sheets.map(s => s.styleText))].map(styleText => (
+                    <button key={`s-${styleText}`} onClick={() => toggleFilter(filterStyle, setFilterStyle, sheets.find(s => s.styleText === styleText)?.style)}
+                      className={`px-2.5 py-1 rounded-full text-xs ${filterStyle.has(sheets.find(s => s.styleText === styleText)?.style) ? 'bg-purple-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+                      {styleText}
+                    </button>
+                  ))}
+                  {selectedPoseSets.length > 1 && [...new Set(sheets.map(s => s.poseSetName))].filter(Boolean).map(psName => (
+                    <button key={`p-${psName}`} onClick={() => toggleFilter(filterPoseSet, setFilterPoseSet, sheets.find(s => s.poseSetName === psName)?.poseSet)}
+                      className={`px-2.5 py-1 rounded-full text-xs ${filterPoseSet.has(sheets.find(s => s.poseSetName === psName)?.poseSet) ? 'bg-orange-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+                      {psName}
+                    </button>
+                  ))}
+                  {sheets.some(s => s.error) && (
+                    <button onClick={retryAllFailed} className="px-2.5 py-1 rounded-full text-xs bg-red-600 text-white hover:bg-red-500">
+                      Retry All Failed
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Grouped sections by character */}
+              {Object.entries(groupedByCharacter).map(([charName, charSheets]) => {
+                const complete = charSheets.filter(s => s.imageUrl).length;
+                const total = charSheets.length;
+                return (
+                  <div key={charName} className="mb-6">
+                    {Object.keys(groupedByCharacter).length > 1 && (
+                      <h3 className="text-sm font-medium text-zinc-300 mb-2">
+                        {charName} ({complete}/{total} complete)
+                      </h3>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {charSheets.map(sheet => (
+                        <div key={sheet.id}
+                          onClick={() => !sheet.generating && sheet.imageUrl && setActiveSheetId(sheet.id)}
+                          className={`relative rounded-lg overflow-hidden border cursor-pointer transition-all ${
+                            activeSheetId === sheet.id ? 'border-teal-500 ring-1 ring-teal-500' : 'border-zinc-700 hover:border-zinc-500'
+                          }`}>
+                          {sheet.generating ? (
+                            <div className="aspect-[2/3] flex items-center justify-center bg-zinc-800">
+                              <Loader2 className="animate-spin w-6 h-6 text-teal-400" />
+                            </div>
+                          ) : sheet.error ? (
+                            <div className="aspect-[2/3] flex flex-col items-center justify-center bg-zinc-800 p-2 text-center">
+                              <p className="text-xs text-red-400 mb-2 line-clamp-3">{sheet.error}</p>
+                              <button onClick={(e) => { e.stopPropagation(); retrySheet(sheet.id); }}
+                                className="text-xs text-teal-400 hover:underline">Retry</button>
+                            </div>
+                          ) : (
+                            <img src={sheet.imageUrl} alt="" className="w-full aspect-[2/3] object-cover" />
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                            <p className="text-[10px] text-zinc-300 truncate">{sheet.styleText}</p>
+                            {sheet.poseSetName && sheet.poseSetName !== 'Standard 24' && (
+                              <p className="text-[10px] text-zinc-500 truncate">{sheet.poseSetName}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Fallback: show all sheets flat when no filter grouping applies (backwards compat for old sheets without character) */}
+              {Object.keys(groupedByCharacter).length === 0 && sheets.length > 0 && (
+                <div className={`grid ${sheets.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-2'} gap-4`}>
+                  {sheets.map(sheet => (
+                    <div key={sheet.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                      <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-700">{sheet.styleText}</span>
+                        {sheet.generating && (
+                          <span className="text-[10px] text-[#2C666E] font-medium flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+                          </span>
+                        )}
+                        {sheet.imageUrl && (
+                          <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Ready
+                          </span>
+                        )}
+                        {sheet.error && (
+                          <span className="text-[10px] text-red-500 font-medium flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Failed
+                          </span>
+                        )}
+                      </div>
+                      {sheet.generating && !sheet.imageUrl && (
+                        <div className="flex flex-col items-center justify-center py-16 px-4">
+                          <div className="relative mb-4">
+                            <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
+                            <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-[#2C666E] animate-spin" />
+                            <RotateCcw className="absolute inset-0 m-auto w-5 h-5 text-[#2C666E]" />
+                          </div>
+                          <p className="text-xs text-slate-400">30–90 seconds per sheet</p>
+                          <span className="text-xs font-mono text-slate-500 mt-1">{formatTime(elapsedSeconds)}</span>
+                        </div>
                       )}
                       {sheet.imageUrl && (
-                        <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Ready
-                        </span>
+                        <div className="relative group cursor-pointer" onClick={() => setActiveSheetId(sheet.id)}>
+                          <img src={sheet.imageUrl} alt={`Turnaround — ${sheet.styleText}`}
+                            className="w-full h-auto block" crossOrigin="anonymous" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-semibold bg-[#2C666E] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                              <Eye className="w-4 h-4" /> View & Edit
+                            </span>
+                          </div>
+                        </div>
                       )}
-                      {sheet.error && (
-                        <span className="text-[10px] text-red-500 font-medium flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Failed
-                        </span>
+                      {sheet.error && !sheet.generating && (
+                        <div className="flex flex-col items-center justify-center py-12 px-4 text-slate-400">
+                          <AlertCircle className="w-8 h-8 mb-2 text-red-300" />
+                          <p className="text-xs text-red-500 text-center">{sheet.error}</p>
+                        </div>
+                      )}
+                      {sheet.imageUrl && (
+                        <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+                          <button onClick={() => setActiveSheetId(sheet.id)}
+                            className="text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] flex items-center gap-1">
+                            <Grid3X3 className="w-3 h-3" /> Grid & Slice
+                          </button>
+                          <button onClick={() => handleDownload(sheet.imageUrl)}
+                            className="text-[10px] font-medium text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                            <Download className="w-3 h-3" /> Download
+                          </button>
+                        </div>
                       )}
                     </div>
-
-                    {sheet.generating && !sheet.imageUrl && (
-                      <div className="flex flex-col items-center justify-center py-16 px-4">
-                        <div className="relative mb-4">
-                          <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
-                          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-[#2C666E] animate-spin" />
-                          <RotateCcw className="absolute inset-0 m-auto w-5 h-5 text-[#2C666E]" />
-                        </div>
-                        <p className="text-xs text-slate-400">30–90 seconds per sheet</p>
-                        <span className="text-xs font-mono text-slate-500 mt-1">{formatTime(elapsedSeconds)}</span>
-                      </div>
-                    )}
-
-                    {sheet.imageUrl && (
-                      <div className="relative group cursor-pointer" onClick={() => setActiveSheetId(sheet.id)}>
-                        <img src={sheet.imageUrl} alt={`Turnaround — ${sheet.styleText}`}
-                          className="w-full h-auto block" crossOrigin="anonymous" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-semibold bg-[#2C666E] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-                            <Eye className="w-4 h-4" /> View & Edit
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {sheet.error && !sheet.generating && (
-                      <div className="flex flex-col items-center justify-center py-12 px-4 text-slate-400">
-                        <AlertCircle className="w-8 h-8 mb-2 text-red-300" />
-                        <p className="text-xs text-red-500 text-center">{sheet.error}</p>
-                      </div>
-                    )}
-
-                    {sheet.imageUrl && (
-                      <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
-                        <button onClick={() => setActiveSheetId(sheet.id)}
-                          className="text-[10px] font-medium text-[#2C666E] hover:text-[#07393C] flex items-center gap-1">
-                          <Grid3X3 className="w-3 h-3" /> Grid & Slice
-                        </button>
-                        <button onClick={() => handleDownload(sheet.imageUrl)}
-                          className="text-[10px] font-medium text-slate-500 hover:text-slate-700 flex items-center gap-1">
-                          <Download className="w-3 h-3" /> Download
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Gallery Footer */}
