@@ -825,6 +825,29 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     updateCellField(index, 'editPreview', null);
   };
 
+  // ─── Auto-tag helper ─────────────────────────────────────────────────────
+
+  const autoTagSheet = async (imageId, sheet) => {
+    try {
+      await apiFetch('/api/library/tags/auto-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageId,
+          tagNames: [
+            sheet.character?.name,
+            'turnaround',
+            sheet.styleText,
+            sheet.poseSetName,
+          ].filter(Boolean),
+        }),
+      });
+    } catch (err) {
+      console.warn('[Turnaround] Auto-tag failed:', err.message);
+      // Non-blocking — don't fail the save
+    }
+  };
+
   // ─── Save cells for LoRA ──────────────────────────────────────────────────
 
   const handleSaveCellsForLora = async () => {
@@ -851,7 +874,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
             }),
           });
           const data = await res.json();
-          if (data.saved || data.duplicate || data.url) saved++;
+          if (data.saved || data.duplicate || data.url) {
+            saved++;
+            if (data.id && activeSheet) autoTagSheet(data.id, activeSheet);
+          }
         } catch (err) {
           console.warn(`Failed to save ${cell.label}:`, err.message);
         }
@@ -920,7 +946,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
             }),
           });
           const data = await res.json();
-          if (data.saved || data.duplicate || data.url) savedCells++;
+          if (data.saved || data.duplicate || data.url) {
+            savedCells++;
+            if (data.id && activeSheet) autoTagSheet(data.id, activeSheet);
+          }
         } catch {}
       }
 
@@ -937,6 +966,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       });
       const compData = await compRes.json();
       const hostedUrl = compData.url || compositeDataUrl;
+      if (compData.id && activeSheet) autoTagSheet(compData.id, activeSheet);
 
       setReassembledUrl(hostedUrl);
       toast.success(`Saved ${savedCells} cells + reassembled sheet to library!`);
@@ -984,7 +1014,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
             body: JSON.stringify({ url: canvas.toDataURL('image/png'), type: 'image', title: `Turnaround — ${getCellLabels(activeSheet?.poseSet)[ci]}`, prompt: characters[0]?.description, source: 'turnaround-lora' }),
           });
           const data = await res.json();
-          if (data.saved || data.duplicate || data.url) saved++;
+          if (data.saved || data.duplicate || data.url) {
+            saved++;
+            if (data.id && activeSheet) autoTagSheet(data.id, activeSheet);
+          }
         } catch {}
       }
       toast.success(`Saved ${saved}/${selectedCells.size} cells!`);
