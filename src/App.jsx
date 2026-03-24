@@ -89,6 +89,7 @@ function App() {
           <Route path="/setup" element={<Navigate to="/" replace />} />
 
           {/* Public proposal pages — no auth, isolated from app */}
+          <Route path="/proposal" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
           <Route path="/proposals" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
           <Route path="/proposal/hamilton-city-council" element={<ProposalPage />} />
 
