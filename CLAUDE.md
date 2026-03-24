@@ -115,6 +115,27 @@ All env vars documented in `.env.example`. Canonical names:
 - The password for the proposal page (`TraceyGrayson`) is hardcoded in `ProposalPage.jsx` — client-side only, not secure. It's a convenience gate, not real auth.
 - CampaignsNewPage `handleGenerateScript` must check `res.ok` and `data.error` before accessing `data.script.scenes`. The preview-script API returns `{ script, niche }` on success but `{ error }` on failure — without the check, errors fall through silently and the UI does nothing.
 - `ProposalPage` uses a `PasswordGate` → `ProposalContent` split. `useScrollAnimation` must run inside `ProposalContent` (not the parent), otherwise `[data-animate]` elements are invisible after unlock because the IntersectionObserver fires before content mounts.
+- The `[Verification Required]` Stop callback comes from Claude Preview's `<verification_workflow>` system prompt, not an editable hook file. It fires when code is edited while a preview server is running. Override behavior via the Verification Rules section below.
+- 5 Radix UI packages are installed but unused: `react-dropdown-menu`, `react-progress`, `react-slider`, `react-switch`, `react-tooltip`. Safe to remove.
+- Dead code files (never imported): `src/pages/ShortsWizardPage.jsx`, `src/pages/SetupKeys.jsx`, `src/components/modals/StoryboardPlannerModal.jsx`. Don't route to or extend these.
+- `src/lib/api.js` `apiFetch` never checks `response.ok` — 4xx/5xx responses are silently parsed as success data. Any error handling on the frontend must account for this.
+
+## Verification Rules
+
+Verification (build check, screenshot, snapshot, etc.) is **NOT required** for:
+- Comment additions or removals
+- Formatting or whitespace changes
+- Import reordering
+- Variable renaming with no logic change
+- Documentation updates
+
+Verification **IS required** for:
+- Bug fixes
+- New features or endpoints
+- Refactoring that changes logic
+- Dependency changes
+- Config changes that affect runtime behavior
+- Database migrations or RLS policy changes
 
 ## Deployment
 
