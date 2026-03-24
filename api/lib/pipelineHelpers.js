@@ -85,7 +85,8 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
 
     if (status === 'COMPLETED') return data.output;
     // response_url returns the result directly when done (no status field)
-    if (!status && data.images) return data;
+    // Check for common result shapes: images (image gen), audio (TTS), video (animation)
+    if (!status && (data.images || data.audio || data.video || data.output)) return data;
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
     if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
