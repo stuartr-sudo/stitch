@@ -111,6 +111,8 @@ All env vars documented in `.env.example`. Canonical names:
 - Imagineer has its own `STYLE_PROMPTS` map (~100 styles) in `api/imagineer/generate.js` — these are separate from the 14 visual styles in `api/lib/visualStyles.js` (which are for Shorts only). Don't confuse the two.
 - The `/api/imagineer/result` poller uses a model-to-endpoint map and truncates FAL paths to 2 segments for queue URLs. Edit models get a `-edit` suffix appended to the model ID so the poller resolves the correct endpoint.
 - `cost_ledger` categories map to providers on the dashboard: `openai` → OpenAI, `fal` → FAL.ai, `wavespeed` → Wavespeed, `elevenlabs` → FAL.ai (goes through FAL proxy). Use these exact category strings when calling `logCost()`.
+- Proposal page HCC logo uses an external SVG (`upload.wikimedia.org`). If it breaks, the fallback is in Supabase storage at `images/proposals/hamilton-cc-logo.png` (low-res).
+- The password for the proposal page (`TraceyGrayson`) is hardcoded in `ProposalPage.jsx` — client-side only, not secure. It's a convenience gate, not real auth.
 - CampaignsNewPage `handleGenerateScript` must check `res.ok` and `data.error` before accessing `data.script.scenes`. The preview-script API returns `{ script, niche }` on success but `{ error }` on failure — without the check, errors fall through silently and the UI does nothing.
 - `ProposalPage` uses a `PasswordGate` → `ProposalContent` split. `useScrollAnimation` must run inside `ProposalContent` (not the parent), otherwise `[data-animate]` elements are invisible after unlock because the IntersectionObserver fires before content mounts.
 
@@ -118,3 +120,4 @@ All env vars documented in `.env.example`. Canonical names:
 
 - **Primary**: Fly.io (`fly.toml`) — Sydney region, Express serves both API and built frontend on port 3000.
 - **Fly.io only** — Never use Vercel.
+- Fly.io deploys can fail with lease conflicts if a previous deploy is still rolling out. Wait ~60s and retry `fly deploy`.
