@@ -34,11 +34,11 @@ A new tag system for the image library supports the feature by enabling characte
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `image_id` | uuid | FK → library images table, NOT NULL |
-| `tag_id` | uuid | FK → `image_tags`, NOT NULL |
+| `image_id` | uuid | FK → `image_library_items.id`, NOT NULL, ON DELETE CASCADE |
+| `tag_id` | uuid | FK → `image_tags.id`, NOT NULL, ON DELETE CASCADE |
 
 - PK on `(image_id, tag_id)`.
-- RLS: users can only read/write links for their own images.
+- RLS: users can only read/write links for their own images (join through `image_library_items.user_id`).
 
 ### 1.2 API Endpoints
 
@@ -50,27 +50,28 @@ All authenticated via existing `authenticateToken` middleware.
 | POST | `/api/library/tags` | `{ name }` | `{ tag: { id, name } }` — returns existing if name matches (case-insensitive) |
 | POST | `/api/library/tags/assign` | `{ imageIds: [], tagIds: [] }` | `{ success: true }` — bulk assign |
 | DELETE | `/api/library/tags/unassign` | `{ imageId, tagId }` | `{ success: true }` |
+| POST | `/api/library/tags/auto-tag` | `{ imageId, tagNames: [] }` | `{ success: true, tags: [...] }` — creates tags if they don't exist + assigns, all in one transaction |
 
 ### 1.3 Library UI Changes
 
-- **Tag filter bar** below the existing search bar — horizontal scrollable row of tag pills. Click to toggle filter (multi-select = AND). Active tags highlighted.
+- **Tag filter bar** below the existing search bar — horizontal scrollable row of tag pills. Click to toggle filter. Selecting multiple tags within the bar uses OR (show images matching any selected tag). Active tags highlighted.
 - **Search bar** searches both image titles AND tag names. Typing "kai" surfaces images tagged "Kai" even if the title doesn't match.
 - **Image card tags** — small chips on each card showing assigned tags. "+" button opens tag assignment popover.
 - **Tag assignment popover** — search field at top, existing tags as clickable pills below, "Create new" option at bottom of list. New tags are immediately available for future use.
 
 ### 1.4 Auto-Tagging from Turnaround
 
-When a turnaround sheet completes generation, it is saved to the library with these tags automatically created/assigned:
+When a turnaround sheet is saved to the library, the **backend** calls the auto-tag endpoint to assign tags in one transaction:
 - Character name (e.g., "Kai")
 - `"turnaround"`
 - Style name (e.g., "pixel-art")
 - Pose set name (e.g., "action-heavy")
 
-Tags are created if they don't exist yet for the user.
+Tags are created if they don't exist yet for the user. This happens server-side after the image is saved — the frontend does not need to make separate tagging calls.
 
 ---
 
-## 2. Multi-Character Step (Wizard Step 1)
+## 2. Multi-Character — Wizard Step 1 (Character) — Extended
 
 ### 2.1 State Change
 
@@ -108,7 +109,7 @@ Each character rendered as a card within a vertical list:
 
 ---
 
-## 3. Pose Set Presets (Wizard Step 2)
+## 3. Pose Set Presets — Wizard Step 2 (Style & Model) — Extended
 
 ### 3.1 Data File
 
@@ -126,12 +127,24 @@ Each preset:
   name: string,         // e.g., 'Standard 24'
   description: string,  // short UI description
   thumbnail: string,    // path in public/assets/pose-sets/
-  rows: [               // 6 entries, each with 4 cell labels
-    { label: 'Row 1 — Turnaround', cells: ['front view', '3/4 front view', 'side profile view', 'back view'] },
+  rows: [               // 6 entries, each with 4 cells
+    {
+      label: 'Row 1 — Turnaround',
+      cells: [
+        { prompt: 'front view', shortLabel: 'Front' },
+        { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
+        { prompt: 'side profile view', shortLabel: 'Side' },
+        { prompt: 'back view', shortLabel: 'Back' },
+      ]
+    },
     // ... 5 more rows
   ]
 }
 ```
+
+Each cell has both a `prompt` string (used in the generation prompt) and a `shortLabel` string (used for grid overlay text, library save titles, and cell editor labels). This keeps display labels compact (e.g., "Front", "Wing Spread") while prompt text stays descriptive.
+
+Frontend mirror: `src/lib/turnaroundPoseSets.js` — duplicated file with a sync comment, following the same pattern as `api/lib/visualStyles.js` / `src/lib/visualStylePresets.js`.
 
 ### 3.2 Five Presets
 
@@ -182,12 +195,9 @@ Each preset:
 - Each card shows thumbnail + name + short description.
 - Default: `standard-24` pre-selected.
 
-### 3.4 API
+### 3.4 Shared Data Strategy
 
-- `GET /api/turnaround/pose-sets` — returns `listPoseSets()` (all presets). Optional but useful if we want to avoid bundling pose set data in the frontend.
-- Alternatively, expose via a shared module imported by both frontend and backend. Given the data is static and small, a shared import is simpler.
-
-Decision: **Shared import** — frontend imports from `src/lib/turnaroundPoseSets.js` (mirror of backend file, or single source if build supports it). No API endpoint needed for V1.
+Frontend mirror: `src/lib/turnaroundPoseSets.js` is a duplicated file with a comment at the top noting it must stay in sync with `api/lib/turnaroundPoseSets.js`. This follows the existing pattern used by `visualStyles.js` / `visualStylePresets.js`. No API endpoint needed for V1.
 
 ---
 
@@ -220,15 +230,17 @@ Each sheet object:
 
 Model is global — `selectedModel` applies to all sheets.
 
-### 4.2 Soft Warning
+### 4.2 Concurrency & Soft Warning
 
-Before firing, if `sheets.length > 10`:
+**Concurrency limit**: Maximum 4 concurrent API calls. Sheets beyond the first 4 are queued and dispatched as earlier calls complete. This prevents overwhelming FAL.ai rate limits and the Express server connection pool.
+
+**Soft warning**: Before firing, if `sheets.length > 10`, show a confirmation dialog:
 
 ```
 "This will generate 24 sheets (2 characters × 4 styles × 3 pose sets). Continue?"
 ```
 
-Shown as a confirmation dialog (AlertDialog). No hard cap. Below 10: no warning, generates immediately.
+Shown as an AlertDialog. No hard cap. Below 10: no warning, generates immediately.
 
 ### 4.3 API Call
 
@@ -239,7 +251,7 @@ Each sheet fires `/api/imagineer/turnaround` with:
   referenceImageUrl: sheet.character.referenceImageUrl || undefined,
   style: sheet.styleText,
   poseSet: sheet.poseSet,          // NEW — pose set ID
-  characterName: sheet.character.name, // NEW — for tagging
+  characterName: sheet.character.name, // NEW — for auto-tagging on save
   props: propsLabels,
   model: selectedModel,
   negativePrompt: combinedNegativePrompt,
@@ -249,16 +261,20 @@ Each sheet fires `/api/imagineer/turnaround` with:
 
 ### 4.4 Backend Changes
 
-`buildTurnaroundPrompt` signature adds `poseSet` parameter:
+**`buildTurnaroundPrompt` signature** adds `poseSet` parameter:
 ```js
 function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide, poseSet })
 ```
 
-Row definitions: instead of hardcoded Row 1–6 strings, looks up `getPoseSetById(poseSet).rows` and formats each as `Row N — {label}: {cells.join(', ')}`.
+**Row definitions**: Instead of hardcoded Row 1–6 strings, looks up `getPoseSetById(poseSet).rows` and formats each as `Row N — {row.label}: {row.cells.map(c => c.prompt).join(', ')}`.
 
-Everything else in the function stays identical — negative prompt handling, style rendering, props, reference note, brand guide, keyword suffixes.
+**Negative prompt expression conflict resolution**: Only applied when `poseSet === 'standard-24'` (the only preset with the original Row 2 expression cells). For all other pose sets, the negative prompt is still placed at the start and end of the prompt (the "CRITICAL INSTRUCTION" wrapper), but the per-cell expression swapping logic is skipped — the broader negative prompt instruction is sufficient for non-standard layouts.
 
-`CELL_LABELS` becomes dynamic on the frontend — derived from the pose set's `rows` flattened into 24 labels. Used by the slice/edit step.
+**`characterName` usage**: The backend handler receives `characterName` and passes it through to the save/auto-tag flow. When the generated image is saved to the library, the handler calls the auto-tag transaction with `[characterName, 'turnaround', styleName, poseSetName]`.
+
+Everything else in the function stays identical — style rendering, props, reference note, brand guide, keyword suffixes.
+
+**`CELL_LABELS`** becomes dynamic on the frontend — derived from the pose set's `rows` flattened: `poseSet.rows.flatMap(r => r.cells.map(c => c.shortLabel))`. Used by the slice/edit step and grid overlay.
 
 ---
 
@@ -280,7 +296,7 @@ Each sheet card shows:
 - Thumbnail (or spinner if generating)
 - Style label
 - Pose set label
-- Error state if failed
+- Error state if failed + **"Retry"** button on failed sheets
 
 ### 5.2 Filter Bar
 
@@ -289,15 +305,20 @@ Horizontal pill row above the groups:
 - **Style**: toggle pills for each selected style
 - **Pose Set**: toggle pills for each selected pose set
 
-Filters are AND within category, OR across categories (standard faceted filtering).
+Filters use standard faceted filtering: **OR within a category** (selecting "Kai" and "Mira" shows both), **AND across categories** (Character=Kai AND Style=pixel-art shows only Kai's pixel-art sheets).
 
-### 5.3 Detail/Slice/Edit
+### 5.3 Retry Failed
 
-Clicking a sheet enters the existing detail view. `CELL_LABELS` for the slice grid comes from the sheet's pose set (not a global constant). All other cell editing, reassembly, and save logic unchanged.
+- Individual "Retry" button on each failed sheet card — re-fires that single sheet's API call.
+- **"Retry All Failed"** button in the filter bar (visible when any sheets have errors) — re-fires all failed sheets, respecting the concurrency limit.
 
-### 5.4 Auto-Tagging on Save
+### 5.4 Detail/Slice/Edit
 
-When a completed sheet is saved to library (either automatically or via user action), tags are assigned:
+Clicking a sheet enters the existing detail view. `CELL_LABELS` for the slice grid comes from the sheet's pose set (`shortLabel` values), not a global constant. All other cell editing, reassembly, and save logic unchanged.
+
+### 5.5 Auto-Tagging on Save
+
+When a completed sheet is saved to library, the backend auto-tags via the `/api/library/tags/auto-tag` endpoint:
 - Character name
 - `"turnaround"`
 - Style name
@@ -309,13 +330,14 @@ When a completed sheet is saved to library (either automatically or via user act
 
 | File | Change |
 |------|--------|
-| `api/lib/turnaroundPoseSets.js` | **NEW** — 5 pose set presets, `getPoseSetById()`, `listPoseSets()` |
-| `src/lib/turnaroundPoseSets.js` | **NEW** — frontend mirror (or shared source) |
-| `api/imagineer/turnaround.js` | `buildTurnaroundPrompt` accepts `poseSet`, dynamic row lookup. Handler accepts `poseSet` + `characterName` fields. |
-| `src/components/modals/TurnaroundSheetWizard.jsx` | Multi-character state, pose set selector, permutation generation, grouped results, dynamic cell labels, auto-tagging |
+| `api/lib/turnaroundPoseSets.js` | **NEW** — 5 pose set presets with `prompt` + `shortLabel` per cell, `getPoseSetById()`, `listPoseSets()` |
+| `src/lib/turnaroundPoseSets.js` | **NEW** — frontend mirror (duplicated, sync comment) |
+| `api/imagineer/turnaround.js` | `buildTurnaroundPrompt` accepts `poseSet`, dynamic row lookup, expression conflict only for `standard-24`. Handler accepts `poseSet` + `characterName`, triggers auto-tagging on save. |
+| `src/components/modals/TurnaroundSheetWizard.jsx` | Multi-character state, pose set selector, permutation generation with concurrency limit, grouped results with filters, retry failed, dynamic cell labels |
 | `api/library/tags.js` | **NEW** — CRUD endpoints for tags |
 | `api/library/tags-assign.js` | **NEW** — assign/unassign endpoints |
-| `server.js` | Register new tag routes |
+| `api/library/tags-auto.js` | **NEW** — atomic auto-tag endpoint (create-if-not-exists + assign) |
+| `server.js` | Register new tag routes + auto-tag route |
 | `src/components/library/` | Tag filter bar, tag pills on cards, tag assignment popover, search integration |
 | `public/assets/pose-sets/` | **NEW** — 5 thumbnail images for pose set cards |
 | Supabase migration | **NEW** — `image_tags` + `image_tag_links` tables with RLS |
