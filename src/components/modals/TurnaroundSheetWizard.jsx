@@ -204,9 +204,9 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [completedSteps, setCompletedSteps] = useState([]);
 
   // Form
-  const [characterDescription, setCharacterDescription] = useState(DEFAULT_CHARACTER_DESC);
-  const [referenceImageUrl, setReferenceImageUrl] = useState("");
-  const [referencePreview, setReferencePreview] = useState("");
+  const [characters, setCharacters] = useState([
+    { id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: '', referencePreview: '' }
+  ]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
   const [selectedStyles, setSelectedStyles] = useState([]);
@@ -215,6 +215,25 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
   const [selectedBrand, setSelectedBrand] = useState(null);
+
+  const updateCharacter = (id, field, value) => {
+    setCharacters(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
+
+  const addCharacter = () => {
+    setCharacters(prev => [...prev, {
+      id: `char-${Date.now()}`,
+      name: '',
+      description: '',
+      referenceImageUrl: '',
+      referencePreview: '',
+    }]);
+  };
+
+  const removeCharacter = (id) => {
+    if (characters.length <= 1) return;
+    setCharacters(prev => prev.filter(c => c.id !== id));
+  };
 
   // AI analysis
   const [analyzingRef, setAnalyzingRef] = useState(false);
@@ -245,7 +264,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  const describeCharacter = async (hostedUrl) => {
+  const describeCharacter = async (charId, hostedUrl) => {
     setAnalyzingRef(true);
     try {
       const res = await apiFetch('/api/imagineer/describe-character', {
@@ -255,7 +274,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       });
       const data = await res.json();
       if (data.description) {
-        setCharacterDescription(data.description);
+        updateCharacter(charId, 'description', data.description);
         toast.success('Character analyzed! Description auto-filled.');
       } else if (data.error) {
         toast.error('Could not analyze character: ' + data.error);
@@ -288,9 +307,11 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     );
   };
 
-  const canGenerate = characterDescription.trim() && selectedStyles.length > 0 && !(
-    !referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
-  );
+  const canGenerate = characters.every(c => c.name.trim() && c.description.trim())
+    && selectedStyles.length > 0
+    && !characters.some(c =>
+      !c.referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
+    );
 
   // ─── Wizard navigation ────────────────────────────────────────────────────
 
@@ -329,7 +350,6 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     if (isOpen) {
       setWizardStep('character');
       setCompletedSteps([]);
-      setCharacterDescription(DEFAULT_CHARACTER_DESC);
       setSelectedStyles([]);
       setSelectedModel("nano-banana-2-edit");
       setSelectedProps([]);
@@ -353,14 +373,13 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       if (timerRef.current) clearInterval(timerRef.current);
 
       if (initialImage) {
-        setReferenceImageUrl(initialImage);
-        setReferencePreview(initialImage);
+        const initCharId = `char-${Date.now()}`;
+        setCharacters([{ id: initCharId, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: initialImage, referencePreview: initialImage }]);
         setUploadingRef(false);
         setAnalyzingRef(false);
-        describeCharacter(initialImage);
+        describeCharacter(initCharId, initialImage);
       } else {
-        setReferenceImageUrl("");
-        setReferencePreview("");
+        setCharacters([{ id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: '', referencePreview: '' }]);
         setUploadingRef(false);
         setAnalyzingRef(false);
       }
@@ -425,8 +444,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   // ─── File upload ──────────────────────────────────────────────────────────
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUploadForChar = async (charId, file) => {
     if (!file || !file.type.startsWith('image/')) {
       if (file) toast.error('Please select an image file.');
       return;
@@ -434,7 +452,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const dataUrl = ev.target.result;
-      setReferencePreview(dataUrl);
+      updateCharacter(charId, 'referencePreview', dataUrl);
       setUploadingRef(true);
       try {
         const res = await apiFetch('/api/library/save', {
@@ -444,13 +462,13 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         });
         const data = await res.json();
         if (data.url) {
-          setReferenceImageUrl(data.url);
+          updateCharacter(charId, 'referenceImageUrl', data.url);
           toast.success('Reference image uploaded — analyzing character...');
-          describeCharacter(data.url);
+          describeCharacter(charId, data.url);
         } else throw new Error(data.error || 'Upload failed');
       } catch (err) {
         toast.error('Upload failed: ' + err.message);
-        setReferencePreview('');
+        updateCharacter(charId, 'referencePreview', '');
       } finally {
         setUploadingRef(false);
       }
@@ -458,16 +476,11 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     reader.readAsDataURL(file);
   };
 
-  const clearReferenceImage = () => {
-    setReferenceImageUrl('');
-    setReferencePreview('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   // ─── Generate (parallel per style) ────────────────────────────────────────
 
   const handleGenerate = async () => {
-    if (!characterDescription.trim()) { toast.error("Please describe your character."); return; }
+    const primaryChar = characters[0];
+    if (!primaryChar?.description.trim()) { toast.error("Please describe your character."); return; }
     if (selectedStyles.length === 0) { toast.error("Select at least one style."); return; }
 
     const newSheets = selectedStyles.map((style, i) => ({
@@ -501,8 +514,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              characterDescription: characterDescription.trim(),
-              referenceImageUrl: referenceImageUrl.trim() || undefined,
+              characterDescription: primaryChar.description.trim(),
+              referenceImageUrl: primaryChar.referenceImageUrl.trim() || undefined,
               style: sheet.styleText.trim(),
               props: propsLabels.length > 0 ? propsLabels : undefined,
               model: selectedModel,
@@ -722,7 +735,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
               url: cell.url,
               type: 'image',
               title: `${titlePrefix} — ${cell.label}`,
-              prompt: characterDescription,
+              prompt: characters[0]?.description,
               source: 'turnaround-lora',
             }),
           });
@@ -791,7 +804,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
               url: cell.url,
               type: 'image',
               title: `${titlePrefix} — ${cell.label}`,
-              prompt: characterDescription,
+              prompt: characters[0]?.description,
               source: 'turnaround-cell',
             }),
           });
@@ -818,7 +831,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       toast.success(`Saved ${savedCells} cells + reassembled sheet to library!`);
 
       if (onImageCreated) {
-        onImageCreated({ imageUrl: hostedUrl, type: 'turnaround-sheet', description: characterDescription });
+        onImageCreated({ imageUrl: hostedUrl, type: 'turnaround-sheet', description: characters[0]?.description });
       }
     } catch (err) {
       console.error('[Turnaround] Reassemble error:', err);
@@ -857,7 +870,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           const res = await apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: canvas.toDataURL('image/png'), type: 'image', title: `Turnaround — ${CELL_LABELS[ci]}`, prompt: characterDescription, source: 'turnaround-lora' }),
+            body: JSON.stringify({ url: canvas.toDataURL('image/png'), type: 'image', title: `Turnaround — ${CELL_LABELS[ci]}`, prompt: characters[0]?.description, source: 'turnaround-lora' }),
           });
           const data = await res.json();
           if (data.saved || data.duplicate || data.url) saved++;
@@ -942,93 +955,79 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         {wizardStep === 'character' && (
           <>
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="max-w-2xl mx-auto space-y-6">
+              <div className="max-w-2xl mx-auto space-y-4">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => {
+                  const charId = typeof showLibrary === 'string' ? showLibrary : characters[0]?.id;
+                  handleFileUploadForChar(charId, e.target.files?.[0]);
+                  e.target.value = '';
+                }} className="hidden" />
 
-                {/* Character Description */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-semibold text-slate-700">
-                      Character Description <span className="text-red-500">*</span>
-                    </Label>
-                    {referenceImageUrl && (
-                      <button onClick={() => describeCharacter(referenceImageUrl)} disabled={analyzingRef}
-                        className="flex items-center gap-1.5 text-sm font-medium text-[#2C666E] hover:text-[#07393C] disabled:opacity-50">
-                        {analyzingRef
-                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</>
-                          : <><Sparkles className="w-4 h-4" /> Re-analyze reference</>}
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Textarea value={characterDescription} onChange={(e) => setCharacterDescription(e.target.value)}
-                      placeholder="e.g., A young woman with shoulder-length red hair, freckles, wearing a dark green hoodie, black jeans, and white sneakers, athletic build"
-                      rows={6}
-                      className={`bg-white text-sm ${analyzingRef ? 'opacity-60' : ''}`} disabled={analyzingRef} />
-                    {analyzingRef && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-md">
-                        <div className="flex items-center gap-2 text-[#2C666E]">
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span className="text-sm font-medium">Analyzing character...</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-400 mt-1.5">
-                    {analyzingRef ? 'AI vision is describing your character...'
-                      : referenceImageUrl ? 'Auto-filled from reference. Edit freely.'
-                      : 'Describe the character only — the turnaround prompt is built automatically.'}
-                  </p>
-                </div>
-
-                {/* Reference Image */}
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700 mb-2 block">Reference Image (optional)</Label>
-                  {(referencePreview || referenceImageUrl) ? (
-                    <div className="flex items-start gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                      <div className="relative flex-shrink-0">
-                        <img src={referencePreview || referenceImageUrl} alt="Reference"
-                          className="w-32 h-32 object-cover rounded-lg border border-slate-200" onError={(e) => { e.target.src = ''; }} />
-                        {uploadingRef && (
-                          <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center">
-                            <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-600 font-medium mb-1">
-                          {uploadingRef ? 'Uploading...' : analyzingRef ? 'Analyzing...' : 'Reference loaded'}
-                        </p>
-                        <p className="text-sm text-slate-400">
-                          {analyzingRef ? 'AI is describing your character...' : 'Description auto-filled from this image.'}
-                        </p>
-                        <button onClick={clearReferenceImage}
-                          className="mt-2 text-sm text-red-500 hover:text-red-700 flex items-center gap-1">
-                          <X className="w-4 h-4" /> Remove
-                        </button>
-                      </div>
+                {characters.map((char, idx) => (
+                  <div key={char.id} className="border border-zinc-700 rounded-lg p-4 space-y-3 bg-slate-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">Character {idx + 1}</span>
+                      {characters.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => removeCharacter(char.id)}
+                          className="text-red-400 hover:text-red-300 h-7 px-2">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex gap-3">
-                        <div onClick={() => fileInputRef.current?.click()}
-                          className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                          <Upload className="w-5 h-5 text-slate-400" />
-                          <span className="text-sm text-slate-500">Upload</span>
+                    <Input
+                      placeholder="Character name (e.g., Kai)"
+                      value={char.name}
+                      onChange={e => updateCharacter(char.id, 'name', e.target.value)}
+                      className="bg-white border-slate-300"
+                    />
+                    <textarea
+                      rows={4}
+                      placeholder="Describe this character's appearance in detail..."
+                      value={char.description}
+                      onChange={e => updateCharacter(char.id, 'description', e.target.value)}
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#2C666E]"
+                    />
+                    {/* Reference image section */}
+                    <div className="flex items-center gap-2">
+                      {char.referencePreview ? (
+                        <div className="relative w-16 h-16 rounded overflow-hidden border border-slate-300">
+                          <img src={char.referencePreview} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => { updateCharacter(char.id, 'referenceImageUrl', ''); updateCharacter(char.id, 'referencePreview', ''); }}
+                            className="absolute top-0 right-0 bg-black/60 p-0.5 rounded-bl">
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                          {uploadingRef && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded">
+                              <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
+                            </div>
+                          )}
                         </div>
-                        <div onClick={() => setShowLibrary(true)}
-                          className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
-                          <FolderOpen className="w-5 h-5 text-slate-400" />
-                          <span className="text-sm text-slate-500">Library</span>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setShowLibrary(char.id);
+                          }} className="text-xs gap-1">
+                            <FolderOpen className="w-3.5 h-3.5" /> Library
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setShowLibrary(char.id);
+                            fileInputRef.current?.click();
+                          }} className="text-xs gap-1">
+                            <Upload className="w-3.5 h-3.5" /> Upload
+                          </Button>
                         </div>
-                      </div>
-                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                      <Input value={referenceImageUrl}
-                        onChange={(e) => { setReferenceImageUrl(e.target.value); setReferencePreview(e.target.value); }}
-                        onBlur={(e) => { const url = e.target.value.trim(); if (url?.startsWith('http')) describeCharacter(url); }}
-                        placeholder="https://... paste a reference image URL" className="bg-white text-sm h-9" />
+                      )}
+                      {char.referenceImageUrl && (
+                        <Button variant="outline" size="sm" onClick={() => describeCharacter(char.id, char.referenceImageUrl)}
+                          disabled={analyzingRef} className="text-xs gap-1">
+                          {analyzingRef ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</> : <><Sparkles className="w-3 h-3" /> Analyze</>}
+                        </Button>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
+                <Button variant="outline" onClick={addCharacter} className="w-full mt-3 border-dashed border-slate-400 text-slate-600">
+                  + Add Character
+                </Button>
               </div>
             </div>
 
@@ -1039,7 +1038,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={goNext} disabled={!characterDescription.trim() || analyzingRef || uploadingRef}
+                <Button onClick={goNext} disabled={!characters.every(c => c.name.trim() && c.description.trim()) || analyzingRef || uploadingRef}
                   className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-2">
                   Next: Style & Model <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -1077,7 +1076,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                 </div>
 
                 {/* Warning if no ref + model needs it */}
-                {!referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
+                {characters.some(c => !c.referenceImageUrl) && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
                   <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-md">
                     <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-800">
@@ -1626,14 +1625,15 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     </SlideOverPanel>
 
     <LibraryModal
-      isOpen={showLibrary}
+      isOpen={!!showLibrary}
       onClose={() => setShowLibrary(false)}
       onSelect={(item) => {
-        setReferenceImageUrl(item.url);
-        setReferencePreview(item.url);
+        const charId = typeof showLibrary === 'string' ? showLibrary : characters[0]?.id;
+        updateCharacter(charId, 'referenceImageUrl', item.url);
+        updateCharacter(charId, 'referencePreview', item.url);
         setShowLibrary(false);
         toast.success('Reference image selected — analyzing character...');
-        describeCharacter(item.url);
+        describeCharacter(charId, item.url);
       }}
       mediaType="images"
     />
