@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const PROCESS_STEPS = [
   {
@@ -134,10 +134,57 @@ function StitchLogo({ size = 'large' }) {
   );
 }
 
+function PasswordGate({ children }) {
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('proposal_unlocked') === '1');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === 'TraceyGrayson') {
+      sessionStorage.setItem('proposal_unlocked', '1');
+      setUnlocked(true);
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  if (unlocked) return children;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white px-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');`}</style>
+      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6 w-full max-w-sm">
+        <StitchLogo size="small" />
+        <p className="text-[#64748b] text-sm text-center">Enter the password to view this proposal</p>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          autoFocus
+          className={`w-full px-4 py-3 border rounded-xl text-center text-[#0f172a] outline-none transition-colors ${
+            error ? 'border-red-400 bg-red-50' : 'border-[#e2e8f0] focus:border-[#2C666E]'
+          }`}
+        />
+        <button
+          type="submit"
+          className="w-full bg-[#2C666E] hover:bg-[#235158] text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+        >
+          View Proposal
+        </button>
+        {error && <p className="text-red-500 text-sm">Incorrect password</p>}
+      </form>
+    </div>
+  );
+}
+
 export default function ProposalPage() {
   useScrollAnimation();
 
   return (
+    <PasswordGate>
     <div className="min-h-screen" style={{ backgroundColor: '#ffffff', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -490,5 +537,6 @@ export default function ProposalPage() {
         <p className="text-[#94a3b8] text-xs">Prepared March 2026</p>
       </footer>
     </div>
+    </PasswordGate>
   );
 }
