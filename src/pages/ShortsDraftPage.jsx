@@ -12,7 +12,7 @@ import { apiFetch } from '@/lib/api';
 import YouTubePublishModal from '@/components/modals/YouTubePublishModal';
 
 export default function ShortsDraftPage() {
-  const { draftId } = useParams();
+  const { draftId } = useParams(); // may be a draft ID or campaign ID
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -21,35 +21,111 @@ export default function ShortsDraftPage() {
   const [error, setError] = useState(null);
   const [showYouTubePublish, setShowYouTubePublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [playingClip, setPlayingClip] = useState(null); // scene index of currently playing clip
+  const [playingClip, setPlayingClip] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null); // track pipeline progress
+  const [jobStep, setJobStep] = useState(null);
 
-  // ── Fetch draft ──────────────────────────────────────────────────────────────
+  // ── Fetch draft (tries draft ID first, then campaign_id, then polls job) ───
   useEffect(() => {
     if (!draftId || !user) return;
+    let cancelled = false;
+    let pollTimer = null;
 
     async function fetchDraft() {
       setLoading(true);
       try {
-        const { data, error: fetchErr } = await supabase
+        // 1) Try by draft ID
+        const { data: byId } = await supabase
           .from('ad_drafts')
           .select('*')
           .eq('id', draftId)
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (fetchErr || !data) {
-          setError('Draft not found');
+        if (!cancelled && byId) { setDraft(byId); setLoading(false); return; }
+
+        // 2) Try by campaign_id (pipeline creates draft with campaign_id column)
+        const { data: byCampaign } = await supabase
+          .from('ad_drafts')
+          .select('*')
+          .eq('campaign_id', draftId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!cancelled && byCampaign) { setDraft(byCampaign); setLoading(false); return; }
+
+        // 3) Draft doesn't exist yet — check if there's a running job for this campaign
+        const { data: job } = await supabase
+          .from('jobs')
+          .select('id, status, current_step, total_steps, completed_steps, last_error')
+          .eq('campaign_id', draftId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!cancelled && job && (job.status === 'running' || job.status === 'pending')) {
+          setJobStatus(job.status);
+          setJobStep(job.current_step);
+          setLoading(false);
+          // Poll until job completes and draft appears
+          pollTimer = setInterval(async () => {
+            if (cancelled) return;
+            // Check for draft
+            const { data: newDraft } = await supabase
+              .from('ad_drafts')
+              .select('*')
+              .eq('campaign_id', draftId)
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (newDraft) {
+              clearInterval(pollTimer);
+              if (!cancelled) { setDraft(newDraft); setJobStatus(null); }
+              return;
+            }
+            // Update job status
+            const { data: updatedJob } = await supabase
+              .from('jobs')
+              .select('status, current_step, completed_steps, last_error')
+              .eq('campaign_id', draftId)
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (!cancelled && updatedJob) {
+              setJobStatus(updatedJob.status);
+              setJobStep(updatedJob.current_step);
+              if (updatedJob.status === 'failed') {
+                clearInterval(pollTimer);
+                setError(`Generation failed at step: ${updatedJob.current_step}${updatedJob.last_error ? ` — ${typeof updatedJob.last_error === 'string' ? updatedJob.last_error : updatedJob.last_error.message || JSON.stringify(updatedJob.last_error)}` : ''}`);
+              }
+            }
+          }, 5000);
           return;
         }
-        setDraft(data);
+
+        // 4) Job failed or doesn't exist
+        if (!cancelled) {
+          if (job?.status === 'failed') {
+            setError(`Generation failed at step: ${job.current_step}${job.last_error ? ` — ${typeof job.last_error === 'string' ? job.last_error : job.last_error.message || JSON.stringify(job.last_error)}` : ''}`);
+          } else {
+            setError('Draft not found');
+          }
+          setLoading(false);
+        }
       } catch (err) {
-        setError(err.message || 'Failed to load draft');
+        if (!cancelled) setError(err.message || 'Failed to load draft');
       } finally {
-        setLoading(false);
+        if (!cancelled && !pollTimer) setLoading(false);
       }
     }
 
     fetchDraft();
+    return () => { cancelled = true; if (pollTimer) clearInterval(pollTimer); };
   }, [draftId, user]);
 
   // ── Publish handler ──────────────────────────────────────────────────────────
@@ -91,6 +167,35 @@ export default function ShortsDraftPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
+      </div>
+    );
+  }
+
+  // ── Generating state (pipeline running, draft not yet created) ───────────
+  if (!draft && jobStatus && !error) {
+    const stepLabels = {
+      research: 'Researching topic…',
+      script: 'Writing script…',
+      images: 'Generating images…',
+      videos: 'Animating scenes…',
+      voiceover: 'Creating voiceover…',
+      music: 'Generating music…',
+      captions: 'Adding captions…',
+      assembly: 'Assembling video…',
+      finalizing: 'Finalizing draft…',
+    };
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-6">
+        <Loader2 className="w-10 h-10 animate-spin text-[#2C666E]" />
+        <div className="text-center space-y-2">
+          <p className="text-lg font-semibold text-slate-800">Generating your Short…</p>
+          <p className="text-sm text-slate-500">
+            {stepLabels[jobStep] || `Step: ${jobStep || 'starting'}…`}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/campaigns')} className="text-slate-400">
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Campaigns
+        </Button>
       </div>
     );
   }
