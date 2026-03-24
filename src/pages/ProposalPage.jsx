@@ -157,7 +157,7 @@ export default function ProposalPage() {
       {/* Section 1: Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 py-24">
         {/* Partnership logos */}
-        <div className="flex items-center gap-8 mb-14">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 mb-14">
           <img
             src="https://upload.wikimedia.org/wikipedia/commons/9/92/Hamilton_City_Council_logo.svg"
             alt="Hamilton City Council"
