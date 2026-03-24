@@ -156,18 +156,15 @@ export default function ProposalPage() {
 
       {/* Section 1: Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 py-24">
-        {/* Partnership logos — grid ensures × is dead-center on page */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-8 mb-14 w-full px-6">
-          <div className="flex justify-end">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/9/92/Hamilton_City_Council_logo.svg"
-              alt="Hamilton City Council"
-              style={{ height: 44, width: 'auto' }}
-            />
-          </div>
+        {/* Partnership logos */}
+        <div className="flex items-center gap-8 mb-14">
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/9/92/Hamilton_City_Council_logo.svg"
+            alt="Hamilton City Council"
+            style={{ height: 44, width: 'auto' }}
+          />
           <span className="text-[#cbd5e1] text-2xl font-light">&times;</span>
-          <div className="flex justify-start">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
               <svg
                 width="36"
                 height="44"
@@ -196,7 +193,6 @@ export default function ProposalPage() {
                   Animation &amp; Media
                 </span>
               </div>
-            </div>
           </div>
         </div>
 
