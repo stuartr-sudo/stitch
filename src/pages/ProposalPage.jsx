@@ -293,20 +293,20 @@ function ProposalContent() {
           {/* Right: Cards in staircase stack */}
           <div className="flex flex-col gap-3">
             {[
-              { label: '7 Episodes', sub: 'Character intro + 5 themed + compilation', indent: 0, bg: '#eef2ff', border: '#c7d2fe', accent: '#4338ca' },
-              { label: '3:30 Feature Film', sub: 'Full compilation edit', indent: 1, bg: '#ecfdf5', border: '#a7f3d0', accent: '#059669' },
-              { label: 'Primary School', sub: 'Ages 5 to 12 target audience', indent: 2, bg: '#fef3c7', border: '#fcd34d', accent: '#b45309' },
-              { label: 'Workbook Integration', sub: 'Reinforced classroom learning', indent: 3, bg: '#fce7f3', border: '#f9a8d4', accent: '#be185d' },
-              { label: 'Active Travel Focus', sub: 'Walking, biking, scooting to school', indent: 4, bg: '#e0f2fe', border: '#7dd3fc', accent: '#0369a1' },
-              { label: "Movin' Martin Website", sub: 'Public site with admin backend for content management', indent: 5, bg: '#f3e8ff', border: '#d8b4fe', accent: '#7c3aed' },
+              { label: '7 Episodes', sub: 'Character intro + 5 themed + compilation', indent: 0, opacity: 0.08 },
+              { label: '3:30 Feature Film', sub: 'Full compilation edit', indent: 1, opacity: 0.12 },
+              { label: 'Primary School', sub: 'Ages 5 to 12 target audience', indent: 2, opacity: 0.16 },
+              { label: 'Workbook Integration', sub: 'Reinforced classroom learning', indent: 3, opacity: 0.20 },
+              { label: 'Active Travel Focus', sub: 'Walking, biking, scooting to school', indent: 4, opacity: 0.25 },
+              { label: "Movin' Martin Website", sub: 'Public site with admin backend for content management', indent: 5, opacity: 0.30 },
             ].map((card) => (
               <div
                 key={card.label}
-                className="rounded-xl p-4 border"
-                style={{ marginLeft: `${card.indent * 16}px`, backgroundColor: card.bg, borderColor: card.border }}
+                className="rounded-xl p-4 border border-[#2C666E]/20"
+                style={{ marginLeft: `${card.indent * 16}px`, backgroundColor: `rgba(44, 102, 110, ${card.opacity})` }}
               >
-                <p className="font-bold" style={{ color: card.accent }}>{card.label}</p>
-                <p className="text-sm" style={{ color: card.accent, opacity: 0.7 }}>{card.sub}</p>
+                <p className="font-bold text-[#0f172a]">{card.label}</p>
+                <p className="text-sm text-[#2C666E]">{card.sub}</p>
               </div>
             ))}
           </div>
