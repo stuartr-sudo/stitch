@@ -545,9 +545,5 @@ function ProposalContent() {
 }
 
 export default function ProposalPage() {
-  return (
-    <PasswordGate>
-      <ProposalContent />
-    </PasswordGate>
-  );
+  return <ProposalContent />;
 }

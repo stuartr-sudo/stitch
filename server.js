@@ -898,6 +898,12 @@ async function pollWithBackoff() {
   setTimeout(pollWithBackoff, nextDelay);
 }
 
+// Static proposal pages — served as plain HTML (no React/JS required)
+// This ensures government/corporate networks that block JS bundles can still view proposals
+app.get('/proposal/hamilton-city-council', (req, res) => {
+  res.sendFile(join(__dirname, 'dist', 'proposal', 'hamilton-city-council.html'));
+});
+
 // Serve Vite build output
 app.use(express.static(join(__dirname, 'dist')));
 
