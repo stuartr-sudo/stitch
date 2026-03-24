@@ -68,6 +68,7 @@ const WIZARD_STEPS = [
   { key: 'story', label: 'Story & Mood' },
   { key: 'story-chat', label: 'Story Builder' },
   { key: 'style', label: 'Visual Style' },
+  { key: 'video-style', label: 'Video Style' },
   { key: 'scene-builder', label: 'Scene Builder' },
   { key: 'characters', label: 'Characters' },
   { key: 'generating', label: 'Generate' },
@@ -133,6 +134,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const [style, setStyle] = useState('cinematic');
   const [defaultDuration, setDefaultDuration] = useState(5);
   const [aspectRatio, setAspectRatio] = useState('16:9');
+
+  // Video style state
+  const [videoStyle, setVideoStyle] = useState('');
+  const [videoStylesList, setVideoStylesList] = useState([]);
 
   // Step 1 settings
   const [storyboardName, setStoryboardName] = useState('');
@@ -261,6 +266,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       setChatHistory([]);
       setExpandedScene(0);
       setVeoReferenceImages([]);
+      setVideoStyle('');
     }
   }, [isOpen]);
 
@@ -271,6 +277,13 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       analyzeStartFrame(initialImage);
     }
   }, [isOpen, initialImage]);
+
+  // Fetch video styles when that step becomes active
+  useEffect(() => {
+    if (step === 'video-style' && videoStylesList.length === 0) {
+      apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
+    }
+  }, [step]);
 
   // ── Helpers ──
 
@@ -681,6 +694,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     if (overallMood) prompt += `. Mood: ${overallMood}`;
     if (builderLighting) prompt += `. Lighting: ${builderLighting}`;
     if (builderColorGrade) prompt += `. Color grade: ${builderColorGrade}`;
+    const selectedVideoStylePreset = videoStylesList.find(s => s.key === videoStyle);
+    if (selectedVideoStylePreset?.prompt) {
+      prompt += `. Video style: ${selectedVideoStylePreset.prompt}`;
+    }
 
     const formData = new FormData();
     formData.append('prompt', prompt);
@@ -1274,6 +1291,34 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           </div>
         )}
 
+        {/* ── Step 4: Video Style ── */}
+        {step === 'video-style' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Choose the motion and cinematography style for your video scenes.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {videoStylesList.map(s => (
+                <button key={s.key} onClick={() => setVideoStyle(videoStyle === s.key ? '' : s.key)}
+                  className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                  {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" loading="lazy" />}
+                  <div className="p-2">
+                    <div className="text-xs font-medium text-slate-700">{s.label}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                  </div>
+                </button>
+              ))}
+              {videoStylesList.length === 0 && (
+                <div className="col-span-3 py-8 text-center text-sm text-gray-400">Loading video styles…</div>
+              )}
+            </div>
+            {videoStyle && (
+              <p className="text-xs text-[#2C666E] font-medium">
+                Selected: {videoStylesList.find(s => s.key === videoStyle)?.label}
+                <button onClick={() => setVideoStyle('')} className="ml-2 text-gray-400 hover:text-gray-600 underline">Clear</button>
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── Step 5: Characters (conditional — only if ref models selected) ── */}
         {step === 'characters' && (
           <div className="space-y-4">
@@ -1431,6 +1476,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                 onImportFromLibrary={() => {
                   setShowLibraryForStartFrame(true);
                 }}
+                onGenerateStartImage={() => setShowImagineerForStartFrame(true)}
                 onUploadVideoSource={() => {
                   const input = document.createElement('input');
                   input.type = 'file';

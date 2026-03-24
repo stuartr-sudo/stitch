@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronRight, Upload, Video, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Upload, Video, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SceneModelSelector, { SCENE_MODELS } from './SceneModelSelector';
 
@@ -58,6 +58,7 @@ export default function SceneCard({
   onToggleExpand,
   onUploadStartImage,
   onImportFromLibrary,
+  onGenerateStartImage,
   onUploadVideoSource,
   onUploadEndImage,
 }) {
@@ -169,6 +170,9 @@ export default function SceneCard({
                   </Button>
                   <Button variant="outline" size="sm" onClick={onImportFromLibrary}>
                     <ImageIcon className="w-3.5 h-3.5" /> Library
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onGenerateStartImage}>
+                    <Sparkles className="w-3.5 h-3.5" /> Generate
                   </Button>
                 </div>
               )}
