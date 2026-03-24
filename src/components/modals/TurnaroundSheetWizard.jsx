@@ -18,6 +18,7 @@ import { getPromptText } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import WizardStepper from "@/components/ui/WizardStepper";
+import { POSE_SETS, getPoseSetById } from '@/lib/turnaroundPoseSets';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -210,6 +211,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
   const [selectedStyles, setSelectedStyles] = useState([]);
+  const [selectedPoseSets, setSelectedPoseSets] = useState(['standard-24']);
   const [selectedModel, setSelectedModel] = useState("nano-banana-2-edit");
   const [selectedProps, setSelectedProps] = useState([]);
   const [selectedNegPills, setSelectedNegPills] = useState([]);
@@ -309,6 +311,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   const canGenerate = characters.every(c => c.name.trim() && c.description.trim())
     && selectedStyles.length > 0
+    && selectedPoseSets.length > 0
     && !characters.some(c =>
       !c.referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
     );
@@ -351,6 +354,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       setWizardStep('character');
       setCompletedSteps([]);
       setSelectedStyles([]);
+      setSelectedPoseSets(['standard-24']);
       setSelectedModel("nano-banana-2-edit");
       setSelectedProps([]);
       setSelectedNegPills([]);
@@ -1057,6 +1061,38 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                 <div>
                   <Label className="text-sm font-semibold text-slate-700 mb-2 block">Art Style <span className="text-red-500">*</span></Label>
                   <StyleGrid value={selectedStyles} onChange={setSelectedStyles} maxHeight="none" multiple columns="grid-cols-4" />
+                </div>
+
+                {/* Pose Sets */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Pose Sets</label>
+                  <p className="text-xs text-slate-500">Choose one or more pose layouts for the turnaround grid</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {POSE_SETS.map(ps => {
+                      const selected = selectedPoseSets.includes(ps.id);
+                      return (
+                        <button
+                          key={ps.id}
+                          onClick={() => {
+                            setSelectedPoseSets(prev => {
+                              if (prev.includes(ps.id)) {
+                                if (prev.length <= 1) { toast.info('At least one pose set required'); return prev; }
+                                return prev.filter(id => id !== ps.id);
+                              }
+                              return [...prev, ps.id];
+                            });
+                          }}
+                          className={`relative rounded-lg border-2 p-3 text-left transition-all ${
+                            selected ? 'border-[#2C666E] bg-[#2C666E]/10' : 'border-slate-200 bg-white hover:border-slate-400'
+                          }`}
+                        >
+                          <img src={ps.thumbnail} alt={ps.name} className="w-full h-20 object-cover rounded mb-2 bg-slate-100" />
+                          <p className="text-sm font-medium text-slate-800">{ps.name}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{ps.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Model Selector */}
