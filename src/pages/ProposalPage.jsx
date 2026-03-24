@@ -271,34 +271,37 @@ function ProposalContent() {
 
       {/* Section 2: Project Vision */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <div className="grid md:grid-cols-2 gap-12">
-          <div>
-            <h2 className="text-3xl font-bold mb-6 text-[#0f172a]">Project Vision</h2>
-            <p className="text-[#64748b] leading-relaxed">
-              An animated series featuring Movin&apos; Martin, a lovable dog mascot who
-              promotes road safety and active travel for primary school children. The series combines
-              interactive learning moments inspired by Dora the Explorer, where Martin pauses to ask
-              questions, reinforced by companion workbooks for classroom use. A unique focus on active
-              travel (walking, biking, and scooting to school) sets this apart from existing road
-              safety programmes.
-            </p>
-          </div>
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-[#0f172a]">Project Vision</h2>
+          <p className="text-[#64748b] leading-loose">
+            An animated series featuring Movin&apos; Martin, a lovable dog mascot who
+            promotes road safety and active travel for primary school children.
+          </p>
+          <p className="text-[#64748b] leading-loose mt-4">
+            The series combines interactive learning moments inspired by Dora the Explorer,
+            where Martin pauses to ask questions, reinforced by companion workbooks for
+            classroom use.
+          </p>
+          <p className="text-[#64748b] leading-loose mt-4">
+            A unique focus on active travel (walking, biking, and scooting to school) sets
+            this apart from existing road safety programmes.
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-3">
-            {[
-              { label: '7 Episodes', sub: 'Character intro + 5 themed + compilation' },
-              { label: '3:30 Feature Film', sub: 'Full compilation edit' },
-              { label: 'Primary School', sub: 'Ages 5 to 12 target audience' },
-              { label: 'Workbook Integration', sub: 'Reinforced classroom learning' },
-              { label: 'Active Travel Focus', sub: 'Walking, biking, scooting to school' },
-              { label: "Movin' Martin Website", sub: 'Public site with admin backend for content management' },
-            ].map((card) => (
-              <div key={card.label} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4">
-                <p className="text-[#0f172a] font-bold">{card.label}</p>
-                <p className="text-[#64748b] text-sm">{card.sub}</p>
-              </div>
-            ))}
-          </div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto">
+          {[
+            { label: '7 Episodes', sub: 'Character intro + 5 themed + compilation' },
+            { label: '3:30 Feature Film', sub: 'Full compilation edit' },
+            { label: 'Primary School', sub: 'Ages 5 to 12 target audience' },
+            { label: 'Workbook Integration', sub: 'Reinforced classroom learning' },
+            { label: 'Active Travel Focus', sub: 'Walking, biking, scooting to school' },
+            { label: "Movin' Martin Website", sub: 'Public site with admin backend for content management' },
+          ].map((card) => (
+            <div key={card.label} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4">
+              <p className="text-[#0f172a] font-bold">{card.label}</p>
+              <p className="text-[#64748b] text-sm">{card.sub}</p>
+            </div>
+          ))}
         </div>
       </section>
 
