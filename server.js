@@ -278,6 +278,24 @@ app.post('/api/library/update-thumbnail', authenticateToken, async (req, res) =>
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Tag management — specific paths BEFORE the catch-all /api/library/tags
+app.use('/api/library/tags/auto-tag', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-auto.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-auto]', e); return res.status(500).json({ error: e.message }); }
+});
+app.post('/api/library/tags/assign', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-assign.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-assign]', e); return res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/library/tags/unassign', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-assign.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-unassign]', e); return res.status(500).json({ error: e.message }); }
+});
+app.use('/api/library/tags', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags]', e); return res.status(500).json({ error: e.message }); }
+});
+
 // Brand Kit routes (with auth)
 app.post('/api/brand/kit', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/kit.js');
