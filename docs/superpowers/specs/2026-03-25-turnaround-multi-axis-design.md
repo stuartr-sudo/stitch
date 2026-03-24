@@ -61,13 +61,13 @@ All authenticated via existing `authenticateToken` middleware.
 
 ### 1.4 Auto-Tagging from Turnaround
 
-When a turnaround sheet is saved to the library, the **backend** calls the auto-tag endpoint to assign tags in one transaction:
+When a turnaround sheet is saved to the library, the **frontend** calls the `/api/library/tags/auto-tag` endpoint after the save succeeds, passing:
 - Character name (e.g., "Kai")
 - `"turnaround"`
 - Style name (e.g., "pixel-art")
 - Pose set name (e.g., "action-heavy")
 
-Tags are created if they don't exist yet for the user. This happens server-side after the image is saved — the frontend does not need to make separate tagging calls.
+Tags are created if they don't exist yet for the user. This is a non-blocking call — if auto-tagging fails, the save still succeeds. The frontend approach is used because the turnaround handler returns the generated image URL but doesn't perform the library save itself (that happens in the wizard's save flow).
 
 ---
 
