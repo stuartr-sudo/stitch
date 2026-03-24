@@ -57,10 +57,11 @@ export default function ShortsDraftPage() {
         if (!cancelled && byCampaign) { setDraft(byCampaign); setLoading(false); return; }
 
         // 3) Draft doesn't exist yet — check if there's a running job for this campaign
+        //    campaign_id lives inside input_json, use PostgREST JSONB filter
         const { data: job } = await supabase
           .from('jobs')
           .select('id, status, current_step, total_steps, completed_steps, last_error')
-          .eq('campaign_id', draftId)
+          .eq('input_json->>campaign_id', draftId)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -91,7 +92,7 @@ export default function ShortsDraftPage() {
             const { data: updatedJob } = await supabase
               .from('jobs')
               .select('status, current_step, completed_steps, last_error')
-              .eq('campaign_id', draftId)
+              .eq('input_json->>campaign_id', draftId)
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .limit(1)
