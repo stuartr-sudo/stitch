@@ -14,12 +14,13 @@
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
+import { getPoseSetById } from '../lib/turnaroundPoseSets.js';
 
 /**
  * Builds a single cohesive prompt from all structured inputs.
  * This is the ONLY place prompt text is assembled — the frontend sends raw data.
  */
-function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide }) {
+function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide, poseSet }) {
   // Style rendering instructions
   const stylePrompt = (style && style.trim())
     ? `Rendered in ${style.trim()} style with high quality, detailed ${style.trim()} aesthetic throughout every cell`
@@ -35,24 +36,24 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
     ? `The character has the following props/accessories which should appear naturally throughout the poses: ${props.join(', ')}. Incorporate these items into relevant poses — for example, holding, wearing, using, or interacting with them`
     : 'No additional props or accessories — focus purely on the character';
 
-  // Parse negative prompt to filter conflicting expressions from Row 2
-  const negLower = (negativePrompt || '').toLowerCase();
+  // Expression conflict resolution — only for standard-24 which has Row 2 expression cells
+  let expressionCells = ['determined expression', 'joyful laughing expression'];
+  if ((poseSet || 'standard-24') === 'standard-24' && negativePrompt) {
+    const negLower = (negativePrompt || '').toLowerCase();
 
-  // Default Row 2 expressions — filter out any that conflict with the negative prompt
-  const defaultExpressions = [
-    { label: 'determined expression', conflicts: ['angry', 'aggressive', 'fierce', 'intense', 'negative emotion'] },
-    { label: 'joyful laughing expression', conflicts: ['sad', 'negative emotion', 'crying', 'unhappy'] },
-  ];
-  // Replacement expressions if originals are filtered out
-  const safeExpressions = [
-    'calm confident expression',
-    'gentle smile expression',
-    'curious interested expression',
-    'thoughtful expression',
-  ];
+    // Default Row 2 expressions — filter out any that conflict with the negative prompt
+    const defaultExpressions = [
+      { label: 'determined expression', conflicts: ['angry', 'aggressive', 'fierce', 'intense', 'negative emotion'] },
+      { label: 'joyful laughing expression', conflicts: ['sad', 'negative emotion', 'crying', 'unhappy'] },
+    ];
+    // Replacement expressions if originals are filtered out
+    const safeExpressions = [
+      'calm confident expression',
+      'gentle smile expression',
+      'curious interested expression',
+      'thoughtful expression',
+    ];
 
-  let expressionCells = defaultExpressions.map(e => e.label);
-  if (negativePrompt) {
     expressionCells = defaultExpressions.map(e => {
       const isConflicting = e.conflicts.some(c => negLower.includes(c));
       return isConflicting ? null : e.label;
@@ -81,12 +82,22 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
     `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`,
     `Character: ${characterDescription}`,
     propsNote,
-    `Row 1 — Turnaround (Neutral Standing): front view, three-quarter front view, side profile view, back view`,
-    `Row 2 — Expressions & Alternative Back: three-quarter back view, neutral expression close-up, ${expressionCells[0]}, ${expressionCells[1]}`,
-    `Row 3 — Walk Cycles: walk cycle pose A (left foot forward), walk cycle pose B (right foot forward), walking toward viewer, walking away`,
-    `Row 4 — Dynamic & Action: running side view, jumping with arms raised, dynamic hero landing pose, fighting/action stance`,
-    `Row 5 — Still Poses & Interaction: sitting cross-legged, reaching hand outward, carrying an object, leaning against wall casually`,
-    `Row 6 — Special Views & Details: face close-up head and shoulders, hand and accessory detail close-up, bird's-eye view from above, dramatic low angle from below`,
+    // Dynamic rows from pose set
+    ...(() => {
+      const poseSetData = getPoseSetById(poseSet || 'standard-24');
+      return poseSetData.rows.map((row, i) => {
+        // For standard-24 Row 2, use expression-conflict-resolved cells
+        if ((poseSet || 'standard-24') === 'standard-24' && i === 1) {
+          const cells = row.cells.map((c, ci) => {
+            if (ci === 2) return expressionCells[0];
+            if (ci === 3) return expressionCells[1];
+            return c.prompt;
+          });
+          return `Row ${i + 1} — ${row.label}: ${cells.join(', ')}`;
+        }
+        return `Row ${i + 1} — ${row.label}: ${row.cells.map(c => c.prompt).join(', ')}`;
+      });
+    })(),
     refNote,
     `character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference`,
   );
@@ -225,6 +236,8 @@ export default async function handler(req, res) {
     negativePrompt,
     props,
     brandStyleGuide,
+    poseSet,         // NEW
+    characterName,   // NEW — for auto-tagging
   } = req.body;
 
   if (!characterDescription) {
@@ -248,6 +261,7 @@ export default async function handler(req, res) {
     props: Array.isArray(props) ? props : undefined,
     negativePrompt: negPrompt,
     brandStyleGuide: brandStyleGuide || undefined,
+    poseSet,  // NEW
   });
 
   // Validate: edit models REQUIRE a reference image
