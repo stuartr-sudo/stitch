@@ -150,7 +150,7 @@ function PasswordGate({ children }) {
     }
   };
 
-  if (unlocked) return children;
+  if (unlocked) return <>{children}</>;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -180,11 +180,10 @@ function PasswordGate({ children }) {
   );
 }
 
-export default function ProposalPage() {
+function ProposalContent() {
   useScrollAnimation();
 
   return (
-    <PasswordGate>
     <div className="min-h-screen" style={{ backgroundColor: '#ffffff', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -537,6 +536,13 @@ export default function ProposalPage() {
         <p className="text-[#94a3b8] text-xs">Prepared March 2026</p>
       </footer>
     </div>
+  );
+}
+
+export default function ProposalPage() {
+  return (
+    <PasswordGate>
+      <ProposalContent />
     </PasswordGate>
   );
 }
