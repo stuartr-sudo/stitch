@@ -123,6 +123,8 @@ All env vars documented in `.env.example`. Canonical names:
 - `src/lib/api.js` `apiFetch` never checks `response.ok` — 4xx/5xx responses are silently parsed as success data. Any error handling on the frontend must account for this.
 - Three separate style systems exist: (1) Visual Styles (`api/lib/visualStyles.js` — 14 styles, Shorts image generation prompt suffixes), (2) Style Presets (`src/lib/stylePresets.js` — ~130 styles with FAL.ai thumbnails, shared `StyleGrid` component used by Shorts "Look & Feel" step and Storyboard "Visual Style" step), (3) Video Style Presets (`api/lib/videoStylePresets.js` — 32 motion styles, used by Shorts "Motion Style" step and Storyboard "Video Style" step). Don't confuse these — they control different aspects (image look vs motion feel).
 - SceneCard (`src/components/storyboard/SceneCard.jsx`) is a prop-driven extracted component. When adding features to the Storyboard Scene Builder step, add both the prop to SceneCard AND wire it up in StoryboardPlannerWizard where SceneCard is rendered (~line 1411). The Imagineer "Generate" button for starting images uses `onGenerateStartImage` → `setShowImagineerForStartFrame(true)`.
+- After completing code changes, always check if a Fly.io deploy is needed (`git log origin/main..HEAD` for unpushed commits, then `fly deploy`). Previous sessions may have pushed code but not deployed.
+- When resuming from a previous session, check `git log --oneline -5` before re-investigating — work may already be committed. Don't re-verify things that git history confirms are done.
 
 ## Verification Rules
 
