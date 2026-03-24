@@ -186,7 +186,7 @@ const GRID_COLS = 4;
 const GRID_ROWS = 6;
 const TOTAL_CELLS = GRID_COLS * GRID_ROWS;
 
-const CELL_LABELS = [
+const DEFAULT_CELL_LABELS = [
   "Front", "3/4 Front", "Side", "Back",
   "3/4 Back", "Neutral", "Determined", "Joyful",
   "Walk A", "Walk B", "Walk Toward", "Walk Away",
@@ -263,6 +263,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const fileInputRef = useRef(null);
   const pollingIntervalsRef = useRef({});
   const timerRef = useRef(null);
+  const concurrencyRef = useRef({ running: 0, queue: [] });
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -302,6 +303,12 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     ...negPillLabels,
     ...(negativePrompt.trim() ? [negativePrompt.trim()] : []),
   ].join(', ') || undefined;
+
+  const getCellLabels = (poseSetId) => {
+    if (!poseSetId || poseSetId === 'standard-24') return DEFAULT_CELL_LABELS;
+    const ps = getPoseSetById(poseSetId);
+    return ps.rows.flatMap(r => r.cells.map(c => c.shortLabel));
+  };
 
   const toggleNegPill = (val) => {
     setSelectedNegPills(prev =>
@@ -480,23 +487,109 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     reader.readAsDataURL(file);
   };
 
-  // ─── Generate (parallel per style) ────────────────────────────────────────
+  // ─── Generate (cartesian product: characters × styles × pose sets) ──────────
+
+  const fireSheet = async (sheet) => {
+    try {
+      const response = await apiFetch('/api/imagineer/turnaround', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          characterDescription: sheet.character.description.trim(),
+          referenceImageUrl: sheet.character.referenceImageUrl?.trim() || undefined,
+          style: sheet.styleText.trim(),
+          poseSet: sheet.poseSet,
+          characterName: sheet.character.name.trim(),
+          props: propsLabels.length > 0 ? propsLabels : undefined,
+          model: selectedModel,
+          negativePrompt: combinedNegativePrompt,
+          brandStyleGuide: extractBrandStyleData(selectedBrand),
+        }),
+      });
+
+      const text = await response.text();
+      let data;
+      try { data = text ? JSON.parse(text) : {}; } catch {
+        throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
+      }
+      if (!response.ok) throw new Error(data.error || 'Generation failed');
+
+      if (data.imageUrl) {
+        setSheets(prev => prev.map(s => s.id === sheet.id
+          ? { ...s, imageUrl: data.imageUrl, generating: false }
+          : s
+        ));
+        toast.success(`Sheet ready: ${sheet.character.name} / ${sheet.styleText}`);
+      } else if (data.requestId) {
+        setSheets(prev => prev.map(s => s.id === sheet.id
+          ? { ...s, requestId: data.requestId, pollModel: data.model || selectedModel }
+          : s
+        ));
+        startPolling(sheet.id, data.requestId, data.model || selectedModel);
+      } else throw new Error('Unexpected response');
+    } catch (error) {
+      console.error(`[Turnaround] Error for ${sheet.character.name}/${sheet.style}:`, error);
+      setSheets(prev => prev.map(s => s.id === sheet.id
+        ? { ...s, generating: false, error: error.message }
+        : s
+      ));
+      toast.error(`${sheet.character.name} / ${sheet.styleText}: ${error.message}`);
+    }
+  };
+
+  const MAX_CONCURRENT = 4;
+  const enqueueSheets = (sheetsToFire) => {
+    const ref = concurrencyRef.current;
+    ref.queue.push(...sheetsToFire);
+    const processNext = () => {
+      while (ref.running < MAX_CONCURRENT && ref.queue.length > 0) {
+        const s = ref.queue.shift();
+        ref.running++;
+        fireSheet(s).finally(() => { ref.running--; processNext(); });
+      }
+    };
+    processNext();
+  };
 
   const handleGenerate = async () => {
-    const primaryChar = characters[0];
-    if (!primaryChar?.description.trim()) { toast.error("Please describe your character."); return; }
+    if (!characters.every(c => c.name.trim() && c.description.trim())) {
+      toast.error("Every character needs a name and description.");
+      return;
+    }
     if (selectedStyles.length === 0) { toast.error("Select at least one style."); return; }
+    if (selectedPoseSets.length === 0) { toast.error("Select at least one pose set."); return; }
 
-    const newSheets = selectedStyles.map((style, i) => ({
-      id: `${Date.now()}-${i}`,
-      style,
-      styleText: getPromptText(style),
-      generating: true,
-      requestId: null,
-      pollModel: null,
-      imageUrl: null,
-      error: null,
-    }));
+    // Cartesian product: characters × styles × poseSets
+    const newSheets = [];
+    let idx = 0;
+    for (const char of characters) {
+      for (const style of selectedStyles) {
+        for (const psId of selectedPoseSets) {
+          const ps = getPoseSetById(psId);
+          newSheets.push({
+            id: `${Date.now()}-${idx++}`,
+            character: { ...char },
+            style,
+            styleText: getPromptText(style),
+            poseSet: psId,
+            poseSetName: ps.name,
+            generating: true,
+            requestId: null,
+            pollModel: null,
+            imageUrl: null,
+            error: null,
+          });
+        }
+      }
+    }
+
+    // Soft warning if >10 sheets
+    if (newSheets.length > 10) {
+      const confirmed = window.confirm(
+        `This will generate ${newSheets.length} sheets (${characters.length} character${characters.length > 1 ? 's' : ''} × ${selectedStyles.length} style${selectedStyles.length > 1 ? 's' : ''} × ${selectedPoseSets.length} pose set${selectedPoseSets.length > 1 ? 's' : ''}). Continue?`
+      );
+      if (!confirmed) return;
+    }
 
     setSheets(newSheets);
     setActiveSheetId(null);
@@ -504,60 +597,42 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     setCellImages([]);
     setEditingCellIndex(null);
 
-    // Mark config steps completed and advance to results
     markCompleted('character');
     markCompleted('style-model');
     markCompleted('props');
     markCompleted('refinements');
     setWizardStep('results');
 
-    for (const sheet of newSheets) {
-      (async () => {
-        try {
-          const response = await apiFetch('/api/imagineer/turnaround', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              characterDescription: primaryChar.description.trim(),
-              referenceImageUrl: primaryChar.referenceImageUrl.trim() || undefined,
-              style: sheet.styleText.trim(),
-              props: propsLabels.length > 0 ? propsLabels : undefined,
-              model: selectedModel,
-              negativePrompt: combinedNegativePrompt,
-              brandStyleGuide: extractBrandStyleData(selectedBrand),
-            }),
-          });
+    // Reset concurrency queue and fire
+    concurrencyRef.current = { running: 0, queue: [] };
+    enqueueSheets(newSheets);
+  };
 
-          const text = await response.text();
-          let data;
-          try { data = text ? JSON.parse(text) : {}; } catch {
-            throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
-          }
-          if (!response.ok) throw new Error(data.error || 'Generation failed');
+  const retrySheet = (sheetId) => {
+    setSheets(prev => {
+      const sheet = prev.find(s => s.id === sheetId);
+      if (!sheet?.error) return prev;
+      // Reset and re-fire
+      const updated = prev.map(s => s.id === sheetId
+        ? { ...s, generating: true, error: null, requestId: null, imageUrl: null }
+        : s
+      );
+      setTimeout(() => enqueueSheets([{ ...sheet, generating: true, error: null, requestId: null, imageUrl: null }]), 0);
+      return updated;
+    });
+  };
 
-          if (data.imageUrl) {
-            setSheets(prev => prev.map(s => s.id === sheet.id
-              ? { ...s, imageUrl: data.imageUrl, generating: false }
-              : s
-            ));
-            toast.success(`Sheet ready: ${sheet.styleText}`);
-          } else if (data.requestId) {
-            setSheets(prev => prev.map(s => s.id === sheet.id
-              ? { ...s, requestId: data.requestId, pollModel: data.model || selectedModel }
-              : s
-            ));
-            startPolling(sheet.id, data.requestId, data.model || selectedModel);
-          } else throw new Error('Unexpected response');
-        } catch (error) {
-          console.error(`[Turnaround] Error for style ${sheet.style}:`, error);
-          setSheets(prev => prev.map(s => s.id === sheet.id
-            ? { ...s, generating: false, error: error.message }
-            : s
-          ));
-          toast.error(`${sheet.styleText}: ${error.message}`);
-        }
-      })();
-    }
+  const retryAllFailed = () => {
+    setSheets(prev => {
+      const failed = prev.filter(s => s.error);
+      if (failed.length === 0) return prev;
+      const updated = prev.map(s => s.error
+        ? { ...s, generating: true, error: null, requestId: null, imageUrl: null }
+        : s
+      );
+      setTimeout(() => enqueueSheets(failed.map(s => ({ ...s, generating: true, error: null, requestId: null, imageUrl: null }))), 0);
+      return updated;
+    });
   };
 
   // ─── Slice sheet into cells ───────────────────────────────────────────────
@@ -593,7 +668,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         ctx.drawImage(img, Math.round(col * cellW), Math.round(row * cellH), Math.round(cellW), Math.round(cellH), 0, 0, canvas.width, canvas.height);
         cells.push({
           url: canvas.toDataURL('image/png'),
-          label: CELL_LABELS[i],
+          label: getCellLabels(activeSheet?.poseSet)[i],
           deleted: false,
           editing: false,
           editPrompt: '',
@@ -874,7 +949,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           const res = await apiFetch('/api/library/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: canvas.toDataURL('image/png'), type: 'image', title: `Turnaround — ${CELL_LABELS[ci]}`, prompt: characters[0]?.description, source: 'turnaround-lora' }),
+            body: JSON.stringify({ url: canvas.toDataURL('image/png'), type: 'image', title: `Turnaround — ${getCellLabels(activeSheet?.poseSet)[ci]}`, prompt: characters[0]?.description, source: 'turnaround-lora' }),
           });
           const data = await res.json();
           if (data.saved || data.duplicate || data.url) saved++;
@@ -1413,7 +1488,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                             }`}>
                             <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
                               selectedCells.has(i) ? 'bg-[#2C666E] text-white' : 'bg-black/50 text-white/80'
-                            }`}>{CELL_LABELS[i]}</span>
+                            }`}>{getCellLabels(activeSheet?.poseSet)[i]}</span>
                           </div>
                         ))}
                       </div>
