@@ -72,6 +72,8 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Smoosh** (`api/smoosh/`): Image combination/blending tool. **Lens** (`api/lens/`): Image generation endpoint. **Trip** (`api/trip/`): Video restyle. **TryStyle** (`api/trystyle/`): Style try-on with polling. **Audio** (`api/audio/`): Captions, music, and voiceover generation endpoints. **Voice** (`api/voice/` + `api/voices/`): Voice preview and ElevenLabs voice library browsing.
 
+**Proposal Pages** (`src/pages/ProposalPage.jsx`): Password-gated client proposals. `PasswordGate` component checks `sessionStorage` for unlock state; `ProposalContent` renders the actual page. Public route at `/proposal/hamilton-city-council`, with `/proposals` redirecting there. No auth required — password is client-side only (`TraceyGrayson`). HCC logo loaded as SVG from Wikimedia Commons.
+
 **Cost Logger** (`api/lib/costLogger.js`): Tracks per-user API spend across all providers. Called from generation endpoints with model, token counts, and username. Dashboard at `CostDashboardPage.jsx`.
 
 **Shorts Templates** (`api/lib/shortsTemplates.js`): 20 niche definitions for the Shorts pipeline — each has scene structure, music mood, voice pacing, default voice, script system prompt, and visual style. Niches range from AI/Tech to Paranormal/UFO. Used by `api/campaigns/research.js` to validate niche and by the script generator for tone/style. Frontend niche cards with topic counts live in the `NICHES` array in `CampaignsNewPage.jsx`.
@@ -110,6 +112,7 @@ All env vars documented in `.env.example`. Canonical names:
 - The `/api/imagineer/result` poller uses a model-to-endpoint map and truncates FAL paths to 2 segments for queue URLs. Edit models get a `-edit` suffix appended to the model ID so the poller resolves the correct endpoint.
 - `cost_ledger` categories map to providers on the dashboard: `openai` → OpenAI, `fal` → FAL.ai, `wavespeed` → Wavespeed, `elevenlabs` → FAL.ai (goes through FAL proxy). Use these exact category strings when calling `logCost()`.
 - CampaignsNewPage `handleGenerateScript` must check `res.ok` and `data.error` before accessing `data.script.scenes`. The preview-script API returns `{ script, niche }` on success but `{ error }` on failure — without the check, errors fall through silently and the UI does nothing.
+- `ProposalPage` uses a `PasswordGate` → `ProposalContent` split. `useScrollAnimation` must run inside `ProposalContent` (not the parent), otherwise `[data-animate]` elements are invisible after unlock because the IntersectionObserver fires before content mounts.
 
 ## Deployment
 

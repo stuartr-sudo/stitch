@@ -351,17 +351,16 @@ function ProposalContent() {
         <h2 className="text-3xl font-bold mb-2 text-[#0f172a]">Sample Work</h2>
         <p className="text-[#64748b] mb-10">Examples from our animation pipeline</p>
         <div className="grid md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm"
-            >
-              <video className="w-full aspect-video bg-[#f1f5f9]" controls poster="#" src="#placeholder" />
-              <p className="p-4 text-xs text-[#64748b]">
-                Sample animation. Final style will be tailored to Movin&apos; Martin
-              </p>
-            </div>
-          ))}
+          <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
+            <video
+              className="w-full aspect-video bg-[#f1f5f9]"
+              controls
+              src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/videos/library/video-studio-extend-1773998121905-g1wiq3.mp4"
+            />
+            <p className="p-4 text-xs text-[#64748b]">
+              Sample animation. Final style will be tailored to Movin&apos; Martin
+            </p>
+          </div>
         </div>
       </section>
 
