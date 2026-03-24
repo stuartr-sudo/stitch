@@ -155,24 +155,22 @@ export default function ProposalPage() {
       `}</style>
 
       {/* Section 1: Hero */}
-      <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 py-24">
+      <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 pt-12 pb-24">
         {/* Partnership logos */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 mb-14">
+        <div className="flex items-center gap-4 sm:gap-8 mb-14">
           <img
             src="https://upload.wikimedia.org/wikipedia/commons/9/92/Hamilton_City_Council_logo.svg"
             alt="Hamilton City Council"
-            style={{ height: 44, width: 'auto' }}
+            className="h-8 sm:h-11 w-auto"
           />
-          <span className="text-[#cbd5e1] text-2xl font-light">&times;</span>
-          <div className="flex items-center gap-3">
+          <span className="text-[#cbd5e1] text-xl sm:text-2xl font-light">&times;</span>
+          <div className="flex items-center gap-2 sm:gap-3">
               <svg
-                width="36"
-                height="44"
                 viewBox="0 0 64 80"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 aria-hidden="true"
-                className="shrink-0"
+                className="shrink-0 w-6 h-8 sm:w-9 sm:h-11"
               >
                 <line x1="32" y1="4" x2="32" y2="18" stroke="#2C666E" strokeWidth="2.5" strokeLinecap="round" />
                 <ellipse cx="32" cy="8" rx="2.5" ry="4" stroke="#2C666E" strokeWidth="1.5" fill="none" />
@@ -186,10 +184,10 @@ export default function ProposalPage() {
                 <circle cx="32" cy="60" r="2" fill="#2C666E" />
               </svg>
               <div className="flex flex-col">
-                <span className="text-[#0f172a] font-bold tracking-[0.25em] uppercase text-base leading-tight">
+                <span className="text-[#0f172a] font-bold tracking-[0.2em] sm:tracking-[0.25em] uppercase text-xs sm:text-base leading-tight">
                   Stitch Studios
                 </span>
-                <span className="text-[#64748b] tracking-[0.15em] uppercase text-[10px]">
+                <span className="text-[#64748b] tracking-[0.15em] uppercase text-[8px] sm:text-[10px]">
                   Animation &amp; Media
                 </span>
               </div>
