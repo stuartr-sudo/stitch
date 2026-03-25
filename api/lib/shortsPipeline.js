@@ -33,6 +33,33 @@ import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
 
 /**
+ * Get the actual video duration after model-specific clamping.
+ * Each model has different min/max constraints — this mirrors the
+ * duration format converters in modelRegistry.js.
+ */
+function getActualDuration(modelKey, requestedSeconds) {
+  const n = Number(requestedSeconds) || 5;
+  switch (modelKey) {
+    case 'fal_veo3':
+    case 'fal_veo2':
+      return Math.max(5, Math.min(8, Math.round(n))); // Veo: 5-8s
+    case 'fal_kling':
+      return n <= 7 ? 5 : 10; // Kling v2: 5 or 10
+    case 'fal_kling_v3':
+    case 'fal_kling_o3':
+      return Math.max(3, Math.min(15, Math.round(n))); // Kling v3/O3: 3-15
+    case 'fal_wan25':
+      return n <= 7 ? 5 : 10; // Wan 2.5: 5 or 10
+    case 'fal_pixverse':
+      return n <= 6 ? 5 : 8; // PixVerse: 5 or 8
+    case 'wavespeed_wan':
+      return Math.max(5, Math.min(8, Math.round(n))); // Wavespeed: 5-8
+    default:
+      return Math.min(n, 8); // safe default
+  }
+}
+
+/**
  * Run the full 9-step shorts generation pipeline.
  *
  * @param {object} opts
@@ -198,6 +225,7 @@ export async function runShortsPipeline(opts) {
     const sceneImages = [];
     const sceneClips = [];
     const sceneInputs = [];
+    const actualClipDurations = []; // track real durations for assembly
     let prevFrameUrl = null;
     let prevFrameAnalysis = null;
 
@@ -262,17 +290,21 @@ export async function runShortsPipeline(opts) {
       const motionPromptUsed = [scene.motion_prompt, videoStylePrompt].filter(Boolean).join(', ') || 'slow cinematic pan';
 
       // Duration from actual voiceover timing (fallback to template)
-      const clipDuration = sceneWord
+      const requestedDuration = sceneWord
         ? Math.max(3, Math.round(sceneWord.endTime - sceneWord.startTime))
         : scene.duration_seconds || 5;
+      // The model clamps this — Veo max 8s, Kling v2 5/10, etc.
+      // Track the actual expected duration for assembly and frame extraction
+      const actualDuration = getActualDuration(videoModel, requestedDuration);
+      actualClipDurations.push(actualDuration);
 
       currentStep = 'animating_clips';
       currentModel = videoModel;
       await updateJob({ current_step: 'animating_clips', completed_steps: 3 });
-      console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (${clipDuration}s, model: ${videoModel})`);
+      console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (requested ${requestedDuration}s → actual ${actualDuration}s, model: ${videoModel})`);
 
       const clipUrl = await withRetry(
-        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', clipDuration, keys, supabase, { loras: loraConfigs, generate_audio: generateAudioFlag }),
+        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', requestedDuration, keys, supabase, { loras: loraConfigs, generate_audio: generateAudioFlag }),
         { maxAttempts: 2, baseDelayMs: 5000 }
       );
       sceneClips.push(clipUrl);
@@ -282,12 +314,12 @@ export async function runShortsPipeline(opts) {
         category: 'fal',
         operation: 'shorts_video_clip',
         model: videoModel || 'fal_kling',
-        metadata: { video_count: 1, duration: clipDuration },
+        metadata: { video_count: 1, duration: actualDuration },
       });
 
       // ── Extract last frame for next scene ──────────────────────────────────────
       try {
-        prevFrameUrl = await extractLastFrame(clipUrl, clipDuration, keys.falKey);
+        prevFrameUrl = await extractLastFrame(clipUrl, actualDuration, keys.falKey);
         if (prevFrameUrl) {
           prevFrameAnalysis = await analyzeFrameContinuity(prevFrameUrl, openai);
         }
@@ -359,7 +391,7 @@ export async function runShortsPipeline(opts) {
     await updateJob({ current_step: 'assembling_video', completed_steps: 6 });
     console.log('[shortsPipeline] Step 7: Assembling video (clips + voiceover + music)');
 
-    assembledVideoUrl = await assembleShort(sceneClips, voiceoverUrl, musicUrl, keys.falKey, supabase);
+    assembledVideoUrl = await assembleShort(sceneClips, voiceoverUrl, musicUrl, keys.falKey, supabase, actualClipDurations);
 
     // ── Step 8: Burn Captions ─────────────────────────────────────────────────────
     currentStep = 'burning_captions';

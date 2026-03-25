@@ -326,21 +326,23 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {string|null} musicUrl - Optional background music URL
  * @param {string} falKey
  * @param {object} supabase
+ * @param {number[]} [clipDurations] - Actual duration of each clip in seconds
  * @returns {Promise<string>} Public URL of the assembled video
  */
-export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase) {
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = []) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
 
-  // Build tracks for fal-ai/ffmpeg-api/compose
-  const CLIP_DURATION_MS = 10_000; // default per-clip duration estimate
-  const videoKeyframes = videoUrls.map((url, i) => ({
-    url,
-    timestamp: i * CLIP_DURATION_MS,
-    duration: CLIP_DURATION_MS,
-  }));
-  const totalDurationMs = videoUrls.length * CLIP_DURATION_MS;
+  // Build tracks for fal-ai/ffmpeg-api/compose using actual clip durations
+  let runningTimestamp = 0;
+  const videoKeyframes = videoUrls.map((url, i) => {
+    const durationMs = (clipDurations[i] || 8) * 1000; // default 8s if unknown
+    const kf = { url, timestamp: runningTimestamp, duration: durationMs };
+    runningTimestamp += durationMs;
+    return kf;
+  });
+  const totalDurationMs = runningTimestamp;
 
   const tracks = [
     { id: 'video', type: 'video', keyframes: videoKeyframes },
@@ -351,7 +353,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
     tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs }] });
   }
 
-  console.log(`[assembleShort] Assembling ${videoUrls.length} clips + voiceover${musicUrl ? ' + music' : ''}`);
+  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationMs/1000}s) + voiceover${musicUrl ? ' + music' : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
@@ -465,8 +467,13 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
 export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
   if (!falKey) throw new Error('falKey required for frame extraction');
 
-  // Target 0.1s before end to ensure we get the last visible frame
-  const frameTime = Math.max(0, (durationSeconds || 5) - 0.1);
+  // Use a conservative frame time — the actual video may be shorter than
+  // the requested duration (e.g. Veo clamps 10s→8s). Probe the real duration
+  // by targeting 95% of the requested duration, capped at a safe max.
+  // If the video is shorter, FFmpeg will extract the last available frame.
+  const safeDuration = Math.min(durationSeconds || 5, 8); // Veo max is 8s
+  const frameTime = Math.max(0.5, safeDuration - 0.5);
+  console.log(`[extractLastFrame] Extracting frame at ${frameTime}s from ${safeDuration}s video`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/extract-frame`, {
     method: 'POST',
