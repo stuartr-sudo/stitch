@@ -1604,6 +1604,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       <ImagineerModal
         isOpen={showImagineerForStartFrame}
         onClose={() => setShowImagineerForStartFrame(false)}
+        initialMode="i2i"
         onGenerate={(params) => {
           setShowImagineerForStartFrame(false);
           handleStartFrameGenerate(params);

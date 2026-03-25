@@ -34,7 +34,7 @@ const I2I_MODELS = [
   { value: "wavespeed-nano-ultra", label: "Nano Banana Pro Ultra (4K/8K)", description: "Multi-image blending, high resolution", multiImage: true },
   { value: "wavespeed-qwen", label: "Qwen Image Edit", description: "Multi-image blending, great detail", multiImage: true },
   { value: "fal-flux", label: "Flux 2 Dev (LoRA)", description: "Brand Kits & custom products", multiImage: false, supportsLora: true },
-  { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, reliable editing", multiImage: false },
+  { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast multi-image composition", multiImage: true },
   { value: "seedream", label: "Seedream v4.5", description: "High detail editing", multiImage: false },
 ];
 
@@ -220,7 +220,7 @@ function ResultActions({ imageUrl, onEditAgain, onClose, onGenerate }) {
 const T2I_STEPS = ["Subject", "Style", "Enhance", "Output"];
 const I2I_STEPS = ["Images", "Instructions & Style", "Enhance", "Model & Output"];
 
-export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded = false }) {
+export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded = false, initialMode = 't2i' }) {
   const { user } = useAuth();
 
   // ─── Mode & Navigation ──────────────────────────────────────────────
@@ -283,7 +283,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   // ─── Reset on open ──────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
-      setMode("t2i"); setStep(0);
+      setMode(initialMode); setStep(0);
       setSelectedModel("nano-banana-2");
       setSubjectDescription(""); setSubjectType(""); setArtisticStyle("");
       setColorPalette(""); setLighting(""); setCameraAngle("");
@@ -462,25 +462,27 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       });
       const baseImage = i2iImages.find(img => img.isBase) || i2iImages[0];
 
-      if (isWavespeed) {
+      const isWavespeedModel = i2iModel.startsWith('wavespeed-');
+      if (isWavespeedModel) {
         const res = await apiFetch('/api/images/edit', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: i2iImages.map(img => img.url), prompt: cohesivePrompt, model: i2iModel, outputSize: i2iOutputSize }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); }
-        else if (data.requestId) { toast.info('Processing...'); await pollJumpstartResult(data.requestId); }
+        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); saveToLibrary(data.imageUrl); }
+        else if (data.requestId) { await pollJumpstartResult(data.requestId); }
       } else {
         const loras = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const allUrls = i2iImages.map(img => img.url);
         const res = await apiFetch('/api/imagineer/edit', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model: i2iModel, strength: i2iStrength, dimensions: i2iDimensions, loras }),
+          body: JSON.stringify({ image_url: baseImage.url, image_urls: isWavespeed ? allUrls : undefined, prompt: cohesivePrompt, model: i2iModel, strength: i2iStrength, dimensions: i2iDimensions, loras }),
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); }
-        else if (data.requestId) { toast.info('Processing...'); await pollImagineerResult(data.requestId, data.model || i2iModel); }
+        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); saveToLibrary(data.imageUrl); }
+        else if (data.requestId) { await pollImagineerResult(data.requestId, data.model || i2iModel); }
       }
     } catch (err) { toast.error(err.message || 'Failed to edit image'); }
     finally { setI2iEditing(false); }

@@ -9,9 +9,11 @@ import { logCost } from '../lib/costLogger.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { image_url, prompt, mask_url, loras, strength, dimensions, model } = req.body;
-  if (!image_url || !prompt) {
-    return res.status(400).json({ error: 'image_url and prompt are required' });
+  const { image_url, image_urls: rawImageUrls, prompt, mask_url, loras, strength, dimensions, model } = req.body;
+  // Support both single image_url and multi image_urls array
+  const allImageUrls = rawImageUrls?.length ? rawImageUrls : image_url ? [image_url] : [];
+  if (allImageUrls.length === 0 || !prompt) {
+    return res.status(400).json({ error: 'image_url (or image_urls) and prompt are required' });
   }
 
   const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
@@ -51,7 +53,7 @@ export default async function handler(req, res) {
       endpoint: 'fal-ai/nano-banana-2/edit',
       sync: true, // Use fal.run (synchronous) — queue polling doesn't work for this endpoint
       buildPayload: () => ({
-        image_urls: [image_url],
+        image_urls: allImageUrls,
         prompt,
         aspect_ratio: dimensions === '16:9' ? '16:9' : dimensions === '9:16' ? '9:16' : dimensions === '4:3' ? '4:3' : dimensions === '3:4' ? '3:4' : '1:1',
         resolution: '2K',
@@ -63,7 +65,7 @@ export default async function handler(req, res) {
       endpoint: 'fal-ai/bytedance/seedream/v4.5/edit',
       sync: true, // Use fal.run (synchronous) — queue polling doesn't work for this endpoint
       buildPayload: () => ({
-        image_urls: [image_url],
+        image_urls: allImageUrls,
         prompt,
         image_size: sizeMap[dimensions] || 'square_hd',
         num_images: 1,
@@ -77,8 +79,8 @@ export default async function handler(req, res) {
 
   console.log(`[imagineer/edit] Model: ${selectedModel}, endpoint: ${config.endpoint}`);
   console.log(`[imagineer/edit] Payload keys:`, Object.keys(payload));
-  console.log(`[imagineer/edit] image_url starts with:`, image_url?.substring(0, 30));
-  console.log(`[imagineer/edit] Has image_urls:`, !!payload.image_urls, payload.image_urls?.length);
+  console.log(`[imagineer/edit] image_urls count:`, allImageUrls.length);
+  console.log(`[imagineer/edit] Has image_urls in payload:`, !!payload.image_urls, payload.image_urls?.length);
 
   try {
     const baseUrl = config.sync ? 'https://fal.run' : 'https://queue.fal.run';
