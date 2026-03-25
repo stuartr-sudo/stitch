@@ -166,20 +166,6 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
             />
           </div>
 
-          {/* Negative Prompt — Beatoven models */}
-          {(model === 'beatoven/music-generation' || model === 'beatoven/sound-effect-generation') && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">Negative Prompt (what to avoid)</Label>
-              <Textarea
-                value={negativePrompt}
-                onChange={(e) => setNegativePrompt(e.target.value)}
-                placeholder={model === 'beatoven/music-generation' ? 'e.g., noise, distortion, heavy drums' : 'e.g., noise, high-pitched screech'}
-                className="bg-white border-slate-300 text-slate-900 min-h-[72px]"
-                rows={3}
-              />
-            </div>
-          )}
-
           {/* Lyrics — MiniMax */}
           {selectedModelInfo?.requiresLyrics && (
             <div className="space-y-2">
@@ -196,27 +182,23 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
             </div>
           )}
 
-          {/* Beatoven parameters */}
-          {(model === 'beatoven/music-generation' || model === 'beatoven/sound-effect-generation') && (
+          {/* Duration — ElevenLabs */}
+          {model === 'fal-ai/elevenlabs/music' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-700">
                   Duration (seconds)
-                  <span className="text-xs text-slate-400 ml-1">
-                    {model === 'beatoven/sound-effect-generation' ? '(1-35)' : '(5-150)'}
-                  </span>
+                  <span className="text-xs text-slate-400 ml-1">(3-600)</span>
                 </Label>
                 <Input
                   type="number"
-                  min={model === 'beatoven/sound-effect-generation' ? 1 : 5}
-                  max={model === 'beatoven/sound-effect-generation' ? 35 : 150}
+                  min={3}
+                  max={600}
                   step="1"
                   value={duration}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || (model === 'beatoven/sound-effect-generation' ? 5 : 90);
-                    const min = model === 'beatoven/sound-effect-generation' ? 1 : 5;
-                    const max = model === 'beatoven/sound-effect-generation' ? 35 : 150;
-                    setDuration(Math.max(min, Math.min(max, val)));
+                    const val = parseInt(e.target.value) || 90;
+                    setDuration(Math.max(3, Math.min(600, val)));
                   }}
                   className="bg-white border-slate-300 text-slate-900"
                 />

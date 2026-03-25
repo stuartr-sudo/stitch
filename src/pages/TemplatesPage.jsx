@@ -347,7 +347,7 @@ export default function TemplatesPage() {
       image_model: template.model_preferences?.image_model || 'wavespeed',
       video_model: template.model_preferences?.video_model || 'wavespeed_wan',
       motion_style: template.model_preferences?.motion_style || 'standard',
-      music_model: template.model_preferences?.music_model || 'beatoven',
+      music_model: template.model_preferences?.music_model || 'minimax',
     });
     setVisualStylePreset(template.visual_style_preset || null);
     setBrandUsernames(
