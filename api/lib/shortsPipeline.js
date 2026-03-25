@@ -367,14 +367,19 @@ export async function runShortsPipeline(opts) {
     await updateJob({ current_step: 'burning_captions', completed_steps: 7 });
     console.log(`[shortsPipeline] Step 8: Burning captions (style: ${captionStyle})`);
 
-    captionedVideoUrl = await burnCaptions(
-      assembledVideoUrl,
-      wordTimestamps,
-      keys.falKey,
-      supabase,
-      captionStyle,
-      wordsPerChunk,
-    );
+    try {
+      captionedVideoUrl = await burnCaptions(
+        assembledVideoUrl,
+        wordTimestamps,
+        keys.falKey,
+        supabase,
+        captionStyle,
+        wordsPerChunk,
+      );
+    } catch (captionErr) {
+      console.warn(`[shortsPipeline] Caption burning failed, using uncaptioned video: ${captionErr.message}`);
+      captionedVideoUrl = assembledVideoUrl;
+    }
 
     // ── Step 9: Finalize ───────────────────────────────────────────────────────────
     currentStep = 'finalizing';
