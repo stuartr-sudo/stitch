@@ -467,28 +467,22 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
 export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
   if (!falKey) throw new Error('falKey required for frame extraction');
 
-  // Use a conservative frame time — the actual video may be shorter than
-  // the requested duration (e.g. Veo clamps 10s→8s). Probe the real duration
-  // by targeting 95% of the requested duration, capped at a safe max.
-  // If the video is shorter, FFmpeg will extract the last available frame.
-  const safeDuration = Math.min(durationSeconds || 5, 8); // Veo max is 8s
-  const frameTime = Math.max(0.5, safeDuration - 0.5);
-  console.log(`[extractLastFrame] Extracting frame at ${frameTime}s from ${safeDuration}s video`);
+  console.log(`[extractLastFrame] Extracting last frame via fal-ai/ffmpeg-api/extract-frame`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/extract-frame`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ video_url: videoUrl, frame_time: frameTime }),
+    body: JSON.stringify({ video_url: videoUrl, frame_type: 'last' }),
   });
 
   if (!res.ok) throw new Error(`FAL extract-frame failed: ${await res.text()}`);
   const queueData = await res.json();
 
   // Some FAL endpoints return the result directly; others require polling
-  if (queueData.image_url) return queueData.image_url;
+  if (queueData.images?.[0]?.url) return queueData.images[0].url;
 
   const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 30, 2000);
-  const imageUrl = output?.image_url || output?.images?.[0]?.url;
+  const imageUrl = output?.images?.[0]?.url;
   if (!imageUrl) throw new Error('No image URL from frame extraction');
   return imageUrl;
 }
