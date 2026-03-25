@@ -35,7 +35,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **API Key Resolution** (`api/lib/getUserKeys.js`): Queries `user_api_keys` table, falls back to server env vars if user email matches `OWNER_EMAIL`. Route handlers should call `getUserKeys()` instead of reading `process.env` directly for AI provider keys.
 
-**Model Registry** (`api/lib/modelRegistry.js`): Declarative config for all AI models — 7 image models (Flux 2, SeedDream v4.5, Imagen 4, Kling Image v3, Grok Imagine, Ideogram v2, Wavespeed) and 10 video models (Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Veo 2, Veo 3, Wan 2.5, Wan Pro, PixVerse v4.5, Hailuo/MiniMax, Wavespeed WAN). Each entry has `provider`, `endpoint`, `buildBody()`, `parseResult()`, and `pollConfig`. New models go here, not in if-else chains.
+**Model Registry** (`api/lib/modelRegistry.js`): Declarative config for all AI models — 8 image models (Nano Banana 2, Flux 2, SeedDream v4.5, Imagen 4, Kling Image v3, Grok Imagine, Ideogram v2, Wavespeed) and 10 video models (Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Veo 2, Veo 3.1, Wan 2.5, Wan Pro, PixVerse v4.5, Hailuo/MiniMax, Wavespeed WAN). Each entry has `provider`, `endpoint`, `buildBody()`, `parseResult()`, and `pollConfig`. New models go here, not in if-else chains.
 
 **Media Generator** (`api/lib/mediaGenerator.js`): Generic dispatcher — `generateImageV2()` and `animateImageV2()` look up the model in the registry and handle provider-specific auth/polling. Replaces ~360 lines of per-model branching.
 
@@ -43,7 +43,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Shorts Pipeline** (`api/lib/shortsPipeline.js`): End-to-end Shorts creation — script → voiceover (ElevenLabs) → images + video clips (interleaved, frame-chained) → music → assemble (fal-ai/ffmpeg-api/compose) → auto-caption (fal-ai/auto-caption) → draft. No Whisper — auto-caption handles speech detection from audio. Per-scene checkpointing to `jobs.step_results`. Structured error reporting to `jobs.last_error`. Entry point: `api/campaigns/create.js`.
 
-**Script Generator** (`api/lib/scriptGenerator.js`): OpenAI structured output for Shorts scripts. Produces scenes with narration, visual descriptions, and scene 1 image description. Supports `targetDurationSeconds` for length presets (30s/45s/60s/90s).
+**Script Generator** (`api/lib/scriptGenerator.js`): OpenAI structured output for Shorts scripts. Produces scenes with narration, visual descriptions, and scene 1 image description. Supports `targetDurationSeconds` for length presets (15s/30s/45s/60s/90s). 15s = 3 scenes, 30s = 3, 45s = 4, 60s = 5, 90s = 7.
 
 **Visual Styles** (`api/lib/visualStyles.js`): 14 visual style presets across 3 categories — Illustration (Pixel Art, Ghibli, Pixar, Cartoon, 8-bit, Manga, Comic Book, Pixar 3D), Realistic (Photorealistic, Cinematic, Documentary), Painting (Watercolor, Oil, Impressionist). Thumbnails in `public/assets/styles/`. Frontend mirror: `src/lib/visualStylePresets.js`.
 
@@ -106,11 +106,11 @@ All env vars are documented in `.env.example` — refer to that file for the ful
 - Vite dev server runs on port 4390 (not the default 5173).
 - Some routes return immediately and do background work (e.g., `generate-thumbnails`). Check for `res.json()` before async blocks.
 - Webhook routes (`/api/webhooks/content`, `/api/article/from-url`, `/api/article/bulk`) skip auth — they use webhook secrets or brand_username verification instead.
-- Video model duration formats differ by provider: Veo uses `'5s'`/`'8s'` (string with suffix), Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.
+- Video model duration formats differ by provider: Veo 3.1 uses `'4s'`/`'6s'`/`'8s'` (ONLY these three values — `'5s'`/`'7s'` cause 422 errors), Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.
 - `/shorts/new` redirects to `/campaigns/new?type=shorts` — the actual wizard lives in `CampaignsNewPage.jsx` (not `ShortsWizardPage.jsx`, which is dead code). Draft review at `/shorts/draft/:draftId`.
 - `/templates` route exists (`TemplatesPage.jsx`) — undocumented but live. `JumpStartVideoStudioModal.jsx` and `MotionTransferModal.jsx` are additional modals in `src/components/modals/` used by the Video Ad Creator.
 - LoRA configs from the frontend use `{ loraUrl, triggerWord, scale }` but FAL expects `{ path, scale }`. The pipeline transforms this — don't pass raw loraConfigs to `generateImageV2` without mapping `loraUrl` → `path`.
-- `generate_audio` is only supported by Kling v3, Kling O3, Veo 3, and Veo 3.1 variants. Passing it to other video models will cause errors. The frontend toggle only shows for these models. In the Storyboard Planner, audio is controlled per-scene based on the selected model's `supportsAudio` flag in `SCENE_MODELS`.
+- `generate_audio` is only supported by Kling v3, Kling O3, and Veo 3.1 variants. Passing it to other video models will cause errors. The frontend toggle only shows for these models. In the Storyboard Planner, audio is controlled per-scene based on the selected model's `supportsAudio` flag in `SCENE_MODELS`.
 - `api/lib/modelRegistry.js` image models use either `image_size` (Flux, SeeDream, Ideogram) or `aspect_ratio` (Imagen4, Kling Image, Grok) — check the registry's `buildBody()` before adding new models.
 - Tag routes in server.js must be registered in specificity order: `/api/library/tags/auto-tag`, `/api/library/tags/assign`, `/api/library/tags/unassign` BEFORE the catch-all `/api/library/tags`. Express matches first registered route.
 - Turnaround `buildTurnaroundPrompt` expression conflict resolution (swapping Row 2 expressions when negative prompt conflicts) only runs for `poseSet === 'standard-24'`. Other pose sets define their own rows and skip this logic entirely.
@@ -164,4 +164,4 @@ Verification **IS required** for:
 - `pollFalQueue` uses the full model endpoint path for queue URLs (e.g. `fal-ai/ffmpeg-api/compose`, not `fal-ai/ffmpeg-api`). Never truncate multi-segment FAL paths — it causes 404s.
 - `extractLastFrame` uses `frame_type: 'last'` (not manual `frame_time` calculation). The FAL extract-frame API supports `'first'`, `'middle'`, `'last'`.
 - Shorts pipeline always forces `generate_audio: false` for video clips — it has its own voiceover + music. Don't pass `generate_audio: true` from the frontend for Shorts.
-- Nano Banana 2 (Imagineer's best image model) is not available in the Shorts wizard image model picker. Known gap — only the 7 models in `modelRegistry.js` are shown.
+- Nano Banana 2 is now in both the Shorts wizard image model picker (as `fal_nano_banana` in modelRegistry) and Imagineer. It's the best quality image model available.
