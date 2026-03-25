@@ -244,6 +244,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [sheets, setSheets] = useState([]);
   const [activeSheetId, setActiveSheetId] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [savedSheetIds, setSavedSheetIds] = useState(new Set());
 
   // Gallery filters
   const [filterCharacter, setFilterCharacter] = useState(new Set());
@@ -283,7 +284,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       const data = await res.json();
       if (data.description) {
         updateCharacter(charId, 'description', data.description);
-        toast.success('Character analyzed! Description auto-filled.');
+        // Character analyzed
       } else if (data.error) {
         toast.error('Could not analyze character: ' + data.error);
       }
@@ -398,6 +399,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       setSelectedBrand(null);
       setSheets([]);
       setActiveSheetId(null);
+      setSavedSheetIds(new Set());
       setFilterCharacter(new Set());
       setFilterStyle(new Set());
       setFilterPoseSet(new Set());
@@ -430,6 +432,29 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   }, [isOpen]);
 
   const anyGenerating = sheets.some(s => s.generating);
+
+  // Completed but unsaved sheets (for "Edit Next" flow)
+  const completedSheets = sheets.filter(s => s.imageUrl && !s.generating && !s.error);
+  const unsavedSheets = completedSheets.filter(s => !savedSheetIds.has(s.id));
+  const nextUnsavedSheet = unsavedSheets.find(s => s.id !== activeSheetId);
+
+  const handleEditNextSheet = () => {
+    if (!nextUnsavedSheet) {
+      // All sheets saved — return to results gallery
+      setWizardStep('results');
+      setActiveSheetId(null);
+      setCellImages([]);
+      setEditingCellIndex(null);
+      setReassembledUrl(null);
+      return;
+    }
+    // Navigate to the next unsaved sheet's detail view
+    setActiveSheetId(nextUnsavedSheet.id);
+    setCellImages([]);
+    setEditingCellIndex(null);
+    setReassembledUrl(null);
+    setWizardStep('results');
+  };
 
   // ─── Timer ────────────────────────────────────────────────────────────────
 
@@ -466,7 +491,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           ));
           clearInterval(interval);
           delete pollingIntervalsRef.current[sheetId];
-          toast.success(`Sheet ready: ${getPromptText(sheets.find(s => s.id === sheetId)?.style) || 'style'}`);
+          // Sheet ready
         } else if (data.status === 'failed') {
           setSheets(prev => prev.map(s => s.id === sheetId
             ? { ...s, generating: false, requestId: null, error: data.error || 'Generation failed' }
@@ -489,7 +514,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   const handleFileUploadForChar = async (charId, file) => {
     if (!file || !file.type.startsWith('image/')) {
-      if (file) toast.error('Please select an image file.');
+      // invalid file type
       return;
     }
     const reader = new FileReader();
@@ -506,7 +531,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         const data = await res.json();
         if (data.url) {
           updateCharacter(charId, 'referenceImageUrl', data.url);
-          toast.success('Reference image uploaded — analyzing character...');
+          // Reference uploaded, analyzing
           describeCharacter(charId, data.url);
         } else throw new Error(data.error || 'Upload failed');
       } catch (err) {
@@ -551,7 +576,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           ? { ...s, imageUrl: data.imageUrl, generating: false }
           : s
         ));
-        toast.success(`Sheet ready: ${sheet.character.name} / ${sheet.styleText}`);
+        // Sheet ready
       } else if (data.requestId) {
         setSheets(prev => prev.map(s => s.id === sheet.id
           ? { ...s, requestId: data.requestId, pollModel: data.model || selectedModel }
@@ -718,7 +743,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       setEditingCellIndex(null);
       markCompleted('results');
       setWizardStep('cells');
-      toast.success('Sheet sliced into 24 cells — review, edit, or delete.');
+      // Sliced
     } catch (err) {
       toast.error('Failed to slice: ' + err.message);
     } finally {
@@ -781,9 +806,9 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
       if (editData.imageUrl) {
         updateCellField(index, 'editPreview', editData.imageUrl);
-        toast.success(`Edit preview ready for "${cell.label}"`);
+        // Edit preview ready
       } else if (editData.requestId) {
-        toast.info('Edit processing...');
+        // Edit processing
         const pollEdit = async (rid) => {
           for (let attempt = 0; attempt < 40; attempt++) {
             await new Promise(r => setTimeout(r, 3000));
@@ -796,7 +821,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
               const pd = await pr.json();
               if (pd.imageUrl) {
                 updateCellField(index, 'editPreview', pd.imageUrl);
-                toast.success(`Edit ready for "${cell.label}"`);
+                // Edit ready
                 return;
               }
               if (pd.status === 'failed') throw new Error('Edit failed');
@@ -823,7 +848,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       i === index ? { ...c, url: c.editPreview, editPreview: null, editPrompt: '', editing: false } : c
     ));
     setEditingCellIndex(null);
-    toast.success(`Applied edit to "${cell.label}"`);
+    // Edit applied
   };
 
   const rejectEdit = (index) => {
@@ -887,7 +912,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           console.warn(`Failed to save ${cell.label}:`, err.message);
         }
       }
-      toast.success(`Saved ${saved}/${keepCells.length} cells to library for LoRA training!`);
+      // Cells saved for LoRA
     } catch (err) {
       toast.error('Save failed: ' + err.message);
     } finally {
@@ -974,7 +999,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       if (compData.id && activeSheet) autoTagSheet(compData.id, activeSheet);
 
       setReassembledUrl(hostedUrl);
-      toast.success(`Saved ${savedCells} cells + reassembled sheet to library!`);
+      // Mark this sheet as saved
+      if (activeSheetId) setSavedSheetIds(prev => new Set([...prev, activeSheetId]));
 
       if (onImageCreated) {
         onImageCreated({ imageUrl: hostedUrl, type: 'turnaround-sheet', description: characters[0]?.description });
@@ -1025,7 +1051,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           }
         } catch {}
       }
-      toast.success(`Saved ${saved}/${selectedCells.size} cells!`);
+      // Cells saved
     } catch (err) {
       toast.error('Failed: ' + err.message);
     } finally {
@@ -1061,8 +1087,6 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   const activeCells = cellImages.filter(c => !c.deleted);
   const deletedCount = cellImages.filter(c => c.deleted).length;
-
-  const completedSheets = sheets.filter(s => s.imageUrl);
 
   // ─── Subtitle ─────────────────────────────────────────────────────────────
 
@@ -1221,7 +1245,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                           onClick={() => {
                             setSelectedPoseSets(prev => {
                               if (prev.includes(ps.id)) {
-                                if (prev.length <= 1) { toast.info('At least one pose set required'); return prev; }
+                                if (prev.length <= 1) { return prev; }
                                 return prev.filter(id => id !== ps.id);
                               }
                               return [...prev, ps.id];
@@ -1856,19 +1880,33 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={onClose}>Close</Button>
-                  <Button onClick={handleSaveCellsForLora} disabled={savingForLora || reassembling || activeCells.length === 0}
-                    variant="outline" className="gap-1 text-[#2C666E] border-[#2C666E]">
-                    {savingForLora
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                      : <><Save className="w-4 h-4" /> Save Cells Only</>}
-                  </Button>
-                  <Button onClick={handleReassembleAndSave} disabled={reassembling || savingForLora || activeCells.length === 0}
-                    className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
-                    {reassembling
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Reassembling...</>
-                      : <><Grid3X3 className="w-4 h-4" /> Reassemble & Save ({activeCells.length})</>}
-                  </Button>
+                  {reassembledUrl && unsavedSheets.length > 0 ? (
+                    <>
+                      <Button variant="outline" onClick={onClose}>Close</Button>
+                      <Button onClick={handleEditNextSheet}
+                        className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                        {nextUnsavedSheet
+                          ? <><ChevronRight className="w-4 h-4" /> Edit Next Sheet ({unsavedSheets.length - (unsavedSheets.some(s => s.id === activeSheetId) ? 0 : 0)} remaining)</>
+                          : <><CheckCircle2 className="w-4 h-4" /> All Done — Back to Gallery</>}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={onClose}>Close</Button>
+                      <Button onClick={handleSaveCellsForLora} disabled={savingForLora || reassembling || activeCells.length === 0}
+                        variant="outline" className="gap-1 text-[#2C666E] border-[#2C666E]">
+                        {savingForLora
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                          : <><Save className="w-4 h-4" /> Save Cells Only</>}
+                      </Button>
+                      <Button onClick={handleReassembleAndSave} disabled={reassembling || savingForLora || activeCells.length === 0}
+                        className="bg-[#2C666E] hover:bg-[#07393C] text-white gap-1">
+                        {reassembling
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Reassembling...</>
+                          : <><Grid3X3 className="w-4 h-4" /> Reassemble & Save ({activeCells.length})</>}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1894,7 +1932,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           }
         }
         setShowLibrary(false);
-        toast.success('Reference image selected — analyzing character...');
+        // Reference selected, analyzing
         if (charId) describeCharacter(charId, item.url);
       }}
       mediaType="images"
