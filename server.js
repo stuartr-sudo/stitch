@@ -433,6 +433,23 @@ app.post('/api/storyboard/assemble', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Storyboard presets (GET, POST, DELETE all on same route)
+app.get('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.delete('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
 app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);

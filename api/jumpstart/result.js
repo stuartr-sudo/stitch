@@ -57,6 +57,8 @@ export default async function handler(req, res) {
       return await checkSeedanceResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-imagine') {
       return await checkGrokResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'grok-r2v') {
+      return await checkGrokR2VResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-imagine-extend') {
       return await checkGrokExtendResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-edit') {
@@ -215,6 +217,82 @@ async function getGrokResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'grok-imagine',
+  });
+}
+
+/**
+ * Check Grok R2V (Reference-to-Video) result
+ */
+async function checkGrokR2VResult(req, res, requestId, FAL_KEY) {
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/reference-to-video/requests/${requestId}/status`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    if (pollResponse.status === 404) {
+      return await getGrokR2VResult(req, res, requestId, FAL_KEY);
+    }
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/GrokR2V] Poll error:', errorText);
+    return res.status(pollResponse.status).json({ error: 'Failed to check status', details: errorText });
+  }
+
+  const data = await pollResponse.json();
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getGrokR2VResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'grok-r2v',
+    queuePosition: data.queue_position,
+  });
+}
+
+async function getGrokR2VResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/reference-to-video/requests/${requestId}`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/GrokR2V] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'grok-r2v',
+      videoInfo: {
+        width: data.video.width,
+        height: data.video.height,
+        duration: data.video.duration,
+        fps: data.video.fps,
+      }
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'grok-r2v',
   });
 }
 

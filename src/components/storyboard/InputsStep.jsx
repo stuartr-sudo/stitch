@@ -14,16 +14,16 @@ const SCENE_PILLS = {
 function PillSelector({ label, options, selected, onToggle }) {
   return (
     <div className="mb-3">
-      <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</span>
+      <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">{label}</span>
       <div className="flex flex-wrap gap-1.5 mt-1.5">
         {options.map((pill) => (
           <button
             key={pill}
             onClick={() => onToggle(pill)}
-            className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+            className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
               selected.includes(pill)
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                ? 'bg-[#07393C] text-white border-[#07393C]'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
             }`}
           >
             {pill}
@@ -76,50 +76,50 @@ export default function InputsStep({
       className="w-full flex items-center gap-3 py-3 text-left"
     >
       {expandedSection === id
-        ? <ChevronDown size={16} className="text-zinc-400" />
-        : <ChevronRight size={16} className="text-zinc-400" />}
+        ? <ChevronDown size={16} className="text-gray-400" />
+        : <ChevronRight size={16} className="text-gray-400" />}
       <div>
-        <span className="text-sm font-medium text-zinc-200">{label}</span>
-        {subtitle && <span className="ml-2 text-xs text-zinc-500">{subtitle}</span>}
+        <span className="text-sm font-semibold text-gray-800">{label}</span>
+        {subtitle && <span className="ml-2 text-xs text-gray-400">{subtitle}</span>}
       </div>
     </button>
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* 5a: Starting Image */}
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4">
+      <div className="bg-white border border-gray-200 rounded-xl px-4">
         <SectionHeader id="startImage" label="Starting Image" subtitle="Sets the visual foundation for Scene 1" />
         {expandedSection === 'startImage' && (
           <div className="pb-4">
             {startFrameUrl ? (
               <div className="space-y-3">
-                <img src={startFrameUrl} alt="Start frame" className="w-full max-w-md rounded-lg border border-zinc-700" />
+                <img src={startFrameUrl} alt="Start frame" className="w-full max-w-md rounded-lg border border-gray-200" />
                 {isAnalyzingFrame && (
-                  <p className="text-xs text-blue-400 animate-pulse">Analyzing image...</p>
+                  <p className="text-xs text-[#2C666E] animate-pulse">Analyzing image...</p>
                 )}
                 {startFrameDescription && (
-                  <div className="bg-zinc-800 rounded-lg p-3">
-                    <p className="text-xs text-zinc-400 mb-1">AI Analysis:</p>
-                    <p className="text-sm text-zinc-300">{startFrameDescription}</p>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">AI Analysis:</p>
+                    <p className="text-sm text-gray-700">{startFrameDescription}</p>
                   </div>
                 )}
                 <button
                   onClick={onGenerateStartFrame}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-[#2C666E] hover:text-[#1e4d54]"
                 >
                   Replace image
                 </button>
               </div>
             ) : (
               <div className="flex gap-2">
-                <button onClick={onUploadStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-sm text-zinc-300 transition-colors">
+                <button onClick={onUploadStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors">
                   <Upload size={14} /> Upload
                 </button>
-                <button onClick={onLibraryStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-sm text-zinc-300 transition-colors">
+                <button onClick={onLibraryStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors">
                   <ImageIcon size={14} /> Library
                 </button>
-                <button onClick={onGenerateStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm text-white transition-colors">
+                <button onClick={onGenerateStartFrame} className="flex items-center gap-2 px-4 py-2.5 bg-[#2C666E] hover:bg-[#1e4d54] rounded-lg text-sm text-white transition-colors">
                   <Sparkles size={14} /> Generate
                 </button>
               </div>
@@ -130,7 +130,7 @@ export default function InputsStep({
 
       {/* 5b: Characters (conditional) */}
       {needsCharacters && (
-        <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4">
+        <div className="bg-white border border-gray-200 rounded-xl px-4">
           <SectionHeader
             id="characters"
             label="Characters"
@@ -160,7 +160,7 @@ export default function InputsStep({
       )}
 
       {/* 5c: Scene Direction Pills */}
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4">
+      <div className="bg-white border border-gray-200 rounded-xl px-4">
         <SectionHeader id="direction" label="Scene Direction" subtitle="Global creative direction for all scenes" />
         {expandedSection === 'direction' && (
           <div className="pb-4">

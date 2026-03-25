@@ -5,6 +5,7 @@ export const SCENE_MODELS = [
   { id: 'veo3', label: 'Veo 3.1 (Reference)', description: 'Google — best subject consistency via flat image refs', mode: 'reference-to-video', supportsRefs: true, supportsAudio: true, supportsResolution: true, fixedDuration: 8 },
   { id: 'kling-r2v-pro', label: 'Kling O3 Pro (R2V)', description: 'Best character consistency — @Element system', mode: 'reference-to-video', supportsRefs: true, supportsAudio: true },
   { id: 'kling-r2v-standard', label: 'Kling O3 Standard (R2V)', description: 'Faster, lower cost — @Element system', mode: 'reference-to-video', supportsRefs: true, supportsAudio: true },
+  { id: 'grok-r2v', label: 'Grok Imagine R2V (xAI)', description: 'Up to 7 reference images — @Image1 syntax', mode: 'reference-to-video', supportsRefs: true },
 
   // Image-to-Video
   { id: 'veo3-fast', label: 'Veo 3.1 Fast', description: 'Google — flexible duration, audio', mode: 'image-to-video', supportsAudio: true, supportsResolution: true },

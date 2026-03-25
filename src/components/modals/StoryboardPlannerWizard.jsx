@@ -11,6 +11,7 @@ import {
   FolderOpen,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Trash2,
   Plus,
   ArrowUp,
@@ -27,6 +28,7 @@ import {
   X,
   Check,
   Link,
+  Save,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { extractLastFrame } from '@/lib/frameExtractor';
@@ -84,6 +86,7 @@ function getModelDurationConstraints(modelId) {
     'kling-o3-v2v-standard': { min: 3, max: 15, allowed: [3, 5, 8, 10, 15] },
     'seedance-pro': { min: 4, max: 12, allowed: [4, 6, 8, 10, 12] },
     'grok-imagine': { min: 5, max: 15, allowed: [5, 8, 10, 15] },
+    'grok-r2v': { min: 1, max: 10, allowed: [4, 6, 8, 10] },
     'wavespeed-wan': { min: 5, max: 8, allowed: [5, 8] },
   };
   return constraints[modelId] || { min: 5, max: 8, allowed: [5, 8] };
@@ -217,12 +220,22 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   // Upscaled elements cache for Kling R2V
   const [upscaledElementsCache, setUpscaledElementsCache] = useState(null);
 
+  // Preset state
+  const [presets, setPresets] = useState([]);
+  const [activePresetId, setActivePresetId] = useState(null);
+  const [activePresetName, setActivePresetName] = useState('');
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const [showSavePresetDialog, setShowSavePresetDialog] = useState(false);
+  const [savePresetName, setSavePresetName] = useState('');
+  const [savingPreset, setSavingPreset] = useState(false);
+  const presetMenuRef = useRef(null);
+
   // ── Derived state ──
 
   const selectedModelInfo = SCENE_MODELS.find(m => m.id === globalModel);
   const needsCharacters = selectedModelInfo?.supportsRefs || false;
   const hasKlingRefs = globalModel === 'kling-r2v-pro' || globalModel === 'kling-r2v-standard';
-  const hasVeoRefs = globalModel === 'veo3';
+  const hasVeoRefs = globalModel === 'veo3' || globalModel === 'grok-r2v';
 
   // ── Effects ──
 
@@ -273,6 +286,11 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       cancelRef.current = false;
       setVeoReferenceImages([]);
       setUpscaledElementsCache(null);
+      setActivePresetId(null);
+      setActivePresetName('');
+      setShowPresetMenu(false);
+      setShowSavePresetDialog(false);
+      setSavePresetName('');
     }
   }, [isOpen]);
 
@@ -290,6 +308,152 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
     }
   }, [step]);
+
+  // Load presets when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      apiFetch('/api/storyboard/presets')
+        .then(r => r.json())
+        .then(data => setPresets(data.presets || []))
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  // Close preset menu on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (presetMenuRef.current && !presetMenuRef.current.contains(e.target)) {
+        setShowPresetMenu(false);
+      }
+    };
+    if (showPresetMenu) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showPresetMenu]);
+
+  // ── Preset helpers ──
+
+  const getPresetConfig = () => ({
+    storyboardName,
+    storyOverview,
+    overallMood,
+    builderStyle,
+    builderLighting,
+    builderColorGrade,
+    desiredLength,
+    style,
+    defaultDuration,
+    aspectRatio,
+    resolution,
+    enableAudioDefault,
+    videoStyle,
+    globalModel,
+    sceneDirection,
+    selectedBrand,
+  });
+
+  const applyPreset = (config) => {
+    if (config.storyboardName) setStoryboardName(config.storyboardName);
+    if (config.storyOverview) setStoryOverview(config.storyOverview);
+    if (config.overallMood) setOverallMood(config.overallMood);
+    if (config.builderStyle) setBuilderStyle(config.builderStyle);
+    if (config.builderLighting) setBuilderLighting(config.builderLighting);
+    if (config.builderColorGrade) setBuilderColorGrade(config.builderColorGrade);
+    if (config.desiredLength) setDesiredLength(config.desiredLength);
+    if (config.style) setStyle(config.style);
+    if (config.defaultDuration) setDefaultDuration(config.defaultDuration);
+    if (config.aspectRatio) setAspectRatio(config.aspectRatio);
+    if (config.resolution) setResolution(config.resolution);
+    if (config.enableAudioDefault !== undefined) setEnableAudioDefault(config.enableAudioDefault);
+    if (config.videoStyle) setVideoStyle(config.videoStyle);
+    if (config.globalModel) setGlobalModel(config.globalModel);
+    if (config.sceneDirection) setSceneDirection(config.sceneDirection);
+    if (config.selectedBrand !== undefined) setSelectedBrand(config.selectedBrand);
+  };
+
+  const handleLoadPreset = (preset) => {
+    applyPreset(preset.config);
+    setActivePresetId(preset.id);
+    setActivePresetName(preset.name);
+    setShowPresetMenu(false);
+    toast.success(`Loaded preset: ${preset.name}`);
+  };
+
+  const handleSavePreset = async () => {
+    if (!savePresetName.trim()) return;
+    setSavingPreset(true);
+    try {
+      const res = await apiFetch('/api/storyboard/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: savePresetName.trim(),
+          config: getPresetConfig(),
+          id: activePresetId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.preset) {
+        setActivePresetId(data.preset.id);
+        setActivePresetName(data.preset.name);
+        // Refresh presets list
+        const listRes = await apiFetch('/api/storyboard/presets');
+        const listData = await listRes.json();
+        setPresets(listData.presets || []);
+        toast.success(`Saved preset: ${data.preset.name}`);
+      } else {
+        toast.error(data.error || 'Failed to save preset');
+      }
+    } catch (err) {
+      toast.error('Failed to save preset');
+    }
+    setSavingPreset(false);
+    setShowSavePresetDialog(false);
+    setSavePresetName('');
+  };
+
+  const handleUpdatePreset = async () => {
+    if (!activePresetId) return;
+    setSavingPreset(true);
+    try {
+      const res = await apiFetch('/api/storyboard/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: activePresetName,
+          config: getPresetConfig(),
+          id: activePresetId,
+        }),
+      });
+      const data = await res.json();
+      if (data.preset) {
+        toast.success(`Updated preset: ${data.preset.name}`);
+        const listRes = await apiFetch('/api/storyboard/presets');
+        const listData = await listRes.json();
+        setPresets(listData.presets || []);
+      }
+    } catch (err) {
+      toast.error('Failed to update preset');
+    }
+    setSavingPreset(false);
+  };
+
+  const handleDeletePreset = async (presetId, presetName) => {
+    try {
+      await apiFetch('/api/storyboard/presets', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: presetId }),
+      });
+      setPresets(prev => prev.filter(p => p.id !== presetId));
+      if (activePresetId === presetId) {
+        setActivePresetId(null);
+        setActivePresetName('');
+      }
+      toast.success(`Deleted preset: ${presetName}`);
+    } catch (err) {
+      toast.error('Failed to delete preset');
+    }
+  };
 
   // ── Library browser ──
   const loadLibrary = async () => {
@@ -673,6 +837,11 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       formData.append('additionalImages', JSON.stringify(veoReferenceImages));
     }
 
+    // For Grok R2V, pass reference images and inject @Image1 refs into prompt
+    if (sceneModel === 'grok-r2v' && veoReferenceImages.length > 0) {
+      formData.append('referenceImageUrls', JSON.stringify(veoReferenceImages));
+    }
+
     // For V2V, pass video URL
     if (sceneModel === 'kling-o3-v2v-pro' || sceneModel === 'kling-o3-v2v-standard') {
       // V2V uses existing video — not applicable in standard storyboard flow
@@ -1012,6 +1181,98 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       />
 
       <SlideOverBody className="p-6 bg-gray-50">
+
+        {/* ── Preset Bar (visible on all steps) ── */}
+        <div className="flex items-center gap-2 mb-4 -mt-1">
+          <div className="relative" ref={presetMenuRef}>
+            <button
+              onClick={() => setShowPresetMenu(!showPresetMenu)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              <FolderOpen size={14} />
+              {activePresetName || 'Load Preset'}
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+            {showPresetMenu && (
+              <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+                {presets.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-sm text-gray-400">No saved presets yet</div>
+                ) : (
+                  presets.map(p => (
+                    <div key={p.id} className="flex items-center group hover:bg-gray-50">
+                      <button
+                        onClick={() => handleLoadPreset(p)}
+                        className="flex-1 px-3 py-2 text-left text-sm text-gray-700 truncate"
+                      >
+                        {p.name}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeletePreset(p.id, p.name); }}
+                        className="px-2 py-1 mr-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {activePresetId && (
+            <button
+              onClick={handleUpdatePreset}
+              disabled={savingPreset}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-[#2C666E]/20 bg-[#2C666E]/5 hover:bg-[#2C666E]/10 text-[#2C666E] transition-colors"
+              title="Update current preset with latest settings"
+            >
+              {savingPreset ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Update
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setSavePresetName(activePresetName || storyboardName || '');
+              setShowSavePresetDialog(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+          >
+            <Save size={14} />
+            Save As
+          </button>
+
+          {activePresetName && (
+            <span className="text-xs text-gray-400 ml-auto">Preset: {activePresetName}</span>
+          )}
+        </div>
+
+        {/* Save Preset Dialog */}
+        {showSavePresetDialog && (
+          <div className="mb-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Preset Name</label>
+            <div className="flex gap-2">
+              <Input
+                value={savePresetName}
+                onChange={(e) => setSavePresetName(e.target.value)}
+                placeholder="e.g., 'Hamilton City Council' or 'Product Demos'"
+                className="text-sm flex-1"
+                onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                autoFocus
+              />
+              <Button
+                onClick={handleSavePreset}
+                disabled={!savePresetName.trim() || savingPreset}
+                className="bg-[#2C666E] hover:bg-[#1e4d54] text-white"
+              >
+                {savingPreset ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+              </Button>
+              <Button variant="outline" onClick={() => setShowSavePresetDialog(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* ── Step 1: Story & Mood ── */}
         {step === 'story' && (

@@ -203,6 +203,18 @@ export default async function handler(req, res) {
       return await handleGrokImagine(req, res, {
         imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, audioTranscript, FAL_KEY
       });
+    } else if (model === 'grok-r2v') {
+      let referenceImageUrls = [];
+      try {
+        if (fields.referenceImageUrls?.[0]) {
+          referenceImageUrls = JSON.parse(fields.referenceImageUrls[0]);
+        }
+      } catch (e) {
+        console.warn('[JumpStart] Failed to parse referenceImageUrls:', e);
+      }
+      return await handleGrokR2V(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls, FAL_KEY
+      });
     } else {
       return await handleWavespeed(req, res, {
         imageUrl, prompt, duration, aspectRatio, resolution, width, height, WAVESPEED_API_KEY
@@ -367,6 +379,91 @@ async function handleGrokImagine(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Grok API' });
+}
+
+/**
+ * Handle xAI Grok Imagine Reference-to-Video (FAL.ai)
+ * Uses @Image1, @Image2 syntax in prompts with up to 7 reference images
+ */
+async function handleGrokR2V(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls = [], FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  console.log('[JumpStart/GrokR2V] Submitting to xAI Grok Imagine Reference-to-Video...');
+
+  // Build reference_image_urls — primary image + any additional references (max 7 total)
+  const allRefs = [imageUrl, ...referenceImageUrls].slice(0, 7);
+
+  // Auto-inject @Image references into prompt if not already present
+  let enhancedPrompt = prompt;
+  if (!prompt.includes('@Image')) {
+    const imageRefs = allRefs.map((_, i) => `@Image${i + 1}`).join(', ');
+    enhancedPrompt = `${imageRefs} ${prompt}`;
+  }
+
+  const requestBody = {
+    prompt: enhancedPrompt,
+    reference_image_urls: allRefs,
+    duration: Math.min(Math.max(duration, 1), 10),
+    aspect_ratio: aspectRatio === 'auto' ? '16:9' : aspectRatio,
+    resolution: resolution || '720p',
+  };
+
+  console.log('[JumpStart/GrokR2V] Request:', {
+    ...requestBody,
+    reference_image_urls: `[${allRefs.length} images]`,
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+
+  const submitResponse = await fetch('https://fal.run/xai/grok-imagine-video/reference-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/GrokR2V] Error:', errorText);
+    return res.status(500).json({ error: 'Grok R2V API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/GrokR2V] Response:', JSON.stringify(data).substring(0, 500));
+
+  // FAL returns video directly or a request_id for queuing
+  if (data.video?.url) {
+    console.log('[JumpStart/GrokR2V] Video ready:', data.video.url);
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+      videoInfo: {
+        width: data.video.width,
+        height: data.video.height,
+        duration: data.video.duration,
+        fps: data.video.fps,
+      }
+    });
+  }
+
+  // If queued, return request ID for polling
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'grok-r2v',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Grok R2V API' });
 }
 
 /**
