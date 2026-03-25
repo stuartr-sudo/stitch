@@ -7,9 +7,12 @@
  * Body: { voice_id: string, text?: string }
  */
 
+import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { pollFalQueue } from '../lib/pipelineHelpers.js';
-import { resolveVoiceName } from '../lib/voiceoverGenerator.js';
+import { resolveVoiceName, GEMINI_VOICES, generateGeminiVoiceover } from '../lib/voiceoverGenerator.js';
+
+const GEMINI_VOICE_IDS = new Set(GEMINI_VOICES.map(v => v.id));
 
 const DEFAULT_PREVIEW_TEXT = 'Hey, this is what I sound like. Pretty cool, right?';
 
@@ -23,6 +26,25 @@ export default async function handler(req, res) {
   if (!keys.falKey) return res.status(400).json({ error: 'FAL API key required for voice preview' });
 
   try {
+    // Gemini TTS branch — if voice_id matches a Gemini voice name, use Gemini TTS
+    if (GEMINI_VOICE_IDS.has(voice_id)) {
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const publicUrl = await generateGeminiVoiceover(
+        text || DEFAULT_PREVIEW_TEXT,
+        { falKey: keys.falKey },
+        supabase,
+        { voice: voice_id }
+      );
+      // Fetch the uploaded audio and stream it back to the client
+      const audioRes = await fetch(publicUrl);
+      if (!audioRes.ok) return res.status(500).json({ error: `Failed to fetch Gemini TTS audio: ${audioRes.status}` });
+      const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', audioBuffer.length);
+      return res.send(audioBuffer);
+    }
+
+    // ElevenLabs TTS (default)
     // Submit to FAL queue
     const submitRes = await fetch('https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3', {
       method: 'POST',
