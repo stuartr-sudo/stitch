@@ -13,7 +13,7 @@ import { STYLE_CATEGORIES } from '@/lib/stylePresets';
  *   columns    – optional CSS grid-cols class override
  *   multiple   – if true, value is an array and clicking toggles selection
  */
-export default function StyleGrid({ value, onChange, maxHeight = '16rem', categories, columns, multiple = false }) {
+export default function StyleGrid({ value, onChange, maxHeight = '16rem', categories, columns, multiple = false, hideLabel = false }) {
   const cats = categories || STYLE_CATEGORIES;
 
   const isSelected = (v) => {
@@ -38,14 +38,16 @@ export default function StyleGrid({ value, onChange, maxHeight = '16rem', catego
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="block text-xs font-medium text-gray-700">Style</label>
-        {multiple && selectedCount > 0 && (
-          <span className="text-[10px] font-medium text-[#2C666E] bg-[#2C666E]/10 px-2 py-0.5 rounded-full">
-            {selectedCount} selected
-          </span>
-        )}
-      </div>
+      {!hideLabel && (
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-medium text-gray-700">Style</label>
+          {multiple && selectedCount > 0 && (
+            <span className="text-[10px] font-medium text-[#2C666E] bg-[#2C666E]/10 px-2 py-0.5 rounded-full">
+              {selectedCount} selected
+            </span>
+          )}
+        </div>
+      )}
       <div
         className="overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 space-y-3"
         style={{ maxHeight }}

@@ -1043,13 +1043,7 @@ export default function CampaignsNewPage() {
             {/* Step 3: Look & Feel */}
             {/* Step 3: Visual Style */}
             {wizardStep === 'visual_style' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Visual Style</label>
-                  <p className="text-[10px] text-slate-400 mb-3">Choose the visual aesthetic for your generated images.</p>
-                  <StyleGrid value={visualStyle} onChange={setVisualStyle} />
-                </div>
-              </div>
+              <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="none" hideLabel />
             )}
 
             {/* Step 4: Image Model */}

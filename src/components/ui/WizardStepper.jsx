@@ -16,7 +16,7 @@ export default function WizardStepper({ steps, currentStep, completedSteps = [],
   const currentIndex = steps.findIndex(s => s.key === currentStep);
 
   return (
-    <div className="flex items-center gap-1 px-5 py-3 border-b bg-slate-50 flex-shrink-0 overflow-x-auto">
+    <div className="flex items-center gap-1 px-4 py-1.5 border-b bg-slate-50 flex-shrink-0 overflow-x-auto">
       {steps.map((step, i) => {
         const isCompleted = completedSteps.includes(step.key);
         const isCurrent = step.key === currentStep;
