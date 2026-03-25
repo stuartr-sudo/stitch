@@ -18,7 +18,7 @@
 
 import OpenAI from 'openai';
 import { generateScript } from './scriptGenerator.js';
-import { generateVoiceover, generateTimestamps, mapWordsToScenes } from './voiceoverGenerator.js';
+import { generateVoiceover } from './voiceoverGenerator.js';
 import { burnCaptions } from './captionBurner.js';
 import { generateImageV2, animateImageV2 } from './mediaGenerator.js';
 import {
@@ -31,6 +31,20 @@ import { getVisualStyleSuffix, getImageStrategy } from './visualStyles.js';
 import { getVideoStylePrompt } from './videoStylePresets.js';
 import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
+
+/**
+ * Get the target scene duration for fast-paced Shorts.
+ * Hook/intro: 3s max. Other scenes: 3-5s. One scene gets 2s for pace variation.
+ */
+function getSceneDuration(role, sceneIndex, totalScenes) {
+  // First scene (hook) — short and punchy
+  if (sceneIndex === 0) return 3;
+  // Last scene (CTA/outro) — brief
+  if (sceneIndex === totalScenes - 1) return 3;
+  // Middle scenes — vary between 3-5s, include one 2s scene for pace
+  if (sceneIndex === Math.floor(totalScenes / 2)) return 2; // mid-point quick cut
+  return role === 'cta' ? 3 : 5;
+}
 
 /**
  * Get the actual video duration after model-specific clamping.
@@ -203,23 +217,12 @@ export async function runShortsPipeline(opts) {
       metadata: { character_count: scriptResult.narration_full.length },
     });
 
-    // ── Step 3: Generate Word Timestamps ─────────────────────────────────────────
-    currentStep = 'generating_timestamps';
-    let wordTimestamps, sceneWordMap;
-    await updateJob({ current_step: 'generating_timestamps', completed_steps: 2 });
-    console.log('[shortsPipeline] Step 3: Generating word-level timestamps via Whisper');
-
-    const tsResult = await withRetry(
-      () => generateTimestamps(voiceoverUrl, keys.falKey),
-      { maxAttempts: 2, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[shortsPipeline] Whisper retry ${a}: ${e.message}`) }
-    );
-    wordTimestamps = tsResult.words;
-    sceneWordMap = mapWordsToScenes(wordTimestamps, scriptResult.scenes);
-    console.log(`[shortsPipeline] ${wordTimestamps.length} words mapped to ${sceneWordMap.length} scenes`);
+    // ── Step 3: Skipped (Whisper removed — auto-caption handles speech-to-text) ─
+    await updateJob({ current_step: 'generating_images', completed_steps: 2 });
+    console.log('[shortsPipeline] Step 3: Skipped (auto-caption handles captions from audio)');
 
     // ── Steps 4+5: Generate Images & Animate Clips (interleaved per scene) ───────
     currentStep = 'generating_images';
-    await updateJob({ current_step: 'generating_images', completed_steps: 3 });
     console.log(`[shortsPipeline] Steps 4+5: Generating ${scriptResult.scenes.length} scene images (strategy: ${imageStrategy})${hasLoras ? ' with LoRA' : ''}`);
 
     const sceneImages = [];
@@ -233,7 +236,6 @@ export async function runShortsPipeline(opts) {
 
     for (let i = 0; i < scriptResult.scenes.length; i++) {
       const scene = scriptResult.scenes[i];
-      const sceneWord = sceneWordMap[i];
       currentSceneIndex = i;
 
       // ── Image ──────────────────────────────────────────────────────────────────
@@ -289,12 +291,9 @@ export async function runShortsPipeline(opts) {
       const videoStylePrompt = getVideoStylePrompt(videoStyle);
       const motionPromptUsed = [scene.motion_prompt, videoStylePrompt].filter(Boolean).join(', ') || 'slow cinematic pan';
 
-      // Duration from actual voiceover timing (fallback to template)
-      const requestedDuration = sceneWord
-        ? Math.max(3, Math.round(sceneWord.endTime - sceneWord.startTime))
-        : scene.duration_seconds || 5;
-      // The model clamps this — Veo max 8s, Kling v2 5/10, etc.
-      // Track the actual expected duration for assembly and frame extraction
+      // Fast-paced scene durations: hook=3s, others=3-5s
+      // Keep it snappy — short scenes hold attention
+      const requestedDuration = getSceneDuration(scene.role, i, scriptResult.scenes.length);
       const actualDuration = getActualDuration(videoModel, requestedDuration);
       actualClipDurations.push(actualDuration);
 
@@ -304,7 +303,8 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (requested ${requestedDuration}s → actual ${actualDuration}s, model: ${videoModel})`);
 
       const clipUrl = await withRetry(
-        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', requestedDuration, keys, supabase, { loras: loraConfigs, generate_audio: generateAudioFlag }),
+        // Never send generate_audio for Shorts — we have our own voiceover + music
+        () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, '9:16', requestedDuration, keys, supabase, { loras: loraConfigs, generate_audio: false }),
         { maxAttempts: 2, baseDelayMs: 5000 }
       );
       sceneClips.push(clipUrl);
@@ -402,11 +402,10 @@ export async function runShortsPipeline(opts) {
     try {
       captionedVideoUrl = await burnCaptions(
         assembledVideoUrl,
-        wordTimestamps,
+        null, // auto-caption handles speech detection from audio
         keys.falKey,
         supabase,
         captionStyle,
-        wordsPerChunk,
       );
     } catch (captionErr) {
       console.warn(`[shortsPipeline] Caption burning failed, using uncaptioned video: ${captionErr.message}`);
@@ -430,7 +429,6 @@ export async function runShortsPipeline(opts) {
         video_url: assembledVideoUrl,
       },
       voiceover_url: voiceoverUrl,
-      word_timestamps_json: wordTimestamps,
       captioned_video_url: captionedVideoUrl,
       scene_inputs_json: sceneInputs,
       shorts_metadata_json: {
