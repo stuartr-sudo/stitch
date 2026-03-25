@@ -84,9 +84,12 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     const status = data.status;
 
     if (status === 'COMPLETED') return data.output;
-    // response_url returns the result directly when done (no status field)
-    // Check for common result shapes: images (image gen), audio (TTS), video (animation)
-    if (!status && (data.images || data.audio || data.video || data.output)) return data;
+    // response_url returns the result directly when done (no status field).
+    // Detect completion by checking for any known FAL result key.
+    if (!status && !data.queue_position && (
+      data.images || data.audio || data.video || data.output ||
+      data.image_url || data.video_url || data.output_url
+    )) return data;
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
     if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
