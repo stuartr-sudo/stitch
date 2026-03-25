@@ -5,6 +5,7 @@ export const IMAGE_MODELS = [
   { value: 'fal_imagen4', label: 'Imagen 4', strength: "Google's best quality", price: '$0.04/img', lora: false },
   { value: 'fal_kling_img', label: 'Kling Image V3', strength: 'Consistent photorealism', price: '$0.028/img', lora: false },
   { value: 'fal_grok', label: 'Grok Imagine', strength: 'Highly aesthetic', price: '$0.02/img', lora: false },
+  { value: 'fal_nano_banana', label: 'Nano Banana 2', strength: 'Best overall quality', price: '~$0.02/img', lora: false },
   { value: 'fal_ideogram', label: 'Ideogram V2', strength: 'Best text/typography', price: '~$0.04/img', lora: false },
 ];
 

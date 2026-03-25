@@ -111,6 +111,17 @@ export const IMAGE_MODELS = {
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
   },
+  fal_nano_banana: {
+    provider: 'fal',
+    label: 'Nano Banana 2',
+    endpoint: 'fal-ai/nano-banana-2',
+    sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9' },
+    buildBody: (prompt, size) => ({
+      prompt, image_size: size, num_images: 1,
+    }),
+    parseResult: (output) => output?.images?.[0]?.url,
+    pollConfig: { maxRetries: 120, delayMs: 2000 },
+  },
   // FIX: Wavespeed doesn't support num_images on standard endpoint
   wavespeed: {
     provider: 'wavespeed',
