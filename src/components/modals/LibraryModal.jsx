@@ -527,6 +527,7 @@ export default function LibraryModal({
   const fetchTags = async () => {
     try {
       const res = await apiFetch('/api/library/tags');
+      if (!res.ok) return; // Silently skip if tags API unavailable (migration not run)
       const data = await res.json();
       if (data.tags) setTags(data.tags);
     } catch {}
@@ -544,13 +545,16 @@ export default function LibraryModal({
     if (imageItems.length === 0) return items;
     const ids = imageItems.map(i => i.id);
     try {
-      const { data: links } = await supabase
+      const { data: links, error } = await supabase
         .from('image_tag_links')
         .select('image_id, tag_id, image_tags(id, name)')
         .in('image_id', ids);
 
+      // Gracefully handle table not existing (migration not run yet)
+      if (error || !links) return items;
+
       const tagMap = {};
-      for (const link of (links || [])) {
+      for (const link of links) {
         if (!tagMap[link.image_id]) tagMap[link.image_id] = [];
         if (link.image_tags) tagMap[link.image_id].push(link.image_tags);
       }

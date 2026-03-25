@@ -965,7 +965,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           url: compositeDataUrl,
           type: 'image',
           title: `${titlePrefix} — Reassembled Sheet (${keepCells.length} cells)`,
-          prompt: characterDescription,
+          prompt: characters[0]?.description || '',
           source: 'turnaround-sheet',
         }),
       });
