@@ -48,7 +48,7 @@ export async function generateScript({ niche, topic, nicheTemplate, keys, brandU
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
   // If targetDurationSeconds provided, adjust scene count from template
-  const sceneCounts = { 30: 3, 45: 4, 60: 5, 90: 7 };
+  const sceneCounts = { 15: 3, 30: 3, 45: 4, 60: 5, 90: 7 };
   let scenes = nicheTemplate.scenes;
   let effectiveDuration = nicheTemplate.total_duration_seconds;
 
