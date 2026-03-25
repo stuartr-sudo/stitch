@@ -18,8 +18,8 @@ const ScriptSceneSchema = z.object({
   visual_prompt: z.string().describe('Vivid AI image generation prompt describing exactly what to show'),
   motion_prompt: z.string().describe('Camera movement: slow pan, zoom in, drift left, etc.'),
   duration_seconds: z.number().describe('Target duration matching the template scene'),
-  overlay_text: z.string().nullable().optional().describe('On-screen text overlay for this scene (null if none)'),
-  scene_label: z.string().optional().describe('Framework beat name for this scene'),
+  overlay_text: z.string().nullable().describe('On-screen text overlay for this scene (null if none)'),
+  scene_label: z.string().nullable().describe('Framework beat name for this scene'),
 });
 
 const ShortsScriptSchema = z.object({
