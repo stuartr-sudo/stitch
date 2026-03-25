@@ -394,8 +394,7 @@ export default function CampaignsNewPage() {
   }, []);
 
   useEffect(() => {
-    if ((wizardStep === 'framework' || wizardStep === 'visual_style' || wizardStep === 'image_model' || wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0) {
-      setVideoStylesError(false);
+    if ((wizardStep === 'framework' || wizardStep === 'visual_style' || wizardStep === 'image_model' || wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0 && !videoStylesError) {
       apiFetch('/api/styles/video').then(r => r.json()).then(d => { if (Array.isArray(d)) setVideoStylesList(d); else setVideoStylesError(true); }).catch(() => setVideoStylesError(true));
       apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
     }
@@ -420,6 +419,7 @@ export default function CampaignsNewPage() {
       if (fw.defaults.imageModel) setImageModel(fw.defaults.imageModel);
       if (fw.defaults.videoModel) setVideoModel(fw.defaults.videoModel);
     }
+    setTimeout(() => goNext(), 150);
   };
 
   const scrollToTop = () => {
