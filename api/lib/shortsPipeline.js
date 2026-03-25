@@ -28,10 +28,12 @@ import {
   extractFirstFrame,
   analyzeFrameContinuity,
   assembleShort,
+  pollFalQueue,
+  uploadUrlToSupabase,
 } from './pipelineHelpers.js';
 import { getVisualStyleSuffix, getImageStrategy } from './visualStyles.js';
 import { getVideoStylePrompt } from './videoStylePresets.js';
-import { getFramework, getSceneStructure } from './videoStyleFrameworks.js';
+import { getFramework } from './videoStyleFrameworks.js';
 import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
 
@@ -287,13 +289,11 @@ export async function runShortsPipeline(opts) {
             }),
           });
           if (concatRes.ok) {
-            const { pollFalQueue: poll } = await import('./pipelineHelpers.js');
             const qData = await concatRes.json();
-            const output = await poll(qData.response_url || qData.request_id, 'fal-ai/ffmpeg-api/compose', keys.falKey, 60, 3000);
+            const output = await pollFalQueue(qData.response_url || qData.request_id, 'fal-ai/ffmpeg-api/compose', keys.falKey, 60, 3000);
             const url = output?.video_url || output?.audio?.url || output?.output_url;
             if (url) {
-              const { uploadUrlToSupabase: upload } = await import('./pipelineHelpers.js');
-              voiceoverUrl = await upload(url, supabase, 'pipeline/voiceover');
+              voiceoverUrl = await uploadUrlToSupabase(url, supabase, 'pipeline/voiceover');
             }
           }
         } catch (concatErr) {
