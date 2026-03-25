@@ -383,12 +383,31 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
  * @param {string} [model] - 'beatoven' | 'fal_elevenlabs' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
-export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'beatoven') {
+export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'minimax') {
   if (!keys.falKey) return null; // music is optional — don't block pipeline
 
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
 
   try {
+    // --- MiniMax Music V2 (default) ---
+    if (model === 'minimax') {
+      const res = await fetch(`${FAL_BASE}/fal-ai/minimax-music/v2`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: moodPrompt.slice(0, 300),
+          lyrics_prompt: '[Instrumental]',
+        }),
+      });
+      if (!res.ok) { console.warn('[pipelineHelpers] MiniMax Music gen failed, skipping:', await res.text()); return null; }
+      const queueData = await res.json();
+      if (!queueData.request_id) return null;
+      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/minimax-music/v2', keys.falKey, 120, 3000);
+      const audioUrl = output?.audio?.url;
+      if (!audioUrl) return null;
+      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    }
+
     // --- ElevenLabs Music via FAL ---
     if (model === 'fal_elevenlabs') {
       const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/music`, {
@@ -421,7 +440,7 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
 
-    // --- Default: Beatoven ---
+    // --- Beatoven (legacy fallback) ---
     const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
