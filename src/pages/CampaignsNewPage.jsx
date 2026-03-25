@@ -132,7 +132,8 @@ const WIZARD_STEPS = [
   { key: 'framework', label: 'Video Style' },
   { key: 'visual_style', label: 'Visual Style' },
   { key: 'image_model', label: 'Image Model' },
-  { key: 'motion', label: 'Motion & Video' },
+  { key: 'video_style', label: 'Motion Style' },
+  { key: 'video_model', label: 'Video Model' },
   { key: 'voice', label: 'Voice & Music' },
   { key: 'pills', label: 'Scene Direction' },
   { key: 'topics', label: 'Topic & Research' },
@@ -392,7 +393,7 @@ export default function CampaignsNewPage() {
   }, []);
 
   useEffect(() => {
-    if ((wizardStep === 'motion' || wizardStep === 'voice') && videoStylesList.length === 0) {
+    if ((wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0) {
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
       apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
     }
@@ -444,7 +445,8 @@ export default function CampaignsNewPage() {
       case 'framework': return !!selectedFramework;
       case 'visual_style': return visualStyle;
       case 'image_model': return !!imageModel;
-      case 'motion': return videoStyle && videoModel;
+      case 'video_style': return !!videoStyle;
+      case 'video_model': return !!videoModel;
       case 'voice': return geminiVoice;
       case 'pills': return true; // optional
       case 'topics': return topic.trim().length > 0;
@@ -1043,7 +1045,7 @@ export default function CampaignsNewPage() {
             {/* Step 3: Look & Feel */}
             {/* Step 3: Visual Style */}
             {wizardStep === 'visual_style' && (
-              <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="none" hideLabel />
+              <StyleGrid value={visualStyle} onChange={(v) => { setVisualStyle(v); setTimeout(() => goNext(), 150); }} maxHeight="none" hideLabel />
             )}
 
             {/* Step 4: Image Model */}
@@ -1075,39 +1077,36 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 4: Motion & Video */}
-            {wizardStep === 'motion' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Style</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {videoStylesList.map(s => (
-                      <button key={s.key} onClick={() => setVideoStyle(s.key)}
-                        className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" />}
-                        <div className="p-2">
-                          <div className="text-xs font-medium text-slate-700">{s.label}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* Step 5: Motion Style */}
+            {wizardStep === 'video_style' && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {videoStylesList.map(s => (
+                  <button key={s.key} onClick={() => { setVideoStyle(s.key); setTimeout(() => goNext(), 150); }}
+                    className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                    {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" />}
+                    <div className="p-2">
+                      <div className="text-xs font-medium text-slate-700">{s.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Model</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {VIDEO_MODELS.map(m => (
-                      <button key={m.value} onClick={() => setVideoModel(m.value)}
-                        className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
-                          <span className="text-[10px] text-slate-400">{m.price}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
-                      </button>
-                    ))}
-                  </div>
+            {/* Step 6: Video Model */}
+            {wizardStep === 'video_model' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-2">
+                  {VIDEO_MODELS.map(m => (
+                    <button key={m.value} onClick={() => setVideoModel(m.value)}
+                      className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                        <span className="text-[10px] text-slate-400">{m.price}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                    </button>
+                  ))}
                 </div>
 
                 {/* Aspect ratio */}
