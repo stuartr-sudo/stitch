@@ -18,6 +18,8 @@ const ScriptSceneSchema = z.object({
   visual_prompt: z.string().describe('Vivid AI image generation prompt describing exactly what to show'),
   motion_prompt: z.string().describe('Camera movement: slow pan, zoom in, drift left, etc.'),
   duration_seconds: z.number().describe('Target duration matching the template scene'),
+  overlay_text: z.string().nullable().optional().describe('On-screen text overlay for this scene (null if none)'),
+  scene_label: z.string().optional().describe('Framework beat name for this scene'),
 });
 
 const ShortsScriptSchema = z.object({
@@ -41,24 +43,38 @@ const ShortsScriptSchema = z.object({
  * @param {string} [params.brandUsername] - For cost logging
  * @returns {Promise<object>} Parsed ShortsScriptSchema result
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds, framework }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
   if (!nicheTemplate) throw new Error(`No template found for niche "${niche}". Cannot generate script.`);
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
-  // If targetDurationSeconds provided, adjust scene count from template
-  const sceneCounts = { 15: 3, 30: 3, 45: 4, 60: 5, 90: 7 };
   let scenes = nicheTemplate.scenes;
   let effectiveDuration = nicheTemplate.total_duration_seconds;
 
-  if (targetDurationSeconds && sceneCounts[targetDurationSeconds]) {
-    const targetSceneCount = sceneCounts[targetDurationSeconds];
-    effectiveDuration = targetDurationSeconds;
-    // Take first N scenes from template, adjusting to fit target duration
-    scenes = nicheTemplate.scenes.slice(0, targetSceneCount);
-    const perScene = Math.round(effectiveDuration / targetSceneCount);
-    scenes = scenes.map(s => ({ ...s, duration: perScene }));
+  // Determine scene count — framework-driven takes priority over legacy mapping
+  let targetSceneCount;
+  if (framework) {
+    const frameworkScenes = framework.sceneStructure[targetDurationSeconds]
+      || framework.sceneStructure[framework.supportedDurations[0]];
+    targetSceneCount = frameworkScenes.length;
+    effectiveDuration = targetDurationSeconds || framework.supportedDurations[0];
+    // Build scenes array from framework structure
+    scenes = frameworkScenes.map(s => ({
+      role: s.label,
+      hint: s.beat,
+      duration: Math.round((s.durationRange[0] + s.durationRange[1]) / 2),
+    }));
+  } else if (targetDurationSeconds) {
+    // Legacy fallback
+    const sceneCounts = { 15: 3, 30: 3, 45: 4, 60: 5, 90: 7 };
+    if (sceneCounts[targetDurationSeconds]) {
+      targetSceneCount = sceneCounts[targetDurationSeconds];
+      effectiveDuration = targetDurationSeconds;
+      scenes = nicheTemplate.scenes.slice(0, targetSceneCount);
+      const perScene = Math.round(effectiveDuration / targetSceneCount);
+      scenes = scenes.map(s => ({ ...s, duration: perScene }));
+    }
   }
 
   const sceneStructure = scenes
@@ -67,12 +83,41 @@ export async function generateScript({ niche, topic, nicheTemplate, keys, brandU
 
   const totalWords = Math.round(effectiveDuration * 2.7); // ~2.7 words/sec for natural speech
 
+  // Build framework-specific prompt block
+  let frameworkBlock = '';
+  if (framework) {
+    const frameworkScenes = framework.sceneStructure[targetDurationSeconds]
+      || framework.sceneStructure[framework.supportedDurations[0]];
+
+    const sceneGuide = frameworkScenes.map((s, i) =>
+      `Scene ${i + 1} "${s.label}" (${s.durationRange[0]}-${s.durationRange[1]}s): ${s.beat}` +
+      (s.overlayText ? ` — overlay text template: ${s.overlayText}` : '')
+    ).join('\n');
+
+    frameworkBlock = `
+
+VIDEO STYLE FRAMEWORK: ${framework.name}
+Category: ${framework.category === 'story' ? 'Narrative/Story (flowing, connected scenes)' : 'Fast-Paced/List (independent, punchy scenes)'}
+TTS Pacing: ${framework.ttsPacing}
+Text Overlays: ${framework.textOverlays === 'required' ? 'REQUIRED — each scene MUST have overlay_text' : framework.textOverlays === 'optional' ? 'Optional — add overlay_text where it enhances clarity' : 'None — leave overlay_text null'}
+${framework.overlayStyle ? `Overlay Style: ${framework.overlayStyle}` : ''}
+
+SCENE STRUCTURE (follow this exactly):
+${sceneGuide}
+
+Write narration that matches this pacing: ${framework.ttsPacing}
+${framework.category === 'fast_paced' ? 'Each scene should be self-contained and punchy. No flowery transitions between scenes.' : 'Scenes should flow naturally into each other like a continuous story.'}
+- For each scene, set scene_label to the scene label name (e.g. "${frameworkScenes[0]?.label}")
+- overlay_text: ${framework.textOverlays === 'required' ? 'REQUIRED for every scene — write concise on-screen text (3-7 words) that reinforces the narration' : framework.textOverlays === 'optional' ? 'Add where it enhances clarity; leave null otherwise' : 'Set to null for all scenes'}`;
+  }
+
   const systemPrompt = `${nicheTemplate.script_system_prompt}
 
 TEMPLATE STRUCTURE (${scenes.length} scenes, ${effectiveDuration}s total):
 ${sceneStructure}
 
-VOICE PACING: ${nicheTemplate.voice_pacing}
+VOICE PACING: ${framework ? framework.ttsPacing : nicheTemplate.voice_pacing}
+${frameworkBlock}
 
 CRITICAL RULES:
 - Total narration must be ${totalWords - 15} to ${totalWords + 15} words (for ${effectiveDuration} seconds at natural pace)

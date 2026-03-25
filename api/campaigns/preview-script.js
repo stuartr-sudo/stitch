@@ -22,7 +22,7 @@ import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, topic, brand_username, story_context, visual_directions, videoLengthPreset } = req.body;
+  const { niche, topic, brand_username, story_context, visual_directions, videoLengthPreset, framework: frameworkId } = req.body;
 
   if (!niche) {
     return res.status(400).json({ error: 'Missing niche' });
@@ -50,6 +50,9 @@ export default async function handler(req, res) {
   if (!openaiKey) return res.status(400).json({ error: 'OpenAI API key required' });
 
   try {
+    const { getFramework } = await import('../lib/videoStyleFrameworks.js');
+    const framework = frameworkId ? getFramework(frameworkId) : null;
+
     const script = await generateScript({
       niche,
       topic,
@@ -59,6 +62,7 @@ export default async function handler(req, res) {
       storyContext: story_context || undefined,
       visualDirections: visual_directions || undefined,
       targetDurationSeconds: videoLengthPreset || undefined,
+      framework,
     });
 
     return res.json({ script, niche });

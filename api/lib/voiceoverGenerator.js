@@ -10,6 +10,42 @@
 
 import { pollFalQueue } from './pipelineHelpers.js';
 
+// Gemini TTS voices via fal-ai/gemini-tts
+export const GEMINI_VOICES = [
+  { id: 'Kore', label: 'Kore', description: 'Strong, firm female' },
+  { id: 'Puck', label: 'Puck', description: 'Upbeat, lively male' },
+  { id: 'Charon', label: 'Charon', description: 'Calm, professional male' },
+  { id: 'Zephyr', label: 'Zephyr', description: 'Bright, clear female' },
+  { id: 'Aoede', label: 'Aoede', description: 'Warm, melodic female' },
+  { id: 'Achernar', label: 'Achernar', description: 'Deep, resonant' },
+  { id: 'Achird', label: 'Achird', description: 'Gentle, measured' },
+  { id: 'Algenib', label: 'Algenib', description: 'Energetic, bright' },
+  { id: 'Algieba', label: 'Algieba', description: 'Warm, conversational' },
+  { id: 'Alnilam', label: 'Alnilam', description: 'Steady, authoritative' },
+  { id: 'Autonoe', label: 'Autonoe', description: 'Soft, thoughtful' },
+  { id: 'Callirrhoe', label: 'Callirrhoe', description: 'Clear, articulate' },
+  { id: 'Despina', label: 'Despina', description: 'Light, airy' },
+  { id: 'Enceladus', label: 'Enceladus', description: 'Rich, dramatic' },
+  { id: 'Erinome', label: 'Erinome', description: 'Crisp, professional' },
+  { id: 'Fenrir', label: 'Fenrir', description: 'Bold, commanding' },
+  { id: 'Gacrux', label: 'Gacrux', description: 'Smooth, reassuring' },
+  { id: 'Iapetus', label: 'Iapetus', description: 'Neutral, versatile' },
+  { id: 'Laomedeia', label: 'Laomedeia', description: 'Melodious, flowing' },
+  { id: 'Leda', label: 'Leda', description: 'Quiet, intimate' },
+  { id: 'Orus', label: 'Orus', description: 'Strong, grounded' },
+  { id: 'Pulcherrima', label: 'Pulcherrima', description: 'Elegant, refined' },
+  { id: 'Rasalgethi', label: 'Rasalgethi', description: 'Deep, sonorous' },
+  { id: 'Sadachbia', label: 'Sadachbia', description: 'Cheerful, warm' },
+  { id: 'Sadaltager', label: 'Sadaltager', description: 'Measured, precise' },
+  { id: 'Schedar', label: 'Schedar', description: 'Bright, enthusiastic' },
+  { id: 'Sulafat', label: 'Sulafat', description: 'Calm, soothing' },
+  { id: 'Umbriel', label: 'Umbriel', description: 'Low, mysterious' },
+  { id: 'Vindemiatrix', label: 'Vindemiatrix', description: 'Clear, confident' },
+  { id: 'Zubenelgenubi', label: 'Zubenelgenubi', description: 'Animated, expressive' },
+];
+
+const GEMINI_TTS_ENDPOINT = 'fal-ai/gemini-tts';
+
 // Map legacy ElevenLabs voice IDs to FAL-compatible voice names.
 // FAL only supports: Aria, Roger, Sarah, Laura, Charlie, George, Callum,
 // River, Liam, Charlotte, Alice, Matilda, Will, Jessica, Eric, Chris,
@@ -117,6 +153,87 @@ export async function generateVoiceover(text, keys, supabase, options = {}) {
 
   const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
   console.log(`[voiceover] Uploaded to ${publicUrl}`);
+  return publicUrl;
+}
+
+/**
+ * Generate voiceover using Gemini TTS via FAL.
+ * @param {string} text - Narration text
+ * @param {object} keys - { falKey }
+ * @param {object} supabase - Supabase client
+ * @param {object} options - { voice, model, styleInstructions }
+ * @returns {Promise<string>} Public URL of generated MP3
+ */
+export async function generateGeminiVoiceover(text, keys, supabase, options = {}) {
+  const {
+    voice = 'Kore',
+    model = 'gemini-2.5-flash-tts',
+    styleInstructions = 'Say the following in a warm, conversational tone',
+  } = options;
+
+  const falKey = keys.falKey;
+  if (!falKey) throw new Error('FAL API key required for Gemini TTS voiceover generation');
+  if (!text?.trim()) throw new Error('Text is required for Gemini TTS voiceover generation');
+
+  console.log(`[Gemini TTS] Generating voiceover: voice=${voice}, model=${model}, text length=${text.length}`);
+
+  const body = {
+    prompt: text,
+    style_instructions: styleInstructions,
+    voice,
+    model,
+    language_code: 'English (US)',
+    temperature: 1,
+    output_format: 'mp3',
+  };
+
+  // Submit to FAL queue
+  const submitRes = await fetch(`https://queue.fal.run/${GEMINI_TTS_ENDPOINT}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${falKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!submitRes.ok) {
+    const err = await submitRes.text();
+    throw new Error(`Gemini TTS submit failed (${submitRes.status}): ${err}`);
+  }
+
+  const submitData = await submitRes.json();
+  const request_id = submitData.request_id;
+  // Use response_url from FAL (full path) to avoid 2-segment truncation in pollFalQueue
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/${GEMINI_TTS_ENDPOINT}/requests/${request_id}`;
+  console.log(`[Gemini TTS] Queued: request_id=${request_id}`);
+
+  // Poll for completion
+  const result = await pollFalQueue(responseUrl, GEMINI_TTS_ENDPOINT, falKey, 120, 2000);
+
+  if (!result?.audio?.url) {
+    throw new Error('Gemini TTS returned no audio URL');
+  }
+
+  console.log(`[Gemini TTS] Complete, downloading from FAL...`);
+
+  // Download and re-upload to Supabase
+  const audioRes = await fetch(result.audio.url);
+  if (!audioRes.ok) throw new Error(`Failed to download Gemini TTS audio: ${audioRes.status}`);
+
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+  console.log(`[Gemini TTS] Audio: ${audioBuffer.length} bytes`);
+
+  const fileName = `pipeline/voiceover/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
+  const { error: uploadError } = await supabase.storage
+    .from('media')
+    .upload(fileName, audioBuffer, { contentType: 'audio/mpeg', upsert: false });
+
+  if (uploadError) throw new Error(`Gemini TTS voiceover upload failed: ${uploadError.message}`);
+
+  const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
+  console.log(`[Gemini TTS] Uploaded to ${publicUrl}`);
   return publicUrl;
 }
 

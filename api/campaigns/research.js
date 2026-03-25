@@ -10,6 +10,8 @@
  *   niche: string,
  *   brand_username: string,
  *   count?: number,         // number of story ideas (default: 5)
+ *   exclude_topics?: string[], // topics to avoid (default: [])
+ *   framework?: string,     // video format framework (optional)
  * }
  *
  * Response: { stories: Array<{ title, summary, angle, why_viral, story_context }> }
@@ -113,7 +115,7 @@ async function searchRealStories(niche, nicheName, topic) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, topic, brand_username, count = 5 } = req.body;
+  const { niche, topic, brand_username, count = 5, exclude_topics = [], framework } = req.body;
 
   if (!niche) {
     return res.status(400).json({ error: 'Missing niche' });
@@ -153,6 +155,22 @@ export default async function handler(req, res) {
       ? `\n\nIMPORTANT: The user specifically wants stories about "${topic.replace(/\s*—\s*/g, ' → ')}". Every story MUST be directly related to this topic. Do NOT return generic ${nicheTemplate.name} stories — stay tightly focused on the user's chosen topic.`
       : '';
 
+    // Add exclusion block if topics are provided
+    const excludeBlock = exclude_topics.length > 0
+      ? `\n\nAVOID these topics (already covered): ${exclude_topics.join(', ')}`
+      : '';
+
+    // Add framework-aware research guidance
+    const frameworkBlock = framework
+      ? `\n\nVIDEO FORMAT: ${framework} — tailor research for this format. ${
+          framework.includes('top') || framework.includes('countdown') ? 'Find list-worthy items.' :
+          framework.includes('documentary') || framework.includes('story') ? 'Find deep-dive stories with narrative arcs.' :
+          framework.includes('myth') ? 'Find common misconceptions to debunk.' :
+          framework.includes('comparison') ? 'Find comparable items to pit against each other.' :
+          'Find interesting angles.'
+        }`
+      : '';
+
     const systemPrompt = hasRealArticles
       ? `You are a viral content researcher for ${nicheTemplate.name} short-form videos.
 
@@ -162,7 +180,7 @@ For each story:
 - Use the REAL facts from the articles — do NOT make up information
 - Find the most surprising or counterintuitive angle
 - The story_context field should include all key facts, names, dates from the article
-- Make the title punchy and click-worthy for 60-second vertical videos${topicFocus}`
+- Make the title punchy and click-worthy for 60-second vertical videos${topicFocus}${excludeBlock}${frameworkBlock}`
       : `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos.
 
 Your job is to surface specific, real stories that would make excellent 60-second vertical videos.
@@ -172,7 +190,7 @@ For each story:
 - Be SPECIFIC: real names, dates, places — not "a man in the 1980s"
 - Pick stories with a clear narrative arc: setup → conflict → resolution
 - Prioritize counterintuitive angles: the thing most people don't know
-- The story_context field should be rich enough that a script writer could use it without any additional research${topicFocus}`;
+- The story_context field should be rich enough that a script writer could use it without any additional research${topicFocus}${excludeBlock}${frameworkBlock}`;
 
     const topicClause = topic && topic.trim()
       ? ` specifically about "${topic.replace(/\s*—\s*/g, ' → ')}"`

@@ -335,7 +335,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {number[]} [clipDurations] - Actual duration of each clip in seconds
  * @returns {Promise<string>} Public URL of the assembled video
  */
-export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = []) {
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
@@ -356,11 +356,11 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   ];
 
   if (musicUrl) {
-    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs }] });
+    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume }] });
   }
 
   const totalDurationSec = totalDurationMs / 1000;
-  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s) + voiceover${musicUrl ? ' + music' : ''}`);
+  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s) + voiceover${musicUrl ? ` + music (vol=${musicVolume})` : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
@@ -379,6 +379,42 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
 }
 
 // ---------------------------------------------------------------------------
+// Extract the first frame from a video clip
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts the first frame of a video clip via the fal.ai FFMPEG API.
+ * Returns a publicly accessible image URL.
+ *
+ * @param {string} videoUrl - public URL of the source video
+ * @param {string} falKey
+ * @returns {Promise<string>} image URL of the extracted frame
+ */
+export async function extractFirstFrame(videoUrl, falKey) {
+  if (!falKey) throw new Error('falKey required for frame extraction');
+
+  console.log('[extractFirstFrame] Extracting first frame...');
+  const body = { video_url: videoUrl, frame_type: 'first' };
+  const submitRes = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/extract-frame`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!submitRes.ok) throw new Error(`extractFirstFrame submit failed: ${submitRes.status}`);
+  const queueData = await submitRes.json();
+
+  // Some FAL endpoints return the result directly; others require polling
+  if (queueData.images?.[0]?.url) return queueData.images[0].url;
+
+  const result = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 30, 2000);
+  const imageUrl = result?.images?.[0]?.url || result?.image?.url;
+  if (!imageUrl) throw new Error('extractFirstFrame returned no image URL');
+  console.log('[extractFirstFrame] Done:', imageUrl);
+  return imageUrl;
+}
+
+// ---------------------------------------------------------------------------
 // Generate background music
 // ---------------------------------------------------------------------------
 
@@ -390,7 +426,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
  * @param {string} [model] - 'minimax' | 'fal_elevenlabs' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
-export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'minimax') {
+export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'fal_lyria2') {
   if (!keys.falKey) return null; // music is optional — don't block pipeline
 
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
@@ -431,12 +467,12 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
 
-    // --- Lyria 2 (Google) via FAL ---
+    // --- Lyria 2 (Google) via FAL (default) ---
     if (model === 'fal_lyria2') {
       const res = await fetch(`${FAL_BASE}/fal-ai/lyria2`, {
         method: 'POST',
         headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: moodPrompt, duration: clampedDuration }),
+        body: JSON.stringify({ prompt: `[Instrumental] ${moodPrompt.slice(0, 280)}`, duration: clampedDuration }),
       });
       if (!res.ok) { console.warn('[pipelineHelpers] Lyria 2 Music gen failed, skipping:', await res.text()); return null; }
       const queueData = await res.json();
@@ -447,7 +483,7 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
 
-    // No other music models — MiniMax is the only supported provider
+    // No other music models — Lyria 2, MiniMax, and ElevenLabs are supported
     console.warn('[pipelineHelpers] Unknown music model, skipping');
     return null;
   } catch (err) {

@@ -113,25 +113,90 @@ export const NICHE_SCENE_PILLS = {
 
 // ── Shared camera pills (appended to every niche) ───────────────────────────
 
-const SHARED_CAMERA_PILLS = {
-  label: 'Camera',
-  pills: [
-    'extreme close-up', 'wide establishing shot', 'aerial drone view',
-    'slow zoom in', 'pan left to right', 'dolly forward', 'tracking shot',
-    'bird eye view', 'low angle looking up', 'over the shoulder', 'handheld shake',
-  ],
+const SHARED_CAMERA_PILLS = [
+  'extreme close-up', 'wide establishing shot', 'aerial drone view',
+  'slow zoom in', 'pan left to right', 'dolly forward', 'tracking shot',
+  'bird eye view', 'low angle looking up', 'over the shoulder', 'handheld shake',
+];
+
+// ── Framework-specific pill sets ─────────────────────────────────────────────
+
+const FRAMEWORK_PILLS = {
+  story: {
+    Atmosphere: ['warm golden light', 'misty morning', 'quiet intimacy', 'nostalgic warmth', 'dramatic shadows', 'soft bokeh background'],
+    Emotion: ['determination', 'vulnerability', 'triumph', 'reflection', 'hope', 'tension'],
+    Pacing: ['slow reveal', 'building momentum', 'lingering moment', 'quiet pause'],
+  },
+  fast_paced: {
+    Action: ['quick zoom', 'rapid cuts', 'dynamic movement', 'high energy', 'snappy transitions'],
+    Impact: ['bold graphics', 'striking contrast', 'neon accents', 'clean modern', 'eye-catching'],
+    Rhythm: ['punchy beats', 'staccato rhythm', 'countdown energy', 'reveal moment'],
+  },
 };
 
 /**
- * Get scene pills for a specific niche. Returns niche-specific categories + shared camera.
+ * Get scene pills with context awareness.
+ * Combines niche-specific pills, framework context, visual style, and duration.
+ * Returns curated visual direction helpers for the scene builder.
+ * @param {string} niche - Niche key (e.g. 'scary_horror')
+ * @param {Object} framework - Framework object with { category, name } (e.g. { category: 'story', name: 'Story-Driven' })
+ * @param {string} visualStyle - Visual style name (informational, may influence pill selection)
+ * @param {number} duration - Video duration in seconds (affects pill count)
+ * @returns {Array<{label: string, pills: string[]}>}
+ */
+export function getScenePills(niche, framework = null, visualStyle = null, duration = null) {
+  const nichePills = NICHE_SCENE_PILLS[niche];
+  const frameworkCategory = framework?.category || 'story';
+  const frameworkPills = FRAMEWORK_PILLS[frameworkCategory] || {};
+
+  // If no niche-specific pills found, use fallback
+  if (!nichePills) {
+    return SCENE_PILL_CATEGORIES;
+  }
+
+  const allCategories = {};
+
+  // Niche-specific pills first (in order from NICHE_SCENE_PILLS)
+  for (const category of nichePills) {
+    allCategories[category.label] = [...category.pills];
+  }
+
+  // Framework pills added/merged
+  for (const [cat, pills] of Object.entries(frameworkPills)) {
+    if (allCategories[cat]) {
+      allCategories[cat] = [...allCategories[cat], ...pills];
+    } else {
+      allCategories[cat] = [...pills];
+    }
+  }
+
+  // Duration-aware: shorter videos get fewer pills per category
+  const maxPills = duration && duration <= 30 ? 4 : 6;
+
+  // Build result array with sliced pills
+  const result = Object.entries(allCategories).map(([label, pills]) => ({
+    label,
+    pills: pills.slice(0, maxPills),
+  }));
+
+  // Always append camera pills
+  result.push({
+    label: 'Camera',
+    pills: SHARED_CAMERA_PILLS.slice(0, maxPills),
+  });
+
+  return result;
+}
+
+/**
+ * Get scene pills for a specific niche (backward compatible).
+ * Returns niche-specific categories + shared camera.
  * Falls back to generic pills if niche has no custom pills.
  * @param {string} niche - Niche key (e.g. 'scary_horror')
  * @returns {Array<{label: string, pills: string[]}>}
  */
 export function getScenePillsForNiche(niche) {
-  const nichePills = NICHE_SCENE_PILLS[niche];
-  if (nichePills) return [...nichePills, SHARED_CAMERA_PILLS];
-  return SCENE_PILL_CATEGORIES;
+  return getScenePills(niche);
 }
 
 // ── Legacy generic fallback (unchanged for backward compat) ─────────────────
@@ -163,10 +228,6 @@ export const SCENE_PILL_CATEGORIES = [
   },
   {
     label: 'Camera',
-    pills: [
-      'extreme close-up', 'wide establishing shot', 'aerial drone view',
-      'slow zoom in', 'pan left to right', 'dolly forward', 'tracking shot',
-      'bird eye view', 'low angle looking up', 'over the shoulder', 'handheld shake',
-    ],
+    pills: SHARED_CAMERA_PILLS,
   },
 ];

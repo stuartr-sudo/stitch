@@ -441,7 +441,27 @@ app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campai
 // Style/voice list routes (with auth)
 app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
 app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
+app.get('/api/styles/frameworks', authenticateToken, async (req, res) => {
+  const { listFrameworks } = await import('./api/lib/videoStyleFrameworks.js');
+  res.json({ frameworks: listFrameworks() });
+});
+app.get('/api/styles/captions', authenticateToken, async (req, res) => {
+  const { CAPTION_STYLES } = await import('./api/lib/captionBurner.js');
+  res.json({ presets: CAPTION_STYLES });
+});
 app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
+
+// Shorts repair & reassemble (with auth)
+app.post('/api/shorts/repair-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/repair-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/shorts/reassemble', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/reassemble.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
 
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
