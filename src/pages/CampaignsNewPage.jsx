@@ -19,6 +19,8 @@ import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
 import { SCENE_PILL_CATEGORIES, getScenePillsForNiche } from '@/lib/scenePills';
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
+import { FRAMEWORK_CARDS, getFrameworkCard, getFrameworksByCategory } from '@/lib/videoStyleFrameworks';
+import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 
 const STYLE_PRESETS = [
   { key: 'ugc', label: 'UGC', description: 'Authentic, handheld' },
@@ -126,13 +128,14 @@ const NICHES = [
 ];
 
 const WIZARD_STEPS = [
-  { key: 'niche', label: 'Niche & Theme' },
-  { key: 'topics', label: 'Topics' },
-  { key: 'script', label: 'Script' },
+  { key: 'niche', label: 'Niche & Brand' },
+  { key: 'framework', label: 'Video Style' },
   { key: 'look_feel', label: 'Look & Feel' },
-  { key: 'motion', label: 'Motion Style' },
-  { key: 'video_model', label: 'Video Model' },
+  { key: 'motion', label: 'Motion & Video' },
   { key: 'voice', label: 'Voice & Music' },
+  { key: 'pills', label: 'Scene Direction' },
+  { key: 'topics', label: 'Topic & Research' },
+  { key: 'script', label: 'Script' },
   { key: 'captions', label: 'Captions' },
   { key: 'preview', label: 'Preview Image' },
   { key: 'review', label: 'Review' },
@@ -145,6 +148,38 @@ const VIDEO_LENGTH_PRESETS = [
   { value: 60, label: '60s' },
   { value: 90, label: '90s' },
 ];
+
+const CAPTION_FONT_FAMILIES = [
+  'Montserrat', 'Inter', 'Roboto', 'Poppins', 'Open Sans', 'Lato', 'Oswald',
+  'Raleway', 'Playfair Display', 'Bebas Neue', 'Anton', 'Permanent Marker',
+];
+
+const CAPTION_PRESET_CONFIGS = {
+  word_pop: {
+    font_name: 'Montserrat', font_size: 100, font_weight: 'bold', font_color: 'white',
+    highlight_color: 'purple', stroke_width: 3, stroke_color: 'black', background_color: 'none',
+    background_opacity: 0, position: 'bottom', y_offset: 75, words_per_subtitle: 1,
+    enable_animation: true,
+  },
+  karaoke_glow: {
+    font_name: 'Bebas Neue', font_size: 110, font_weight: 'bold', font_color: 'white',
+    highlight_color: '#FFD700', stroke_width: 2, stroke_color: 'black', background_color: 'none',
+    background_opacity: 0, position: 'bottom', y_offset: 75, words_per_subtitle: 1,
+    enable_animation: true,
+  },
+  news_ticker: {
+    font_name: 'Roboto', font_size: 70, font_weight: 'bold', font_color: 'white',
+    highlight_color: '#FF0000', stroke_width: 0, stroke_color: 'black', background_color: '#000000',
+    background_opacity: 80, position: 'bottom', y_offset: 95, words_per_subtitle: 4,
+    enable_animation: false,
+  },
+  phrase: {
+    font_name: 'Poppins', font_size: 80, font_weight: 'normal', font_color: 'white',
+    highlight_color: '#00BFFF', stroke_width: 2, stroke_color: 'black', background_color: 'none',
+    background_opacity: 0, position: 'center', y_offset: 50, words_per_subtitle: 3,
+    enable_animation: true,
+  },
+};
 
 function SceneEditor({ scene, index, onChange, onRemove, isOnly }) {
   const [expanded, setExpanded] = useState(true);
@@ -267,16 +302,45 @@ export default function CampaignsNewPage() {
   const [startingImage, setStartingImage] = useState(null);
   const [showLibraryForStart, setShowLibraryForStart] = useState(false);
 
-  // Step 3
+  // Script
   const [scriptScenes, setScriptScenes] = useState([]);
   const [scriptLoading, setScriptLoading] = useState(false);
   const [expandedScene, setExpandedScene] = useState(null);
 
-  // Step 4
+  // Image / scene direction
   const [imageModel, setImageModel] = useState('fal_flux');
   const [sceneBuilderPills, setSceneBuilderPills] = useState([]);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [previewImageLoading, setPreviewImageLoading] = useState(false);
+
+  // Framework
+  const [selectedFramework, setSelectedFramework] = useState(null);
+  const [frameworkCards, setFrameworkCards] = useState([]);
+
+  // Gemini TTS
+  const [geminiVoice, setGeminiVoice] = useState('Kore');
+  const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash-tts');
+  const [styleInstructions, setStyleInstructions] = useState('');
+
+  // Aspect ratio
+  const [aspectRatio, setAspectRatio] = useState('9:16');
+
+  // Full caption config
+  const [captionConfig, setCaptionConfig] = useState({
+    font_name: 'Montserrat',
+    font_size: 100,
+    font_weight: 'bold',
+    font_color: 'white',
+    highlight_color: 'purple',
+    stroke_width: 3,
+    stroke_color: 'black',
+    background_color: 'none',
+    background_opacity: 0,
+    position: 'bottom',
+    y_offset: 75,
+    words_per_subtitle: 1,
+    enable_animation: true,
+  });
 
   // Resolve visual style promptText for backend
   const getVisualStylePrompt = (key) => {
@@ -287,7 +351,7 @@ export default function CampaignsNewPage() {
     return '';
   };
 
-  // Step 5
+  // Video styles & voices
   const [videoStylesList, setVideoStylesList] = useState([]);
   const [voicesList, setVoicesList] = useState([]);
   const [previewingVoice, setPreviewingVoice] = useState(null);
@@ -316,6 +380,16 @@ export default function CampaignsNewPage() {
     }).catch(() => {});
   }, []);
 
+  // Load framework cards on mount
+  useEffect(() => {
+    apiFetch('/api/styles/frameworks').then(data => {
+      if (data?.frameworks) setFrameworkCards(data.frameworks);
+    }).catch(() => {
+      // Fallback to local FRAMEWORK_CARDS if API not available
+      setFrameworkCards(FRAMEWORK_CARDS);
+    });
+  }, []);
+
   useEffect(() => {
     if ((wizardStep === 'motion' || wizardStep === 'voice') && videoStylesList.length === 0) {
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
@@ -328,6 +402,21 @@ export default function CampaignsNewPage() {
     apiFetch(`/api/youtube/status?brand_username=${encodeURIComponent(selectedBrand)}`)
       .then(r => r.json()).then(d => setYtConnected(d.connected)).catch(() => setYtConnected(false));
   }, [selectedBrand, contentType]);
+
+  const handleFrameworkSelect = (fw) => {
+    setSelectedFramework(fw);
+    setStyleInstructions(fw.ttsPacing || '');
+    if (fw.supportedDurations?.length > 0) {
+      setVideoLengthPreset(fw.supportedDurations[0]);
+    }
+    setEnableBackgroundMusic(true);
+    if (fw.defaults) {
+      if (fw.defaults.visualStyle) setVisualStyle(fw.defaults.visualStyle);
+      if (fw.defaults.videoStylePreset) setVideoStyle(fw.defaults.videoStylePreset);
+      if (fw.defaults.imageModel) setImageModel(fw.defaults.imageModel);
+      if (fw.defaults.videoModel) setVideoModel(fw.defaults.videoModel);
+    }
+  };
 
   const goNext = () => {
     const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
@@ -343,14 +432,15 @@ export default function CampaignsNewPage() {
   const canGoNext = () => {
     switch (wizardStep) {
       case 'niche': return niche;
+      case 'framework': return !!selectedFramework;
+      case 'look_feel': return visualStyle;
+      case 'motion': return videoStyle && videoModel;
+      case 'voice': return geminiVoice;
+      case 'pills': return true; // optional
       case 'topics': return topic.trim().length > 0;
       case 'script': return scriptScenes.length > 0;
-      case 'look_feel': return visualStyle;
-      case 'motion': return videoStyle;
-      case 'video_model': return videoModel;
-      case 'voice': return voiceId;
-      case 'captions': return captionStyle;
-      case 'preview': return !!previewImageUrl; // must generate starting image
+      case 'captions': return true; // has defaults
+      case 'preview': return !!previewImageUrl;
       default: return true;
     }
   };
@@ -423,7 +513,15 @@ export default function CampaignsNewPage() {
     try {
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, brand_username: selectedBrand, visual_directions: sceneBuilderPills.length > 0 ? sceneBuilderPills : undefined, videoLengthPreset }),
+        body: JSON.stringify({
+          niche,
+          topic: topic.trim(),
+          story_context: storyContext,
+          brand_username: selectedBrand,
+          visual_directions: sceneBuilderPills.length > 0 ? sceneBuilderPills : undefined,
+          videoLengthPreset,
+          framework: selectedFramework?.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -467,13 +565,13 @@ export default function CampaignsNewPage() {
     finally { setPreviewImageLoading(false); }
   };
 
-  const handleVoicePreview = async (vid) => {
-    if (previewingVoice === vid) { previewAudioRef.current?.pause(); setPreviewingVoice(null); return; }
-    setPreviewingVoice(vid);
+  const handleVoicePreview = async (voiceName) => {
+    if (previewingVoice === voiceName) { previewAudioRef.current?.pause(); setPreviewingVoice(null); return; }
+    setPreviewingVoice(voiceName);
     try {
       const res = await apiFetch('/api/voice/preview', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voice_id: vid, text: 'This is a preview of this voice for your short video.' }),
+        body: JSON.stringify({ voice_id: voiceName, text: 'This is a preview of this voice for your short video.' }),
       });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -487,7 +585,7 @@ export default function CampaignsNewPage() {
 
   const handleCreate = async (autoGenerate) => {
     if (contentType === 'shorts') {
-      if (!niche || !topic.trim() || !visualStyle || !videoStyle || !voiceId) {
+      if (!niche || !topic.trim() || !visualStyle || !videoStyle || !geminiVoice) {
         toast.error('Please complete all required steps'); return;
       }
       if (!previewImageUrl) {
@@ -498,18 +596,29 @@ export default function CampaignsNewPage() {
         const res = await apiFetch('/api/campaigns/create', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content_type: 'shorts', name: topic.slice(0, 60),
-            brand_username: selectedBrand, niche, topic: topic.trim(),
+            content_type: 'shorts',
+            name: topic.slice(0, 60),
+            brand_username: selectedBrand,
+            niche,
+            topic: topic.trim(),
             story_context: storyContext || undefined,
-            visual_style: visualStyle, visual_style_prompt: getVisualStylePrompt(visualStyle),
-            video_style: videoStyle, video_model: videoModel, image_model: imageModel,
-            voice_id: voiceId, caption_style: captionStyle, words_per_chunk: 3,
+            visual_style: visualStyle,
+            visual_style_prompt: getVisualStylePrompt(visualStyle),
+            video_style: videoStyle,
+            video_model: videoModel,
+            image_model: imageModel,
+            gemini_voice: geminiVoice,
+            gemini_model: geminiModel,
+            style_instructions: styleInstructions,
+            caption_config: captionConfig,
             lora_config: loraConfig.length > 0 ? loraConfig : undefined,
             video_length_preset: videoLengthPreset,
-            generate_audio: generateAudio,
+            generate_audio: false,
             enable_background_music: enableBackgroundMusic,
             starting_image: previewImageUrl || undefined,
             script: scriptScenes.length > 0 ? { scenes: scriptScenes } : undefined,
+            framework: selectedFramework?.id,
+            aspect_ratio: aspectRatio,
           }),
         });
         const data = await res.json();
@@ -550,6 +659,22 @@ export default function CampaignsNewPage() {
       setIsCreating(false);
     }
   };
+
+  // Caption config updater
+  const updateCaptionConfig = (key, value) => {
+    setCaptionConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Sort Gemini voices: featured first, then alphabetical
+  const sortedGeminiVoices = [
+    ...GEMINI_VOICES.filter(v => FEATURED_VOICES.includes(v.id)),
+    ...GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id)),
+  ];
+
+  // Active framework cards — use API data if available, else local
+  const activeFrameworks = frameworkCards.length > 0 ? frameworkCards : FRAMEWORK_CARDS;
+  const storyFrameworks = activeFrameworks.filter(f => f.category === 'story');
+  const fastFrameworks = activeFrameworks.filter(f => f.category === 'fast_paced');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -726,7 +851,7 @@ export default function CampaignsNewPage() {
             <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
               onStepClick={(key) => { if (completedSteps.includes(key)) setWizardStep(key); }} />
 
-            {/* Step 1: Niche & Theme */}
+            {/* Step 1: Niche & Brand */}
             {wizardStep === 'niche' && (
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
@@ -742,7 +867,7 @@ export default function CampaignsNewPage() {
                   </div>
                   {selectedBrand && (
                     <div className="flex gap-2">
-                      {ytConnected && <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full">YouTube ✓</span>}
+                      {ytConnected && <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full">YouTube connected</span>}
                       <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Guidelines set</span>
                     </div>
                   )}
@@ -764,32 +889,300 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 2: Topics */}
-            {wizardStep === 'topics' && (
+            {/* Step 2: Framework Picker */}
+            {wizardStep === 'framework' && (
               <div className="space-y-6">
-                {/* Video Length Preset */}
-                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-3">
-                  <label className="text-sm font-medium text-slate-700 block">Video Length</label>
-                  <div className="flex gap-2">
-                    {VIDEO_LENGTH_PRESETS.map(p => (
-                      <button key={p.value} type="button" onClick={() => setVideoLengthPreset(p.value)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
-                          videoLengthPreset === p.value
-                            ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                {/* Story Frameworks */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Story Frameworks</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {storyFrameworks.map(fw => (
+                      <button key={fw.id} onClick={() => handleFrameworkSelect(fw)}
+                        className={`rounded-xl border overflow-hidden text-left transition-all ${
+                          selectedFramework?.id === fw.id ? 'border-[#2C666E] ring-2 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
                         }`}>
-                        {p.label}
+                        {fw.thumb ? (
+                          <div className="w-full h-24 bg-slate-100">
+                            <img src={fw.thumb} alt={fw.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 bg-gradient-to-br from-[#2C666E]/20 to-[#07393C]/30" />
+                        )}
+                        <div className="p-3 space-y-1.5">
+                          <div className="text-xs font-semibold text-slate-800">{fw.name}</div>
+                          <div className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{fw.description}</div>
+                          <div className="text-[10px] text-[#2C666E] italic">"{fw.hook}"</div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {fw.badges?.map(badge => (
+                              <span key={badge} className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{badge}</span>
+                            ))}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {fw.supportedDurations?.map(d => (
+                              <span key={d} className="text-[9px] bg-[#2C666E]/10 text-[#2C666E] px-1.5 py-0.5 rounded-full font-medium">{d}s</span>
+                            ))}
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
+                {/* Fast-Paced Frameworks */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Fast-Paced Frameworks</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {fastFrameworks.map(fw => (
+                      <button key={fw.id} onClick={() => handleFrameworkSelect(fw)}
+                        className={`rounded-xl border overflow-hidden text-left transition-all ${
+                          selectedFramework?.id === fw.id ? 'border-[#2C666E] ring-2 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
+                        }`}>
+                        {fw.thumb ? (
+                          <div className="w-full h-24 bg-slate-100">
+                            <img src={fw.thumb} alt={fw.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 bg-gradient-to-br from-orange-200/40 to-red-300/30" />
+                        )}
+                        <div className="p-3 space-y-1.5">
+                          <div className="text-xs font-semibold text-slate-800">{fw.name}</div>
+                          <div className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{fw.description}</div>
+                          <div className="text-[10px] text-[#2C666E] italic">"{fw.hook}"</div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {fw.badges?.map(badge => (
+                              <span key={badge} className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{badge}</span>
+                            ))}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {fw.supportedDurations?.map(d => (
+                              <span key={d} className="text-[9px] bg-[#2C666E]/10 text-[#2C666E] px-1.5 py-0.5 rounded-full font-medium">{d}s</span>
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Duration picker — only shows supported durations from selected framework */}
+                {selectedFramework && (
+                  <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-3">
+                    <label className="text-sm font-medium text-slate-700 block">Video Length</label>
+                    <div className="flex gap-2">
+                      {(selectedFramework.supportedDurations || VIDEO_LENGTH_PRESETS.map(p => p.value)).map(dur => (
+                        <button key={dur} type="button" onClick={() => setVideoLengthPreset(dur)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                            videoLengthPreset === dur
+                              ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}>
+                          {dur}s
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Look & Feel */}
+            {wizardStep === 'look_feel' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Visual Style</label>
+                  <StyleGrid value={visualStyle} onChange={setVisualStyle} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Image Model</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {IMAGE_MODELS.map(m => (
+                      <button key={m.value} onClick={() => { setImageModel(m.value); if (!m.lora) setLoraConfig([]); }}
+                        className={`p-3 rounded-xl border text-left transition-all ${imageModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                          {m.lora && <span className="text-[9px] bg-[#2C666E] text-white px-1.5 py-0.5 rounded">LoRA</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                        <div className="text-[10px] text-slate-400">{m.price}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {IMAGE_MODELS.find(m => m.value === imageModel)?.lora && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-2">LoRA Models</label>
+                    <LoRAPicker value={loraConfig} onChange={setLoraConfig} brandUsername={selectedBrand} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Motion & Video */}
+            {wizardStep === 'motion' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Style</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {videoStylesList.map(s => (
+                      <button key={s.key} onClick={() => setVideoStyle(s.key)}
+                        className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" />}
+                        <div className="p-2">
+                          <div className="text-xs font-medium text-slate-700">{s.label}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Model</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VIDEO_MODELS.map(m => (
+                      <button key={m.value} onClick={() => setVideoModel(m.value)}
+                        className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                          <span className="text-[10px] text-slate-400">{m.price}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Aspect ratio */}
+                <div className="bg-white rounded-2xl p-4 border shadow-sm space-y-3">
+                  <label className="text-sm font-medium text-slate-700 block">Aspect Ratio</label>
+                  <div className="flex gap-2">
+                    {['9:16', '16:9', '1:1'].map(ar => (
+                      <button key={ar} onClick={() => setAspectRatio(ar)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                          aspectRatio === ar
+                            ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}>
+                        {ar}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Voice & Music — Gemini Voices */}
+            {wizardStep === 'voice' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">Voice</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
+                    {sortedGeminiVoices.map(v => (
+                      <div key={v.id} onClick={() => setGeminiVoice(v.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${geminiVoice === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-700">{v.label}</span>
+                          <button onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }} className="p-1 hover:bg-slate-100 rounded text-xs">
+                            {previewingVoice === v.id ? '||' : '>>'}
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{v.description}</div>
+                        {FEATURED_VOICES.includes(v.id) && <span className="text-[9px] text-[#2C666E] font-medium mt-1 block">Featured</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Style instructions */}
+                <div className="bg-white rounded-2xl p-4 border shadow-sm space-y-3">
+                  <label className="text-sm font-medium text-slate-700 block">Voice Style Instructions</label>
+                  <p className="text-[10px] text-slate-400">Guide how the voice should speak — pacing, tone, energy level.</p>
+                  <textarea
+                    value={styleInstructions}
+                    onChange={e => setStyleInstructions(e.target.value)}
+                    placeholder="e.g., Speak with high energy and urgency, pause for emphasis after each key point..."
+                    className="w-full border rounded-lg px-3 py-2 text-sm h-20 resize-none"
+                  />
+                </div>
+
+                {/* TTS model toggle */}
+                <div className="bg-white rounded-2xl p-4 border shadow-sm space-y-3">
+                  <label className="text-sm font-medium text-slate-700 block">TTS Quality</label>
+                  <div className="flex gap-2">
+                    <button onClick={() => setGeminiModel('gemini-2.5-flash-tts')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                        geminiModel === 'gemini-2.5-flash-tts'
+                          ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}>
+                      <div>Flash</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Fast, cost-effective</div>
+                    </button>
+                    <button onClick={() => setGeminiModel('gemini-2.5-pro-tts')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                        geminiModel === 'gemini-2.5-pro-tts'
+                          ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}>
+                      <div>Pro</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Premium quality</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Background music toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">Background music</div>
+                    <div className="text-xs text-slate-500">AI-generated mood music layered behind voiceover</div>
+                  </div>
+                  <button onClick={() => setEnableBackgroundMusic(!enableBackgroundMusic)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableBackgroundMusic ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enableBackgroundMusic ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Scene Direction (pills) */}
+            {wizardStep === 'pills' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Scene Direction Helpers</label>
+                  <p className="text-[10px] text-slate-400 mb-2">Click pills to build a visual direction — these will be included when generating your script scenes.</p>
+                  {getScenePillsForNiche(niche).map(cat => (
+                    <div key={cat.label} className="mb-2">
+                      <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {cat.pills.map(pill => (
+                          <button key={pill} onClick={() => {
+                            setSceneBuilderPills(prev => prev.includes(pill) ? prev.filter(p => p !== pill) : [...prev, pill]);
+                          }} className={`text-[10px] px-2 py-1 rounded-full transition-colors ${sceneBuilderPills.includes(pill) ? 'bg-[#2C666E] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                            {pill}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {sceneBuilderPills.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-100">
+                      <div className="text-[10px] text-slate-400 mb-1">Selected: {sceneBuilderPills.join(', ')}</div>
+                      <button onClick={() => setSceneBuilderPills([])} className="text-[10px] text-red-400 hover:underline">Clear all</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Topic & Research */}
+            {wizardStep === 'topics' && (
+              <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
                   <label className="text-sm font-medium text-slate-700 block">Topic</label>
                   <div className="flex gap-2">
                     <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="What is this short about?" className="flex-1 border rounded-lg px-3 py-2 text-sm" />
                     <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()} className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg whitespace-nowrap disabled:opacity-50">
-                      {researchLoading ? 'Researching...' : '🔍 Research'}
+                      {researchLoading ? 'Researching...' : 'Research'}
                     </button>
                   </div>
                   {niche && TOPIC_SUGGESTIONS[niche] && (() => {
@@ -909,7 +1302,7 @@ export default function CampaignsNewPage() {
                                   className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
                                     isPrimary ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'text-[#2C666E] border-[#2C666E]/30 hover:bg-[#2C666E]/10'
                                   }`}>
-                                  {isPrimary ? 'Primary ★' : 'Set Primary'}
+                                  {isPrimary ? 'Primary' : 'Set Primary'}
                                 </button>
                               )}
                             </div>
@@ -943,38 +1336,13 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 3: Script */}
+            {/* Step 8: Script */}
             {wizardStep === 'script' && (
               <div className="space-y-4">
                 {scriptScenes.length === 0 && !scriptLoading && (
                   <div className="space-y-4">
-                    {/* Scene Builder Helpers — shown BEFORE script generation to guide visual style */}
-                    <div className="border border-dashed border-slate-200 rounded-xl p-3">
-                      <label className="text-xs font-medium text-slate-500 block mb-1">Scene Builder Helpers</label>
-                      <p className="text-[10px] text-slate-400 mb-2">Click pills to build a visual direction — these will be included when generating your script scenes.</p>
-                      {getScenePillsForNiche(niche).map(cat => (
-                        <div key={cat.label} className="mb-2">
-                          <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
-                          <div className="flex flex-wrap gap-1">
-                            {cat.pills.map(pill => (
-                              <button key={pill} onClick={() => {
-                                setSceneBuilderPills(prev => prev.includes(pill) ? prev.filter(p => p !== pill) : [...prev, pill]);
-                              }} className={`text-[10px] px-2 py-1 rounded-full transition-colors ${sceneBuilderPills.includes(pill) ? 'bg-[#2C666E] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
-                                {pill}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                      {sceneBuilderPills.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-slate-100">
-                          <div className="text-[10px] text-slate-400 mb-1">Selected: {sceneBuilderPills.join(', ')}</div>
-                          <button onClick={() => setSceneBuilderPills([])} className="text-[10px] text-red-400 hover:underline">Clear all</button>
-                        </div>
-                      )}
-                    </div>
                     <div className="text-center py-4">
-                      <p className="text-sm text-slate-500 mb-3">Generate a script from your topic{sceneBuilderPills.length > 0 ? ` with ${sceneBuilderPills.length} visual directions` : ''}</p>
+                      <p className="text-sm text-slate-500 mb-3">Generate a script from your topic{sceneBuilderPills.length > 0 ? ` with ${sceneBuilderPills.length} visual directions` : ''}{selectedFramework ? ` using ${selectedFramework.name} framework` : ''}</p>
                       <button onClick={handleGenerateScript} className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-sm font-medium hover:bg-[#235258]">
                         Generate Script
                       </button>
@@ -991,7 +1359,7 @@ export default function CampaignsNewPage() {
                   <>
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium text-slate-700">Scenes ({scriptScenes.length})</label>
-                      <button onClick={handleGenerateScript} className="text-xs text-[#2C666E] hover:underline">🔄 Regenerate</button>
+                      <button onClick={handleGenerateScript} className="text-xs text-[#2C666E] hover:underline">Regenerate</button>
                     </div>
                     {scriptScenes.map((scene, i) => (
                       <div key={i} className={`border rounded-xl p-4 transition-all ${expandedScene === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200'}`}>
@@ -1046,170 +1414,174 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 4: Look & Feel */}
-            {wizardStep === 'look_feel' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Visual Style</label>
-                  <StyleGrid value={visualStyle} onChange={setVisualStyle} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Image Model</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {IMAGE_MODELS.map(m => (
-                      <button key={m.value} onClick={() => { setImageModel(m.value); if (!m.lora) setLoraConfig([]); }}
-                        className={`p-3 rounded-xl border text-left transition-all ${imageModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
-                          {m.lora && <span className="text-[9px] bg-[#2C666E] text-white px-1.5 py-0.5 rounded">LoRA</span>}
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
-                        <div className="text-[10px] text-slate-400">{m.price}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {IMAGE_MODELS.find(m => m.value === imageModel)?.lora && (
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 block mb-2">LoRA Models</label>
-                    <LoRAPicker value={loraConfig} onChange={setLoraConfig} brandUsername={selectedBrand} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 5: Motion Style */}
-            {wizardStep === 'motion' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Style</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {videoStylesList.map(s => (
-                      <button key={s.key} onClick={() => setVideoStyle(s.key)}
-                        className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" />}
-                        <div className="p-2">
-                          <div className="text-xs font-medium text-slate-700">{s.label}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 6: Video Model */}
-            {wizardStep === 'video_model' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Video Model</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {VIDEO_MODELS.map(m => (
-                      <button key={m.value} onClick={() => setVideoModel(m.value)}
-                        className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-medium text-slate-700">{m.label}</span>
-                          <span className="text-[10px] text-slate-400">{m.price}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Native audio toggle — only for models that support it */}
-                {['fal_kling_v3', 'fal_kling_o3', 'fal_veo3'].includes(videoModel) && (
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
-                    <div>
-                      <div className="text-sm font-medium text-slate-700">Generate native audio</div>
-                      <div className="text-xs text-slate-500">Model generates audio with video (extra cost)</div>
-                    </div>
-                    <button onClick={() => setGenerateAudio(!generateAudio)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${generateAudio ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${generateAudio ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 7: Voice & Music */}
-            {wizardStep === 'voice' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Voice</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                    {voicesList.filter(v => v.source === 'preset').length > 0 && voicesList.filter(v => v.source === 'preset').map(v => (
-                      <div key={v.id} onClick={() => setVoiceId(v.id)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-slate-700">{v.name}</span>
-                          <button onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }} className="p-1 hover:bg-slate-100 rounded text-xs">
-                            {previewingVoice === v.id ? '⏹' : '▶️'}
-                          </button>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{v.description}</div>
-                        {v.niches?.includes(niche) && <span className="text-[9px] text-[#2C666E] font-medium mt-1 block">Recommended</span>}
-                      </div>
-                    ))}
-                    {voicesList.filter(v => v.source === 'custom').length > 0 && (
-                      <>
-                        <div className="col-span-full text-[10px] text-slate-400 uppercase font-medium pt-2">Your Voices</div>
-                        {voicesList.filter(v => v.source === 'custom').map(v => (
-                          <div key={v.id} onClick={() => setVoiceId(v.id)}
-                            className={`p-3 rounded-xl border cursor-pointer transition-all ${voiceId === v.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-slate-700">{v.name}</span>
-                              <button onClick={e => { e.stopPropagation(); handleVoicePreview(v.id); }} className="p-1 hover:bg-slate-100 rounded text-xs">
-                                {previewingVoice === v.id ? '⏹' : '▶️'}
-                              </button>
-                            </div>
-                            <div className="text-[10px] text-slate-500 mt-0.5">{v.description}</div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Background music toggle */}
-                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700">Background music</div>
-                    <div className="text-xs text-slate-500">AI-generated mood music layered behind voiceover</div>
-                  </div>
-                  <button onClick={() => setEnableBackgroundMusic(!enableBackgroundMusic)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableBackgroundMusic ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enableBackgroundMusic ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 8: Captions */}
+            {/* Step 9: Captions — Full Editor */}
             {wizardStep === 'captions' && (
               <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-2">Caption Style</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {CAPTION_STYLES.map(c => (
-                      <button key={c.key} onClick={() => setCaptionStyle(c.key)}
-                        className={`rounded-xl border overflow-hidden transition-all ${captionStyle === c.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className={`${c.preview.bg} py-4 flex items-center justify-center`}>
-                          <span className={c.preview.style} style={c.preview.textStroke ? { WebkitTextStroke: c.preview.textStroke } : undefined}>{c.preview.text}</span>
-                        </div>
-                        <div className="p-1.5 text-center">
-                          <div className="text-[10px] font-medium text-slate-700">{c.label}</div>
-                        </div>
+                {/* Preset quick-select */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Caption Preset</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(CAPTION_PRESET_CONFIGS).map(([key, config]) => (
+                      <button key={key} onClick={() => { setCaptionConfig(config); setCaptionStyle(key); }}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium border-2 transition-all ${
+                          captionStyle === key
+                            ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}>
+                        {key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Individual controls */}
+                <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
+                  <label className="text-sm font-medium text-slate-700 block">Caption Settings</label>
+
+                  {/* Font family */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Font Family</label>
+                    <select value={captionConfig.font_name} onChange={e => updateCaptionConfig('font_name', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm">
+                      {CAPTION_FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Font size */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Font Size: {captionConfig.font_size}</label>
+                    <input type="range" min={50} max={200} step={5} value={captionConfig.font_size}
+                      onChange={e => updateCaptionConfig('font_size', parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]" />
+                  </div>
+
+                  {/* Font weight */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Font Weight</label>
+                    <div className="flex gap-2">
+                      {['normal', 'bold'].map(w => (
+                        <button key={w} onClick={() => updateCaptionConfig('font_weight', w)}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            captionConfig.font_weight === w ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200'
+                          }`}>
+                          {w.charAt(0).toUpperCase() + w.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Colors */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-600 block mb-1">Font Color</label>
+                      <input type="color" value={captionConfig.font_color === 'white' ? '#ffffff' : captionConfig.font_color}
+                        onChange={e => updateCaptionConfig('font_color', e.target.value)}
+                        className="w-full h-8 rounded border cursor-pointer" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-600 block mb-1">Highlight Color</label>
+                      <input type="color" value={captionConfig.highlight_color === 'purple' ? '#9333ea' : captionConfig.highlight_color}
+                        onChange={e => updateCaptionConfig('highlight_color', e.target.value)}
+                        className="w-full h-8 rounded border cursor-pointer" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-600 block mb-1">Stroke Color</label>
+                      <input type="color" value={captionConfig.stroke_color === 'black' ? '#000000' : captionConfig.stroke_color}
+                        onChange={e => updateCaptionConfig('stroke_color', e.target.value)}
+                        className="w-full h-8 rounded border cursor-pointer" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-600 block mb-1">Background Color</label>
+                      <input type="color" value={captionConfig.background_color === 'none' ? '#000000' : captionConfig.background_color}
+                        onChange={e => updateCaptionConfig('background_color', e.target.value)}
+                        className="w-full h-8 rounded border cursor-pointer" />
+                    </div>
+                  </div>
+
+                  {/* Stroke width */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Stroke Width: {captionConfig.stroke_width}</label>
+                    <input type="range" min={0} max={10} step={1} value={captionConfig.stroke_width}
+                      onChange={e => updateCaptionConfig('stroke_width', parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]" />
+                  </div>
+
+                  {/* Background opacity */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Background Opacity: {captionConfig.background_opacity}%</label>
+                    <input type="range" min={0} max={100} step={5} value={captionConfig.background_opacity}
+                      onChange={e => updateCaptionConfig('background_opacity', parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]" />
+                  </div>
+
+                  {/* Position */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Position</label>
+                    <div className="flex gap-2">
+                      {['top', 'center', 'bottom'].map(pos => (
+                        <button key={pos} onClick={() => updateCaptionConfig('position', pos)}
+                          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            captionConfig.position === pos ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200'
+                          }`}>
+                          {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Y offset */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Y Offset: {captionConfig.y_offset}%</label>
+                    <input type="range" min={0} max={100} step={5} value={captionConfig.y_offset}
+                      onChange={e => updateCaptionConfig('y_offset', parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]" />
+                  </div>
+
+                  {/* Words per subtitle */}
+                  <div>
+                    <label className="text-xs text-slate-600 block mb-1">Words per Subtitle: {captionConfig.words_per_subtitle}</label>
+                    <input type="range" min={1} max={8} step={1} value={captionConfig.words_per_subtitle}
+                      onChange={e => updateCaptionConfig('words_per_subtitle', parseInt(e.target.value))}
+                      className="w-full accent-[#2C666E]" />
+                  </div>
+
+                  {/* Animation toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Animation</div>
+                      <div className="text-xs text-slate-500">Animate subtitle appearance</div>
+                    </div>
+                    <button onClick={() => updateCaptionConfig('enable_animation', !captionConfig.enable_animation)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${captionConfig.enable_animation ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${captionConfig.enable_animation ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live preview */}
+                <div className="bg-slate-900 rounded-2xl p-6 border border-slate-700">
+                  <label className="text-xs text-slate-400 block mb-3">Preview</label>
+                  <div className="flex items-center justify-center py-8" style={{
+                    textAlign: 'center',
+                  }}>
+                    <span style={{
+                      fontFamily: captionConfig.font_name,
+                      fontSize: `${Math.min(captionConfig.font_size / 3, 48)}px`,
+                      fontWeight: captionConfig.font_weight,
+                      color: captionConfig.font_color === 'white' ? '#ffffff' : captionConfig.font_color,
+                      WebkitTextStroke: captionConfig.stroke_width > 0 ? `${captionConfig.stroke_width / 2}px ${captionConfig.stroke_color === 'black' ? '#000' : captionConfig.stroke_color}` : undefined,
+                      backgroundColor: captionConfig.background_color !== 'none' ? `${captionConfig.background_color}${Math.round(captionConfig.background_opacity * 2.55).toString(16).padStart(2, '0')}` : undefined,
+                      padding: captionConfig.background_color !== 'none' ? '4px 12px' : undefined,
+                      borderRadius: '4px',
+                    }}>
+                      Sample <span style={{ color: captionConfig.highlight_color === 'purple' ? '#9333ea' : captionConfig.highlight_color }}>Caption</span> Text
+                    </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 9: Preview Image */}
+            {/* Step 10: Preview Image */}
             {wizardStep === 'preview' && (
               <div className="space-y-4">
                 <div className="bg-white rounded-2xl p-5 border shadow-sm">
@@ -1220,7 +1592,7 @@ export default function CampaignsNewPage() {
                     </div>
                     <button onClick={handlePreviewImage} disabled={previewImageLoading || scriptScenes.length === 0}
                       className="px-3 py-1.5 text-xs bg-[#2C666E] text-white rounded-lg hover:bg-[#235258] disabled:opacity-50">
-                      {previewImageLoading ? 'Generating...' : previewImageUrl ? '🔄 Regenerate' : 'Generate Preview'}
+                      {previewImageLoading ? 'Generating...' : previewImageUrl ? 'Regenerate' : 'Generate Preview'}
                     </button>
                   </div>
                   {previewImageLoading && (
@@ -1248,7 +1620,7 @@ export default function CampaignsNewPage() {
               </div>
             )}
 
-            {/* Step 10: Review & Generate */}
+            {/* Step 11: Review & Generate */}
             {wizardStep === 'review' && (
               <div className="space-y-4">
                 <label className="text-sm font-medium text-slate-700 block">Review & Generate</label>
@@ -1256,13 +1628,16 @@ export default function CampaignsNewPage() {
                   {[
                     { label: 'Brand', value: selectedBrand || 'None' },
                     { label: 'Niche', value: NICHES.find(n => n.key === niche)?.label || niche },
+                    { label: 'Framework', value: selectedFramework?.name || 'None' },
                     { label: 'Visual Style', value: visualStyle },
                     { label: 'Video Style', value: videoStylesList.find(s => s.key === videoStyle)?.label || videoStyle },
                     { label: 'Image Model', value: IMAGE_MODELS.find(m => m.value === imageModel)?.label || imageModel },
                     { label: 'Video Model', value: VIDEO_MODELS.find(m => m.value === videoModel)?.label || videoModel },
-                    { label: 'Voice', value: voicesList.find(v => v.id === voiceId)?.name || voiceId },
-                    { label: 'Captions', value: CAPTION_STYLES.find(c => c.key === captionStyle)?.label || captionStyle },
+                    { label: 'Voice', value: geminiVoice },
+                    { label: 'TTS Model', value: geminiModel === 'gemini-2.5-flash-tts' ? 'Flash' : 'Pro' },
+                    { label: 'Captions', value: `${captionConfig.font_name}, ${captionConfig.font_size}px` },
                     { label: 'Length', value: `${videoLengthPreset}s` },
+                    { label: 'Aspect Ratio', value: aspectRatio },
                   ].map(item => (
                     <div key={item.label} className="bg-slate-50 rounded-lg p-3">
                       <div className="text-[10px] text-slate-400 uppercase">{item.label}</div>
@@ -1274,9 +1649,15 @@ export default function CampaignsNewPage() {
                   <div className="text-[10px] text-slate-400 uppercase">Topic</div>
                   <div className="text-sm text-slate-800">{topic}</div>
                 </div>
+                {styleInstructions && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-[10px] text-slate-400 uppercase">Voice Style Instructions</div>
+                    <div className="text-sm text-slate-800">{styleInstructions}</div>
+                  </div>
+                )}
                 <div className="bg-slate-50 rounded-lg p-3">
                   <div className="text-[10px] text-slate-400 uppercase">Scenes</div>
-                  <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~{videoLengthPreset} seconds · 9:16 vertical</div>
+                  <div className="text-sm text-slate-800">{scriptScenes.length} scenes · ~{videoLengthPreset} seconds · {aspectRatio} {aspectRatio === '9:16' ? 'vertical' : aspectRatio === '16:9' ? 'landscape' : 'square'}</div>
                 </div>
                 {previewImageUrl && (
                   <div className="bg-slate-50 rounded-lg p-3">
@@ -1290,12 +1671,12 @@ export default function CampaignsNewPage() {
             {/* Navigation */}
             <div className="flex justify-between pt-4 border-t">
               {wizardStep !== 'niche' ? (
-                <button onClick={goBack} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
+                <button onClick={goBack} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Back</button>
               ) : <div />}
               {wizardStep !== 'review' ? (
                 <button onClick={goNext}
                   disabled={!canGoNext()} className="px-5 py-2 bg-[#2C666E] text-white rounded-xl text-sm font-medium hover:bg-[#235258] disabled:opacity-50">
-                  Next →
+                  Next
                 </button>
               ) : (
                 <button onClick={() => handleCreate(true)} disabled={isCreating}
