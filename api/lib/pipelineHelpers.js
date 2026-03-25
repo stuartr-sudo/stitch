@@ -335,57 +335,37 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
 
-  const n = videoUrls.length;
-  const inputs = [
-    ...videoUrls.map(url => ({ url })),
-    { url: voiceoverUrl },
+  // Build tracks for fal-ai/ffmpeg-api/compose
+  const CLIP_DURATION_MS = 10_000; // default per-clip duration estimate
+  const videoKeyframes = videoUrls.map((url, i) => ({
+    url,
+    timestamp: i * CLIP_DURATION_MS,
+    duration: CLIP_DURATION_MS,
+  }));
+  const totalDurationMs = videoUrls.length * CLIP_DURATION_MS;
+
+  const tracks = [
+    { id: 'video', type: 'video', keyframes: videoKeyframes },
+    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0, duration: totalDurationMs }] },
   ];
 
-  const voIdx = n; // voiceover input index
-  let filterComplex;
-  let outputMap;
-
   if (musicUrl) {
-    inputs.push({ url: musicUrl });
-    const musIdx = n + 1;
-
-    // Concat video streams only (a=0 discards clip audio), then mix voiceover + music
-    filterComplex = [
-      `${Array.from({ length: n }, (_, i) => `[${i}:v]`).join('')}concat=n=${n}:v=1:a=0[outv]`,
-      `[${voIdx}:a]volume=1.0[vo]`,
-      `[${musIdx}:a]volume=0.15[mus]`,
-      `[vo][mus]amix=inputs=2:duration=first[outa]`,
-    ].join(';');
-  } else {
-    // No music — concat video, use voiceover as sole audio
-    filterComplex = [
-      `${Array.from({ length: n }, (_, i) => `[${i}:v]`).join('')}concat=n=${n}:v=1:a=0[outv]`,
-      `[${voIdx}:a]anull[outa]`,
-    ].join(';');
+    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs }] });
   }
 
-  outputMap = ['-map', '[outv]', '-map', '[outa]'];
+  console.log(`[assembleShort] Assembling ${videoUrls.length} clips + voiceover${musicUrl ? ' + music' : ''}`);
 
-  const body = {
-    inputs,
-    filter_complex: filterComplex,
-    output_options: [...outputMap, '-c:v', 'libx264', '-c:a', 'aac', '-shortest'],
-    output_filename: `short_${Date.now()}.mp4`,
-  };
-
-  console.log(`[assembleShort] Assembling ${n} clips + voiceover${musicUrl ? ' + music' : ''}`);
-
-  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api`, {
+  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ tracks }),
   });
 
   if (!res.ok) throw new Error(`FAL ffmpeg short assembly failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
-  const videoUrl = output?.video?.url || output?.output_url;
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg short assembly');
 
   return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
@@ -503,7 +483,7 @@ export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
   if (queueData.image_url) return queueData.image_url;
 
   const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 30, 2000);
-  const imageUrl = output?.image_url;
+  const imageUrl = output?.image_url || output?.images?.[0]?.url;
   if (!imageUrl) throw new Error('No image URL from frame extraction');
   return imageUrl;
 }
@@ -565,45 +545,34 @@ export async function concatVideos(videoUrls, audioUrl, falKey, supabase) {
   // Single clip — no concat needed
   if (videoUrls.length === 1 && !audioUrl) return videoUrls[0];
 
-  // Build FFmpeg filter_complex for concatenation.
-  // Each input video is labelled [0:v][0:a], [1:v][1:a] etc. and fed to concat.
-  const inputs = videoUrls.map(url => ({ url }));
-  const n = videoUrls.length;
+  // Build tracks for fal-ai/ffmpeg-api/compose
+  const CLIP_DURATION_MS = 10_000;
+  const videoKeyframes = videoUrls.map((url, i) => ({
+    url,
+    timestamp: i * CLIP_DURATION_MS,
+    duration: CLIP_DURATION_MS,
+  }));
+  const totalDurationMs = videoUrls.length * CLIP_DURATION_MS;
 
-  // filter_complex: concat N video segments, then optionally mix audio
-  let filterComplex = `${Array.from({ length: n }, (_, i) => `[${i}:v][${i}:a]`).join('')}concat=n=${n}:v=1:a=1[outv][outa]`;
-  let outputMap = ['-map', '[outv]', '-map', '[outa]'];
+  const tracks = [
+    { id: 'video', type: 'video', keyframes: videoKeyframes },
+  ];
 
   if (audioUrl) {
-    // Add music as an extra input, mix it under the concated audio at 20% volume
-    inputs.push({ url: audioUrl });
-    const musicIdx = n;
-    filterComplex = [
-      `${Array.from({ length: n }, (_, i) => `[${i}:v][${i}:a]`).join('')}concat=n=${n}:v=1:a=1[outv][concata]`,
-      `[${musicIdx}:a]volume=0.20[musica]`,
-      `[concata][musica]amix=inputs=2:duration=first[outa]`,
-    ].join(';');
-    outputMap = ['-map', '[outv]', '-map', '[outa]'];
+    tracks.push({ id: 'audio', type: 'audio', keyframes: [{ url: audioUrl, timestamp: 0, duration: totalDurationMs }] });
   }
 
-  const body = {
-    inputs,
-    filter_complex: filterComplex,
-    output_options: [...outputMap, '-c:v', 'libx264', '-c:a', 'aac', '-shortest'],
-    output_filename: `concat_${Date.now()}.mp4`,
-  };
-
-  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api`, {
+  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ tracks }),
   });
 
   if (!res.ok) throw new Error(`FAL ffmpeg concat failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api', falKey, 120, 3000);
-  const videoUrl = output?.video?.url || output?.output_url;
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg concat');
 
   return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
