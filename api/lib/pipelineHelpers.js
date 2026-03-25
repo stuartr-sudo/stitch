@@ -54,14 +54,12 @@ export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, d
 }
 
 export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 120, delayMs = 2000) {
-  // Use response_url if a full URL is passed, otherwise construct from model path.
-  // FAL queue URLs use only the first 2 path segments of the model path.
-  // e.g. "fal-ai/bytedance/seedream/v4/text-to-image" → "fal-ai/bytedance"
-  const segments = model.split('/');
-  const queuePath = segments.length > 2 ? segments.slice(0, 2).join('/') : model;
+  // Use response_url if a full URL is passed, otherwise construct from full model path.
+  // IMPORTANT: use the complete model path — truncating breaks multi-segment endpoints
+  // like fal-ai/ffmpeg-api/compose, fal-ai/ffmpeg-api/extract-frame, etc.
   const pollUrl = requestIdOrUrl.startsWith('http')
     ? requestIdOrUrl
-    : `${FAL_BASE}/${queuePath}/requests/${requestIdOrUrl}`;
+    : `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
 
   // Absolute timeout: derived from poll params, min 5 min, max 10 min
   const computedMs = Math.min(maxRetries * delayMs, 600_000);
