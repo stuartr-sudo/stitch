@@ -43,6 +43,7 @@ export const T = {
   neon_new: 'https://v3b.fal.media/files/b/0a93a132/CCrNUBuYutOt2C3XWZ41X_VgsRuTkv.png',
   neon_noir: 'https://v3b.fal.media/files/b/0a93a134/-LYXZUqERSTx_ErYC940s_UutroMeD.png',
   // Period / Aesthetic (unique per style)
+  vintage: 'https://v3b.fal.media/files/b/0a93a134/C3hdFOBUiWGO34y5XU-sS_MxODdMi4.png',
   vintage_new: 'https://v3b.fal.media/files/b/0a93a134/C3hdFOBUiWGO34y5XU-sS_MxODdMi4.png',
   vintage_8mm: 'https://v3b.fal.media/files/b/0a93a135/NGgaJvESl-QwPn1-P4mdw_DLIkVtrf.png',
   vhs_1980s: 'https://v3b.fal.media/files/b/0a93a136/bwCMJzudT7YcOGLsbGrDa_YA3VJUEc.png',

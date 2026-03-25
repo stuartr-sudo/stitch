@@ -355,6 +355,7 @@ export default function CampaignsNewPage() {
 
   // Video styles & voices
   const [videoStylesList, setVideoStylesList] = useState([]);
+  const [videoStylesError, setVideoStylesError] = useState(false);
   const [voicesList, setVoicesList] = useState([]);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const previewAudioRef = useRef(null);
@@ -394,7 +395,8 @@ export default function CampaignsNewPage() {
 
   useEffect(() => {
     if ((wizardStep === 'framework' || wizardStep === 'visual_style' || wizardStep === 'image_model' || wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0) {
-      apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
+      setVideoStylesError(false);
+      apiFetch('/api/styles/video').then(r => r.json()).then(d => { if (Array.isArray(d)) setVideoStylesList(d); else setVideoStylesError(true); }).catch(() => setVideoStylesError(true));
       apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
     }
   }, [wizardStep]);
@@ -1080,9 +1082,19 @@ export default function CampaignsNewPage() {
             {/* Step 5: Motion Style */}
             {wizardStep === 'video_style' && (
               videoStylesList.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
-                  <span className="ml-2 text-sm text-slate-500">Loading styles...</span>
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  {videoStylesError ? (
+                    <>
+                      <span className="text-sm text-red-500">Failed to load styles</span>
+                      <button onClick={() => { setVideoStylesError(false); apiFetch('/api/styles/video').then(r => r.json()).then(d => { if (Array.isArray(d)) setVideoStylesList(d); else setVideoStylesError(true); }).catch(() => setVideoStylesError(true)); }}
+                        className="px-4 py-2 text-sm bg-[#2C666E] text-white rounded-lg hover:bg-[#235258]">Retry</button>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                      <span className="text-sm text-slate-500">Loading styles...</span>
+                    </>
+                  )}
                 </div>
               ) : <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {videoStylesList.map(s => (
