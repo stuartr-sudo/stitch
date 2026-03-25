@@ -157,7 +157,7 @@ export const VIDEO_MODELS = {
     endpoint: 'fal-ai/kling-video/v3/pro/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       start_image_url: imageUrl, prompt, duration: klingV3Duration(duration), aspect_ratio: aspectRatio,
-      ...(opts.generate_audio ? { generate_audio: true } : {}),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
@@ -169,7 +169,7 @@ export const VIDEO_MODELS = {
     endpoint: 'fal-ai/kling-video/o3/pro/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: klingV3Duration(duration), aspect_ratio: aspectRatio,
-      ...(opts.generate_audio ? { generate_audio: true } : {}),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
@@ -192,7 +192,7 @@ export const VIDEO_MODELS = {
     endpoint: 'fal-ai/veo3/fast/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: veoDuration(duration), aspect_ratio: aspectRatio,
-      ...(opts.generate_audio ? { generate_audio: true } : {}),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
