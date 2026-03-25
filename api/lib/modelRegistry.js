@@ -9,9 +9,11 @@ const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text
 
 // Duration format converters per model family
 function veoDuration(seconds) {
-  // Veo accepts '5s', '6s', '7s', '8s' (no '4s')
-  const n = Math.max(5, Math.min(8, Math.round(Number(seconds) || 5)));
-  return `${n}s`;
+  // Veo 3.1 accepts ONLY '4s', '6s', '8s'
+  const n = Number(seconds) || 5;
+  if (n <= 4) return '4s';
+  if (n <= 6) return '6s';
+  return '8s';
 }
 
 function klingDuration(seconds) {

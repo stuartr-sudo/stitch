@@ -42,7 +42,10 @@ function getActualDuration(modelKey, requestedSeconds) {
   switch (modelKey) {
     case 'fal_veo3':
     case 'fal_veo2':
-      return Math.max(5, Math.min(8, Math.round(n))); // Veo: 5-8s
+      // Veo 3.1 only accepts 4, 6, 8
+      if (n <= 4) return 4;
+      if (n <= 6) return 6;
+      return 8;
     case 'fal_kling':
       return n <= 7 ? 5 : 10; // Kling v2: 5 or 10
     case 'fal_kling_v3':
