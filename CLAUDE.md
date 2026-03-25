@@ -41,7 +41,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Pipeline Helpers** (`api/lib/pipelineHelpers.js`): Shared polling logic for Wavespeed and FAL.ai async generation. `generateImage()` and `animateImage()` are backward-compat wrappers that delegate to `mediaGenerator.js`. Also exports `pollWavespeedRequest()`, `pollFalQueue()`, `uploadUrlToSupabase()`, `assembleShort()`, `generateMusic()`.
 
-**Shorts Pipeline** (`api/lib/shortsPipeline.js`): End-to-end Shorts creation — script → images → video clips → voiceover → music → captions → concat → draft. Per-scene checkpointing to `jobs.step_results`. Structured error reporting to `jobs.last_error`. Entry point: `api/campaigns/create.js`.
+**Shorts Pipeline** (`api/lib/shortsPipeline.js`): End-to-end Shorts creation — script → voiceover (ElevenLabs) → images + video clips (interleaved, frame-chained) → music → assemble (fal-ai/ffmpeg-api/compose) → auto-caption (fal-ai/auto-caption) → draft. No Whisper — auto-caption handles speech detection from audio. Per-scene checkpointing to `jobs.step_results`. Structured error reporting to `jobs.last_error`. Entry point: `api/campaigns/create.js`.
 
 **Script Generator** (`api/lib/scriptGenerator.js`): OpenAI structured output for Shorts scripts. Produces scenes with narration, visual descriptions, and scene 1 image description. Supports `targetDurationSeconds` for length presets (30s/45s/60s/90s).
 
@@ -53,7 +53,7 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **Workflow Engine** (`api/lib/workflowEngine.js`): Persistent state machine for long-running jobs (article→video pipeline). Steps: scrape → analyze → match_templates → create_campaign → generate_assets → concat → upload → finalize. State stored in `jobs` table. Supports pause/resume/retry.
 
-**Voiceover Generator** (`api/lib/voiceoverGenerator.js`): ElevenLabs TTS via FAL.ai proxy (`fal-ai/elevenlabs/tts/eleven-v3`) — only needs `FAL_KEY`, no separate ElevenLabs subscription. Includes legacy voice ID → FAL voice name mapping. Also exports Whisper-based word-level timestamp generation for caption sync.
+**Voiceover Generator** (`api/lib/voiceoverGenerator.js`): ElevenLabs TTS via FAL.ai proxy (`fal-ai/elevenlabs/tts/eleven-v3`) — only needs `FAL_KEY`, no separate ElevenLabs subscription. Includes legacy voice ID → FAL voice name mapping.
 
 **Scheduled Publisher** (`api/lib/scheduledPublisher.js`): Polls for drafts with scheduled publish times and pushes to YouTube.
 
@@ -62,6 +62,8 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 **JumpStart** (`api/jumpstart/`): Image/video generation endpoints used by both the Video Ad Creator and Storyboard Planner. 6 endpoints: `generate` (FormData with image blob), `result` (poll async), `save-video`, `edit`, `extend`, `erase`. Models are selected client-side and passed as form field — the backend dispatches to the appropriate provider. Supports Veo 3.1 variants (reference-to-video, fast, first-last-frame), Kling O3 R2V (character references), Kling O3 V2V (video-to-video restyle/refinement), Seedance, Grok, and Wavespeed WAN.
 
 **Imagineer** (`src/components/modals/ImagineerModal.jsx` + `api/imagineer/`): AI image generation and editing suite with two modes — Text-to-Image (4-step wizard: Subject → Style → Enhance → Output) and Image-to-Image (edit existing images). T2I models: Nano Banana 2, Seedream v4, Flux 2 (LoRA). I2I models add Wavespeed Nano Ultra and Qwen Image Edit for multi-image blending. Has its own 100+ style presets map in `generate.js` (separate from `api/lib/visualStyles.js` which is Shorts-only). Reference images are analyzed via GPT-4.1 mini vision (`describe-character.js`). All structured inputs are assembled into prompts by the shared Cohesive Prompt Builder.
+
+**Imagineer I2I Multi-Image**: Nano Banana 2, Seedream, Wavespeed Nano Ultra, and Qwen all support multiple `image_urls` in I2I mode (e.g., scene backdrop + character → composite). `api/imagineer/edit.js` accepts both `image_url` (single, backward-compat) and `image_urls` (array). Wavespeed models route to `/api/images/edit`; FAL models (nano-banana-2, seedream, fal-flux) route to `/api/imagineer/edit`. The Storyboard "Generate" button opens Imagineer in I2I mode via `initialMode="i2i"` prop.
 
 **Turnaround Sheet** (`api/imagineer/turnaround.js` + `TurnaroundSheetWizard.jsx`): Generates 4×6 character turnaround grids (24 poses) with multi-axis variation. 6-step wizard: Character → Style & Model → Props → Refinements → Results → Cell Editor. Supports multiple characters per batch, 5 pose set presets (`api/lib/turnaroundPoseSets.js` — Standard, Expressions Focus, Action Heavy, Fashion/Outfit, Creature/Non-Human), and multi-style selection. Generation computes `characters × styles × poseSets` cartesian product with 4-concurrent request limit. Results grouped by character with per-dimension filter pills and per-sheet retry. Edit models use synchronous `fal.run` with automatic fallback chain; generate models use `queue.fal.run` with frontend polling. Supports 6 models, categorized props, negative prompt conflict resolution (standard-24 only), brand style guides, and auto-tagging on library save. Frontend pose set mirror: `src/lib/turnaroundPoseSets.js`.
 
@@ -94,6 +96,9 @@ All env vars are documented in `.env.example` — refer to that file for the ful
 
 ## Gotchas
 
+- `fal-ai/nano-banana-2` (T2I generation) and `fal-ai/nano-banana-2/edit` (I2I composition with `image_urls[]`) are separate FAL endpoints. Same applies to Seedream. Don't confuse them — `api/imagineer/generate.js` hits the base endpoint, `api/imagineer/edit.js` hits the `/edit` variant.
+- Turnaround "Edit Next Sheet" flow: after reassembling & saving, `savedSheetIds` tracks completed sheets. The footer swaps to show "Edit Next Sheet" (navigates to next unsaved) or "All Done" (returns to gallery). Don't remove `savedSheetIds` state.
+- Tag tables (`image_tags`, `image_tag_links`) require migration `supabase-migration-tags.sql` to exist in Supabase. Without it, the library shows 404/500 errors on tag queries. The frontend `loadTagsForItems` should handle missing tables gracefully.
 - `public/` directory contents are copied to `dist/` by Vite on build and served as static assets. In dev, Vite serves them directly. Style thumbnails live at `public/assets/styles/`.
 - `.env` lines must each have their own newline — concatenated lines silently break dotenv parsing.
 - `api/lora/seed-library.js` is a CLI script (`node api/lora/seed-library.js`), not an Express handler. Don't register it as a route.
@@ -155,3 +160,8 @@ Verification **IS required** for:
 - **CI/CD**: GitHub Actions (`.github/workflows/fly-deploy.yml`) auto-deploys to Fly.io on every push to `main`. Manual `fly deploy` also works.
 - **Docker**: Multi-stage `Dockerfile` at project root (deps → builder → runner). Used by Fly.io builds.
 - Fly.io deploys can fail with lease conflicts if a previous deploy is still rolling out. Wait ~60s and retry `fly deploy`.
+- Pushing to `main` triggers GitHub Actions auto-deploy, which restarts the Fly machine and kills any running pipeline. When deploying during active generation: run `fly deploy` manually first, then `git push` after the deploy completes.
+- `pollFalQueue` uses the full model endpoint path for queue URLs (e.g. `fal-ai/ffmpeg-api/compose`, not `fal-ai/ffmpeg-api`). Never truncate multi-segment FAL paths — it causes 404s.
+- `extractLastFrame` uses `frame_type: 'last'` (not manual `frame_time` calculation). The FAL extract-frame API supports `'first'`, `'middle'`, `'last'`.
+- Shorts pipeline always forces `generate_audio: false` for video clips — it has its own voiceover + music. Don't pass `generate_audio: true` from the frontend for Shorts.
+- Nano Banana 2 (Imagineer's best image model) is not available in the Shorts wizard image model picker. Known gap — only the 7 models in `modelRegistry.js` are shown.
