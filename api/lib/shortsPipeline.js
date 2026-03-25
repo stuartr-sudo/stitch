@@ -33,20 +33,6 @@ import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
 
 /**
- * Get the target scene duration for fast-paced Shorts.
- * Hook/intro: 3s max. Other scenes: 3-5s. One scene gets 2s for pace variation.
- */
-function getSceneDuration(role, sceneIndex, totalScenes) {
-  // First scene (hook) — short and punchy
-  if (sceneIndex === 0) return 3;
-  // Last scene (CTA/outro) — brief
-  if (sceneIndex === totalScenes - 1) return 3;
-  // Middle scenes — vary between 3-5s, include one 2s scene for pace
-  if (sceneIndex === Math.floor(totalScenes / 2)) return 2; // mid-point quick cut
-  return role === 'cta' ? 3 : 5;
-}
-
-/**
  * Get the actual video duration after model-specific clamping.
  * Each model has different min/max constraints — this mirrors the
  * duration format converters in modelRegistry.js.
@@ -291,9 +277,8 @@ export async function runShortsPipeline(opts) {
       const videoStylePrompt = getVideoStylePrompt(videoStyle);
       const motionPromptUsed = [scene.motion_prompt, videoStylePrompt].filter(Boolean).join(', ') || 'slow cinematic pan';
 
-      // Fast-paced scene durations: hook=3s, others=3-5s
-      // Keep it snappy — short scenes hold attention
-      const requestedDuration = getSceneDuration(scene.role, i, scriptResult.scenes.length);
+      // Use script-defined duration (frame chaining = seamless continuity)
+      const requestedDuration = scene.duration_seconds || 5;
       const actualDuration = getActualDuration(videoModel, requestedDuration);
       actualClipDurations.push(actualDuration);
 
