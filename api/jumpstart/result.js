@@ -57,6 +57,8 @@ export default async function handler(req, res) {
       return await checkSeedanceResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-imagine') {
       return await checkGrokResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'grok-imagine-extend') {
+      return await checkGrokExtendResult(req, res, requestId, FAL_KEY);
     } else if (model === 'grok-edit') {
       return await checkGrokEditResult(req, res, requestId, FAL_KEY);
     } else {
@@ -213,6 +215,101 @@ async function getGrokResult(req, res, requestId, FAL_KEY) {
     status: 'processing',
     requestId,
     model: 'grok-imagine',
+  });
+}
+
+/**
+ * Check Grok Imagine Extend/FAL result
+ */
+async function checkGrokExtendResult(req, res, requestId, FAL_KEY) {
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}/status`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Grok Extend] Poll error:', errorText);
+
+    if (pollResponse.status === 404) {
+      return await getGrokExtendResult(req, res, requestId, FAL_KEY);
+    }
+
+    return res.status(pollResponse.status).json({
+      error: 'Failed to check status',
+      details: errorText
+    });
+  }
+
+  const data = await pollResponse.json();
+  console.log('[JumpStart/Grok Extend] Status response:', JSON.stringify(data).substring(0, 300));
+
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getGrokExtendResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'grok-imagine-extend',
+    queuePosition: data.queue_position,
+  });
+}
+
+/**
+ * Get completed Grok Imagine Extend result
+ */
+async function getGrokExtendResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/xai/grok-imagine-video/requests/${requestId}`,
+    {
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+      },
+    }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Grok Extend] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  console.log('[JumpStart/Grok Extend] Result:', JSON.stringify(data).substring(0, 300));
+
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      requestId,
+      videoUrl: data.video.url,
+      model: 'grok-imagine-extend',
+      videoInfo: {
+        width: data.video.width,
+        height: data.video.height,
+        duration: data.video.duration,
+        fps: data.video.fps,
+      }
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: 'processing',
+    requestId,
+    model: 'grok-imagine-extend',
   });
 }
 

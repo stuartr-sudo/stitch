@@ -5,6 +5,7 @@ import { getUserKeys } from '../lib/getUserKeys.js';
  * Supports:
  * - Bytedance Seedance 1.5 Pro (via Wavespeed)
  * - Google Veo 3.1 Fast Extend (via FAL.ai)
+ * - xAI Grok Imagine Extend Video (via FAL.ai)
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -35,6 +36,8 @@ export default async function handler(req, res) {
     // Route to appropriate handler
     if (model === 'veo3-fast-extend') {
       return await handleVeo3FastExtend(req, res, { videoUrl, prompt, resolution, generate_audio, FAL_KEY });
+    } else if (model === 'grok-imagine-extend') {
+      return await handleGrokImagineExtend(req, res, { videoUrl, prompt, duration, FAL_KEY });
     } else if (model === 'seedance' || model === 'luma-ray' || model === 'runway-gen3') {
       // luma-ray and runway-gen3 use Wavespeed Seedance extend under the hood
       return await handleSeedanceExtend(req, res, { videoUrl, prompt, duration, resolution, generate_audio, camera_fixed, seed, WAVESPEED_API_KEY });
@@ -178,4 +181,71 @@ async function handleVeo3FastExtend(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Fast Extend API' });
+}
+
+/**
+ * Handle Grok Imagine Extend Video (FAL.ai)
+ * Input video must be MP4 (H.264/H.265/AV1), 2-15s long. Extension: 2-10s.
+ */
+async function handleGrokImagineExtend(req, res, params) {
+  const { videoUrl, prompt, duration, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  console.log('[JumpStart/Grok Extend] Requesting extension...');
+
+  const requestBody = {
+    prompt: prompt || "Continue the scene naturally, maintaining the same style and motion.",
+    video_url: videoUrl,
+    duration: Math.max(2, Math.min(10, parseInt(duration) || 6)),
+  };
+
+  console.log('[JumpStart/Grok Extend] Request:', {
+    ...requestBody,
+    video_url: '[video]',
+    prompt: requestBody.prompt.substring(0, 50) + '...'
+  });
+
+  const response = await fetch('https://queue.fal.run/xai/grok-imagine-video/extend-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[JumpStart/Grok Extend] API Error:', errorText);
+    return res.status(response.status).json({ error: 'Grok Imagine Extend API error', details: errorText });
+  }
+
+  const data = await response.json();
+  console.log('[JumpStart/Grok Extend] Response:', JSON.stringify(data).substring(0, 300));
+
+  // Check for immediate result
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      videoUrl: data.video.url,
+      model: 'grok-imagine-extend',
+    });
+  }
+
+  // If queued, return request ID for polling
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      status: 'processing',
+      requestId: requestId,
+      model: 'grok-imagine-extend',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Grok Imagine Extend API' });
 }

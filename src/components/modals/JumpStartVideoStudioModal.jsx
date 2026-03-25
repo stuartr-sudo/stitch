@@ -75,6 +75,17 @@ const EXTEND_MODELS = [
     promptPlaceholder: "Describe the continuation with speech/audio cues if needed. e.g., 'The scene continues naturally as the person finishes their sentence and looks off into the distance'",
     promptLabel: 'Scene Extension Prompt',
   },
+  {
+    id: 'grok-imagine-extend',
+    label: 'xAI Grok Imagine Extend',
+    description: 'Extend videos 2-10s, stitches original + extension together',
+    durationOptions: [2, 4, 6, 8, 10],
+    resolutions: ['auto'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    promptPlaceholder: "Describe what should happen next in the video. e.g., 'The camera slowly zooms out to reveal the city skyline at sunset'",
+    promptLabel: 'Extension Prompt',
+  },
 ];
 
 // Edit Model Options
