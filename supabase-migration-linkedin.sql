@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS linkedin_topics (
 
 ALTER TABLE linkedin_topics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own topics" ON linkedin_topics FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE UNIQUE INDEX idx_linkedin_topics_dedup ON linkedin_topics(user_id, url, (discovered_at::date));
+CREATE UNIQUE INDEX idx_linkedin_topics_dedup ON linkedin_topics(user_id, url);
 CREATE INDEX idx_linkedin_topics_user_status ON linkedin_topics(user_id, status);
 
 -- 3. linkedin_posts — generated post variations
