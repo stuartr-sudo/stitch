@@ -56,6 +56,13 @@ export default async function handler(req, res) {
     video_length_preset,
     generate_audio,
     enable_background_music,
+    // Framework + Gemini TTS fields
+    framework,
+    caption_config,
+    gemini_voice,
+    gemini_model,
+    style_instructions,
+    aspect_ratio,
   } = req.body;
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -116,11 +123,17 @@ export default async function handler(req, res) {
     runShortsPipeline({
       niche, topic, story_context, brand_username,
       visual_style, visual_style_prompt, video_style, video_model,
-      voice_id, caption_style, words_per_chunk: words_per_chunk || 3,
+      voice_id, caption_style, caption_config,
+      words_per_chunk: words_per_chunk || 3,
       lora_config: lora_config || [], script,
       starting_image, image_model, video_length_preset,
       generate_audio: generate_audio || false,
       enable_background_music: enable_background_music !== false,
+      framework,
+      gemini_voice,
+      gemini_model,
+      style_instructions,
+      aspect_ratio: aspect_ratio || '9:16',
       supabase,
       keys,
       jobId: job.id,
