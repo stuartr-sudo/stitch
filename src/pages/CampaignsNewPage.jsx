@@ -418,19 +418,23 @@ export default function CampaignsNewPage() {
     }
   };
 
+  const scrollToTop = () => {
+    // Defer scroll to after React re-render completes
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 0);
+  };
   const goNext = () => {
     const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
     if (idx < WIZARD_STEPS.length - 1) {
       setCompletedSteps(prev => [...new Set([...prev, wizardStep])]);
       setWizardStep(WIZARD_STEPS[idx + 1].key);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop();
     }
   };
   const goBack = () => {
     const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
     if (idx > 0) {
       setWizardStep(WIZARD_STEPS[idx - 1].key);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop();
     }
   };
   const canGoNext = () => {
@@ -857,7 +861,7 @@ export default function CampaignsNewPage() {
         {contentType === 'shorts' && (
           <div className="space-y-6">
             <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
-              onStepClick={(key) => { if (completedSteps.includes(key)) { setWizardStep(key); window.scrollTo({ top: 0, behavior: 'smooth' }); } }} />
+              onStepClick={(key) => { if (completedSteps.includes(key)) { setWizardStep(key); scrollToTop(); } }} />
 
             {/* Step 1: Niche & Brand */}
             {wizardStep === 'niche' && (
