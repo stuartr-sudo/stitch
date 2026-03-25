@@ -390,10 +390,9 @@ export async function runShortsPipeline(opts) {
     try {
       captionedVideoUrl = await burnCaptions(
         assembledVideoUrl,
-        null, // auto-caption handles speech detection from audio
+        captionStyle, // string preset key or config object; auto-subtitle handles speech detection
         keys.falKey,
         supabase,
-        captionStyle,
       );
     } catch (captionErr) {
       console.warn(`[shortsPipeline] Caption burning failed, using uncaptioned video: ${captionErr.message}`);

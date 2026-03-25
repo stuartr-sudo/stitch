@@ -83,36 +83,41 @@ const CAPTION_STYLES = {
  * Burn captions into a video using fal-ai/workflow-utilities/auto-subtitle.
  *
  * @param {string} videoUrl - URL of the video to caption
- * @param {Array|null} wordTimestamps - Unused (auto-subtitle handles its own transcription)
+ * @param {string|object} captionConfig - Caption style preset key (string) OR a full config object.
+ *   If a string, looks up in CAPTION_STYLES (falls back to 'word_pop').
+ *   If an object, uses it directly as the style config (unknown keys are ignored).
  * @param {string} falKey - FAL API key
  * @param {object} supabase - Supabase client
- * @param {string} [captionStyle='word_pop'] - Caption style preset
  * @returns {Promise<string>} Public URL of the captioned video
  */
-export async function burnCaptions(videoUrl, wordTimestamps, falKey, supabase, captionStyle = 'word_pop') {
+export async function burnCaptions(videoUrl, captionConfig, falKey, supabase) {
   if (!falKey) throw new Error('FAL key required for caption burn-in');
   if (!videoUrl) throw new Error('Video URL required');
 
-  const style = CAPTION_STYLES[captionStyle] || CAPTION_STYLES.word_pop;
+  // Resolve config: string → preset lookup, object → use directly, null/undefined → default preset
+  const config = (captionConfig && typeof captionConfig === 'object')
+    ? captionConfig
+    : (CAPTION_STYLES[captionConfig] || CAPTION_STYLES.word_pop);
 
-  console.log(`[captionBurner] Auto-subtitling video (style: ${captionStyle})`);
+  const styleLabel = (typeof captionConfig === 'string') ? captionConfig : (config.label || 'custom');
+  console.log(`[captionBurner] Auto-subtitling video (style: ${styleLabel})`);
 
   const body = {
     video_url: videoUrl,
     language: 'en',
-    font_name: style.font_name,
-    font_size: style.font_size,
-    font_weight: style.font_weight,
-    font_color: style.font_color,
-    highlight_color: style.highlight_color,
-    stroke_width: style.stroke_width,
-    stroke_color: style.stroke_color,
-    background_color: style.background_color,
-    background_opacity: style.background_opacity,
-    position: style.position,
-    y_offset: style.y_offset,
-    words_per_subtitle: style.words_per_subtitle,
-    enable_animation: style.enable_animation,
+    font_name: config.font_name || 'Montserrat',
+    font_size: config.font_size || 100,
+    font_weight: config.font_weight || 'bold',
+    font_color: config.font_color || 'white',
+    highlight_color: config.highlight_color || 'purple',
+    stroke_width: config.stroke_width || 3,
+    stroke_color: config.stroke_color || 'black',
+    background_color: config.background_color || 'none',
+    background_opacity: config.background_opacity || 0,
+    position: config.position || 'bottom',
+    y_offset: config.y_offset || 75,
+    words_per_subtitle: config.words_per_subtitle || 1,
+    enable_animation: config.enable_animation !== false,
   };
 
   const res = await fetch(`${FAL_BASE}/fal-ai/workflow-utilities/auto-subtitle`, {
