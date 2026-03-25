@@ -421,6 +421,9 @@ export default function VideoAdvertCreator() {
               <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
                 <Link to="/templates">Templates</Link>
               </Button>
+              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
+                <Link to="/linkedin">LinkedIn</Link>
+              </Button>
               <div className="h-4 w-px bg-gray-300 hidden md:block mx-1"></div>
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="w-32 h-8 bg-white border-gray-300 text-gray-900 text-xs">

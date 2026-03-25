@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import TopicQueue from '@/components/linkedin/TopicQueue';
 import PostFeed from '@/components/linkedin/PostFeed';
+import LinkedInConfigModal from '@/components/linkedin/LinkedInConfigModal';
 
 export default function LinkedInPage() {
   const [topics, setTopics]               = useState([]);
@@ -234,27 +235,12 @@ export default function LinkedInPage() {
         </div>
       )}
 
-      {/* Config modal placeholder — wired up in Task 13 */}
-      {showConfig && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-          onClick={() => setShowConfig(false)}
-        >
-          <div
-            className="bg-white rounded-xl p-6 shadow-xl max-w-md w-full mx-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold mb-2">LinkedIn Settings</h2>
-            <p className="text-sm text-slate-500">Configuration UI coming in Task 13.</p>
-            <button
-              className="mt-4 text-sm text-slate-600 underline"
-              onClick={() => setShowConfig(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <LinkedInConfigModal
+        open={showConfig}
+        onOpenChange={setShowConfig}
+        config={config}
+        onSaved={(updated) => setConfig(updated)}
+      />
     </div>
   );
 }

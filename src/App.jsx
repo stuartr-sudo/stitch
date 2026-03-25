@@ -13,6 +13,7 @@ import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
+import LinkedInPage from './pages/LinkedInPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -148,6 +149,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <ShortsDraftPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/linkedin"
+            element={
+              <ProtectedRoute>
+                <LinkedInPage />
               </ProtectedRoute>
             }
           />
