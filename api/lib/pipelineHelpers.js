@@ -136,12 +136,18 @@ export async function uploadUrlToSupabase(url, supabase, folder = 'pipeline') {
 
     const buffer = Buffer.from(await response.arrayBuffer());
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    // Detect extension from content-type first, then fall back to URL extension
+    const urlExt = url.split('?')[0].split('.').pop()?.toLowerCase();
     const ext = contentType.includes('mp4') ? 'mp4'
       : contentType.includes('webm') ? 'webm'
       : contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
       : contentType.includes('png') ? 'png'
       : contentType.includes('wav') ? 'wav'
       : contentType.includes('flac') ? 'flac'
+      : contentType.includes('mpeg') && !contentType.includes('video') ? 'mp3'
+      : contentType.includes('video') ? 'mp4'
+      : ['mp4', 'webm', 'mov'].includes(urlExt) ? urlExt
+      : folder.includes('final') || folder.includes('video') ? 'mp4'
       : 'mp3';
 
     // Validate image quality before uploading (skip video/audio)
@@ -440,30 +446,9 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
 
-    // --- Beatoven (legacy fallback) ---
-    const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: moodPrompt,
-        duration: clampedDuration,
-        refinement: 80,
-        creativity: 14,
-      }),
-    });
-
-    if (!res.ok) {
-      console.warn('[pipelineHelpers] Music gen failed, skipping:', await res.text());
-      return null;
-    }
-
-    const queueData = await res.json();
-    if (!queueData.request_id) return null;
-
-    const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'beatoven/music-generation', keys.falKey, 120, 2000);
-    const audioUrl = output?.audio?.url;
-    if (!audioUrl) return null;
-    return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    // No other music models — MiniMax is the only supported provider
+    console.warn('[pipelineHelpers] Unknown music model, skipping');
+    return null;
   } catch (err) {
     console.warn('[pipelineHelpers] Music poll failed, skipping:', err.message);
     return null;
