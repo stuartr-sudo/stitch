@@ -393,7 +393,7 @@ export default function CampaignsNewPage() {
   }, []);
 
   useEffect(() => {
-    if ((wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0) {
+    if ((wizardStep === 'framework' || wizardStep === 'visual_style' || wizardStep === 'image_model' || wizardStep === 'video_style' || wizardStep === 'video_model' || wizardStep === 'voice') && videoStylesList.length === 0) {
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
       apiFetch('/api/voices/library').then(r => r.json()).then(setVoicesList).catch(() => {});
     }
@@ -1079,7 +1079,12 @@ export default function CampaignsNewPage() {
 
             {/* Step 5: Motion Style */}
             {wizardStep === 'video_style' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              videoStylesList.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
+                  <span className="ml-2 text-sm text-slate-500">Loading styles...</span>
+                </div>
+              ) : <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {videoStylesList.map(s => (
                   <button key={s.key} onClick={() => { setVideoStyle(s.key); setTimeout(() => goNext(), 150); }}
                     className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
