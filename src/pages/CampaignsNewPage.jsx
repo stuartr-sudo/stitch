@@ -130,7 +130,8 @@ const NICHES = [
 const WIZARD_STEPS = [
   { key: 'niche', label: 'Niche & Brand' },
   { key: 'framework', label: 'Video Style' },
-  { key: 'look_feel', label: 'Look & Feel' },
+  { key: 'visual_style', label: 'Visual Style' },
+  { key: 'image_model', label: 'Image Model' },
   { key: 'motion', label: 'Motion & Video' },
   { key: 'voice', label: 'Voice & Music' },
   { key: 'pills', label: 'Scene Direction' },
@@ -441,7 +442,8 @@ export default function CampaignsNewPage() {
     switch (wizardStep) {
       case 'niche': return niche;
       case 'framework': return !!selectedFramework;
-      case 'look_feel': return visualStyle;
+      case 'visual_style': return visualStyle;
+      case 'image_model': return !!imageModel;
       case 'motion': return videoStyle && videoModel;
       case 'voice': return geminiVoice;
       case 'pills': return true; // optional
@@ -705,8 +707,8 @@ export default function CampaignsNewPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        {/* Content type toggle — always visible */}
-        <div className="bg-white rounded-2xl p-6 border shadow-sm">
+        {/* Content type toggle — only visible on first step */}
+        <div className={`bg-white rounded-2xl p-6 border shadow-sm ${wizardStep !== 'niche' && contentType === 'shorts' ? 'hidden' : ''}`}>
           <div className="flex gap-2">
             <button
               onClick={() => setContentType('ad')}
@@ -1039,14 +1041,23 @@ export default function CampaignsNewPage() {
             )}
 
             {/* Step 3: Look & Feel */}
-            {wizardStep === 'look_feel' && (
+            {/* Step 3: Visual Style */}
+            {wizardStep === 'visual_style' && (
               <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Visual Style</label>
+                  <p className="text-[10px] text-slate-400 mb-3">Choose the visual aesthetic for your generated images.</p>
                   <StyleGrid value={visualStyle} onChange={setVisualStyle} />
                 </div>
+              </div>
+            )}
+
+            {/* Step 4: Image Model */}
+            {wizardStep === 'image_model' && (
+              <div className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-2">Image Model</label>
+                  <p className="text-[10px] text-slate-400 mb-3">Select the AI model to generate your scene images.</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {IMAGE_MODELS.map(m => (
                       <button key={m.value} onClick={() => { setImageModel(m.value); if (!m.lora) setLoraConfig([]); }}
