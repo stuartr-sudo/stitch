@@ -29,7 +29,7 @@ export const SCENE_ROLES = {
  * Template definitions.
  * scene_count: how many scenes to generate
  * scenes: blueprint with role, duration, and overlay style guidance
- * music_mood: hint for Beatoven music generation
+ * music_mood: hint for MiniMax music generation
  * voice_pacing: hint for voiceover pacing
  */
 export const VIDEO_TEMPLATES = {

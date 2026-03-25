@@ -11,14 +11,12 @@ import { apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 const AUDIO_MODELS = [
-  { id: 'beatoven/music-generation', label: 'Beatoven Music', type: 'music', provider: 'fal' },
-  { id: 'beatoven/sound-effect-generation', label: 'Beatoven Sound Effects', type: 'sfx', provider: 'fal' },
-  { id: 'fal-ai/minimax-music/v2', label: 'MiniMax Music v2 (requires lyrics)', type: 'music', provider: 'fal', requiresLyrics: true },
+  { id: 'fal-ai/minimax-music/v2', label: 'MiniMax Music v2', type: 'music', provider: 'fal' },
   { id: 'fal-ai/elevenlabs/music', label: 'ElevenLabs Music', type: 'music', provider: 'fal' },
 ];
 
 export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) {
-  const [model, setModel] = useState('beatoven/music-generation');
+  const [model, setModel] = useState('fal-ai/minimax-music/v2');
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [lyrics, setLyrics] = useState('');

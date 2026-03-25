@@ -359,12 +359,13 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
     tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs }] });
   }
 
-  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationMs/1000}s) + voiceover${musicUrl ? ' + music' : ''}`);
+  const totalDurationSec = totalDurationMs / 1000;
+  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s) + voiceover${musicUrl ? ' + music' : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tracks }),
+    body: JSON.stringify({ tracks, duration: totalDurationSec }),
   });
 
   if (!res.ok) throw new Error(`FAL ffmpeg short assembly failed: ${await res.text()}`);
@@ -386,7 +387,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
  * @param {number} durationSeconds
  * @param {object} keys - { falKey }
  * @param {object} supabase
- * @param {string} [model] - 'beatoven' | 'fal_elevenlabs' | 'fal_lyria2'
+ * @param {string} [model] - 'minimax' | 'fal_elevenlabs' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
 export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'minimax') {

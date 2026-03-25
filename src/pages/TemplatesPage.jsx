@@ -91,7 +91,7 @@ const MOTION_STYLES = [
 ];
 
 const MUSIC_MODELS = [
-  { value: 'beatoven',       label: 'Beatoven AI',      strength: 'Royalty-free instrumental', price: '$0.0013/sec' },
+  { value: 'minimax',         label: 'MiniMax Music v2', strength: 'Fast instrumental',         price: '$0.03/gen' },
   { value: 'fal_elevenlabs', label: 'ElevenLabs Music', strength: 'High quality, premium',     price: '$0.80/min' },
   { value: 'fal_lyria2',     label: 'Lyria 2 (Google)', strength: "Google's best music model", price: '$0.10/30sec' },
   { value: 'none',           label: 'No Music',         strength: '',                          price: '' },
@@ -292,7 +292,7 @@ export default function TemplatesPage() {
     image_model: 'wavespeed',
     video_model: 'wavespeed_wan',
     motion_style: 'standard',
-    music_model: 'beatoven',
+    music_model: 'minimax',
   });
   const [visualStylePreset, setVisualStylePreset] = useState(null);
   const [brandUsernames, setBrandUsernames] = useState([]);
@@ -373,7 +373,7 @@ export default function TemplatesPage() {
     setOutputType('both');
     setSelectedPlatforms(['tiktok', 'instagram_reels', 'youtube_shorts']);
     setSelectedStructures([]);
-    setModelPreferences({ image_model: 'wavespeed', video_model: 'wavespeed_wan', motion_style: 'standard', music_model: 'beatoven' });
+    setModelPreferences({ image_model: 'wavespeed', video_model: 'wavespeed_wan', motion_style: 'standard', music_model: 'minimax' });
     setVisualStylePreset(null);
     setBrandUsernames([]);
     setTemplateLoraConfig([]);
