@@ -239,6 +239,7 @@ CREATE TABLE linkedin_config (
   linkedin_cta_text text,
   linkedin_cta_url text,
   exa_api_key text,
+  linkedin_access_token text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
   UNIQUE(user_id)
@@ -263,9 +264,11 @@ CREATE TABLE linkedin_topics (
   status text DEFAULT 'discovered' CHECK (status IN ('discovered', 'generated', 'dismissed', 'expired')),
   discovered_at timestamptz DEFAULT now(),
   expires_at timestamptz DEFAULT (now() + interval '7 days'),
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(user_id, url, (discovered_at::date))
+  created_at timestamptz DEFAULT now()
 );
+
+-- Functional unique index for dedup (same URL + user + day)
+CREATE UNIQUE INDEX idx_linkedin_topics_dedup ON linkedin_topics(user_id, url, (discovered_at::date));
 ```
 
 #### `linkedin_posts`
@@ -294,7 +297,35 @@ CREATE TABLE linkedin_posts (
 
 ### RLS Policies
 
-All three tables get RLS enabled with user_id-scoped SELECT/INSERT/UPDATE/DELETE policies.
+All three tables get RLS enabled:
+
+```sql
+ALTER TABLE linkedin_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own config" ON linkedin_config FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE linkedin_topics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own topics" ON linkedin_topics FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE linkedin_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own posts" ON linkedin_posts FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+```
+
+### Triggers
+
+```sql
+CREATE TRIGGER update_linkedin_config_updated_at BEFORE UPDATE ON linkedin_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_linkedin_posts_updated_at BEFORE UPDATE ON linkedin_posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
+
+### Post Number Assignment
+
+`post_number` is assigned at publish time as a per-user sequential counter:
+
+```sql
+SELECT COALESCE(MAX(post_number), 0) + 1 FROM linkedin_posts WHERE user_id = $1 AND status = 'published'
+```
+
+`template_index` is derived: `(post_number - 1) % 6`.
 
 ### Indexes
 
@@ -311,7 +342,7 @@ CREATE INDEX idx_linkedin_posts_topic ON linkedin_posts(topic_id);
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | GET | `/api/linkedin/config` | Get user's LinkedIn config |
-| PUT | `/api/linkedin/config` | Update LinkedIn config |
+| PUT | `/api/linkedin/config` | Update LinkedIn config (separate handler file) |
 | POST | `/api/linkedin/search` | Search news via SerpAPI, score, insert topics |
 | POST | `/api/linkedin/add-topic` | Manual URL paste, fetch via Exa, score |
 | GET | `/api/linkedin/topics` | List discovered topics for user |
@@ -332,7 +363,7 @@ All endpoints require `authenticateToken` middleware.
 - **SerpAPI** (news search): existing `SEARCHAPI_KEY` / `SERP_API_KEY` env vars
 - **Exa** (URL content fetching): new `EXA_API_KEY` env var + `linkedin_config.exa_api_key` per-user override
 - **FAL** (Imagineer base image): via `getUserKeys()`
-- **LinkedIn API** (publishing): new `LINKEDIN_ACCESS_TOKEN` per-user — stored in `linkedin_config` or `user_api_keys`
+- **LinkedIn API** (publishing): stored in `linkedin_config.linkedin_access_token` per-user
 
 ---
 
@@ -342,7 +373,8 @@ All endpoints require `authenticateToken` middleware.
 
 ```
 api/linkedin/
-  config.js          — GET/PUT linkedin_config
+  get-config.js      — GET linkedin_config
+  update-config.js   — PUT linkedin_config
   search.js          — SerpAPI news search + scoring
   add-topic.js       — Manual URL paste + Exa fetch
   topics.js          — GET topics list
@@ -380,9 +412,13 @@ src/components/linkedin/
 supabase-migration-linkedin.sql
 ```
 
+### Dependencies
+
+- `sharp` — verify if already installed; if not, `npm install sharp` (has native bindings, Docker build handles this)
+
 ### Docker
 
-Add `fonts-dejavu-core` and `fonts-liberation` to Dockerfile apt-get.
+Add `fonts-dejavu-core` and `fonts-liberation` to Dockerfile apt-get. Verify `sharp` builds correctly in the Docker multi-stage build.
 
 ---
 
@@ -392,8 +428,8 @@ In `server.js`, add a new LinkedIn block following the campaigns pattern (direct
 
 ```javascript
 // LinkedIn
-app.get('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/config.js')).default);
-app.put('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/config.js')).default);
+app.get('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/get-config.js')).default);
+app.put('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/update-config.js')).default);
 app.post('/api/linkedin/search', authenticateToken, (await import('./api/linkedin/search.js')).default);
 app.post('/api/linkedin/add-topic', authenticateToken, (await import('./api/linkedin/add-topic.js')).default);
 app.get('/api/linkedin/topics', authenticateToken, (await import('./api/linkedin/topics.js')).default);
@@ -410,7 +446,7 @@ app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./
 In `App.jsx`:
 
 ```javascript
-<Route path="/linkedin" element={<LinkedInPage />} />
+<Route path="/linkedin" element={<ProtectedRoute><LinkedInPage /></ProtectedRoute>} />
 ```
 
 ---
@@ -420,8 +456,10 @@ In `App.jsx`:
 All API calls logged via `logCost()`:
 - `openai` category for GPT-4.1 (scoring, post generation, excerpt)
 - `fal` category for Imagineer base image
-- `serpapi` category for news search (new category)
-- `exa` category for URL content fetch (new category)
+- `serpapi` category for news search (new category — add to Provider Health Dashboard)
+- `exa` category for URL content fetch (new category — add to Provider Health Dashboard)
+
+Update `CostDashboardPage.jsx` and `api/providers/health.js` to recognize and display the new `serpapi` and `exa` categories.
 
 ---
 
@@ -432,6 +470,7 @@ All API calls logged via `logCost()`:
 - Exa fetch failure: fall back to direct HTTP fetch + basic HTML-to-text
 - LinkedIn API failure: status → `failed`, error_message stored, UI shows retry option
 - SerpAPI failure: show error toast, no topics inserted
+- Vite proxy: existing `/api/*` proxy covers all LinkedIn routes. `generate-posts` (3 parallel GPT calls + Exa fetch) should complete within the 180s timeout. If it doesn't, switch to return-immediately + poll pattern (like `campaigns/create.js`)
 
 ---
 
