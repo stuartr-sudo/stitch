@@ -17,9 +17,9 @@ import BrandKitModal from '@/components/modals/BrandKitModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
-import { SCENE_PILL_CATEGORIES, getScenePillsForNiche } from '@/lib/scenePills';
+import { SCENE_PILL_CATEGORIES, getScenePills } from '@/lib/scenePills';
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
-import { FRAMEWORK_CARDS, getFrameworkCard, getFrameworksByCategory } from '@/lib/videoStyleFrameworks';
+import { FRAMEWORK_CARDS, getFrameworkCard, getFrameworksByCategory, getFrameworksForNiche } from '@/lib/videoStyleFrameworks';
 import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 
 const STYLE_PRESETS = [
@@ -423,11 +423,15 @@ export default function CampaignsNewPage() {
     if (idx < WIZARD_STEPS.length - 1) {
       setCompletedSteps(prev => [...new Set([...prev, wizardStep])]);
       setWizardStep(WIZARD_STEPS[idx + 1].key);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
   const goBack = () => {
     const idx = WIZARD_STEPS.findIndex(s => s.key === wizardStep);
-    if (idx > 0) setWizardStep(WIZARD_STEPS[idx - 1].key);
+    if (idx > 0) {
+      setWizardStep(WIZARD_STEPS[idx - 1].key);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   const canGoNext = () => {
     switch (wizardStep) {
@@ -671,10 +675,14 @@ export default function CampaignsNewPage() {
     ...GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id)),
   ];
 
-  // Active framework cards — use API data if available, else local
-  const activeFrameworks = frameworkCards.length > 0 ? frameworkCards : FRAMEWORK_CARDS;
-  const storyFrameworks = activeFrameworks.filter(f => f.category === 'story');
-  const fastFrameworks = activeFrameworks.filter(f => f.category === 'fast_paced');
+  // Active framework cards — filter by selected niche, then split by category
+  const activeFrameworks = niche ? getFrameworksForNiche(niche) : FRAMEWORK_CARDS;
+  const nicheSpecificFrameworks = activeFrameworks.filter(f => f.applicableNiches);
+  const universalFrameworks = activeFrameworks.filter(f => !f.applicableNiches);
+  const storyFrameworks = universalFrameworks.filter(f => f.category === 'story');
+  const fastFrameworks = universalFrameworks.filter(f => f.category === 'fast_paced');
+  const nicheStoryFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'story');
+  const nicheFastFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'fast_paced');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -849,7 +857,7 @@ export default function CampaignsNewPage() {
         {contentType === 'shorts' && (
           <div className="space-y-6">
             <WizardStepper steps={WIZARD_STEPS} currentStep={wizardStep} completedSteps={completedSteps}
-              onStepClick={(key) => { if (completedSteps.includes(key)) setWizardStep(key); }} />
+              onStepClick={(key) => { if (completedSteps.includes(key)) { setWizardStep(key); window.scrollTo({ top: 0, behavior: 'smooth' }); } }} />
 
             {/* Step 1: Niche & Brand */}
             {wizardStep === 'niche' && (
@@ -877,7 +885,7 @@ export default function CampaignsNewPage() {
                   <label className="text-sm font-medium text-slate-700 block">Niche Template</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {NICHES.map(n => (
-                      <button key={n.key} onClick={() => { setNiche(n.key); setTopicL1(''); setTopicL2(''); setTopicL3(''); setTopic(''); }}
+                      <button key={n.key} onClick={() => { setNiche(n.key); setTopicL1(''); setTopicL2(''); setTopicL3(''); setTopic(''); if (selectedFramework?.applicableNiches && !selectedFramework.applicableNiches.includes(n.key)) setSelectedFramework(null); }}
                         className={`p-3 rounded-xl border text-center transition-all ${niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
                         <div className="text-xl mb-1">{n.icon}</div>
                         <div className="text-xs font-medium text-slate-700">{n.label}</div>
@@ -892,7 +900,48 @@ export default function CampaignsNewPage() {
             {/* Step 2: Framework Picker */}
             {wizardStep === 'framework' && (
               <div className="space-y-6">
-                {/* Story Frameworks */}
+                {/* Niche-specific (Recommended) frameworks — only shown when niche has dedicated ones */}
+                {nicheSpecificFrameworks.length > 0 && (
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#2C666E]/20 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-[#2C666E] block">Recommended for {NICHES.find(n => n.key === niche)?.label || niche}</label>
+                      <span className="text-[10px] bg-[#2C666E]/10 text-[#2C666E] px-2 py-0.5 rounded-full font-medium">{nicheSpecificFrameworks.length} styles</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {nicheSpecificFrameworks.map(fw => (
+                        <button key={fw.id} onClick={() => handleFrameworkSelect(fw)}
+                          className={`rounded-xl border overflow-hidden text-left transition-all ${
+                            selectedFramework?.id === fw.id ? 'border-[#2C666E] ring-2 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'
+                          }`}>
+                          {fw.thumb ? (
+                            <div className="w-full h-24 bg-slate-100">
+                              <img src={fw.thumb} alt={fw.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                            </div>
+                          ) : (
+                            <div className="w-full h-24 bg-gradient-to-br from-[#2C666E]/30 to-[#07393C]/40" />
+                          )}
+                          <div className="p-3 space-y-1.5">
+                            <div className="text-xs font-semibold text-slate-800">{fw.name}</div>
+                            <div className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{fw.description}</div>
+                            <div className="text-[10px] text-[#2C666E] italic">"{fw.hook}"</div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {fw.badges?.map(badge => (
+                                <span key={badge} className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{badge}</span>
+                              ))}
+                            </div>
+                            <div className="flex gap-1 mt-1">
+                              {fw.supportedDurations?.map(d => (
+                                <span key={d} className="text-[9px] bg-[#2C666E]/10 text-[#2C666E] px-1.5 py-0.5 rounded-full font-medium">{d}s</span>
+                              ))}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Universal Story Frameworks */}
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
                   <label className="text-sm font-medium text-slate-700 block">Story Frameworks</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -928,7 +977,7 @@ export default function CampaignsNewPage() {
                   </div>
                 </div>
 
-                {/* Fast-Paced Frameworks */}
+                {/* Universal Fast-Paced Frameworks */}
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
                   <label className="text-sm font-medium text-slate-700 block">Fast-Paced Frameworks</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1150,7 +1199,7 @@ export default function CampaignsNewPage() {
                 <div className="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
                   <label className="text-sm font-medium text-slate-700 block">Scene Direction Helpers</label>
                   <p className="text-[10px] text-slate-400 mb-2">Click pills to build a visual direction — these will be included when generating your script scenes.</p>
-                  {getScenePillsForNiche(niche).map(cat => (
+                  {getScenePills(niche, selectedFramework, visualStyle, videoLengthPreset).map(cat => (
                     <div key={cat.label} className="mb-2">
                       <div className="text-[10px] text-slate-400 uppercase mb-1">{cat.label}</div>
                       <div className="flex flex-wrap gap-1">
@@ -1396,7 +1445,7 @@ export default function CampaignsNewPage() {
                       <div className="border border-dashed border-slate-200 rounded-xl p-3">
                         <label className="text-xs font-medium text-slate-500 block mb-2">Add to scene {expandedScene + 1} visual prompt</label>
                         <div className="flex flex-wrap gap-1">
-                          {getScenePillsForNiche(niche).flatMap(cat => cat.pills).slice(0, 20).map(pill => (
+                          {getScenePills(niche, selectedFramework, visualStyle, videoLengthPreset).flatMap(cat => cat.pills).slice(0, 20).map(pill => (
                             <button key={pill} onClick={() => {
                               const updated = [...scriptScenes];
                               const s = updated[expandedScene];

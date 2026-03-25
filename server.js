@@ -442,8 +442,10 @@ app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campai
 app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
 app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
 app.get('/api/styles/frameworks', authenticateToken, async (req, res) => {
-  const { listFrameworks } = await import('./api/lib/videoStyleFrameworks.js');
-  res.json({ frameworks: listFrameworks() });
+  const { listFrameworks, getFrameworksForNiche } = await import('./api/lib/videoStyleFrameworks.js');
+  const { niche } = req.query;
+  const frameworks = niche ? getFrameworksForNiche(niche) : listFrameworks();
+  res.json({ frameworks });
 });
 app.get('/api/styles/captions', authenticateToken, async (req, res) => {
   const { CAPTION_STYLES } = await import('./api/lib/captionBurner.js');
