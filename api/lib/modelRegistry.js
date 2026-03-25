@@ -185,14 +185,15 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
   },
-  // FIX: Veo 3 i2v endpoint is /image-to-video, not just /fast
   fal_veo3: {
     provider: 'fal',
-    label: 'Veo 3 (Google)',
-    endpoint: 'fal-ai/veo3/fast/image-to-video',
+    label: 'Veo 3.1 (Google)',
+    endpoint: 'fal-ai/veo3.1/fast/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: veoDuration(duration), aspect_ratio: aspectRatio,
       generate_audio: opts.generate_audio === true,
+      resolution: '720p',
+      safety_tolerance: '5',
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },

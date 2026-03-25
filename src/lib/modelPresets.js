@@ -13,7 +13,7 @@ export const VIDEO_MODELS = [
   { value: 'wavespeed_wan', label: 'Wavespeed WAN', strength: 'Fastest, budget-friendly', price: '~$0.10/vid' },
   { value: 'fal_kling', label: 'Kling 2.0 Master', strength: 'Realistic motion', price: '$0.28/sec' },
   { value: 'fal_hailuo', label: 'Hailuo (MiniMax)', strength: 'Cinematic', price: '$0.50/vid' },
-  { value: 'fal_veo3', label: 'Veo 3 (Google)', strength: 'Best quality + audio', price: '$0.15/sec' },
+  { value: 'fal_veo3', label: 'Veo 3.1 (Google)', strength: 'Best quality + audio', price: '$0.10/sec' },
   { value: 'fal_veo2', label: 'Veo 2 (Google)', strength: 'Excellent realism', price: '$0.50/sec' },
   { value: 'fal_kling_v3', label: 'Kling V3 Pro', strength: 'Latest Kling + audio', price: '$0.28/sec' },
   { value: 'fal_kling_o3', label: 'Kling O3 Pro', strength: 'Start+end frame control', price: '$0.28/sec' },
