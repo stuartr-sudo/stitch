@@ -38,6 +38,24 @@ const PROVIDERS = [
     billingUrl: 'https://wavespeed.ai/dashboard',
     icon: '🌊',
   },
+  {
+    key: 'serpapi',
+    name: 'SerpAPI',
+    color: 'bg-orange-500',
+    colorLight: 'bg-orange-50 border-orange-200',
+    colorBar: 'bg-orange-500',
+    billingUrl: 'https://serpapi.com/dashboard',
+    icon: '🔍',
+  },
+  {
+    key: 'exa',
+    name: 'Exa',
+    color: 'bg-cyan-500',
+    colorLight: 'bg-cyan-50 border-cyan-200',
+    colorBar: 'bg-cyan-500',
+    billingUrl: 'https://dashboard.exa.ai',
+    icon: '📄',
+  },
 ];
 
 const STATUS_BADGE = {
