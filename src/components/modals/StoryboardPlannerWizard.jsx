@@ -698,6 +698,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     try {
       const body = {
         storyboardName,
+        description: storyboardName,
         desiredLength,
         defaultDuration,
         overallMood,

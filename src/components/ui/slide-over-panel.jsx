@@ -22,6 +22,18 @@ const SlideOverPanel = React.forwardRef(({
       />
       <DialogPrimitive.Content
         ref={ref}
+        onPointerDownOutside={(e) => {
+          // Don't close the panel when clicking on floating elements like toasts/notifications
+          // that render outside the dialog but above the overlay
+          const target = e.detail?.originalEvent?.target || e.target;
+          if (
+            target?.closest?.('.fixed.bottom-6') ||
+            target?.closest?.('[data-sonner-toast]') ||
+            target?.closest?.('[role="status"]')
+          ) {
+            e.preventDefault();
+          }
+        }}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex flex-col bg-white shadow-2xl outline-none",
           "w-[95vw] sm:w-[75vw] md:w-[65vw] max-w-[1200px]",

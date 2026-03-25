@@ -1130,7 +1130,8 @@ export default function VideoAdvertCreator() {
 
       {/* Floating action panel after image generation */}
       {lastGeneratedImage && (
-        <div className="fixed bottom-6 right-6 z-[9999] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300"
+          onPointerDown={(e) => e.stopPropagation()}>
           <div className="flex items-start gap-3">
             <img
               src={lastGeneratedImage.url}

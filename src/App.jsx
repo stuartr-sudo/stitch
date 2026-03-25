@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useSearchParams, useNavigate } 
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+
+// Silence all non-error toasts — only show toast.error() and toast.warning()
+toast.success = () => {};
+toast.info = () => {};
 import HomePage from './pages/HomePage';
 import VideoAdvertCreator from './pages/VideoAdvertCreator';
 import CampaignsPage from './pages/CampaignsPage';
