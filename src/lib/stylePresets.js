@@ -303,3 +303,9 @@ export function getPromptText(value) {
   const style = findStyleByValue(value);
   return style ? style.promptText : value;
 }
+
+// Helper: get short display label for a value (falls back to value itself)
+export function getStyleLabel(value) {
+  const style = findStyleByValue(value);
+  return style ? style.label : value;
+}
