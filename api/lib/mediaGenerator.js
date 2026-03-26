@@ -1,4 +1,4 @@
-import { IMAGE_MODELS, VIDEO_MODELS } from './modelRegistry.js';
+import { IMAGE_MODELS, VIDEO_MODELS, veoDuration } from './modelRegistry.js';
 import { pollFalQueue, pollWavespeedRequest, uploadUrlToSupabase } from './pipelineHelpers.js';
 
 export class MediaGenerationError extends Error {
@@ -101,4 +101,75 @@ export async function animateImageV2(modelKey, imageUrl, motionPrompt, aspectRat
   const url = model.parseResult(output);
   if (!url) throw new MediaGenerationError(modelKey, 'video', 'No URL in response');
   return uploadUrlToSupabase(url, supabase, 'pipeline/videos');
+}
+
+/**
+ * Generate video from reference image via R2V endpoint.
+ * Three providers with different body shapes.
+ */
+export async function animateImageR2V(r2vEndpoint, referenceImageUrl, prompt, aspectRatio, duration, keys, supabase) {
+  let body;
+
+  if (r2vEndpoint.includes('veo3')) {
+    body = {
+      image_url: referenceImageUrl,
+      prompt,
+      duration: veoDuration(duration),
+      aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9',
+      generate_audio: false,
+    };
+  } else if (r2vEndpoint.includes('grok-imagine')) {
+    body = {
+      reference_image_urls: [referenceImageUrl],
+      prompt,
+      duration: Math.max(1, Math.min(10, Math.round(duration))),
+      aspect_ratio: aspectRatio,
+      generate_audio: false,
+    };
+  } else if (r2vEndpoint.includes('kling-video')) {
+    body = {
+      prompt: `@Element1 ${prompt}`,
+      elements: [{
+        frontal_image_url: referenceImageUrl,
+        reference_image_urls: [referenceImageUrl],
+      }],
+      duration: String(Math.max(3, Math.min(15, Math.round(duration)))),
+      aspect_ratio: aspectRatio,
+    };
+  } else {
+    throw new MediaGenerationError(r2vEndpoint, 'video', `Unknown R2V endpoint: ${r2vEndpoint}`);
+  }
+
+  const res = await fetch(`https://queue.fal.run/${r2vEndpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${keys.falKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new MediaGenerationError(r2vEndpoint, 'video', errText);
+  }
+
+  const queueData = await res.json();
+
+  // Check for direct result
+  const videoUrl = queueData.video?.url;
+  if (videoUrl) return uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
+
+  // Poll for result
+  const output = await pollFalQueue(
+    queueData.response_url || queueData.request_id,
+    r2vEndpoint,
+    keys.falKey,
+    150,
+    4000,
+  );
+  const resultUrl = output?.video?.url || output?.output?.url;
+  if (!resultUrl) throw new MediaGenerationError(r2vEndpoint, 'video', 'No URL in R2V response');
+
+  return uploadUrlToSupabase(resultUrl, supabase, 'pipeline/finals');
 }

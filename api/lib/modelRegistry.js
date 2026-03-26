@@ -8,7 +8,7 @@
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
 
 // Duration format converters per model family
-function veoDuration(seconds) {
+export function veoDuration(seconds) {
   // Veo 3.1 accepts ONLY '4s', '6s', '8s'
   const n = Number(seconds) || 5;
   if (n <= 4) return '4s';
@@ -169,6 +169,7 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Kling O3 Pro',
     endpoint: 'fal-ai/kling-video/o3/pro/image-to-video',
+    r2vEndpoint: 'fal-ai/kling-video/o3/pro/reference-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: klingV3Duration(duration), aspect_ratio: aspectRatio,
       generate_audio: opts.generate_audio === true,
@@ -191,6 +192,7 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Veo 3.1 (Google)',
     endpoint: 'fal-ai/veo3.1/fast/image-to-video',
+    r2vEndpoint: 'fal-ai/veo3.1/reference-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: veoDuration(duration),
       aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9',
@@ -246,6 +248,20 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
+  // Grok Imagine I2V — duration 1-10s, generate_audio defaults true so must be explicit
+  fal_grok_video: {
+    provider: 'fal',
+    label: 'Grok Imagine I2V',
+    endpoint: 'xai/grok-imagine-video/image-to-video',
+    r2vEndpoint: 'xai/grok-imagine-video/reference-to-video',
+    buildBody: (imageUrl, prompt, duration, _aspectRatio, opts = {}) => ({
+      image_url: imageUrl, prompt,
+      duration: Math.max(1, Math.min(10, Number(duration) || 5)),
+      generate_audio: opts.generate_audio === true,
+    }),
+    parseResult: (output) => output?.video?.url,
+    pollConfig: { maxRetries: 120, delayMs: 4000 },
+  },
   // Wavespeed WAN — uses `image` (not `image_url`), numeric duration (correct as-is)
   wavespeed_wan: {
     provider: 'wavespeed',
@@ -266,3 +282,13 @@ export const VIDEO_MODELS = {
     pollConfig: { maxRetries: 90, delayMs: 4000 },
   },
 };
+
+export function isR2VCapable(modelKey) {
+  const model = VIDEO_MODELS[modelKey];
+  return model && !!model.r2vEndpoint;
+}
+
+export function getR2VEndpoint(modelKey) {
+  const model = VIDEO_MODELS[modelKey];
+  return model?.r2vEndpoint || null;
+}

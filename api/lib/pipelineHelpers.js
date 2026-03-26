@@ -352,7 +352,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
 
   const tracks = [
     { id: 'video', type: 'video', keyframes: videoKeyframes },
-    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0, duration: totalDurationMs }] },
+    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0 }] },
   ];
 
   if (musicUrl) {

@@ -43,7 +43,7 @@ const ShortsScriptSchema = z.object({
  * @param {string} [params.brandUsername] - For cost logging
  * @returns {Promise<object>} Parsed ShortsScriptSchema result
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds, framework }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds, framework, lockedDurations = null, frameChain = true }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required for script generation');
   if (!nicheTemplate) throw new Error(`No template found for niche "${niche}". Cannot generate script.`);
 
@@ -81,7 +81,12 @@ export async function generateScript({ niche, topic, nicheTemplate, keys, brandU
     .map((s, i) => `Scene ${i + 1} [${s.role}] (${s.duration}s): ${s.hint}`)
     .join('\n');
 
-  const totalWords = Math.round(effectiveDuration * 2.7); // ~2.7 words/sec for natural speech
+  const totalDuration = lockedDurations
+    ? lockedDurations.reduce((a, b) => a + b, 0)
+    : frameworkScenes
+      ? frameworkScenes.reduce((sum, s) => sum + (s.durationRange[0] + s.durationRange[1]) / 2, 0)
+      : effectiveDuration;
+  const totalWords = Math.round(totalDuration * 2.7); // ~2.7 words/sec for natural speech
 
   // Build framework-specific prompt block
   let frameworkBlock = '';
@@ -89,10 +94,13 @@ export async function generateScript({ niche, topic, nicheTemplate, keys, brandU
     const frameworkScenes = framework.sceneStructure[targetDurationSeconds]
       || framework.sceneStructure[framework.supportedDurations[0]];
 
-    const sceneGuide = frameworkScenes.map((s, i) =>
-      `Scene ${i + 1} "${s.label}" (${s.durationRange[0]}-${s.durationRange[1]}s): ${s.beat}` +
-      (s.overlayText ? ` — overlay text template: ${s.overlayText}` : '')
-    ).join('\n');
+    const sceneGuide = frameworkScenes.map((s, i) => {
+      const duration = lockedDurations
+        ? `${lockedDurations[i]}s`
+        : `${s.durationRange[0]}-${s.durationRange[1]}s`;
+      return `Scene ${i + 1} "${s.label}" (${duration}): ${s.beat}` +
+        (s.overlayText ? ` — overlay text template: ${s.overlayText}` : '');
+    }).join('\n');
 
     frameworkBlock = `
 
@@ -111,6 +119,11 @@ ${framework.category === 'fast_paced' ? 'Each scene should be self-contained and
 - overlay_text: ${framework.textOverlays === 'required' ? 'REQUIRED for every scene — write concise on-screen text (3-7 words) that reinforces the narration' : framework.textOverlays === 'optional' ? 'Add where it enhances clarity; leave null otherwise' : 'Set to null for all scenes'}`;
   }
 
+  const visualPromptStyle = frameChain
+    ? `For Scene 1, write a full visual_prompt describing the complete scene setting, characters, and atmosphere.
+For Scene 2 onwards, write a SHORT visual_prompt (1-2 sentences) describing only what CHANGES — motion, action, camera movement. Do NOT re-describe the setting or characters, as the previous scene's final frame provides visual context.`
+    : `For EVERY scene, write a complete visual_prompt describing the full scene — setting, characters, atmosphere, composition. Each scene is visually independent.`;
+
   const systemPrompt = `${nicheTemplate.script_system_prompt}
 
 TEMPLATE STRUCTURE (${scenes.length} scenes, ${effectiveDuration}s total):
@@ -123,6 +136,7 @@ CRITICAL RULES:
 - Total narration must be ${totalWords - 15} to ${totalWords + 15} words (for ${effectiveDuration} seconds at natural pace)
 - Each scene's narration_segment must match its target duration (~2.7 words per second)
 - narration_full = all narration_segments joined naturally (this is what gets spoken)
+- ${visualPromptStyle}
 - visual_prompt: Write vivid, specific AI image prompts (no text overlays, no words in images)
 - visual_prompt should describe cinematic scenes, environments, close-ups, or symbolic imagery
 - motion_prompt: Subtle camera movements only (slow pan, gentle zoom, drift)

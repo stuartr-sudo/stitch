@@ -5,31 +5,26 @@
  * Called by campaign-aware routes (not the legacy /api/shorts/generate endpoint).
  *
  * Steps:
- *  1. Load framework & generate script
- *  2. Generate TTS voiceover (Gemini or ElevenLabs, single or per-scene)
- *  3. Measure audio durations
- *  4. Generate images (per scene, with conditional frame chaining)
- *  5. Generate video clips (animate each image, duration matched to audio)
- *  6. Extract frames (first_frame_url + last_frame_url per scene for repair)
- *  7. Generate music (Lyria 2, mood from framework)
- *  8. Assemble video (volume from framework)
- *  9. Burn captions (full captionConfig: object or string)
- * 10. Save draft (all scene assets in step_results)
+ *  1. Load framework, solve durations, & generate script
+ *  2. Generate TTS voiceover (single continuous track)
+ *  3. Generate images & video clips per scene (continuous or cut mode)
+ *  4. Generate music (Lyria 2, mood from framework)
+ *  5. Assemble video (volume from framework)
+ *  6. Burn captions (full captionConfig: object or string)
+ *  7. Save draft (all scene assets in step_results)
  */
 
-import OpenAI from 'openai';
 import { generateScript } from './scriptGenerator.js';
 import { generateVoiceover, generateGeminiVoiceover } from './voiceoverGenerator.js';
 import { burnCaptions } from './captionBurner.js';
-import { generateImageV2, animateImageV2 } from './mediaGenerator.js';
+import { generateImageV2, animateImageV2, animateImageR2V } from './mediaGenerator.js';
+import { solveDurations } from './durationSolver.js';
+import { getR2VEndpoint } from './modelRegistry.js';
 import {
   generateMusic,
   extractLastFrame,
   extractFirstFrame,
-  analyzeFrameContinuity,
   assembleShort,
-  pollFalQueue,
-  uploadUrlToSupabase,
 } from './pipelineHelpers.js';
 import { getVisualStyleSuffix, getImageStrategy } from './visualStyles.js';
 import { getVideoStylePrompt } from './videoStylePresets.js';
@@ -38,45 +33,6 @@ import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
 import { saveToLibrary } from './librarySave.js';
 import { writeMediaMetadata } from './mediaMetadata.js';
-
-/**
- * Get the actual video duration after model-specific clamping.
- * Each model has different min/max constraints — this mirrors the
- * duration format converters in modelRegistry.js.
- */
-function getActualDuration(modelKey, requestedSeconds) {
-  const n = Number(requestedSeconds) || 5;
-  switch (modelKey) {
-    case 'fal_veo3':
-    case 'fal_veo2':
-      // Veo 3.1 only accepts 4, 6, 8
-      if (n <= 4) return 4;
-      if (n <= 6) return 6;
-      return 8;
-    case 'fal_kling':
-      return n <= 7 ? 5 : 10; // Kling v2: 5 or 10
-    case 'fal_kling_v3':
-    case 'fal_kling_o3':
-      return Math.max(3, Math.min(15, Math.round(n))); // Kling v3/O3: 3-15
-    case 'fal_wan25':
-      return n <= 7 ? 5 : 10; // Wan 2.5: 5 or 10
-    case 'fal_pixverse':
-      return n <= 6 ? 5 : 8; // PixVerse: 5 or 8
-    case 'wavespeed_wan':
-      return Math.max(5, Math.min(8, Math.round(n))); // Wavespeed: 5-8
-    default:
-      return Math.min(n, 8); // safe default
-  }
-}
-
-/**
- * Estimate audio duration from text using word count.
- * Average speaking pace: ~150 words per minute = ~2.5 words per second.
- */
-function estimateDurationFromText(text) {
-  const wordCount = (text || '').split(/\s+/).filter(Boolean).length;
-  return Math.max(2, wordCount / 2.5);
-}
 
 /**
  * Run the full framework-driven shorts generation pipeline.
@@ -171,6 +127,16 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Framework: ${framework.name} (${frameworkId}), frameChain=${effectiveFrameChain}, ttsMode=${framework.ttsMode}, musicVolume=${effectiveMusicVolume}`);
     }
 
+    // --- Duration Solver ---
+    let lockedDurations = null;
+    if (framework) {
+      const sceneStructure = framework.sceneStructure[video_length_preset] ||
+        framework.sceneStructure[framework.supportedDurations[0]];
+      const durationRanges = sceneStructure.map(s => s.durationRange);
+      lockedDurations = solveDurations(video_length_preset, durationRanges, videoModel);
+      console.log('[shorts] Locked durations:', lockedDurations, 'sum:', lockedDurations.reduce((a, b) => a + b, 0));
+    }
+
     // Determine image strategy based on visual_style (legacy) or framework
     const imageStrategy = framework ? (effectiveFrameChain ? 'frame_chain' : 'fresh_per_scene') : getImageStrategy(visualStyle);
     // Use backend VISUAL_STYLES lookup first, fall back to frontend's promptText
@@ -204,6 +170,8 @@ export async function runShortsPipeline(opts) {
           storyContext,
           targetDurationSeconds: video_length_preset,
           framework,
+          lockedDurations,
+          frameChain: framework?.frameChain ?? true,
         });
         scriptResult.narration_full = prebuiltScript;
       } else {
@@ -232,88 +200,26 @@ export async function runShortsPipeline(opts) {
         storyContext,
         targetDurationSeconds: video_length_preset,
         framework,
+        lockedDurations,
+        frameChain: framework?.frameChain ?? true,
       });
     }
 
     console.log(`[shortsPipeline] Script: "${scriptResult.title}" — ${scriptResult.scenes?.length} scenes`);
 
-    // ── Step 2: Generate TTS Voiceover ──────────────────────────────────────────
+    // ── Step 2: Generate TTS Voiceover (always single continuous track) ─────────
     currentStep = 'generating_voiceover';
     await updateJob({ current_step: 'generating_voiceover', completed_steps: 1 });
 
     const useGemini = !!gemini_voice;
-    let voiceoverUrl = null;
-    let perSceneVoiceovers = [];
+    const fullNarration = scriptResult.narration_full || scriptResult.scenes
+      .map(s => s.narration_segment || s.narration || '')
+      .filter(Boolean)
+      .join(' ');
 
-    if (useGemini && framework?.ttsMode === 'per_scene') {
-      // Per-scene Gemini TTS
-      console.log(`[shortsPipeline] Step 2: Generating per-scene Gemini voiceover (${scriptResult.scenes.length} scenes, voice=${gemini_voice})`);
-      for (let i = 0; i < scriptResult.scenes.length; i++) {
-        const scene = scriptResult.scenes[i];
-        const narration = scene.narration_segment || scene.narration || '';
-        if (!narration.trim()) {
-          perSceneVoiceovers.push(null);
-          continue;
-        }
-        const url = await withRetry(
-          () => generateGeminiVoiceover(narration, keys, supabase, {
-            voice: gemini_voice,
-            model: gemini_model || 'gemini-2.5-flash-tts',
-            styleInstructions: style_instructions || framework.ttsPacing,
-          }),
-          { maxAttempts: 2, baseDelayMs: 3000, onRetry: (a, e) => console.warn(`[shortsPipeline] Gemini TTS scene ${i + 1} retry ${a}: ${e.message}`) }
-        );
-        perSceneVoiceovers.push(url);
-        logCost({
-          username: brand_username,
-          category: 'fal',
-          operation: 'shorts_voiceover_gemini',
-          model: gemini_model || 'gemini-2.5-flash-tts',
-          metadata: { character_count: narration.length, scene_index: i },
-        });
-      }
-      // Build a combined voiceover URL for assembly — we'll use per-scene durations
-      // For assembly, we need a single voiceover track. Concatenate per-scene audio.
-      // Use the first non-null as fallback if concat not possible
-      const validVoiceovers = perSceneVoiceovers.filter(Boolean);
-      if (validVoiceovers.length === 1) {
-        voiceoverUrl = validVoiceovers[0];
-      } else if (validVoiceovers.length > 1) {
-        // Use ffmpeg compose to concatenate voiceover segments
-        try {
-          const FAL_BASE = 'https://queue.fal.run';
-          let runningTs = 0;
-          const voKeyframes = [];
-          for (let i = 0; i < perSceneVoiceovers.length; i++) {
-            if (!perSceneVoiceovers[i]) continue;
-            const sceneDur = estimateDurationFromText(scriptResult.scenes[i].narration_segment || scriptResult.scenes[i].narration || '');
-            voKeyframes.push({ url: perSceneVoiceovers[i], timestamp: runningTs * 1000, duration: sceneDur * 1000 });
-            runningTs += sceneDur;
-          }
-          const concatRes = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
-            method: 'POST',
-            headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tracks: [{ id: 'voiceover', type: 'audio', keyframes: voKeyframes }],
-              duration: runningTs,
-            }),
-          });
-          if (concatRes.ok) {
-            const qData = await concatRes.json();
-            const output = await pollFalQueue(qData.response_url || qData.request_id, 'fal-ai/ffmpeg-api/compose', keys.falKey, 60, 3000);
-            const url = output?.video_url || output?.audio?.url || output?.output_url;
-            if (url) {
-              voiceoverUrl = await uploadUrlToSupabase(url, supabase, 'pipeline/voiceover');
-            }
-          }
-        } catch (concatErr) {
-          console.warn(`[shortsPipeline] Per-scene voiceover concat failed, using first segment: ${concatErr.message}`);
-        }
-        if (!voiceoverUrl) voiceoverUrl = validVoiceovers[0];
-      }
-    } else if (useGemini) {
-      // Single-file Gemini TTS
-      const fullNarration = scriptResult.narration_full || scriptResult.scenes.map(s => s.narration_segment || s.narration || '').filter(Boolean).join('\n\n');
+    let voiceoverUrl = null;
+
+    if (useGemini) {
       console.log(`[shortsPipeline] Step 2: Generating single Gemini voiceover (${fullNarration.length} chars, voice=${gemini_voice})`);
       voiceoverUrl = await withRetry(
         () => generateGeminiVoiceover(fullNarration, keys, supabase, {
@@ -331,8 +237,6 @@ export async function runShortsPipeline(opts) {
         metadata: { character_count: fullNarration.length },
       });
     } else {
-      // Legacy ElevenLabs TTS
-      const fullNarration = scriptResult.narration_full || scriptResult.scenes.map(s => s.narration_segment || s.narration || '').filter(Boolean).join(' ');
       console.log(`[shortsPipeline] Step 2: Generating ElevenLabs voiceover (${fullNarration.length} chars)`);
       voiceoverUrl = await withRetry(
         () => generateVoiceover(fullNarration, keys, supabase, { voiceId }),
@@ -357,181 +261,155 @@ export async function runShortsPipeline(opts) {
       });
     }
 
-    // ── Step 3: Measure/Estimate Audio Durations ────────────────────────────────
-    currentStep = 'measuring_audio';
-    await updateJob({ current_step: 'measuring_audio', completed_steps: 2 });
-    console.log('[shortsPipeline] Step 3: Estimating scene audio durations');
+    // ── Steps 3+4+5: Generate Images & Video Clips (per scene) ──────────────────
+    currentStep = 'generating_images';
+    await updateJob({ current_step: 'generating_images', completed_steps: 2 });
 
-    // Estimate per-scene durations from text length (words / 2.5 = seconds)
-    const sceneDurations = [];
-    if (perSceneVoiceovers.length > 0) {
-      // Per-scene TTS: estimate each independently
-      for (const scene of scriptResult.scenes) {
-        const narration = scene.narration_segment || scene.narration || '';
-        sceneDurations.push(estimateDurationFromText(narration));
-      }
-    } else {
-      // Single TTS: distribute total duration proportionally by character count
-      const totalChars = scriptResult.scenes.reduce((sum, s) => sum + ((s.narration_segment || s.narration || '').length), 0);
-      const totalTargetDuration = video_length_preset || scriptResult.scenes.reduce((sum, s) => sum + (s.duration_seconds || 8), 0);
-      for (const scene of scriptResult.scenes) {
-        const chars = (scene.narration_segment || scene.narration || '').length;
-        const proportion = totalChars > 0 ? chars / totalChars : 1 / scriptResult.scenes.length;
-        sceneDurations.push(Math.max(3, Math.round(proportion * totalTargetDuration)));
-      }
+    const isContinuous = effectiveFrameChain;
+    const videoStylePrompt = getVideoStylePrompt(videoStyle);
+    const resolvedImageModel = image_model || (hasLoras ? 'fal_flux' : (framework?.defaults?.imageModel || undefined));
+    let characterRef = null;
+
+    console.log(`[shortsPipeline] Steps 3-5: Generating ${scriptResult.scenes.length} scenes (mode: ${isContinuous ? 'continuous' : 'cut'})${hasLoras ? ' with LoRA' : ''}`);
+    if (lockedDurations) {
+      console.log(`[shortsPipeline] Locked durations: [${lockedDurations.map(d => d + 's').join(', ')}]`);
     }
 
-    console.log(`[shortsPipeline] Scene durations: [${sceneDurations.map(d => d.toFixed(1) + 's').join(', ')}]`);
-
-    // ── Steps 4+5: Generate Images & Video Clips (per scene) ────────────────────
-    currentStep = 'generating_images';
-    await updateJob({ current_step: 'generating_images', completed_steps: 3 });
-    console.log(`[shortsPipeline] Steps 4+5: Generating ${scriptResult.scenes.length} scene images + clips (strategy: ${imageStrategy})${hasLoras ? ' with LoRA' : ''}`);
-
-    const sceneAssets = []; // { image_url, video_url, first_frame_url, last_frame_url, voiceover_url }
-    const sceneClips = [];
-    const actualClipDurations = [];
-    let prevFrameUrl = null;
-    let prevFrameAnalysis = null;
-
-    const openai = new OpenAI({ apiKey: keys.openaiKey });
+    const sceneAssets = [];
+    const clips = [];
+    const actualDurations = [];
 
     for (let i = 0; i < scriptResult.scenes.length; i++) {
       const scene = scriptResult.scenes[i];
       currentSceneIndex = i;
+      const duration = lockedDurations ? lockedDurations[i] : (scene.duration_seconds || 5);
+
+      const visualPrompt = scene.visual_prompt || scene.visual_description || '';
+      const motionPrompt = scene.motion_prompt || '';
+      const fullPrompt = [visualPrompt, motionPrompt, videoStylePrompt].filter(Boolean).join('. ');
 
       let imageUrl = null;
       let clipUrl = null;
       let firstFrameUrl = null;
       let lastFrameUrl = null;
-      let imagePromptUsed = null;
-      let motionPromptUsed = null;
 
       // Retry wrapper for entire scene — retry once on failure, then skip
       try {
-        // ── Image ──────────────────────────────────────────────────────────────
-        if (i === 0 && starting_image) {
-          imageUrl = starting_image;
-          console.log('[shortsPipeline] Using provided starting image for scene 0');
-        } else if (effectiveFrameChain && i > 0 && prevFrameUrl) {
-          // Reuse the last frame of the previous clip as the source image
-          imageUrl = prevFrameUrl;
-          imagePromptUsed = '[reused frame from previous clip]';
-          console.log(`[shortsPipeline] Scene ${i + 1}: reusing prev frame (frame_chain)`);
-        } else {
-          // Build prompt
-          const triggerPrefix = (loraConfigs || [])
-            .map((c) => c.triggerWord)
-            .filter(Boolean)
-            .join(', ');
+        if (i === 0) {
+          // Scene 1: always generate image (or use starting_image) then I2V
+          if (starting_image) {
+            imageUrl = starting_image;
+            console.log('[shortsPipeline] Using provided starting image for scene 0');
+          } else {
+            const triggerPrefix = (loraConfigs || []).map(c => c.triggerWord).filter(Boolean).join(', ');
+            const basePrompt = [triggerPrefix, visualPrompt].filter(Boolean).join(', ');
+            const imagePrompt = basePrompt + visualSuffix + `. Vertical ${aspectRatio} format, cinematic, no text or words in image.`;
 
-          const basePrompt = [triggerPrefix, scene.visual_prompt].filter(Boolean).join(', ');
-          imagePromptUsed = basePrompt + visualSuffix + `. Vertical ${aspectRatio} format, cinematic, no text or words in image.`;
+            currentModel = resolvedImageModel || 'default';
+            console.log(`[shortsPipeline] Scene 1: generating image (model: ${resolvedImageModel || 'fal_flux'})`);
+            imageUrl = await withRetry(
+              () => generateImageV2(resolvedImageModel || 'fal_flux', imagePrompt, aspectRatio, keys, supabase, {
+                loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+              }),
+              { maxAttempts: 2, baseDelayMs: 2000 }
+            );
 
-          // For fresh_per_scene (non-first scenes): append continuity context
-          let promptWithContinuity = imagePromptUsed;
-          if (imageStrategy === 'fresh_per_scene' && prevFrameAnalysis) {
-            promptWithContinuity += `. Maintain visual continuity: ${prevFrameAnalysis}`;
+            logCost({ username: brand_username, category: 'fal', operation: 'shorts_image', model: hasLoras ? 'flux-2-lora' : (resolvedImageModel || 'flux-pro'), metadata: { image_count: 1 } });
+            autoSave(supabase, userId, userEmail, { url: imageUrl, type: 'image', title: `[Short] ${topic} - Scene 1 Image`, source: 'shorts', visual_style: visualStyle || null, model_name: resolvedImageModel || 'fal_nano_banana', short_name: topic || null });
           }
 
-          const resolvedImageModel = image_model || (hasLoras ? 'fal_flux' : (framework?.defaults?.imageModel || undefined));
-          currentModel = resolvedImageModel || 'default';
-          console.log(`[shortsPipeline] Scene ${i + 1}: generating image (${imageStrategy}${resolvedImageModel ? ', model: ' + resolvedImageModel : ''})`);
-          imageUrl = await withRetry(
-            () => generateImageV2(resolvedImageModel || 'fal_flux', promptWithContinuity, aspectRatio, keys, supabase, {
-              loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
-            }),
-            { maxAttempts: 2, baseDelayMs: 2000 }
+          characterRef = imageUrl;
+
+          currentStep = 'animating_clips';
+          currentModel = videoModel;
+          await updateJob({ current_step: 'animating_clips', completed_steps: 3 });
+          console.log(`[shortsPipeline] Scene 1: animating clip (${duration}s, model: ${videoModel})`);
+
+          clipUrl = await withRetry(
+            () => animateImageV2(videoModel || 'fal_kling', imageUrl, fullPrompt, aspectRatio, duration, keys, supabase, { loras: loraConfigs, generate_audio: false }),
+            { maxAttempts: 2, baseDelayMs: 5000 }
           );
+        } else if (isContinuous) {
+          // Continuous: last frame of previous clip -> I2V
+          const lastFrame = clips[clips.length - 1]?.lastFrameUrl;
+          if (!lastFrame) {
+            throw new Error(`No last frame available from scene ${i} for frame chaining`);
+          }
 
-          logCost({
-            username: brand_username,
-            category: 'fal',
-            operation: 'shorts_image',
-            model: hasLoras ? 'flux-2-lora' : (resolvedImageModel || 'flux-pro'),
-            metadata: { image_count: 1, lora_count: loraConfigs.length },
-          });
+          currentStep = 'animating_clips';
+          currentModel = videoModel;
+          await updateJob({ current_step: 'animating_clips', completed_steps: 3 });
+          console.log(`[shortsPipeline] Scene ${i + 1}: continuous I2V from last frame (${duration}s)`);
 
-          autoSave(supabase, userId, userEmail, {
-            url: imageUrl, type: 'image',
-            title: `[Short] ${topic} - Scene ${i + 1} Image`,
-            source: 'shorts',
-            visual_style: visualStyle || null,
-            model_name: resolvedImageModel || 'fal_nano_banana',
-            short_name: topic || null,
-          });
+          clipUrl = await withRetry(
+            () => animateImageV2(videoModel || 'fal_kling', lastFrame, fullPrompt, aspectRatio, duration, keys, supabase, { loras: loraConfigs, generate_audio: false }),
+            { maxAttempts: 2, baseDelayMs: 5000 }
+          );
+        } else {
+          // Cut mode: R2V with character ref, or fresh image -> I2V
+          const r2vEndpoint = getR2VEndpoint(videoModel);
+
+          currentStep = 'animating_clips';
+          currentModel = videoModel;
+          await updateJob({ current_step: 'animating_clips', completed_steps: 3 });
+
+          if (characterRef && r2vEndpoint) {
+            console.log(`[shortsPipeline] Scene ${i + 1}: R2V with character ref (${duration}s, endpoint: ${r2vEndpoint})`);
+            clipUrl = await withRetry(
+              () => animateImageR2V(r2vEndpoint, characterRef, fullPrompt, aspectRatio, duration, keys, supabase),
+              { maxAttempts: 2, baseDelayMs: 5000 }
+            );
+          } else {
+            // No R2V endpoint — fall back to fresh image -> I2V
+            const triggerPrefix = (loraConfigs || []).map(c => c.triggerWord).filter(Boolean).join(', ');
+            const basePrompt = [triggerPrefix, visualPrompt].filter(Boolean).join(', ');
+            const imagePrompt = basePrompt + visualSuffix + `. Vertical ${aspectRatio} format, cinematic, no text or words in image.`;
+
+            currentModel = resolvedImageModel || 'default';
+            console.log(`[shortsPipeline] Scene ${i + 1}: generating fresh image + I2V (${duration}s)`);
+            imageUrl = await withRetry(
+              () => generateImageV2(resolvedImageModel || 'fal_flux', imagePrompt, aspectRatio, keys, supabase, {
+                loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+              }),
+              { maxAttempts: 2, baseDelayMs: 2000 }
+            );
+
+            logCost({ username: brand_username, category: 'fal', operation: 'shorts_image', model: hasLoras ? 'flux-2-lora' : (resolvedImageModel || 'flux-pro'), metadata: { image_count: 1 } });
+            autoSave(supabase, userId, userEmail, { url: imageUrl, type: 'image', title: `[Short] ${topic} - Scene ${i + 1} Image`, source: 'shorts', visual_style: visualStyle || null, model_name: resolvedImageModel || 'fal_nano_banana', short_name: topic || null });
+
+            currentModel = videoModel;
+            clipUrl = await withRetry(
+              () => animateImageV2(videoModel || 'fal_kling', imageUrl, fullPrompt, aspectRatio, duration, keys, supabase, { loras: loraConfigs, generate_audio: false }),
+              { maxAttempts: 2, baseDelayMs: 5000 }
+            );
+          }
         }
 
-        // ── Video Clip ─────────────────────────────────────────────────────────
-        const videoStylePrompt = getVideoStylePrompt(videoStyle);
-        motionPromptUsed = [scene.motion_prompt, videoStylePrompt].filter(Boolean).join(', ') || 'slow cinematic pan';
+        logCost({ username: brand_username, category: 'fal', operation: 'shorts_video_clip', model: videoModel || 'fal_kling', metadata: { video_count: 1, duration } });
+        autoSave(supabase, userId, userEmail, { url: clipUrl, type: 'video', title: `[Short] ${topic} - Scene ${i + 1} Video`, source: 'shorts', video_style: framework?.name || frameworkId || null, visual_style: visualStyle || null, model_name: videoModel || null, short_name: topic || null });
 
-        // Use estimated audio duration for clip duration (voiceover is master clock)
-        const requestedDuration = sceneDurations[i] || scene.duration_seconds || 5;
-        const actualDuration = getActualDuration(videoModel, requestedDuration);
-        actualClipDurations.push(actualDuration);
-
-        currentStep = 'animating_clips';
-        currentModel = videoModel;
-        await updateJob({ current_step: 'animating_clips', completed_steps: 3 });
-        console.log(`[shortsPipeline] Scene ${i + 1}: animating clip (audio=${requestedDuration.toFixed?.(1) || requestedDuration}s -> actual ${actualDuration}s, model: ${videoModel})`);
-
-        clipUrl = await withRetry(
-          // Never send generate_audio for Shorts — we have our own voiceover + music
-          () => animateImageV2(videoModel || 'fal_kling', imageUrl, motionPromptUsed, aspectRatio, requestedDuration, keys, supabase, { loras: loraConfigs, generate_audio: false }),
-          { maxAttempts: 2, baseDelayMs: 5000 }
-        );
-        sceneClips.push(clipUrl);
-
-        logCost({
-          username: brand_username,
-          category: 'fal',
-          operation: 'shorts_video_clip',
-          model: videoModel || 'fal_kling',
-          metadata: { video_count: 1, duration: actualDuration },
-        });
-
-        autoSave(supabase, userId, userEmail, {
-          url: clipUrl, type: 'video',
-          title: `[Short] ${topic} - Scene ${i + 1} Video`,
-          source: 'shorts',
-          video_style: framework?.name || frameworkId || null,
-          visual_style: visualStyle || null,
-          model_name: videoModel || null,
-          short_name: topic || null,
-        });
-
-        // ── Step 6 (per-scene): Extract first and last frames ──────────────────
+        // Extract frames for chaining and checkpointing
         try {
           [firstFrameUrl, lastFrameUrl] = await Promise.all([
             extractFirstFrame(clipUrl, keys.falKey),
-            extractLastFrame(clipUrl, actualDuration, keys.falKey),
+            extractLastFrame(clipUrl, duration, keys.falKey),
           ]);
-          prevFrameUrl = lastFrameUrl;
-          if (lastFrameUrl) {
-            prevFrameAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai);
-          }
         } catch (e) {
           console.warn(`[shortsPipeline] Frame extraction failed for scene ${i + 1}: ${e.message}`);
-          // Try last frame alone if parallel failed
           try {
-            lastFrameUrl = await extractLastFrame(clipUrl, actualDuration, keys.falKey);
-            prevFrameUrl = lastFrameUrl;
-            if (lastFrameUrl) prevFrameAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai);
+            lastFrameUrl = await extractLastFrame(clipUrl, duration, keys.falKey);
           } catch (e2) {
-            prevFrameUrl = null;
-            prevFrameAnalysis = null;
+            lastFrameUrl = null;
           }
         }
 
       } catch (sceneErr) {
         // Scene failed even after retries — log and continue with remaining scenes
         console.error(`[shortsPipeline] Scene ${i + 1} failed, skipping: ${sceneErr.message}`);
-        if (!clipUrl) {
-          // No clip generated — push null placeholder so assembly skips it
-          actualClipDurations.push(0);
-        }
       }
+
+      clips.push({ url: clipUrl, firstFrameUrl, lastFrameUrl, imageUrl });
+      actualDurations.push(clipUrl ? duration : 0);
 
       // ── Store scene assets ──────────────────────────────────────────────────
       const sceneAsset = {
@@ -539,9 +417,7 @@ export async function runShortsPipeline(opts) {
         video_url: clipUrl,
         first_frame_url: firstFrameUrl,
         last_frame_url: lastFrameUrl,
-        voiceover_url: perSceneVoiceovers[i] || voiceoverUrl,
-        image_prompt_used: imagePromptUsed,
-        motion_prompt_used: motionPromptUsed,
+        voiceover_url: voiceoverUrl,
         lora_config: loraConfigs,
         visual_style: visualStyle,
         video_style: videoStyle,
@@ -567,8 +443,8 @@ export async function runShortsPipeline(opts) {
     }
 
     // Filter out failed scenes for assembly
-    const validClips = sceneAssets.filter(s => s.video_url).map(s => s.video_url);
-    const validDurations = sceneAssets.map((s, i) => s.video_url ? actualClipDurations[i] : 0).filter(d => d > 0);
+    const validClips = clips.filter(c => c.url).map(c => c.url);
+    const validDurations = actualDurations.filter(d => d > 0);
 
     if (validClips.length === 0) {
       throw new Error('All scenes failed — no video clips generated');

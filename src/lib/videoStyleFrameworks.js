@@ -28,6 +28,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How I went from [A] to [B]',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -40,6 +41,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How [brand/person/thing] started in a [humble place]',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -52,6 +54,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The untold story of [X]',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'documentary', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -64,6 +67,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'A day in the life of a [profession]',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'vlog_bts', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -76,6 +80,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Watch [X] transform from [A] to [B]',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -88,6 +93,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Why [X] is the way it is',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -100,6 +106,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'A tribute to [X]',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -112,6 +119,7 @@ export const FRAMEWORK_CARDS = [
     hook: "Top 5 [X] you've never heard of",
     supportedDurations: [30, 45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -124,6 +132,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Everything you need to know about [X] in 60 seconds',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -136,6 +145,7 @@ export const FRAMEWORK_CARDS = [
     hook: '3 myths about [X] that are completely wrong',
     supportedDurations: [30, 45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -148,6 +158,7 @@ export const FRAMEWORK_CARDS = [
     hook: '[X] vs [Y] - which one actually wins?',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -160,6 +171,7 @@ export const FRAMEWORK_CARDS = [
     hook: "What you didn't know about [X]",
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -172,6 +184,7 @@ export const FRAMEWORK_CARDS = [
     hook: "I tried [X] for 30 days - here's what happened",
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'vlog_bts', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -184,6 +197,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The entire history of [X] in 60 seconds',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -196,6 +210,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The most overrated [X] and what to use instead',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -208,6 +223,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How [X] actually works',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'corporate', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -224,6 +240,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Watch how [tool] actually works',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -236,6 +253,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Breaking: [X] just changed everything',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -248,6 +266,7 @@ export const FRAMEWORK_CARDS = [
     hook: "I tested [tool] so you don't have to",
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -262,6 +281,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The wealth-building strategy nobody teaches you',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'corporate', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -274,6 +294,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Markets just did something insane',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -286,6 +307,7 @@ export const FRAMEWORK_CARDS = [
     hook: '5 money mistakes keeping you broke',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -300,6 +322,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The 5am routine that changed my life',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -312,6 +335,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The mindset that separates winners from everyone else',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -324,6 +348,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The lesson that took me 10 years to learn',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -338,6 +363,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Let me tell you about the night everything changed',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -350,6 +376,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Top 5 most disturbing [X] ever found',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -362,6 +389,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The urban legend that turned out to be real',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -376,6 +404,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The civilization that vanished without a trace',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -388,6 +417,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'What if [historical event] never happened?',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -400,6 +430,7 @@ export const FRAMEWORK_CARDS = [
     hook: "The person history forgot but shouldn't have",
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -414,6 +445,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Case #[X]: the crime that baffled detectives',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'noir', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -426,6 +458,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'One clue led to another, and another...',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'noir', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -438,6 +471,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'This case went cold for 20 years — until now',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'noir', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -452,6 +486,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Scientists just discovered something that changes everything',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -464,6 +499,7 @@ export const FRAMEWORK_CARDS = [
     hook: "5 things nature does that science can't explain",
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'nature', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -476,6 +512,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'What would happen if [impossible scenario]?',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -490,6 +527,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'A love story that changed how I see relationships',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -502,6 +540,7 @@ export const FRAMEWORK_CARDS = [
     hook: '5 red flags you keep ignoring',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -514,6 +553,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Your attachment style is ruining your relationships',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -528,6 +568,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How I completely transformed my body in [X] days',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -540,6 +581,7 @@ export const FRAMEWORK_CARDS = [
     hook: '3 health hacks backed by science',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -552,6 +594,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Stop believing these fitness lies',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -566,6 +609,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The hidden lore behind [game] you missed',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -578,6 +622,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Easter eggs in [game] you definitely missed',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -590,6 +635,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Why everyone is talking about [X] right now',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -604,6 +650,7 @@ export const FRAMEWORK_CARDS = [
     hook: "I went down the [X] rabbit hole — here's what I found",
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -616,6 +663,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'They tried to hide this from the public',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -628,6 +676,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Nobody has ever been able to explain [X]',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -642,6 +691,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How [company] went from garage to billions',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'corporate', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -654,6 +704,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'How [company] actually makes money',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'corporate', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -666,6 +717,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The playbook that took me from $0 to $10K/month',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -680,6 +732,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The secret recipe that went viral',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'food', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -692,6 +745,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The science behind why [food] tastes so good',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -704,6 +758,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'I ate every street food in [city]',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'photorealistic', videoStylePreset: 'food', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -718,6 +773,7 @@ export const FRAMEWORK_CARDS = [
     hook: "The place tourists don't know about yet",
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'travel', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -730,6 +786,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Travel hacks that save you hundreds',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -742,6 +799,7 @@ export const FRAMEWORK_CARDS = [
     hook: '48 hours in [destination] — the full experience',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'travel', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -756,6 +814,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Your brain is lying to you right now',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -768,6 +827,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'We tested [X] on 100 strangers — the results were shocking',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -780,6 +840,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Psychology facts that will change how you see people',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -794,6 +855,7 @@ export const FRAMEWORK_CARDS = [
     hook: "Let's travel to [cosmic destination]",
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -806,6 +868,7 @@ export const FRAMEWORK_CARDS = [
     hook: "NASA detected something they can't explain",
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -818,6 +881,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The size of the universe will break your brain',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -832,6 +896,7 @@ export const FRAMEWORK_CARDS = [
     hook: "The most incredible animal you've never heard of",
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'nature', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -844,6 +909,7 @@ export const FRAMEWORK_CARDS = [
     hook: "Animals with powers that shouldn't be real",
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'nature', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -856,6 +922,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Tracking the rarest [animal] on Earth',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'nature', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -870,6 +937,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'From nobody to legend — the [athlete] story',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -882,6 +950,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The single moment that changed [sport] forever',
     supportedDurations: [45, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'cinematic', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -894,6 +963,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Sports stats that will blow your mind',
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
 
@@ -908,6 +978,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Learn [X] in 60 seconds',
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'commercial', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -920,6 +991,7 @@ export const FRAMEWORK_CARDS = [
     hook: "Facts you weren't taught in school",
     supportedDurations: [30, 45],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'tiktok_reels', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -932,6 +1004,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'The accidental discovery that changed the world',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 
@@ -946,6 +1019,7 @@ export const FRAMEWORK_CARDS = [
     hook: 'Their encounter defied all explanation',
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
   {
@@ -958,6 +1032,7 @@ export const FRAMEWORK_CARDS = [
     hook: "The evidence they can't debunk",
     supportedDurations: [30, 60],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'documentary', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: false,
     badges: deriveBadges({ frameChain: false, ttsMode: 'per_scene', transitionType: 'hard_cut' }),
   },
   {
@@ -970,6 +1045,7 @@ export const FRAMEWORK_CARDS = [
     hook: "We investigated [location] — here's what we found",
     supportedDurations: [60, 90],
     defaults: { visualStyle: 'cinematic', videoStylePreset: 'dark_horror', imageModel: 'fal_nano_banana', videoModel: 'fal_veo3' },
+    frameChain: true,
     badges: deriveBadges({ frameChain: true, ttsMode: 'single', transitionType: 'crossfade' }),
   },
 ];
