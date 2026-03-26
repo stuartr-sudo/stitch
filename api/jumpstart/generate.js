@@ -1,7 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
+import sharp from 'sharp';
 import { getUserKeys } from '../lib/getUserKeys.js';
+
+const VEO_MAX_IMAGE_BYTES = 7 * 1024 * 1024; // 7MB (FAL limit is 8MB, leave margin)
+
+/**
+ * Ensure an image URL is under the Veo size limit.
+ * If over, download → resize with sharp → re-upload to Supabase → return new URL.
+ */
+async function ensureImageUnderLimit(imageUrl, supabase) {
+  try {
+    const headRes = await fetch(imageUrl, { method: 'HEAD' });
+    const size = parseInt(headRes.headers.get('content-length') || '0', 10);
+    if (size <= VEO_MAX_IMAGE_BYTES) return imageUrl;
+
+    console.log(`[JumpStart/Veo3] Image ${size} bytes exceeds limit, resizing...`);
+    const imgRes = await fetch(imageUrl);
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+
+    // Resize to max 1920px on longest side, convert to JPEG for smaller size
+    const resized = await sharp(buffer)
+      .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    console.log(`[JumpStart/Veo3] Resized: ${size} → ${resized.length} bytes`);
+
+    if (!supabase) return imageUrl; // can't upload, return original and hope
+
+    const filename = `temp/veo-resized-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error: uploadErr } = await supabase.storage
+      .from('media')
+      .upload(filename, resized, { contentType: 'image/jpeg', upsert: true });
+
+    if (uploadErr) {
+      console.error('[JumpStart/Veo3] Upload failed:', uploadErr.message);
+      return imageUrl;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filename);
+    console.log(`[JumpStart/Veo3] Resized image uploaded: ${publicUrl}`);
+    return publicUrl;
+  } catch (err) {
+    console.error('[JumpStart/Veo3] Image resize error:', err.message);
+    return imageUrl; // fallback to original
+  }
+}
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -595,7 +641,11 @@ async function handleVeo3(req, res, params) {
   console.log('[JumpStart/Veo3] Settings:', { aspectRatio, resolution, enableAudio, additionalImagesCount: additionalImages.length });
 
   // Veo 3.1 R2V uses image_urls array - supports multiple reference images
-  const allImages = [imageUrl, ...additionalImages];
+  // FAL limit: images must be under 8MB each. Resize any that exceed.
+  const supabase = getSupabaseClient();
+  const rawImages = [imageUrl, ...additionalImages];
+  const allImages = await Promise.all(rawImages.map(url => ensureImageUnderLimit(url, supabase)));
+  console.log(`[JumpStart/Veo3] ${rawImages.length} images checked, ${allImages.filter((u, i) => u !== rawImages[i]).length} resized`);
 
   // Strip copyrighted brand names that trigger Veo content policy
   let cleanPrompt = prompt
