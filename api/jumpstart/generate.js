@@ -615,10 +615,13 @@ async function handleVeo3(req, res, params) {
   // Veo uses image_urls for references and doesn't understand @Element placeholders.
   cleanPrompt = cleanPrompt.replace(/@Element\d+/g, '').replace(/\s{2,}/g, ' ').trim();
 
+  // Veo 3.1 R2V only accepts '16:9' or '9:16' — coerce anything else
+  const veoAspect = aspectRatio === '9:16' ? '9:16' : '16:9';
+
   const requestBody = {
     prompt: cleanPrompt,
     image_urls: allImages,
-    aspect_ratio: aspectRatio || '16:9',
+    aspect_ratio: veoAspect,
     duration: '8s',
     resolution: resolution || '720p',
     generate_audio: enableAudio !== false,
@@ -679,11 +682,13 @@ async function handleVeo3Fast(req, res, params) {
   console.log('[JumpStart/Veo3Fast] Submitting to Google Veo 3.1 Fast...');
   console.log('[JumpStart/Veo3Fast] Settings:', { duration, aspectRatio, resolution, enableAudio });
   
-  // Veo 3.1 Fast uses single image_url and supports duration options
+  // Veo 3.1 Fast only accepts '16:9', '9:16', or 'auto' — coerce anything else
+  const veoAspect = aspectRatio === '9:16' ? '9:16' : aspectRatio === 'auto' ? 'auto' : '16:9';
+
   const requestBody = {
     prompt: prompt,
     image_url: imageUrl,
-    aspect_ratio: aspectRatio,
+    aspect_ratio: veoAspect,
     duration: `${duration}s`, // Veo Fast uses string format: "4s", "6s", "8s"
     resolution: resolution,
     generate_audio: enableAudio !== false,
@@ -760,11 +765,14 @@ async function handleVeo3FirstLast(req, res, params) {
   console.log('[JumpStart/Veo3FirstLast] Submitting to Veo 3.1 First-Last-Frame...');
   console.log('[JumpStart/Veo3FirstLast] Settings:', { duration, aspectRatio, resolution, enableAudio });
   
+  // Veo 3.1 First-Last-Frame only accepts '16:9', '9:16', or 'auto'
+  const veoAspect = aspectRatio === '9:16' ? '9:16' : aspectRatio === 'auto' ? 'auto' : '16:9';
+
   const requestBody = {
     prompt: prompt,
     first_frame_url: firstFrameUrl,
     last_frame_url: lastFrameUrl,
-    aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
+    aspect_ratio: veoAspect,
     duration: `${duration}s`, // "4s", "6s", "8s"
     resolution: resolution,
     generate_audio: enableAudio !== false,

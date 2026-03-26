@@ -192,7 +192,8 @@ export const VIDEO_MODELS = {
     label: 'Veo 3.1 (Google)',
     endpoint: 'fal-ai/veo3.1/fast/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
-      image_url: imageUrl, prompt, duration: veoDuration(duration), aspect_ratio: aspectRatio,
+      image_url: imageUrl, prompt, duration: veoDuration(duration),
+      aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9',
       generate_audio: opts.generate_audio === true,
       resolution: '720p',
       safety_tolerance: '6',
