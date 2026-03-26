@@ -611,6 +611,10 @@ async function handleVeo3(req, res, params) {
   // confuses the model and contributes to no_media_generated rejections.
   cleanPrompt = cleanPrompt.replace(/\s*AVOID:\s*.*/i, '').trim();
 
+  // Strip @Element references — these are Kling R2V-only syntax.
+  // Veo uses image_urls for references and doesn't understand @Element placeholders.
+  cleanPrompt = cleanPrompt.replace(/@Element\d+/g, '').replace(/\s{2,}/g, ' ').trim();
+
   const requestBody = {
     prompt: cleanPrompt,
     image_urls: allImages,

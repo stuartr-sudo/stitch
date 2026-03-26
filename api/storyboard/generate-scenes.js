@@ -132,12 +132,20 @@ export default async function handler(req, res) {
     const openai = new OpenAI({ apiKey: openaiKey });
 
     // Build element descriptions for the prompt
+    // @Element syntax is Kling R2V-only — Veo/Grok use image_urls and need natural descriptions
+    const isKlingR2V = globalModel === 'kling-r2v-pro' || globalModel === 'kling-r2v-standard';
     let elementInstructions = '';
+    let characterContext = '';
     const activeElements = elementsArr.filter(el => el.description);
     if (activeElements.length > 0) {
-      elementInstructions = activeElements.map(el =>
-        `@Element${el.index}: ${el.description}`
-      ).join('\n');
+      if (isKlingR2V) {
+        elementInstructions = activeElements.map(el =>
+          `@Element${el.index}: ${el.description}`
+        ).join('\n');
+      } else {
+        // For Veo/Grok R2V: provide character descriptions as context without @Element syntax
+        characterContext = activeElements.map(el => el.description).join('; ');
+      }
     }
 
     // Build per-scene guide instructions (legacy sceneGuides)
@@ -205,7 +213,8 @@ ${storyBeatContext ? `\nSTORY BEATS FROM CREATIVE SESSION — follow these beats
 
 ${hasStartFrame && startFrameDescription ? `START FRAME ANALYSIS — ALL scenes must take place in this exact environment:\n${startFrameDescription}\n` : ''}
 ${elementInstructions ? `CHARACTER/OBJECT ELEMENTS — use the EXACT @ElementN placeholder names in every visualPrompt:\n${elementInstructions}\n` : ''}
-${veoReferenceCount ? `VEO REFERENCE IMAGES: ${veoReferenceCount} reference image(s) provided. Describe characters/objects in terms consistent with visual reference.\n` : ''}
+${characterContext ? `CHARACTER REFERENCES: Reference images are provided separately. Describe this character naturally in every scene: ${characterContext}\n` : ''}
+${veoReferenceCount ? `REFERENCE IMAGES: ${veoReferenceCount} reference image(s) provided. The model will use these visually — describe characters/objects consistently with their appearance.\n` : ''}
 ${sceneDirectionBlock ? `${sceneDirectionBlock}\n` : ''}
 ${sceneGuideInstructions ? `PER-SCENE DIRECTIONS FROM THE USER — follow these exactly:\n${sceneGuideInstructions}\n` : ''}
 
@@ -228,7 +237,7 @@ PROMPT WRITING RULES:
 
 4. The end of scene N must visually match the start of scene N+1 — same environment, same lighting conditions.
 
-5. @Element placeholders: You MUST use them exactly as listed. Describe what the character is doing and their expression.
+5. ${elementInstructions ? '@Element placeholders: You MUST use them exactly as listed. Describe what the character is doing and their expression.' : 'Describe characters naturally based on any reference descriptions provided. Do NOT use @Element or placeholder syntax.'}
 
 6. NEVER include: text, words, typography, watermarks, logos, or UI elements in any visualPrompt.
 
