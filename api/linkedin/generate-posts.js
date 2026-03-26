@@ -166,19 +166,22 @@ export default async function handler(req, res) {
       })
     );
 
-    // Generate excerpt via gpt-5-mini
+    // Generate excerpt via gpt-5-mini — pull a compelling insight from the full article
     let excerpt = '';
     try {
+      const excerptSource = content || topic.snippet || topic.headline || '';
       const excerptCompletion = await client.chat.completions.create({
         model: 'gpt-5-mini',
         messages: [
-          { role: 'system', content: 'Extract the single most compelling 6-12 word quote from this article title. Return only the quote, no punctuation marks around it.' },
-          { role: 'user', content: topic.headline },
+          { role: 'system', content: 'Extract the single most compelling or surprising 6-12 word phrase from this article that would make someone stop scrolling. It should capture a key insight, not just restate the headline. Use sentence case (capitalize only the first word and proper nouns). Return only the phrase, no quotation marks.' },
+          { role: 'user', content: `Headline: ${topic.headline}\n\nArticle:\n${excerptSource.slice(0, 2000)}` },
         ],
         temperature: 0.3,
         max_tokens: 50,
       });
       excerpt = excerptCompletion.choices[0]?.message?.content?.trim() || '';
+      // Strip any quotation marks the model may have added
+      excerpt = excerpt.replace(/^["'\u201C\u201D\u2018\u2019]+|["'\u201C\u201D\u2018\u2019]+$/g, '');
       logCost({
         username: req.user.email,
         category: 'openai',
