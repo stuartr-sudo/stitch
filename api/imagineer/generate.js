@@ -4,6 +4,8 @@
  */
 
 import { getUserKeys } from '../lib/getUserKeys.js';
+import { writeMediaMetadata } from '../lib/mediaMetadata.js';
+import { createClient } from '@supabase/supabase-js';
 
 const STYLE_PROMPTS = {
   // UGC & Social Media
@@ -176,7 +178,13 @@ async function handleNanoBanana2(req, res, enhancedPrompt, dimensions) {
   console.log('[Imagineer/NanoBanana2] Queue response:', JSON.stringify(data).substring(0, 300));
 
   if (data.images?.[0]?.url) {
-    return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+    const imageUrl = data.images[0].url;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, imageUrl, {
+      model_name: 'nano-banana-2',
+      visual_style: req.body.style || null,
+    });
+    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
   }
 
   const requestId = data.request_id;
@@ -235,7 +243,13 @@ async function handleSeedream(req, res, enhancedPrompt, dimensions) {
   console.log('[Imagineer/Seedream] Queue response:', JSON.stringify(data).substring(0, 300));
 
   if (data.images?.[0]?.url) {
-    return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+    const imageUrl = data.images[0].url;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, imageUrl, {
+      model_name: 'seedream',
+      visual_style: req.body.style || null,
+    });
+    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
   }
 
   const requestId = data.request_id;
@@ -297,7 +311,13 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
   const data = await response.json();
   
   if (data.images?.[0]?.url) {
-    return res.status(200).json({ success: true, imageUrl: data.images[0].url, status: 'completed' });
+    const imageUrl = data.images[0].url;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, imageUrl, {
+      model_name: 'fal-flux',
+      visual_style: req.body.style || null,
+    });
+    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
   }
 
   if (data.request_id) {

@@ -5,6 +5,8 @@
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
+import { writeMediaMetadata } from '../lib/mediaMetadata.js';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -113,6 +115,11 @@ export default async function handler(req, res) {
 
     const imageUrl = config.getImageUrl(data);
     if (imageUrl) {
+      const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      writeMediaMetadata(sb, req.user?.id, imageUrl, {
+        model_name: selectedModel,
+        visual_style: req.body.style || null,
+      });
       return res.json({ success: true, imageUrl, status: 'completed' });
     }
 
