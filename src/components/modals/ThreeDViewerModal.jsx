@@ -33,8 +33,14 @@ const ANGLE_SLOTS = [
   { key: 'right_front_image_url', label: 'Right Front' },
 ];
 
+const MODELS_3D = [
+  { id: 'meshy', label: 'Meshy v5', provider: 'fal', price: '$0.40', description: 'Textured, high-detail mesh from 1-4 images', minImages: 1, maxImages: 4 },
+  { id: 'wavespeed-hunyuan3d', label: 'Hunyuan3D v2', provider: 'wavespeed', price: '~$0.30', description: 'Multi-view reconstruction (front + back + left required)', minImages: 3, requiredSlots: ['front_image_url', 'back_image_url', 'left_image_url'] },
+];
+
 export default function ThreeDViewerModal({ isOpen, onClose }) {
   const [images, setImages] = useState({});
+  const [selectedModel, setSelectedModel] = useState('meshy');
   const [isGenerating, setIsGenerating] = useState(false);
   const [glbUrl, setGlbUrl] = useState(null);
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -49,6 +55,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   const modelViewerRef = useRef(null);
   const pollTimerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const providerRef = useRef('fal');
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -180,7 +187,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
         const response = await apiFetch('/api/viewer3d/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId }),
+          body: JSON.stringify({ requestId, provider: providerRef.current }),
         });
         if (!response.ok) {
           pollTimerRef.current = setTimeout(poll, 5000);
@@ -212,27 +219,43 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
     poll();
   }, []);
 
+  const modelConfig = MODELS_3D.find(m => m.id === selectedModel) || MODELS_3D[0];
+
+  const canGenerate = (() => {
+    if (modelConfig.requiredSlots) {
+      return modelConfig.requiredSlots.every(k => images[k]);
+    }
+    return Object.keys(images).length >= (modelConfig.minImages || 1);
+  })();
+
   const handleGenerate = async () => {
-    if (!images.front_image_url) {
-      toast.error('Front image is required');
+    if (!canGenerate) {
+      if (modelConfig.requiredSlots) {
+        const missing = modelConfig.requiredSlots.filter(k => !images[k]).map(k => ANGLE_SLOTS.find(s => s.key === k)?.label).join(', ');
+        toast.error(`${modelConfig.label} requires: ${missing}`);
+      } else {
+        toast.error('At least one image is required');
+      }
       return;
     }
 
     setIsGenerating(true);
     setGenerationStatus('Submitting...');
     setGlbUrl(null);
+    providerRef.current = modelConfig.provider;
 
     try {
       const response = await apiFetch('/api/viewer3d/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(images),
+        body: JSON.stringify({ ...images, model: selectedModel }),
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Generation failed');
 
       if (data.requestId) {
+        providerRef.current = data.provider || modelConfig.provider;
         setGenerationStatus('Queued...');
         pollForResult(data.requestId);
       }
@@ -421,20 +444,50 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                       </div>
                     </div>
 
+                    {/* Model selector */}
+                    <div className="mt-6 w-full max-w-3xl">
+                      <Label className="text-slate-700 text-sm font-medium mb-2 block">3D Model</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {MODELS_3D.map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => setSelectedModel(m.id)}
+                            className={`text-left p-3 rounded-lg border transition-all ${selectedModel === m.id ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm text-slate-900">{m.label}</span>
+                              <span className="text-xs text-slate-400">{m.price}</span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">{m.description}</p>
+                            {m.requiredSlots && (
+                              <div className="flex gap-1 mt-1.5">
+                                {m.requiredSlots.map(k => {
+                                  const slot = ANGLE_SLOTS.find(s => s.key === k);
+                                  const filled = !!images[k];
+                                  return (
+                                    <span key={k} className={`text-[10px] px-1.5 py-0.5 rounded ${filled ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}`}>
+                                      {slot?.label}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Generate button */}
-                    <div className="mt-8">
+                    <div className="mt-6">
                       <Button
                         onClick={handleGenerate}
-                        disabled={!images.front_image_url}
+                        disabled={!canGenerate}
                         className="bg-[#2C666E] hover:bg-[#07393C] h-12 px-8 text-base"
                       >
                         <Box className="w-5 h-5 mr-2" /> Generate 3D Model
                       </Button>
                       <p className="text-slate-400 text-xs text-center mt-2">
-                        Hunyuan 3D Pro — ~$0.38 per generation
-                        {!images.front_image_url && Object.keys(images).length > 0 && (
-                          <span className="block text-amber-500 mt-1">Click the star on an image to set it as the front view</span>
-                        )}
+                        {modelConfig.label} — {modelConfig.price} per generation
                       </p>
                     </div>
                   </>

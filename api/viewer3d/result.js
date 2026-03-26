@@ -1,5 +1,6 @@
 /**
  * 3D Viewer — Poll for generation result
+ * Supports both FAL (Meshy) and Wavespeed (Hunyuan3D v2) providers
  */
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { createClient } from '@supabase/supabase-js';
@@ -35,63 +36,104 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
-  if (!FAL_KEY) {
-    return res.status(400).json({ error: 'FAL API key not configured.' });
-  }
+  const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_KEY } = await getUserKeys(req.user.id, req.user.email);
 
-  const { requestId } = req.body;
+  const { requestId, provider } = req.body;
   if (!requestId) {
     return res.status(400).json({ error: 'Missing requestId' });
   }
 
   try {
-    // Poll the request URL directly (FAL returns status + result in one call)
-    const pollUrl = `https://queue.fal.run/fal-ai/hunyuan-3d/v3.1/pro/image-to-3d/requests/${requestId}`;
-    const resultResponse = await fetch(pollUrl, {
-      headers: { 'Authorization': `Key ${FAL_KEY}` },
-    });
+    if (provider === 'wavespeed') {
+      // --- Wavespeed polling ---
+      if (!WAVESPEED_KEY) {
+        return res.status(400).json({ error: 'Wavespeed API key not configured.' });
+      }
 
-    if (!resultResponse.ok) {
-      const errorText = await resultResponse.text();
-      console.error('[3DViewer] Poll error:', resultResponse.status, errorText);
-      return res.status(200).json({ status: 'processing', requestId });
-    }
+      const pollResponse = await fetch(
+        `https://api.wavespeed.ai/api/v3/predictions/${requestId}/result`,
+        { headers: { 'Authorization': `Bearer ${WAVESPEED_KEY}` } }
+      );
 
-    const data = await resultResponse.json();
+      if (!pollResponse.ok) {
+        console.error('[3DViewer] Wavespeed poll error:', pollResponse.status);
+        return res.status(200).json({ status: 'processing', requestId });
+      }
 
-    // Check if still in queue or processing
-    if (data.status === 'IN_QUEUE') {
+      const result = await pollResponse.json();
+      const data = result.data || result;
+      const status = data.status;
+
+      if (status === 'completed') {
+        // Wavespeed returns model_mesh.url or outputs array
+        const glbUrl = data.model_mesh?.url || data.outputs?.[0];
+        if (!glbUrl) {
+          return res.status(200).json({ status: 'failed', error: 'No 3D model in result' });
+        }
+        const permanentGlbUrl = await uploadGlbToSupabase(glbUrl, req.user.id);
+        return res.status(200).json({
+          status: 'completed',
+          requestId,
+          glbUrl: permanentGlbUrl,
+          thumbnailUrl: null,
+        });
+      } else if (status === 'failed') {
+        return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
+      } else {
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+
+    } else {
+      // --- FAL (Meshy) polling ---
+      if (!FAL_KEY) {
+        return res.status(400).json({ error: 'FAL API key not configured.' });
+      }
+
+      const pollUrl = `https://queue.fal.run/fal-ai/meshy/v5/multi-image-to-3d/requests/${requestId}`;
+      const resultResponse = await fetch(pollUrl, {
+        headers: { 'Authorization': `Key ${FAL_KEY}` },
+      });
+
+      if (!resultResponse.ok) {
+        const errorText = await resultResponse.text();
+        console.error('[3DViewer] FAL poll error:', resultResponse.status, errorText);
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+
+      const data = await resultResponse.json();
+
+      // Check if still in queue or processing
+      if (data.status === 'IN_QUEUE') {
+        return res.status(200).json({
+          status: 'queued',
+          requestId,
+          queuePosition: data.queue_position || null,
+        });
+      }
+      if (data.status === 'IN_PROGRESS') {
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+      if (data.status === 'FAILED') {
+        return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
+      }
+
+      // Completed — extract GLB
+      const glbUrl = data.model_glb?.url || data.model_urls?.glb?.url || data.model_urls?.glb;
+      if (!glbUrl) {
+        return res.status(200).json({ status: 'failed', error: 'No 3D model in result' });
+      }
+
+      const permanentGlbUrl = await uploadGlbToSupabase(glbUrl, req.user.id);
+      const thumbnailUrl = data.thumbnail?.url || null;
+
       return res.status(200).json({
-        status: 'queued',
+        status: 'completed',
         requestId,
-        queuePosition: data.queue_position || null,
+        glbUrl: permanentGlbUrl,
+        thumbnailUrl,
+        modelUrls: data.model_urls || null,
       });
     }
-    if (data.status === 'IN_PROGRESS') {
-      return res.status(200).json({ status: 'processing', requestId });
-    }
-    if (data.status === 'FAILED') {
-      return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
-    }
-
-    // Get GLB URL
-    const glbUrl = data.model_glb?.url || data.model_urls?.glb;
-    if (!glbUrl) {
-      return res.status(200).json({ status: 'failed', error: 'No 3D model in result' });
-    }
-
-    // Upload GLB to Supabase for permanent URL
-    const permanentGlbUrl = await uploadGlbToSupabase(glbUrl, req.user.id);
-    const thumbnailUrl = data.thumbnail?.url || null;
-
-    return res.status(200).json({
-      status: 'completed',
-      requestId,
-      glbUrl: permanentGlbUrl,
-      thumbnailUrl,
-      modelUrls: data.model_urls || null,
-    });
 
   } catch (error) {
     console.error('[3DViewer] Result error:', error);
