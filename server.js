@@ -952,6 +952,31 @@ async function pollWithBackoff() {
   setTimeout(pollWithBackoff, nextDelay);
 }
 
+// Proposal media routes
+app.get('/api/proposals/:slug/media', async (req, res) => {
+  const handler = await loadApiRoute('proposals/media.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/proposals/:slug/media', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/proposals/:slug/media/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media-item.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.patch('/api/proposals/:slug/media/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media-item.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Static proposal pages — served as plain HTML (no React/JS required)
 // This ensures government/corporate networks that block JS bundles can still view proposals
 app.get('/proposal/hamilton-city-council', (req, res) => {
