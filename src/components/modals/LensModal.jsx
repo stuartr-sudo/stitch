@@ -184,7 +184,7 @@ export default function LensModal({
             <p className="text-slate-400 text-sm">Click or drag to upload</p>
           </div>
         ) : (
-          <div className="flex-1 grid grid-cols-2 gap-4">
+          <div className="flex-1 grid grid-rows-2 gap-4 overflow-y-auto">
             {/* Original */}
             <div className="flex flex-col">
               <Label className="text-sm font-medium mb-2 text-center">Original</Label>
