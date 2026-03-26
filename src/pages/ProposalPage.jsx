@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiFetch } from '@/lib/api';
+import LibraryModal from '@/components/modals/LibraryModal';
 
 const PROCESS_STEPS = [
   {
@@ -175,8 +178,118 @@ function PasswordGate({ children }) {
   );
 }
 
+function Lightbox({ item, onClose }) {
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl w-10 h-10 flex items-center justify-center"
+      >
+        &times;
+      </button>
+      <div
+        className="max-w-5xl max-h-[90vh] w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {item.type === 'video' ? (
+          <video
+            src={item.url}
+            controls
+            autoPlay
+            className="w-full max-h-[90vh] rounded-lg"
+          />
+        ) : (
+          <img
+            src={item.url}
+            alt=""
+            className="w-full max-h-[90vh] object-contain rounded-lg"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProposalContent() {
   useScrollAnimation();
+  const { user } = useAuth();
+  const [editMode, setEditMode] = useState(false);
+  const [images, setImages] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [lightbox, setLightbox] = useState(null);
+  const [showVideoLibrary, setShowVideoLibrary] = useState(false);
+  const [showImageLibrary, setShowImageLibrary] = useState(false);
+
+  const fetchMedia = async () => {
+    try {
+      const res = await fetch('/api/proposals/hamilton-city-council/media');
+      const data = await res.json();
+      if (data.images) setImages(data.images);
+      if (data.videos) setVideos(data.videos);
+    } catch (err) {
+      console.error('Failed to fetch proposal media:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  const addMedia = async (item, mediaType) => {
+    try {
+      const res = await apiFetch('/api/proposals/hamilton-city-council/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          media_type: mediaType,
+          media_url: item.url || item.image_url || item.video_url,
+          thumbnail_url: item.thumbnail_url || null,
+          caption: item.title || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        console.error('Failed to add media:', data.error);
+        return;
+      }
+      fetchMedia();
+    } catch (err) {
+      console.error('Failed to add media:', err);
+    }
+  };
+
+  const removeMedia = async (id) => {
+    try {
+      await apiFetch(`/api/proposals/hamilton-city-council/media/${id}`, {
+        method: 'DELETE',
+      });
+      fetchMedia();
+    } catch (err) {
+      console.error('Failed to remove media:', err);
+    }
+  };
+
+  const updateCaption = async (id, caption) => {
+    try {
+      await apiFetch(`/api/proposals/hamilton-city-council/media/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption }),
+      });
+      fetchMedia();
+    } catch (err) {
+      console.error('Failed to update caption:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#ffffff', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -194,6 +307,21 @@ function ProposalContent() {
         [data-animate] { opacity: 0; }
         [data-animate].visible { animation: fadeInUp 0.6s ease-out forwards; }
       `}</style>
+
+      {user && (
+        <button
+          onClick={() => setEditMode(!editMode)}
+          className={`fixed top-4 right-4 z-50 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+            editMode ? 'bg-[#2C666E] text-white' : 'bg-white text-[#64748b] border border-[#e2e8f0]'
+          }`}
+          title={editMode ? 'Exit edit mode' : 'Edit proposal'}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        </button>
+      )}
 
       {/* Section 1: Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center relative bg-white px-6 pt-12 pb-24">
@@ -352,33 +480,131 @@ function ProposalContent() {
         </div>
       </section>
 
-      {/* Section 4: Sample Work */}
-      <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
-        <h2 className="text-3xl font-bold mb-2 text-[#0f172a]">Sample Work</h2>
-        <p className="text-[#64748b] mb-10">Examples from our animation pipeline</p>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
-            <video
-              className="w-full aspect-video bg-[#f1f5f9]"
-              controls
-              src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/videos/library/video-studio-extend-1773998121905-g1wiq3.mp4"
-            />
-            <p className="p-4 text-xs text-[#64748b]">
-              Sample animation. Final style will be tailored to Movin&apos; Martin
-            </p>
+      {/* Section 4: Sample Work (Videos) */}
+      {(videos.length > 0 || editMode) && (
+        <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-3xl font-bold text-[#0f172a]">Sample Work</h2>
+            {editMode && (
+              <button
+                onClick={() => setShowVideoLibrary(true)}
+                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                + Add Videos
+              </button>
+            )}
           </div>
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
-            <video
-              className="w-full aspect-video bg-[#f1f5f9]"
-              controls
-              src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/videos/library/storyboard-1774496027533-hgp0nd.mp4"
-            />
-            <p className="p-4 text-xs text-[#64748b]">
-              Character animation test — Veo 3.1 Reference-to-Video
-            </p>
+          <p className="text-[#64748b] mb-10">Examples from our animation pipeline</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {videos.map((v) => (
+              <div key={v.id} className="relative bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm group">
+                {editMode && (
+                  <button
+                    onClick={() => removeMedia(v.id)}
+                    className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                  >
+                    &times;
+                  </button>
+                )}
+                <div
+                  className="aspect-video bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => !editMode && setLightbox({ type: 'video', url: v.media_url })}
+                >
+                  <video
+                    className="w-full h-full object-cover"
+                    src={v.media_url}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    poster={v.thumbnail_url || undefined}
+                  />
+                </div>
+                {(v.caption || editMode) && (
+                  <div className="p-4">
+                    {editMode ? (
+                      <input
+                        type="text"
+                        defaultValue={v.caption || ''}
+                        onBlur={(e) => {
+                          if (e.target.value !== (v.caption || '')) {
+                            updateCaption(v.id, e.target.value);
+                          }
+                        }}
+                        placeholder="Add caption..."
+                        className="w-full text-xs text-[#64748b] border-b border-[#e2e8f0] focus:border-[#2C666E] outline-none pb-1"
+                      />
+                    ) : (
+                      <p className="text-xs text-[#64748b]">{v.caption}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Section 4b: Images */}
+      {(images.length > 0 || editMode) && (
+        <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-3xl font-bold text-[#0f172a]">Images</h2>
+            {editMode && (
+              <button
+                onClick={() => setShowImageLibrary(true)}
+                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                + Add Images
+              </button>
+            )}
+          </div>
+          <p className="text-[#64748b] mb-10">Selected work from our portfolio</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {images.map((img) => (
+              <div key={img.id} className="relative bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm group">
+                {editMode && (
+                  <button
+                    onClick={() => removeMedia(img.id)}
+                    className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                  >
+                    &times;
+                  </button>
+                )}
+                <div
+                  className="aspect-video bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => !editMode && setLightbox({ type: 'image', url: img.media_url })}
+                >
+                  <img
+                    src={img.thumbnail_url || img.media_url}
+                    alt={img.caption || 'Portfolio image'}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                {(img.caption || editMode) && (
+                  <div className="p-4">
+                    {editMode ? (
+                      <input
+                        type="text"
+                        defaultValue={img.caption || ''}
+                        onBlur={(e) => {
+                          if (e.target.value !== (img.caption || '')) {
+                            updateCaption(img.id, e.target.value);
+                          }
+                        }}
+                        placeholder="Add caption..."
+                        className="w-full text-xs text-[#64748b] border-b border-[#e2e8f0] focus:border-[#2C666E] outline-none pb-1"
+                      />
+                    ) : (
+                      <p className="text-xs text-[#64748b]">{img.caption}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Section 5: Client Feedback Portal */}
       <section className="py-24 px-6 max-w-6xl mx-auto" data-animate>
@@ -550,10 +776,42 @@ function ProposalContent() {
         <p className="text-[#94a3b8] text-xs mb-1">© 2026 Stitch Studios LLC</p>
         <p className="text-[#94a3b8] text-xs">Prepared March 2026</p>
       </footer>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <Lightbox item={lightbox} onClose={() => setLightbox(null)} />
+      )}
+
+      {/* Library Modals */}
+      {showVideoLibrary && (
+        <LibraryModal
+          isOpen={showVideoLibrary}
+          onClose={() => setShowVideoLibrary(false)}
+          mediaType="video"
+          onSelect={(item) => {
+            addMedia(item, 'video');
+          }}
+        />
+      )}
+
+      {showImageLibrary && (
+        <LibraryModal
+          isOpen={showImageLibrary}
+          onClose={() => setShowImageLibrary(false)}
+          mediaType="image"
+          onSelect={(item) => {
+            addMedia(item, 'image');
+          }}
+        />
+      )}
     </div>
   );
 }
 
 export default function ProposalPage() {
-  return <ProposalContent />;
+  return (
+    <PasswordGate>
+      <ProposalContent />
+    </PasswordGate>
+  );
 }
