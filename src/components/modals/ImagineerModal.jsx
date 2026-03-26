@@ -1258,6 +1258,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       </div>
 
       {/* ═══════════ Footer ═══════════ */}
+      {!(mode === "i2i" && (i2iMultiResults.length > 0 || i2iResultUrl)) && (
       <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
         {/* Status text */}
         <div className="text-xs text-slate-500">
@@ -1326,6 +1327,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           )}
         </div>
       </div>
+      )}
     </div>
   );
 
