@@ -11,13 +11,17 @@ export default async function handler(req, res) {
     return res.status(404).send('Not found');
   }
 
-  // Read the static HTML template
-  const templatePath = join(__dirname, '..', '..', 'public', 'proposal', `${slug}.html`);
+  // Read the static HTML template — check dist/ first (production), then public/ (dev)
+  const rootDir = join(__dirname, '..', '..');
   let html;
   try {
-    html = await readFile(templatePath, 'utf-8');
+    html = await readFile(join(rootDir, 'dist', 'proposal', `${slug}.html`), 'utf-8');
   } catch {
-    return res.status(404).send('Proposal not found');
+    try {
+      html = await readFile(join(rootDir, 'public', 'proposal', `${slug}.html`), 'utf-8');
+    } catch {
+      return res.status(404).send('Proposal not found');
+    }
   }
 
   // Fetch media from database
