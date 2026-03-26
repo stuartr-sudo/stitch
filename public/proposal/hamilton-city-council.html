@@ -900,6 +900,7 @@
 
       // --- Library modal ---
       var sbClient = null;
+      var PAGE_SIZE = 100;
       function openLibrary(mediaType) {
         var overlay = document.createElement('div');
         overlay.className = 'library-overlay';
@@ -912,83 +913,124 @@
         });
         document.body.appendChild(overlay);
 
-        // Fetch library items directly from Supabase
         if (!sbClient) sbClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
         var table = mediaType === 'video' ? 'generated_videos' : 'image_library_items';
-        sbClient.from(table)
-          .select('id, url, thumbnail_url, title, created_at')
-          .order('created_at', { ascending: false })
-          .limit(50)
-          .then(function(result) {
-            var items = result.data || [];
-            if (!items.length) {
-              modal.querySelector('.library-loading').textContent = 'No ' + mediaType + 's found in your library.';
-              return;
-            }
-            var selected = [];
-            var grid = document.createElement('div');
-            grid.className = 'library-grid';
-            items.forEach(function(item) {
-              var cell = document.createElement('div');
-              cell.className = 'library-item';
-              var url = item.thumbnail_url || item.url || item.image_url || item.video_url || '';
-              if (mediaType === 'video') {
-                cell.innerHTML = '<video src="' + escapeAttr(url) + '" muted></video><div class="name">' + escapeHtml(item.title || item.name || '') + '</div>';
-              } else {
-                cell.innerHTML = '<img src="' + escapeAttr(url) + '" /><div class="name">' + escapeHtml(item.title || item.name || '') + '</div>';
-              }
-              cell.addEventListener('click', function() {
-                cell.classList.toggle('selected');
-                var idx = selected.indexOf(item);
-                if (idx >= 0) selected.splice(idx, 1);
-                else selected.push(item);
-                addBtn.disabled = selected.length === 0;
-              });
-              grid.appendChild(cell);
-            });
-            modal.querySelector('.library-loading').remove();
-            modal.appendChild(grid);
+        var selected = [];
+        var grid = document.createElement('div');
+        grid.className = 'library-grid';
+        var loadMoreBtn = null;
+        var addBtn = null;
+        var offset = 0;
+        var hasMore = true;
 
-            var actions = document.createElement('div');
-            actions.className = 'library-actions';
-            var cancelBtn = document.createElement('button');
-            cancelBtn.className = 'btn-cancel';
-            cancelBtn.textContent = 'Cancel';
-            cancelBtn.onclick = function() { document.body.removeChild(overlay); };
-            var addBtn = document.createElement('button');
-            addBtn.className = 'btn-add';
-            addBtn.textContent = 'Add Selected';
-            addBtn.disabled = true;
-            addBtn.onclick = function() {
-              addBtn.disabled = true;
-              addBtn.textContent = 'Adding...';
-              var promises = selected.map(function(item) {
-                return fetch('/api/proposals/' + slug + '/media', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + accessToken
-                  },
-                  body: JSON.stringify({
-                    media_type: mediaType,
-                    media_url: item.url || item.image_url || item.video_url || '',
-                    thumbnail_url: item.thumbnail_url || '',
-                    caption: item.title || item.name || ''
-                  })
-                }).then(function(r) { return r.json(); });
-              });
-              Promise.all(promises).then(function() {
-                document.body.removeChild(overlay);
-                window.location.reload();
-              });
-            };
-            actions.appendChild(cancelBtn);
-            actions.appendChild(addBtn);
-            modal.appendChild(actions);
-          })
-          .catch(function() {
-            modal.querySelector('.library-loading').textContent = 'Failed to load library.';
+        function renderItems(items) {
+          items.forEach(function(item) {
+            var cell = document.createElement('div');
+            cell.className = 'library-item';
+            var url = item.thumbnail_url || item.url || item.image_url || item.video_url || '';
+            if (mediaType === 'video') {
+              cell.innerHTML = '<video src="' + escapeAttr(url) + '" muted></video><div class="name">' + escapeHtml(item.title || item.name || '') + '</div>';
+            } else {
+              cell.innerHTML = '<img src="' + escapeAttr(url) + '" loading="lazy" /><div class="name">' + escapeHtml(item.title || item.name || '') + '</div>';
+            }
+            cell.addEventListener('click', function() {
+              cell.classList.toggle('selected');
+              var idx = selected.indexOf(item);
+              if (idx >= 0) selected.splice(idx, 1);
+              else selected.push(item);
+              if (addBtn) addBtn.disabled = selected.length === 0;
+            });
+            grid.appendChild(cell);
           });
+        }
+
+        function loadPage() {
+          if (loadMoreBtn) { loadMoreBtn.textContent = 'Loading...'; loadMoreBtn.disabled = true; }
+          sbClient.from(table)
+            .select('id, url, thumbnail_url, title, created_at')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + PAGE_SIZE - 1)
+            .then(function(result) {
+              var items = result.data || [];
+              if (offset === 0 && !items.length) {
+                modal.querySelector('.library-loading').textContent = 'No ' + mediaType + 's found in your library.';
+                return;
+              }
+              // Remove loading text on first load
+              var loadingEl = modal.querySelector('.library-loading');
+              if (loadingEl) loadingEl.remove();
+
+              renderItems(items);
+              offset += items.length;
+              hasMore = items.length >= PAGE_SIZE;
+
+              // Add grid if first load
+              if (!grid.parentNode) modal.appendChild(grid);
+
+              // Load More button
+              if (hasMore) {
+                if (!loadMoreBtn) {
+                  loadMoreBtn = document.createElement('button');
+                  loadMoreBtn.className = 'btn-load-more';
+                  loadMoreBtn.style.cssText = 'display:block;margin:12px auto;padding:8px 24px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;';
+                  modal.insertBefore(loadMoreBtn, modal.querySelector('.library-actions'));
+                }
+                loadMoreBtn.textContent = 'Load More';
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.onclick = loadPage;
+              } else if (loadMoreBtn) {
+                loadMoreBtn.remove();
+                loadMoreBtn = null;
+              }
+
+              // Add action buttons on first load
+              if (!addBtn) {
+                var actions = document.createElement('div');
+                actions.className = 'library-actions';
+                var cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn-cancel';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = function() { document.body.removeChild(overlay); };
+                addBtn = document.createElement('button');
+                addBtn.className = 'btn-add';
+                addBtn.textContent = 'Add Selected';
+                addBtn.disabled = true;
+                addBtn.onclick = function() {
+                  addBtn.disabled = true;
+                  addBtn.textContent = 'Adding...';
+                  var promises = selected.map(function(item) {
+                    return fetch('/api/proposals/' + slug + '/media', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + accessToken
+                      },
+                      body: JSON.stringify({
+                        media_type: mediaType,
+                        media_url: item.url || item.image_url || item.video_url || '',
+                        thumbnail_url: item.thumbnail_url || '',
+                        caption: item.title || item.name || ''
+                      })
+                    }).then(function(r) { return r.json(); });
+                  });
+                  Promise.all(promises).then(function() {
+                    document.body.removeChild(overlay);
+                    window.location.reload();
+                  });
+                };
+                actions.appendChild(cancelBtn);
+                actions.appendChild(addBtn);
+                modal.appendChild(actions);
+              }
+            })
+            .catch(function() {
+              var loadingEl = modal.querySelector('.library-loading');
+              if (loadingEl) loadingEl.textContent = 'Failed to load library.';
+              else if (loadMoreBtn) { loadMoreBtn.textContent = 'Load More'; loadMoreBtn.disabled = false; }
+            });
+        }
+
+        loadPage();
       }
 
       function escapeHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
