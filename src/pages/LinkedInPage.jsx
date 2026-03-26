@@ -45,46 +45,82 @@ export default function LinkedInPage() {
 
   // ── Topic queue callbacks ──────────────────────────────────────────────────
 
-  const onSearch = useCallback(async (query, isUrl) => {
+  /** Paste URL → add directly to topic queue */
+  const onAddUrl = useCallback(async (url) => {
     try {
-      const endpoint = isUrl ? '/api/linkedin/add-topic' : '/api/linkedin/search';
-      const res  = await apiFetch(endpoint, {
+      const res = await apiFetch('/api/linkedin/add-topic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isUrl ? { url: query } : { query }),
+        body: JSON.stringify({ url }),
       });
       const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-        return;
-      }
-      // Merge returned topics into state (avoid duplicates by id)
-      const incoming = data.topics ?? (data.topic ? [data.topic] : []);
+      if (data.error) { toast.error(data.error); return; }
+      const incoming = data.topic ? [data.topic] : [];
       setTopics(prev => {
         const ids = new Set(prev.map(t => t.id));
         const merged = [...prev];
         for (const t of incoming) {
           if (!ids.has(t.id)) merged.push(t);
-          else {
-            const idx = merged.findIndex(x => x.id === t.id);
-            if (idx !== -1) merged[idx] = t;
-          }
+          else { const idx = merged.findIndex(x => x.id === t.id); if (idx !== -1) merged[idx] = t; }
         }
         return merged;
       });
+      toast.success('Topic added');
     } catch (err) {
-      console.error('[LinkedIn] search error', err);
-      toast.error('Search failed');
+      console.error('[LinkedIn] add-url error', err);
+      toast.error('Failed to add topic');
     }
   }, []);
 
-  const onGenerate = useCallback(async (topicId) => {
+  /** Keyword search → return preview results (no DB insert) */
+  const onSearchKeyword = useCallback(async (query) => {
+    try {
+      const res = await apiFetch('/api/linkedin/search-keyword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return []; }
+      return data.results ?? [];
+    } catch (err) {
+      console.error('[LinkedIn] search-keyword error', err);
+      toast.error('Search failed');
+      return [];
+    }
+  }, []);
+
+  /** Add a search result preview to the persisted topic queue */
+  const onAddSearchResult = useCallback(async (result) => {
+    try {
+      const res = await apiFetch('/api/linkedin/add-search-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return; }
+      if (data.topic) {
+        setTopics(prev => {
+          const ids = new Set(prev.map(t => t.id));
+          if (ids.has(data.topic.id)) return prev.map(t => t.id === data.topic.id ? data.topic : t);
+          return [...prev, data.topic];
+        });
+        toast.success('Added to queue');
+      }
+    } catch (err) {
+      console.error('[LinkedIn] add-search-result error', err);
+      toast.error('Failed to add topic');
+    }
+  }, []);
+
+  const onGenerate = useCallback(async (topicId, templateIndex) => {
     setGeneratingTopicId(topicId);
     try {
       const res  = await apiFetch('/api/linkedin/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic_id: topicId }),
+        body: JSON.stringify({ topic_id: topicId, template_index: templateIndex }),
       });
       const data = await res.json();
       if (data.error) {
@@ -213,7 +249,9 @@ export default function LinkedInPage() {
           <div className="overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
             <TopicQueue
               topics={topics}
-              onSearch={onSearch}
+              onAddUrl={onAddUrl}
+              onSearchKeyword={onSearchKeyword}
+              onAddSearchResult={onAddSearchResult}
               onGenerate={onGenerate}
               onDismiss={onDismiss}
               generatingTopicId={generatingTopicId}

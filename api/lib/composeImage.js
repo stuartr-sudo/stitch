@@ -126,8 +126,10 @@ function buildSvg({
   const pillW = logoTargetW + 72;
   const pillH = logoH + 32;
   const pillR = pillH / 2;
-  // Square: top-center; Landscape: top-left
-  const pillX = isSquare ? (canvasW - pillW) / 2 : 20;
+  // Logo always top-left; circular for round logos, pill for wide
+  const logoAspect = logoNaturalW / logoNaturalH;
+  const isRoundLogo = logoAspect >= 0.8 && logoAspect <= 1.2;
+  const pillX = isSquare ? 40 : 20;
   const pillY = isSquare ? 55 : 20;
   const logoInsideX = pillX + 36;
   const logoInsideY = pillY + 16;
@@ -214,7 +216,7 @@ function buildSvg({
   <rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="white" opacity="0.035" filter="url(#noise)" />
 
   <!-- Layer 4: Decorative quote mark -->
-  <text x="${canvasW / 2}" y="${quoteMarkY}" text-anchor="middle" font-family="DejaVu Serif, Georgia, serif" font-size="${quoteFontSize}" fill="white" opacity="0.35">&#x201C;</text>
+  <text x="${canvasW / 2}" y="${quoteMarkY}" text-anchor="middle" font-family="DejaVu Serif, Georgia, serif" font-size="${quoteFontSize}" fill="white" opacity="0.85">&#x201C;</text>
 
   <!-- Layer 5: Quote text -->
   ${lineElements}
@@ -226,11 +228,17 @@ function buildSvg({
   <!-- Layer 7: Watch number -->
   <text x="${watchX}" y="${watchY}" text-anchor="${watchAnchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${watchFontSize}" fill="white" opacity="0.85" letter-spacing="2">${xmlEscape(watchText)}</text>
 
-  <!-- Layer 8: Logo pill background -->
-  <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="${pillR}" ry="${pillR}" fill="white" opacity="0.97" />
+  <!-- Layer 8: Logo container background -->
+  ${isRoundLogo
+    ? `<circle cx="${pillX + pillH / 2}" cy="${pillY + pillH / 2}" r="${pillH / 2}" fill="white" opacity="0.97" />`
+    : `<rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="${pillR}" ry="${pillR}" fill="white" opacity="0.97" />`
+  }
 
   <!-- Layer 9: Logo image -->
-  <image href="${logoDataUri}" x="${logoInsideX}" y="${logoInsideY}" width="${logoTargetW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
+  ${isRoundLogo
+    ? `<image href="${logoDataUri}" x="${pillX + (pillH - logoTargetW) / 2}" y="${logoInsideY}" width="${logoTargetW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" clip-path="circle(${pillH / 2 - 4}px at ${pillH / 2}px ${pillH / 2}px)" />`
+    : `<image href="${logoDataUri}" x="${logoInsideX}" y="${logoInsideY}" width="${logoTargetW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />`
+  }
 </svg>`;
 }
 

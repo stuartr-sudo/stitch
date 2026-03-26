@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS linkedin_posts (
   excerpt text,
   status text DEFAULT 'generated' CHECK (status IN ('generated', 'approved', 'published', 'rejected', 'failed')),
   featured_image_square text,
-  featured_image_landscape text,
+  scheduled_for timestamptz,
   published_linkedin_id text,
   post_number integer,
   template_index integer,

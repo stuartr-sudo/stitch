@@ -459,10 +459,12 @@ app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campai
 app.get('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/get-config.js')).default);
 app.put('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/update-config.js')).default);
 app.post('/api/linkedin/search', authenticateToken, (await import('./api/linkedin/search.js')).default);
+app.post('/api/linkedin/search-keyword', authenticateToken, (await import('./api/linkedin/search-keyword.js')).default);
 app.post('/api/linkedin/add-topic', authenticateToken, (await import('./api/linkedin/add-topic.js')).default);
+app.post('/api/linkedin/add-search-result', authenticateToken, (await import('./api/linkedin/add-search-result.js')).default);
 app.get('/api/linkedin/topics', authenticateToken, (await import('./api/linkedin/topics.js')).default);
 app.patch('/api/linkedin/topics/:id', authenticateToken, (await import('./api/linkedin/update-topic.js')).default);
-app.post('/api/linkedin/generate-posts', authenticateToken, (await import('./api/linkedin/generate-posts.js')).default);
+app.post('/api/linkedin/generate', authenticateToken, (await import('./api/linkedin/generate-posts.js')).default);
 app.get('/api/linkedin/posts', authenticateToken, (await import('./api/linkedin/posts.js')).default);
 app.patch('/api/linkedin/posts/:id', authenticateToken, (await import('./api/linkedin/update-post.js')).default);
 app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);

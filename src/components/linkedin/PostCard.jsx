@@ -105,16 +105,16 @@ export default function PostCard({ post, config, onApprove, onEdit, onReject, on
         </div>
       )}
 
-      {/* Featured image */}
-      {post.featured_image_landscape ? (
+      {/* Featured image (square) */}
+      {post.featured_image_square ? (
         <img
-          src={post.featured_image_landscape}
+          src={post.featured_image_square}
           alt="Post image"
-          className="rounded-md w-full object-cover max-h-48"
+          className="rounded-md w-full aspect-square object-cover"
         />
       ) : post.status === 'generated' && !editing ? (
         <div className="rounded-md bg-slate-100 text-slate-400 text-xs text-center py-6">
-          No image generated
+          Image generating…
         </div>
       ) : null}
 

@@ -1,6 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const COLOR_TEMPLATES = [
+  { name: 'arctic-steel', stops: ['#0a1628', '#1e3a5f', '#94a3b8'] },
+  { name: 'sunset-coral', stops: ['#1a0a1e', '#7c2d5f', '#f97316'] },
+  { name: 'electric-violet', stops: ['#0a0020', '#4a00b4', '#bf5af2'] },
+  { name: 'royal-gold', stops: ['#1a0a2e', '#44337a', '#d69e2e'] },
+  { name: 'midnight-rose', stops: ['#0f0c29', '#302b63', '#e44d7b'] },
+  { name: 'purple-burst', stops: ['#1a0a3e', '#3b1c8c', '#0ea5e9'] },
+];
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -29,6 +38,7 @@ function sourceDomain(url) {
 }
 
 export default function TopicCard({ topic, onGenerate, onDismiss, isGenerating }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(0);
   const score = topic.relevance_score ?? 0;
   const isGenerated = topic.status === 'generated';
 
@@ -62,12 +72,32 @@ export default function TopicCard({ topic, onGenerate, onDismiss, isGenerating }
         <p className="text-sm text-slate-500 italic">{topic.suggested_angle}</p>
       )}
 
+      {/* Color theme picker */}
+      {!isGenerated && (
+        <div className="flex items-center gap-1.5 pt-1">
+          <span className="text-xs text-slate-400 mr-1">Theme:</span>
+          {COLOR_TEMPLATES.map((tpl, i) => (
+            <button
+              key={tpl.name}
+              onClick={() => setSelectedTemplate(i)}
+              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                selectedTemplate === i ? 'border-slate-900 scale-110' : 'border-transparent hover:border-slate-300'
+              }`}
+              style={{
+                background: `linear-gradient(135deg, ${tpl.stops[0]}, ${tpl.stops[1]}, ${tpl.stops[2]})`,
+              }}
+              title={tpl.name}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Actions */}
       {!isGenerated && (
         <div className="flex items-center gap-2 pt-1">
           <Button
             size="sm"
-            onClick={() => onGenerate(topic.id)}
+            onClick={() => onGenerate(topic.id, selectedTemplate)}
             disabled={isGenerating}
             className="flex-1"
           >
