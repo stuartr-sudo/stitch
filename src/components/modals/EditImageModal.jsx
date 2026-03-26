@@ -144,7 +144,10 @@ export default function EditImageModal({
   const [step, setStep] = useState(0);
   const [images, setImages] = useState([]);
   const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('');
+  const [style, setStyle] = useState([]);
+  const [multiResults, setMultiResults] = useState([]);
+  const [expandedImage, setExpandedImage] = useState(null);
+  const mountedRef = useRef(true);
   const [model, setModel] = useState('wavespeed-nano-ultra');
   const [outputSize, setOutputSize] = useState('1920x1080');
   const [isLoading, setIsLoading] = useState(false);
@@ -169,13 +172,16 @@ export default function EditImageModal({
   const [dimensions, setDimensions] = useState('1:1');
   const [loras, setLoras] = useState([]);
 
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
   useEffect(() => {
     if (isOpen) {
       setStep(0);
       setImages(initialImage ? [initialImage] : []);
-      setPrompt(''); setStyle('');
+      setPrompt(''); setStyle([]);
       setModel('wavespeed-nano-ultra'); setOutputSize('1920x1080');
       setIsLoading(false); setResultImage(null);
+      setMultiResults([]); setExpandedImage(null);
       setShowUrlInput(false); setUrlInput('');
       setSelectedProps([]); setSelectedNegPills([]);
       setNegFreetext(''); setSelectedBrand(null);
@@ -230,9 +236,10 @@ export default function EditImageModal({
   const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
   const isWavespeed = modelDef.multiImage;
 
-  const buildCohesivePrompt = async () => {
-    const styleInfo = findStyleByValue(style);
-    const styleText = styleInfo?.promptText || style || '';
+  const buildCohesivePrompt = async (styleOverride) => {
+    const styleKey = styleOverride || '';
+    const styleInfo = findStyleByValue(styleKey);
+    const styleText = styleInfo?.promptText || styleKey || '';
     const body = {
       tool: 'edit',
       description: prompt.trim(),
@@ -255,69 +262,100 @@ export default function EditImageModal({
     return data.prompt;
   };
 
+  const pollForResultAsync = (requestId, backend, falModel) => {
+    return new Promise((resolve, reject) => {
+      const endpoint = backend === 'fal' ? '/api/imagineer/result' : '/api/jumpstart/result';
+      let attempts = 0;
+      const poll = async () => {
+        if (!mountedRef.current) { reject(new Error('Unmounted')); return; }
+        try {
+          const body = backend === 'fal' ? { requestId, model: falModel } : { requestId };
+          const response = await apiFetch(endpoint, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = await response.json();
+          if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
+            resolve(data.imageUrl || data.videoUrl);
+          } else if (data.status === 'failed') {
+            reject(new Error(data.error || 'Edit failed'));
+          } else if (++attempts >= 120) {
+            reject(new Error('Polling timeout'));
+          } else {
+            setTimeout(poll, 3000);
+          }
+        } catch (error) { reject(error); }
+      };
+      poll();
+    });
+  };
+
   const handleEdit = async () => {
     if (images.length === 0) { toast.error('Add at least one image'); return; }
     if (!prompt.trim()) { toast.error('Add edit instructions'); return; }
 
+    const stylesToGenerate = style.length > 0
+      ? style.map(s => ({ key: s, label: findStyleByValue(s)?.label || s }))
+      : [{ key: '', label: 'No Style' }];
+
+    const initialResults = stylesToGenerate.map(s => ({
+      styleKey: s.key, styleLabel: s.label,
+      status: 'prompting', imageUrl: null, error: null, saved: false,
+    }));
+    setMultiResults(initialResults);
+    setResultImage(null);
     setIsLoading(true);
-    try {
-      toast.info('Building cohesive prompt...');
-      const cohesivePrompt = await buildCohesivePrompt();
-      const baseImage = images.find(img => img.isBase) || images[0];
 
-      if (isWavespeed) {
-        // Wavespeed multi-image endpoint
-        const response = await apiFetch('/api/images/edit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) {
-          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
-        } else if (data.requestId) {
-          toast.info('Processing...'); pollForResult(data.requestId, 'wavespeed');
-        }
-      } else {
-        // fal.ai single-image endpoint
-        const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
-        const response = await apiFetch('/api/imagineer/edit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model, strength, dimensions, loras: loraPayload }),
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) {
-          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
-        } else if (data.requestId) {
-          toast.info('Processing...'); pollForResult(data.requestId, 'fal', data.model || model);
-        }
-      }
-    } catch (error) { toast.error(error.message); }
-    finally { setIsLoading(false); }
-  };
-
-  const pollForResult = async (requestId, backend, falModel) => {
-    const endpoint = backend === 'fal' ? '/api/imagineer/result' : '/api/jumpstart/result';
-    const poll = async () => {
-      try {
-        const body = backend === 'fal'
-          ? { requestId, model: falModel }
-          : { requestId };
-        const response = await apiFetch(endpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-        if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
-          const url = data.imageUrl || data.videoUrl;
-          setResultImage(url); toast.success('Image edited!'); saveToLibrary(url);
-        } else if (data.status === 'failed') {
-          toast.error('Edit failed: ' + (data.error || 'Unknown error'));
-        } else { setTimeout(poll, 3000); }
-      } catch (error) { console.error('Poll error:', error); }
+    const updateSlot = (index, updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
     };
-    poll();
+
+    const generateOne = async (styleKey, index) => {
+      try {
+        const cohesivePrompt = await buildCohesivePrompt(styleKey);
+        if (!mountedRef.current) return;
+        updateSlot(index, { status: 'generating' });
+
+        const baseImage = images.find(img => img.isBase) || images[0];
+
+        if (isWavespeed) {
+          const response = await apiFetch('/api/images/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) {
+            updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
+          } else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollForResultAsync(data.requestId, 'wavespeed');
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        } else {
+          const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+          const response = await apiFetch('/api/imagineer/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model, strength, dimensions, loras: loraPayload }),
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) {
+            updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
+          } else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollForResultAsync(data.requestId, 'fal', data.model || model);
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        }
+      } catch (error) {
+        updateSlot(index, { status: 'failed', error: error.message });
+      }
+    };
+
+    await Promise.allSettled(stylesToGenerate.map((s, i) => generateOne(s.key, i)));
+    if (mountedRef.current) setIsLoading(false);
   };
 
   const handleUseResult = () => { if (onImageEdited && resultImage) onImageEdited(resultImage); onClose(); };
@@ -439,7 +477,7 @@ export default function EditImageModal({
               </div>
               <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
                 <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
-                <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" />
+                <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" multiple />
               </div>
             </div>
           </div>
@@ -609,7 +647,7 @@ export default function EditImageModal({
               <div className="grid grid-cols-2 gap-1 text-xs">
                 <div><span className="text-slate-400">Images:</span> <span className="font-medium">{images.length}</span></div>
                 <div><span className="text-slate-400">Model:</span> <span className="font-medium">{modelDef.label}</span></div>
-                {style && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{style}</span></div>}
+                {style.length > 0 && <div><span className="text-slate-400">Styles:</span> <span className="font-medium">{style.length} selected</span></div>}
                 {selectedBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{selectedBrand.brand_name}</span></div>}
                 {lighting && <div><span className="text-slate-400">Lighting:</span> <span className="font-medium">{LIGHTING.find(l => l.value === lighting)?.label}</span></div>}
                 {mood && <div><span className="text-slate-400">Mood:</span> <span className="font-medium">{MOOD.find(m => m.value === mood)?.label}</span></div>}
