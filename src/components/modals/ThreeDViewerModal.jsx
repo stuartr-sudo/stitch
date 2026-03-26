@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Plus,
   Image as ImageIcon,
+  Star,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
@@ -131,10 +132,9 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
     // Accumulate synchronously in ref — immune to React batching and onClose nulling the ref
     pendingImagesRef.current[currentSlot] = url;
 
-    // Advance to next empty slot considering both current state and pending assignments
-    const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
+    // Advance to next empty slot (across ALL slots including front)
     const filled = { ...images, ...pendingImagesRef.current };
-    const nextEmpty = angleSlots.find(s => !filled[s.key]);
+    const nextEmpty = ANGLE_SLOTS.find(s => !filled[s.key]);
 
     if (nextEmpty) {
       activeSlotRef.current = nextEmpty.key;
@@ -148,6 +148,22 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
     // Flush all accumulated assignments to state
     const pending = { ...pendingImagesRef.current };
     setImages(prev => ({ ...prev, ...pending }));
+  };
+
+  const setAsFront = (slotKey) => {
+    if (slotKey === 'front_image_url' || !images[slotKey]) return;
+    setImages(prev => {
+      const next = { ...prev };
+      // Swap: current front goes to the clicked slot, clicked slot becomes front
+      const oldFront = next.front_image_url;
+      next.front_image_url = next[slotKey];
+      if (oldFront) {
+        next[slotKey] = oldFront;
+      } else {
+        delete next[slotKey];
+      }
+      return next;
+    });
   };
 
   const removeImage = (slotKey) => {
@@ -323,97 +339,68 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                   </div>
                 ) : (
                   <>
-                    {/* Front image (required) */}
-                    <div className="mb-6 w-full max-w-2xl">
-                      <Label className="text-slate-700 text-sm font-medium mb-2 block">
-                        Front Image <span className="text-red-500">*</span>
+                    {/* Unified image grid — all 8 slots */}
+                    <div className="w-full max-w-3xl">
+                      <Label className="text-slate-700 text-sm font-medium mb-1 block">
+                        Reference Images <span className="text-slate-400">(click star to set as front)</span>
                       </Label>
-                      {images.front_image_url ? (
-                        <div className="relative group">
-                          <img
-                            src={images.front_image_url}
-                            alt="Front"
-                            className="w-full max-h-64 object-contain rounded-xl bg-slate-100"
-                          />
-                          <button
-                            onClick={() => removeImage('front_image_url')}
-                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => { setActiveSlot('front_image_url'); fileInputRef.current?.click(); }}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, 'front_image_url')}
-                          className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-[#2C666E] transition-colors bg-slate-50"
-                        >
-                          <Upload className="w-10 h-10 text-slate-400 mb-2" />
-                          <p className="text-slate-600 font-medium">Upload front view</p>
-                          <p className="text-slate-400 text-xs mt-1">Required — click or drag to upload</p>
-                        </div>
-                      )}
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { setActiveSlot('front_image_url'); fileInputRef.current?.click(); }}
-                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
-                        >
-                          <Upload className="w-3 h-3 mr-1" /> Upload
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { pendingImagesRef.current = {}; activeSlotRef.current = 'front_image_url'; setActiveSlot('front_image_url'); setShowLibrary(true); }}
-                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
-                        >
-                          <FolderOpen className="w-3 h-3 mr-1" /> Library
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Optional angle slots */}
-                    <div className="w-full max-w-2xl">
-                      <Label className="text-slate-700 text-sm font-medium mb-2 block">
-                        Additional Angles <span className="text-slate-400">(optional — improves quality)</span>
-                      </Label>
-                      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                        {ANGLE_SLOTS.filter(s => !s.required).map(slot => (
-                          <div key={slot.key} className="flex flex-col items-center">
-                            {images[slot.key] ? (
-                              <div className="relative group w-full aspect-square">
-                                <img
-                                  src={images[slot.key]}
-                                  alt={slot.label}
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
+                      <p className="text-slate-400 text-xs mb-3">
+                        Front image is required. Additional angles improve quality.
+                      </p>
+                      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                        {ANGLE_SLOTS.map(slot => {
+                          const isFront = slot.key === 'front_image_url';
+                          return (
+                            <div key={slot.key} className="flex flex-col items-center">
+                              {images[slot.key] ? (
+                                <div className={`relative group w-full aspect-square rounded-lg overflow-hidden ${isFront ? 'ring-2 ring-[#2C666E] ring-offset-1' : ''}`}>
+                                  <img
+                                    src={images[slot.key]}
+                                    alt={slot.label}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <button
+                                    onClick={() => removeImage(slot.key)}
+                                    className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                  {!isFront && (
+                                    <button
+                                      onClick={() => setAsFront(slot.key)}
+                                      title="Set as front image"
+                                      className="absolute top-0.5 left-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2C666E]"
+                                    >
+                                      <Star className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {isFront && (
+                                    <div className="absolute top-0.5 left-0.5 bg-[#2C666E] text-white rounded-full p-0.5">
+                                      <Star className="w-3 h-3 fill-current" />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
                                 <button
-                                  onClick={() => removeImage(slot.key)}
-                                  className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => { setActiveSlot(slot.key); fileInputRef.current?.click(); }}
+                                  onDragOver={handleDragOver}
+                                  onDrop={(e) => handleDrop(e, slot.key)}
+                                  className={`w-full aspect-square border border-dashed rounded-lg flex items-center justify-center hover:border-[#2C666E] transition-colors bg-slate-50 ${isFront ? 'border-[#2C666E] border-2' : 'border-slate-300'}`}
                                 >
-                                  <X className="w-3 h-3" />
+                                  <Plus className="w-4 h-4 text-slate-400" />
                                 </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => { setActiveSlot(slot.key); fileInputRef.current?.click(); }}
-                                className="w-full aspect-square border border-dashed border-slate-300 rounded-lg flex items-center justify-center hover:border-[#2C666E] transition-colors bg-slate-50"
-                              >
-                                <Plus className="w-4 h-4 text-slate-400" />
-                              </button>
-                            )}
-                            <span className="text-slate-500 text-[10px] mt-1">{slot.label}</span>
-                          </div>
-                        ))}
+                              )}
+                              <span className={`text-[10px] mt-1 ${isFront ? 'text-[#2C666E] font-medium' : 'text-slate-500'}`}>{slot.label}{isFront ? ' *' : ''}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-3">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
+                            const emptySlot = ANGLE_SLOTS.find(s => !images[s.key]);
                             if (emptySlot) { setActiveSlot(emptySlot.key); fileInputRef.current?.click(); }
                           }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
@@ -424,7 +411,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
+                            const emptySlot = ANGLE_SLOTS.find(s => !images[s.key]);
                             if (emptySlot) { pendingImagesRef.current = {}; activeSlotRef.current = emptySlot.key; setActiveSlot(emptySlot.key); setShowLibrary(true); }
                           }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
@@ -445,6 +432,9 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                       </Button>
                       <p className="text-slate-400 text-xs text-center mt-2">
                         Hunyuan 3D Pro — ~$0.38 per generation
+                        {!images.front_image_url && Object.keys(images).length > 0 && (
+                          <span className="block text-amber-500 mt-1">Click the star on an image to set it as the front view</span>
+                        )}
                       </p>
                     </div>
                   </>
