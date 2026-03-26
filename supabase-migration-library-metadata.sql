@@ -49,6 +49,9 @@ CREATE INDEX IF NOT EXISTS idx_gv_short_name ON generated_videos(short_name) WHE
 CREATE OR REPLACE FUNCTION get_distinct_metadata(col_name text, p_user_id uuid)
 RETURNS TABLE(val text) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  IF col_name NOT IN ('video_style', 'visual_style', 'model_name', 'storyboard_name', 'short_name') THEN
+    RAISE EXCEPTION 'Invalid column name: %', col_name;
+  END IF;
   RETURN QUERY EXECUTE format(
     'SELECT DISTINCT %I AS val FROM image_library_items WHERE user_id = $1 AND %I IS NOT NULL
      UNION

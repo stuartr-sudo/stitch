@@ -193,9 +193,9 @@ export async function saveToLibrary(supabase, userId, userEmail, opts) {
     };
   }
 
-  // Metadata fallback lookup from media_metadata table
+  // Metadata fallback lookup from media_metadata table (per-field merge: explicit > metadata > null)
   const originalUrl = opts.url;
-  if (!opts.video_style && !opts.visual_style && !opts.model_name && !opts.storyboard_name && !opts.short_name) {
+  if (!opts.video_style || !opts.visual_style || !opts.model_name || !opts.storyboard_name || !opts.short_name) {
     try {
       const { data: meta } = await supabase
         .from('media_metadata')

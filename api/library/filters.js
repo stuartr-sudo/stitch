@@ -18,28 +18,25 @@ export default async function handler(req, res) {
   if (!userId) return res.json({});
 
   try {
-    const filters = {};
-
-    for (const col of METADATA_COLUMNS) {
-      // Try RPC first (uses DISTINCT with partial indexes)
+    // Parallel RPC calls for all columns
+    const results = await Promise.all(METADATA_COLUMNS.map(async (col) => {
       const { data } = await supabase.rpc('get_distinct_metadata', { col_name: col, p_user_id: userId });
       if (data) {
-        filters[col] = data.map(r => r.val).filter(Boolean).sort();
-      } else {
-        // Fallback: query both tables via client
-        const [{ data: imgVals }, { data: vidVals }] = await Promise.all([
-          supabase.from('image_library_items').select(col).eq('user_id', userId).not(col, 'is', null),
-          supabase.from('generated_videos').select(col).eq('user_id', userId).not(col, 'is', null),
-        ]);
-        const allVals = new Set([
-          ...(imgVals || []).map(r => r[col]),
-          ...(vidVals || []).map(r => r[col]),
-        ]);
-        filters[col] = [...allVals].sort();
+        return [col, data.map(r => r.val).filter(Boolean).sort()];
       }
-    }
+      // Fallback: query both tables via client
+      const [{ data: imgVals }, { data: vidVals }] = await Promise.all([
+        supabase.from('image_library_items').select(col).eq('user_id', userId).not(col, 'is', null),
+        supabase.from('generated_videos').select(col).eq('user_id', userId).not(col, 'is', null),
+      ]);
+      const allVals = new Set([
+        ...(imgVals || []).map(r => r[col]),
+        ...(vidVals || []).map(r => r[col]),
+      ]);
+      return [col, [...allVals].sort()];
+    }));
 
-    return res.json(filters);
+    return res.json(Object.fromEntries(results));
   } catch (err) {
     console.error('[Library Filters] Error:', err);
     return res.json({});
