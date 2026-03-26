@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
 import { getUserKeys } from '../lib/getUserKeys.js';
+import { writeMediaMetadata } from '../lib/mediaMetadata.js';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -304,6 +305,8 @@ async function handleWavespeed(req, res, params) {
     if (supabase && tempFileName) {
       await supabase.storage.from('videos').remove([`temp/${tempFileName}`]).catch(() => {});
     }
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, resultUrl, { model_name: 'wavespeed-wan' });
     return res.status(200).json({ success: true, videoUrl: resultUrl, status: 'completed' });
   }
     
@@ -383,6 +386,8 @@ async function handleGrokImagine(req, res, params) {
   // FAL returns video directly or a request_id for queuing
   if (data.video?.url) {
     console.log('[JumpStart/Grok] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'grok-imagine' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -468,6 +473,8 @@ async function handleGrokR2V(req, res, params) {
   // FAL returns video directly or a request_id for queuing
   if (data.video?.url) {
     console.log('[JumpStart/GrokR2V] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'grok-r2v' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -559,6 +566,8 @@ async function handleSeedance(req, res, params) {
   // FAL returns video directly or a request_id for queuing
   if (data.video?.url) {
     console.log('[JumpStart/Seedance] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'seedance-pro' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -713,6 +722,8 @@ async function handleVeo3Fast(req, res, params) {
 
   if (data.video?.url) {
     console.log('[JumpStart/Veo3Fast] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'veo3-fast' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -795,6 +806,8 @@ async function handleVeo3FirstLast(req, res, params) {
 
   if (data.video?.url) {
     console.log('[JumpStart/Veo3FirstLast] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'veo3-first-last' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -867,6 +880,8 @@ async function handleKlingVideo(req, res, params) {
 
   if (data.video?.url) {
     console.log('[JumpStart/Kling] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'kling-video' });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
@@ -916,6 +931,8 @@ async function handleLtxAudioVideo(req, res, params) {
   const data = await submitResponse.json();
 
   if (data.video?.url) {
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'ltx-audio-video' });
     return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
   }
 
@@ -1139,6 +1156,8 @@ async function handleKlingR2V(req, res, params) {
   const upscaledElements = requestBody.elements;
 
   if (data.video?.url) {
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: model });
     return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed', upscaledElements });
   }
 
@@ -1216,6 +1235,8 @@ async function handleLtxICLoRA(req, res, params) {
   console.log('[JumpStart/LTX-ICLoRA] Response:', JSON.stringify(data).substring(0, 500));
 
   if (data.video?.url) {
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'ltx-iclora' });
     return res.status(200).json({ success: true, videoUrl: data.video.url, status: 'completed' });
   }
 
@@ -1279,6 +1300,8 @@ async function handleKlingO3V2V(req, res, params) {
   console.log('[JumpStart/KlingO3V2V] Response:', JSON.stringify(data).substring(0, 500));
 
   if (data.video?.url) {
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: model });
     return res.status(200).json({
       success: true,
       videoUrl: data.video.url,
