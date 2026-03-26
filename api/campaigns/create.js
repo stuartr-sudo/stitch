@@ -139,6 +139,7 @@ export default async function handler(req, res) {
       jobId: job.id,
       campaignId: campaign.id,
       userId: req.user.id,
+      userEmail: req.user?.email,
       nicheTemplate,
     }).catch(err => {
       console.error('[campaigns/create] Shorts pipeline error (already marked failed in pipeline):', err);
