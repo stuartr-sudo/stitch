@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Sparkles, Loader2, Eye, Cpu, Palette, SlidersHorizontal, Pencil,
   FolderOpen, Upload, X, Plus, Link2, ChevronLeft, ChevronRight,
-  Layers, CheckCircle2, ImageIcon,
+  Layers, CheckCircle2, ImageIcon, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -256,7 +256,9 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   // ─── I2I State ──────────────────────────────────────────────────────
   const [i2iImages, setI2iImages] = useState([]);
   const [i2iPrompt, setI2iPrompt] = useState("");
-  const [i2iStyle, setI2iStyle] = useState("");
+  const [i2iStyle, setI2iStyle] = useState([]);
+  const [i2iMultiResults, setI2iMultiResults] = useState([]);
+  const [i2iExpandedImage, setI2iExpandedImage] = useState(null);
   const [i2iModel, setI2iModel] = useState("wavespeed-nano-ultra");
   const [i2iStrength, setI2iStrength] = useState(0.75);
   const [i2iDimensions, setI2iDimensions] = useState("1:1");
@@ -271,6 +273,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   const [i2iShowUrlInput, setI2iShowUrlInput] = useState(false);
   const [i2iUrlInput, setI2iUrlInput] = useState("");
   const i2iFileInputRef = useRef(null);
+  const mountedRef = useRef(true);
 
   // ─── Library modals ─────────────────────────────────────────────────
   const [showRefLibrary, setShowRefLibrary] = useState(false);
@@ -281,6 +284,8 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
 
   const steps = mode === "t2i" ? T2I_STEPS : I2I_STEPS;
   const maxStep = steps.length - 1;
+
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // ─── Reset on open ──────────────────────────────────────────────────
   useEffect(() => {
@@ -294,13 +299,14 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       setSelectedBrand(null); setRefImageUrl(""); setRefPreview("");
       setRefDescription(""); setAnalyzingRef(false); setGenerateLoras([]);
       setGenerating(false); setShowPreview(false);
-      setI2iImages([]); setI2iPrompt(""); setI2iStyle("");
+      setI2iImages([]); setI2iPrompt(""); setI2iStyle([]);
       setI2iModel("wavespeed-nano-ultra"); setI2iStrength(0.75);
       setI2iDimensions("1:1"); setI2iOutputSize("1920x1080");
       setI2iLoras([]); setI2iProps([]); setI2iNegPills([]);
       setI2iNegFreetext(""); setI2iBrand(null);
       setI2iEditing(false); setI2iResultUrl("");
       setI2iShowUrlInput(false); setI2iUrlInput("");
+      setI2iMultiResults([]); setI2iExpandedImage(null);
     }
   }, [isOpen]);
 
@@ -454,40 +460,79 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   const handleImageEdit = async () => {
     if (i2iImages.length === 0) { toast.error('Add at least one image'); return; }
     if (!i2iPrompt.trim()) { toast.error('Add edit instructions'); return; }
-    setI2iEditing(true);
-    try {
-      toast.info('Building cohesive prompt...');
-      const cohesivePrompt = await buildCohesivePrompt('edit', {
-        description: i2iPrompt.trim(), style: i2iStyle,
-        props: i2iProps, negPills: i2iNegPills, negFreetext: i2iNegFreetext,
-        brand: i2iBrand, editStrength: i2iStrength,
-      });
-      const baseImage = i2iImages.find(img => img.isBase) || i2iImages[0];
 
-      const isWavespeedModel = i2iModel.startsWith('wavespeed-');
-      if (isWavespeedModel) {
-        const res = await apiFetch('/api/images/edit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: i2iImages.map(img => img.url), prompt: cohesivePrompt, model: i2iModel, outputSize: i2iOutputSize }),
+    const stylesToGenerate = i2iStyle.length > 0
+      ? i2iStyle.map(s => ({ key: s, label: findStyleByValue(s)?.label || s }))
+      : [{ key: '', label: 'No Style' }];
+
+    const initialResults = stylesToGenerate.map(s => ({
+      styleKey: s.key, styleLabel: s.label,
+      status: 'prompting', imageUrl: null, error: null, saved: false,
+    }));
+    setI2iMultiResults(initialResults);
+    setI2iResultUrl('');
+    setI2iEditing(true);
+
+    const updateSlot = (index, updates) => {
+      if (!mountedRef.current) return;
+      setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    const generateOne = async (styleKey, index) => {
+      try {
+        const cohesivePrompt = await buildCohesivePrompt('edit', {
+          description: i2iPrompt.trim(), style: styleKey,
+          props: i2iProps, negPills: i2iNegPills, negFreetext: i2iNegFreetext,
+          brand: i2iBrand, editStrength: i2iStrength,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); saveToLibrary(data.imageUrl); }
-        else if (data.requestId) { await pollJumpstartResult(data.requestId); }
-      } else {
-        const loras = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
-        const allUrls = i2iImages.map(img => img.url);
-        const res = await apiFetch('/api/imagineer/edit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_url: baseImage.url, image_urls: isWavespeed ? allUrls : undefined, prompt: cohesivePrompt, model: i2iModel, strength: i2iStrength, dimensions: i2iDimensions, loras }),
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) { setI2iResultUrl(data.imageUrl); saveToLibrary(data.imageUrl); }
-        else if (data.requestId) { await pollImagineerResult(data.requestId, data.model || i2iModel); }
+        if (!mountedRef.current) return;
+        updateSlot(index, { status: 'generating' });
+
+        const baseImage = i2iImages.find(img => img.isBase) || i2iImages[0];
+        const isWavespeedModel = i2iModel.startsWith('wavespeed-');
+
+        if (isWavespeedModel) {
+          const res = await apiFetch('/api/images/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: i2iImages.map(img => img.url), prompt: cohesivePrompt, model: i2iModel, outputSize: i2iOutputSize }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) { updateSlot(index, { status: 'completed', imageUrl: data.imageUrl }); }
+          else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollJumpstartResultAsync(data.requestId);
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        } else {
+          const loraPayload = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+          const allUrls = i2iImages.map(img => img.url);
+          const isMultiImage = I2I_MODELS.find(m => m.value === i2iModel)?.multiImage;
+          const res = await apiFetch('/api/imagineer/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_url: baseImage.url,
+              image_urls: isMultiImage ? allUrls : undefined,
+              prompt: cohesivePrompt, model: i2iModel,
+              strength: i2iStrength, dimensions: i2iDimensions, loras: loraPayload,
+            }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) { updateSlot(index, { status: 'completed', imageUrl: data.imageUrl }); }
+          else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel);
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        }
+      } catch (error) {
+        updateSlot(index, { status: 'failed', error: error.message });
       }
-    } catch (err) { toast.error(err.message || 'Failed to edit image'); }
-    finally { setI2iEditing(false); }
+    };
+
+    await Promise.allSettled(stylesToGenerate.map((s, i) => generateOne(s.key, i)));
+    if (mountedRef.current) setI2iEditing(false);
   };
 
   const saveToLibrary = (url) => {
@@ -517,6 +562,134 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); return; }
         if (data.status === 'failed' || data.error) throw new Error(data.error || 'Edit failed');
       } catch (err) { if (err.message.includes('failed')) throw err; }
+    }
+  };
+
+  const pollJumpstartResultAsync = async (requestId) => {
+    for (let i = 0; i < 120; i++) {
+      if (!mountedRef.current) throw new Error('Unmounted');
+      await new Promise(r => setTimeout(r, 3000));
+      const res = await apiFetch('/api/jumpstart/result', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
+      const data = await res.json();
+      if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) return data.imageUrl || data.videoUrl;
+      if (data.status === 'failed') throw new Error(data.error || 'Edit failed');
+    }
+    throw new Error('Polling timeout');
+  };
+
+  const pollImagineerResultAsync = async (requestId, model) => {
+    for (let i = 0; i < 120; i++) {
+      if (!mountedRef.current) throw new Error('Unmounted');
+      await new Promise(r => setTimeout(r, 3000));
+      const res = await apiFetch('/api/imagineer/result', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, model }),
+      });
+      const data = await res.json();
+      if (data.imageUrl) return data.imageUrl;
+      if (data.status === 'failed' || data.error) throw new Error(data.error || 'Edit failed');
+    }
+    throw new Error('Polling timeout');
+  };
+
+  // ─── Multi-result save/retry handlers ────────────────────────────────
+
+  const handleI2iSaveOne = async (index) => {
+    const result = i2iMultiResults[index];
+    if (!result || result.saved || !result.imageUrl) return;
+    setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
+    try {
+      await apiFetch('/api/library/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `[Imagineer] ${result.styleLabel}`, source: 'imagineer-i2i' }),
+      });
+    } catch {
+      setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
+    }
+  };
+
+  const handleI2iSaveAll = async () => {
+    const unsaved = i2iMultiResults
+      .map((r, i) => ({ ...r, index: i }))
+      .filter(r => r.status === 'completed' && !r.saved && r.imageUrl);
+    setI2iMultiResults(prev => prev.map(r =>
+      r.status === 'completed' && !r.saved && r.imageUrl ? { ...r, saved: true } : r
+    ));
+    for (const item of unsaved) {
+      try {
+        await apiFetch('/api/library/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `[Imagineer] ${item.styleLabel}`, source: 'imagineer-i2i' }),
+        });
+      } catch {
+        setI2iMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
+      }
+    }
+  };
+
+  const handleI2iRetry = async (index) => {
+    const result = i2iMultiResults[index];
+    if (!result) return;
+
+    const updateSlot = (updates) => {
+      if (!mountedRef.current) return;
+      setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    updateSlot({ status: 'prompting', error: null, imageUrl: null });
+
+    try {
+      const cohesivePrompt = await buildCohesivePrompt('edit', {
+        description: i2iPrompt.trim(), style: result.styleKey,
+        props: i2iProps, negPills: i2iNegPills, negFreetext: i2iNegFreetext,
+        brand: i2iBrand, editStrength: i2iStrength,
+      });
+      if (!mountedRef.current) return;
+      updateSlot({ status: 'generating' });
+
+      const baseImage = i2iImages.find(img => img.isBase) || i2iImages[0];
+      const isWavespeedModel = i2iModel.startsWith('wavespeed-');
+
+      if (isWavespeedModel) {
+        const res = await apiFetch('/api/images/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: i2iImages.map(img => img.url), prompt: cohesivePrompt, model: i2iModel, outputSize: i2iOutputSize }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollJumpstartResultAsync(data.requestId);
+          updateSlot({ status: 'completed', imageUrl: url });
+        }
+      } else {
+        const loraPayload = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const allUrls = i2iImages.map(img => img.url);
+        const isMultiImage = I2I_MODELS.find(m => m.value === i2iModel)?.multiImage;
+        const res = await apiFetch('/api/imagineer/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: baseImage.url,
+            image_urls: isMultiImage ? allUrls : undefined,
+            prompt: cohesivePrompt, model: i2iModel,
+            strength: i2iStrength, dimensions: i2iDimensions, loras: loraPayload,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel);
+          updateSlot({ status: 'completed', imageUrl: url });
+        }
+      }
+    } catch (error) {
+      updateSlot({ status: 'failed', error: error.message });
     }
   };
 
@@ -777,6 +950,98 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         {/* IMAGE TO IMAGE                                                */}
         {/* ══════════════════════════════════════════════════════════════ */}
 
+        {/* I2I Multi-Results Grid */}
+        {mode === "i2i" && i2iMultiResults.length > 0 && (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-700">
+                {(() => {
+                  const completed = i2iMultiResults.filter(r => r.status === 'completed').length;
+                  const total = i2iMultiResults.length;
+                  return completed === total
+                    ? <span className="text-green-600">All {total} images complete</span>
+                    : <span>Generating... {completed}/{total} complete</span>;
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setI2iMultiResults([]); setI2iEditing(false); }}>
+                  <ChevronLeft className="w-3 h-3 mr-1" /> Back to Editor
+                </Button>
+                {i2iMultiResults.some(r => r.status === 'completed' && !r.saved) && (
+                  <Button size="sm" className="bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={handleI2iSaveAll}>
+                    <FolderOpen className="w-3 h-3 mr-1" /> Save All
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {i2iMultiResults.map((result, index) => (
+                <div key={result.styleKey || index} className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="text-xs font-medium text-slate-600">{result.styleLabel}</span>
+                  </div>
+                  <div className="aspect-square relative">
+                    {['prompting', 'generating', 'polling'].includes(result.status) && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <span className="text-xs capitalize">{result.status}...</span>
+                      </div>
+                    )}
+                    {result.status === 'completed' && result.imageUrl && (
+                      <img src={result.imageUrl} alt={result.styleLabel}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setI2iExpandedImage(result)} />
+                    )}
+                    {result.status === 'failed' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-500 p-4">
+                        <AlertCircle className="w-6 h-6 mb-2" />
+                        <span className="text-xs text-center mb-2">{result.error || 'Failed'}</span>
+                        <Button size="sm" variant="outline" onClick={() => handleI2iRetry(index)}>Retry</Button>
+                      </div>
+                    )}
+                  </div>
+                  {result.status === 'completed' && (
+                    <div className="flex gap-1.5 p-2 border-t border-slate-100">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                        disabled={result.saved}
+                        onClick={() => handleI2iSaveOne(index)}>
+                        {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                      </Button>
+                      <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                        onClick={() => { setI2iResultUrl(result.imageUrl); setI2iMultiResults([]); }}>
+                        Use
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lightbox overlay */}
+        {i2iExpandedImage && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8"
+            onClick={() => setI2iExpandedImage(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setI2iExpandedImage(null)}
+            tabIndex={-1} ref={el => el && el.focus()}>
+            <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setI2iExpandedImage(null)}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="bg-white rounded-lg overflow-hidden shadow-2xl">
+                <div className="px-4 py-2 bg-slate-50 border-b">
+                  <span className="text-sm font-medium text-slate-700">{i2iExpandedImage.styleLabel}</span>
+                </div>
+                <img src={i2iExpandedImage.imageUrl} alt={i2iExpandedImage.styleLabel}
+                  className="max-w-[85vw] max-h-[80vh] object-contain" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* I2I Result View (shown on any step when result exists) */}
         {mode === "i2i" && i2iResultUrl && (
           <div className="p-5 space-y-4">
@@ -793,7 +1058,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         )}
 
         {/* I2I Step 0: Images */}
-        {mode === "i2i" && step === 0 && !i2iResultUrl && (
+        {mode === "i2i" && step === 0 && !i2iResultUrl && i2iMultiResults.length === 0 && (
           <div className="p-5 space-y-4 max-w-2xl">
             <div>
               <Label className="text-sm font-medium mb-1 block">
@@ -843,7 +1108,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         )}
 
         {/* I2I Step 1: Instructions & Style */}
-        {mode === "i2i" && step === 1 && !i2iResultUrl && (
+        {mode === "i2i" && step === 1 && !i2iResultUrl && i2iMultiResults.length === 0 && (
           <div className="p-5">
             <div className="flex gap-6">
               <div className="w-1/2 min-w-0 space-y-4">
@@ -871,14 +1136,14 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
 
               <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
                 <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
-                <StyleGrid value={i2iStyle} onChange={setI2iStyle} maxHeight="none" columns="grid-cols-3" />
+                <StyleGrid value={i2iStyle} onChange={setI2iStyle} maxHeight="none" columns="grid-cols-3" multiple />
               </div>
             </div>
           </div>
         )}
 
         {/* I2I Step 2: Enhance */}
-        {mode === "i2i" && step === 2 && !i2iResultUrl && (
+        {mode === "i2i" && step === 2 && !i2iResultUrl && i2iMultiResults.length === 0 && (
           <div className="p-5 space-y-5 max-w-2xl">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
 
@@ -892,7 +1157,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         )}
 
         {/* I2I Step 3: Model & Output */}
-        {mode === "i2i" && step === 3 && !i2iResultUrl && (
+        {mode === "i2i" && step === 3 && !i2iResultUrl && i2iMultiResults.length === 0 && (
           <div className="p-5 space-y-5 max-w-2xl">
             {/* Model selector */}
             <div className="space-y-2">
@@ -974,7 +1239,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
               <div className="grid grid-cols-2 gap-1 text-xs">
                 <div><span className="text-slate-400">Images:</span> <span className="font-medium">{i2iImages.length}</span></div>
                 <div><span className="text-slate-400">Model:</span> <span className="font-medium">{i2iModelDef.label}</span></div>
-                {i2iStyle && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{i2iStyle}</span></div>}
+                {i2iStyle.length > 0 && <div><span className="text-slate-400">Styles:</span> <span className="font-medium">{i2iStyle.length} selected</span></div>}
                 {i2iBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{i2iBrand.brand_name}</span></div>}
               </div>
               {i2iImages.length > 0 && (
@@ -1004,24 +1269,24 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           {mode === "t2i" && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
           {mode === "t2i" && step === 3 && canImagine && <span className="text-green-600 font-medium">Ready to generate</span>}
           {mode === "t2i" && step === 3 && !canImagine && <span className="text-amber-600">Go back and fill in subject type, description, and style</span>}
-          {mode === "i2i" && step === 0 && i2iImages.length === 0 && <span>Add at least one image</span>}
-          {mode === "i2i" && step === 0 && i2iImages.length > 0 && <span className="text-green-600 font-medium">{i2iImages.length} image{i2iImages.length !== 1 ? 's' : ''} ready</span>}
-          {mode === "i2i" && step === 1 && !i2iPrompt.trim() && <span>Add edit instructions</span>}
-          {mode === "i2i" && step === 1 && i2iPrompt.trim() && <span className="text-green-600 font-medium">Instructions set</span>}
-          {mode === "i2i" && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
-          {mode === "i2i" && step === 3 && <span className="text-green-600 font-medium">Ready to edit</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 0 && i2iImages.length === 0 && <span>Add at least one image</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 0 && i2iImages.length > 0 && <span className="text-green-600 font-medium">{i2iImages.length} image{i2iImages.length !== 1 ? 's' : ''} ready</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 1 && !i2iPrompt.trim() && <span>Add edit instructions</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 1 && i2iPrompt.trim() && <span className="text-green-600 font-medium">Instructions set</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
+          {mode === "i2i" && i2iMultiResults.length === 0 && step === 3 && <span className="text-green-600 font-medium">Ready to edit</span>}
         </div>
 
         {/* Navigation buttons */}
         <div className="flex gap-2">
           {/* Back button (all steps > 0) */}
-          {step > 0 && !i2iResultUrl && (
+          {step > 0 && !i2iResultUrl && i2iMultiResults.length === 0 && (
             <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={generating || i2iEditing}>
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           )}
           {/* Cancel on step 0 */}
-          {step === 0 && !isEmbedded && !i2iResultUrl && (
+          {step === 0 && !isEmbedded && !i2iResultUrl && i2iMultiResults.length === 0 && (
             <Button variant="outline" onClick={onClose} disabled={generating || i2iEditing}>Cancel</Button>
           )}
 
@@ -1045,14 +1310,14 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           )}
 
           {/* ─── I2I Navigation ─── */}
-          {mode === "i2i" && step < 3 && !i2iResultUrl && (
+          {mode === "i2i" && step < 3 && !i2iResultUrl && i2iMultiResults.length === 0 && (
             <Button onClick={() => setStep(s => s + 1)}
               disabled={(step === 0 && i2iImages.length === 0) || (step === 1 && !i2iPrompt.trim())}
               className="bg-[#2C666E] hover:bg-[#07393C] text-white">
               {step === 2 ? 'Next' : 'Next'} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           )}
-          {mode === "i2i" && step === 3 && !i2iResultUrl && (
+          {mode === "i2i" && step === 3 && !i2iResultUrl && i2iMultiResults.length === 0 && (
             <Button onClick={handleImageEdit} disabled={i2iEditing || i2iImages.length === 0 || !i2iPrompt.trim()}
               className="bg-[#2C666E] hover:bg-[#07393C] text-white">
               {i2iEditing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Editing...</>
