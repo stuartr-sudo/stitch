@@ -17,7 +17,7 @@ import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets
 import LoRAPicker from '@/components/LoRAPicker';
 import {
   Edit3, Upload, Link2, Loader2, Plus, X, Sparkles,
-  CheckCircle2, Download, ExternalLink, FolderOpen,
+  CheckCircle2, FolderOpen,
   ChevronLeft, ChevronRight, Cpu, AlertCircle,
 } from 'lucide-react';
 
@@ -144,7 +144,10 @@ export default function EditImageModal({
   const [step, setStep] = useState(0);
   const [images, setImages] = useState([]);
   const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('');
+  const [style, setStyle] = useState([]);
+  const [multiResults, setMultiResults] = useState([]);
+  const [expandedImage, setExpandedImage] = useState(null);
+  const mountedRef = useRef(true);
   const [model, setModel] = useState('wavespeed-nano-ultra');
   const [outputSize, setOutputSize] = useState('1920x1080');
   const [isLoading, setIsLoading] = useState(false);
@@ -169,13 +172,16 @@ export default function EditImageModal({
   const [dimensions, setDimensions] = useState('1:1');
   const [loras, setLoras] = useState([]);
 
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
   useEffect(() => {
     if (isOpen) {
       setStep(0);
       setImages(initialImage ? [initialImage] : []);
-      setPrompt(''); setStyle('');
+      setPrompt(''); setStyle([]);
       setModel('wavespeed-nano-ultra'); setOutputSize('1920x1080');
       setIsLoading(false); setResultImage(null);
+      setMultiResults([]); setExpandedImage(null);
       setShowUrlInput(false); setUrlInput('');
       setSelectedProps([]); setSelectedNegPills([]);
       setNegFreetext(''); setSelectedBrand(null);
@@ -219,20 +225,13 @@ export default function EditImageModal({
 
   const handleSetAsBase = (id) => { setImages(prev => prev.map(img => ({ ...img, isBase: img.id === id }))); };
 
-  const saveToLibrary = (url) => {
-    apiFetch('/api/library/save', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
-    }).then(r => r.json()).then(data => { if (data.saved) toast.success('Saved to library!'); })
-      .catch(() => {});
-  };
-
   const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
   const isWavespeed = modelDef.multiImage;
 
-  const buildCohesivePrompt = async () => {
-    const styleInfo = findStyleByValue(style);
-    const styleText = styleInfo?.promptText || style || '';
+  const buildCohesivePrompt = async (styleOverride) => {
+    const styleKey = styleOverride || '';
+    const styleInfo = findStyleByValue(styleKey);
+    const styleText = styleInfo?.promptText || styleKey || '';
     const body = {
       tool: 'edit',
       description: prompt.trim(),
@@ -255,31 +254,166 @@ export default function EditImageModal({
     return data.prompt;
   };
 
+  const pollForResultAsync = (requestId, backend, falModel) => {
+    return new Promise((resolve, reject) => {
+      const endpoint = backend === 'fal' ? '/api/imagineer/result' : '/api/jumpstart/result';
+      let attempts = 0;
+      const poll = async () => {
+        if (!mountedRef.current) { reject(new Error('Unmounted')); return; }
+        try {
+          const body = backend === 'fal' ? { requestId, model: falModel } : { requestId };
+          const response = await apiFetch(endpoint, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = await response.json();
+          if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
+            resolve(data.imageUrl || data.videoUrl);
+          } else if (data.status === 'failed') {
+            reject(new Error(data.error || 'Edit failed'));
+          } else if (++attempts >= 120) {
+            reject(new Error('Polling timeout'));
+          } else {
+            setTimeout(poll, 3000);
+          }
+        } catch (error) { reject(error); }
+      };
+      poll();
+    });
+  };
+
   const handleEdit = async () => {
     if (images.length === 0) { toast.error('Add at least one image'); return; }
     if (!prompt.trim()) { toast.error('Add edit instructions'); return; }
 
+    const stylesToGenerate = style.length > 0
+      ? style.map(s => ({ key: s, label: findStyleByValue(s)?.label || s }))
+      : [{ key: '', label: 'No Style' }];
+
+    const initialResults = stylesToGenerate.map(s => ({
+      styleKey: s.key, styleLabel: s.label,
+      status: 'prompting', imageUrl: null, error: null, saved: false,
+    }));
+    setMultiResults(initialResults);
+    setResultImage(null);
     setIsLoading(true);
+
+    const updateSlot = (index, updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    const generateOne = async (styleKey, index) => {
+      try {
+        const cohesivePrompt = await buildCohesivePrompt(styleKey);
+        if (!mountedRef.current) return;
+        updateSlot(index, { status: 'generating' });
+
+        const baseImage = images.find(img => img.isBase) || images[0];
+
+        if (isWavespeed) {
+          const response = await apiFetch('/api/images/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) {
+            updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
+          } else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollForResultAsync(data.requestId, 'wavespeed');
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        } else {
+          const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+          const response = await apiFetch('/api/imagineer/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model, strength, dimensions, loras: loraPayload }),
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.error || 'Edit failed');
+          if (data.imageUrl) {
+            updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
+          } else if (data.requestId) {
+            updateSlot(index, { status: 'polling' });
+            const url = await pollForResultAsync(data.requestId, 'fal', data.model || model);
+            updateSlot(index, { status: 'completed', imageUrl: url });
+          }
+        }
+      } catch (error) {
+        updateSlot(index, { status: 'failed', error: error.message });
+      }
+    };
+
+    await Promise.allSettled(stylesToGenerate.map((s, i) => generateOne(s.key, i)));
+    if (mountedRef.current) setIsLoading(false);
+  };
+
+  const handleSaveOne = async (index) => {
+    const result = multiResults[index];
+    if (!result || result.saved || !result.imageUrl) return;
+    setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
     try {
-      toast.info('Building cohesive prompt...');
-      const cohesivePrompt = await buildCohesivePrompt();
+      await apiFetch('/api/library/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `Edited Image — ${result.styleLabel}`, source: 'editimage' }),
+      });
+    } catch {
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
+    }
+  };
+
+  const handleSaveAll = async () => {
+    const unsaved = multiResults
+      .map((r, i) => ({ ...r, index: i }))
+      .filter(r => r.status === 'completed' && !r.saved && r.imageUrl);
+    setMultiResults(prev => prev.map(r =>
+      r.status === 'completed' && !r.saved && r.imageUrl ? { ...r, saved: true } : r
+    ));
+    for (const item of unsaved) {
+      try {
+        await apiFetch('/api/library/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `Edited Image — ${item.styleLabel}`, source: 'editimage' }),
+        });
+      } catch {
+        setMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
+      }
+    }
+  };
+
+  const handleRetry = async (index) => {
+    const result = multiResults[index];
+    if (!result) return;
+    setMultiResults(prev => prev.map((r, i) => i === index
+      ? { ...r, status: 'prompting', imageUrl: null, error: null } : r));
+
+    const updateSlot = (updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    try {
+      const cohesivePrompt = await buildCohesivePrompt(result.styleKey);
+      if (!mountedRef.current) return;
+      updateSlot({ status: 'generating' });
       const baseImage = images.find(img => img.isBase) || images[0];
 
       if (isWavespeed) {
-        // Wavespeed multi-image endpoint
         const response = await apiFetch('/api/images/edit', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) {
-          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
-        } else if (data.requestId) {
-          toast.info('Processing...'); pollForResult(data.requestId, 'wavespeed');
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollForResultAsync(data.requestId, 'wavespeed');
+          updateSlot({ status: 'completed', imageUrl: url });
         }
       } else {
-        // fal.ai single-image endpoint
         const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
         const response = await apiFetch('/api/imagineer/edit', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -287,76 +421,119 @@ export default function EditImageModal({
         });
         const data = await response.json();
         if (!data.success) throw new Error(data.error || 'Edit failed');
-        if (data.imageUrl) {
-          setResultImage(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl);
-        } else if (data.requestId) {
-          toast.info('Processing...'); pollForResult(data.requestId, 'fal', data.model || model);
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollForResultAsync(data.requestId, 'fal', data.model || model);
+          updateSlot({ status: 'completed', imageUrl: url });
         }
       }
-    } catch (error) { toast.error(error.message); }
-    finally { setIsLoading(false); }
+    } catch (error) {
+      updateSlot({ status: 'failed', error: error.message });
+    }
   };
-
-  const pollForResult = async (requestId, backend, falModel) => {
-    const endpoint = backend === 'fal' ? '/api/imagineer/result' : '/api/jumpstart/result';
-    const poll = async () => {
-      try {
-        const body = backend === 'fal'
-          ? { requestId, model: falModel }
-          : { requestId };
-        const response = await apiFetch(endpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-        if (data.status === 'completed' && (data.imageUrl || data.videoUrl)) {
-          const url = data.imageUrl || data.videoUrl;
-          setResultImage(url); toast.success('Image edited!'); saveToLibrary(url);
-        } else if (data.status === 'failed') {
-          toast.error('Edit failed: ' + (data.error || 'Unknown error'));
-        } else { setTimeout(poll, 3000); }
-      } catch (error) { console.error('Poll error:', error); }
-    };
-    poll();
-  };
-
-  const handleUseResult = () => { if (onImageEdited && resultImage) onImageEdited(resultImage); onClose(); };
 
   const content = (
     <div className="flex flex-col h-full">
-      <StepIndicator steps={STEPS} current={step} />
+      {multiResults.length === 0 && <StepIndicator steps={STEPS} current={step} />}
 
       <div className="flex-1 overflow-y-auto">
-        {/* Result view */}
-        {resultImage && (
-          <div className="max-w-3xl mx-auto p-6 space-y-4">
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                <CheckCircle2 className="w-4 h-4" /> Edit Complete!
+        {/* Multi-Results Grid */}
+        {multiResults.length > 0 && (
+          <div className="p-5 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-700">
+                {(() => {
+                  const completed = multiResults.filter(r => r.status === 'completed').length;
+                  const total = multiResults.length;
+                  return completed === total
+                    ? <span className="text-green-600">All {total} images complete</span>
+                    : <span>Generating... {completed}/{total} complete</span>;
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setMultiResults([]); setIsLoading(false); }}>
+                  <ChevronLeft className="w-3 h-3 mr-1" /> Back to Editor
+                </Button>
+                {multiResults.some(r => r.status === 'completed' && !r.saved) && (
+                  <Button size="sm" className="bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={handleSaveAll}>
+                    <FolderOpen className="w-3 h-3 mr-1" /> Save All
+                  </Button>
+                )}
               </div>
             </div>
-            <div className="bg-slate-100 rounded-xl overflow-hidden">
-              <img src={resultImage} alt="Edited" className="w-full object-contain max-h-[500px]" />
+
+            {/* Results Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {multiResults.map((result, index) => (
+                <div key={result.styleKey || index} className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="text-xs font-medium text-slate-600">{result.styleLabel}</span>
+                  </div>
+                  <div className="aspect-square relative">
+                    {(result.status === 'prompting' || result.status === 'generating' || result.status === 'polling') && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <span className="text-xs capitalize">{result.status}...</span>
+                      </div>
+                    )}
+                    {result.status === 'completed' && result.imageUrl && (
+                      <img src={result.imageUrl} alt={result.styleLabel}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setExpandedImage(result)} />
+                    )}
+                    {result.status === 'failed' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-500 p-4">
+                        <AlertCircle className="w-6 h-6 mb-2" />
+                        <span className="text-xs text-center mb-2">{result.error || 'Failed'}</span>
+                        <Button size="sm" variant="outline" onClick={() => handleRetry(index)}>Retry</Button>
+                      </div>
+                    )}
+                  </div>
+                  {result.status === 'completed' && (
+                    <div className="flex gap-1.5 p-2 border-t border-slate-100">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                        disabled={result.saved}
+                        onClick={() => handleSaveOne(index)}>
+                        {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                      </Button>
+                      <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                        onClick={() => { if (onImageEdited) onImageEdited(result.imageUrl); onClose(); }}>
+                        Use
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" onClick={() => setResultImage(null)}>Edit Again</Button>
-              <a href={resultImage} download="edited-image.png"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
-                <Download className="w-4 h-4" /> Download
-              </a>
-              <a href={resultImage} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
-                <ExternalLink className="w-4 h-4" /> Open
-              </a>
-              <Button onClick={handleUseResult} className="bg-[#2C666E] hover:bg-[#07393C]">
-                <Plus className="w-4 h-4 mr-2" /> Use This Image
-              </Button>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {expandedImage && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8"
+            onClick={() => setExpandedImage(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setExpandedImage(null)}
+            tabIndex={-1} ref={el => el && el.focus()}>
+            <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setExpandedImage(null)}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="bg-white rounded-lg overflow-hidden shadow-2xl">
+                <div className="px-4 py-2 bg-slate-50 border-b">
+                  <span className="text-sm font-medium text-slate-700">{expandedImage.styleLabel}</span>
+                </div>
+                <img src={expandedImage.imageUrl} alt={expandedImage.styleLabel}
+                  className="max-w-[85vw] max-h-[80vh] object-contain" />
+              </div>
             </div>
           </div>
         )}
 
         {/* Step 0: Images */}
-        {step === 0 && !resultImage && (
+        {step === 0 && !resultImage && multiResults.length === 0 && (
           <div className="max-w-2xl p-6 space-y-4">
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800 font-medium mb-1">Multi-image blending</p>
@@ -414,7 +591,7 @@ export default function EditImageModal({
         )}
 
         {/* Step 1: Instructions & Style */}
-        {step === 1 && !resultImage && (
+        {step === 1 && !resultImage && multiResults.length === 0 && (
           <div className="p-6">
             <div className="flex gap-6">
               <div className="w-1/2 min-w-0 space-y-4">
@@ -439,14 +616,14 @@ export default function EditImageModal({
               </div>
               <div className="w-1/2 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
                 <label className="text-xs font-medium text-slate-600 mb-2 block">Style (optional)</label>
-                <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" />
+                <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-3" multiple />
               </div>
             </div>
           </div>
         )}
 
         {/* Step 2: Enhance */}
-        {step === 2 && !resultImage && (
+        {step === 2 && !resultImage && multiResults.length === 0 && (
           <div className="p-6 space-y-5 max-w-2xl">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
 
@@ -508,7 +685,7 @@ export default function EditImageModal({
         )}
 
         {/* Step 3: Model & Output */}
-        {step === 3 && !resultImage && (
+        {step === 3 && !resultImage && multiResults.length === 0 && (
           <div className="p-6 space-y-5 max-w-2xl">
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -609,7 +786,7 @@ export default function EditImageModal({
               <div className="grid grid-cols-2 gap-1 text-xs">
                 <div><span className="text-slate-400">Images:</span> <span className="font-medium">{images.length}</span></div>
                 <div><span className="text-slate-400">Model:</span> <span className="font-medium">{modelDef.label}</span></div>
-                {style && <div><span className="text-slate-400">Style:</span> <span className="font-medium">{style}</span></div>}
+                {style.length > 0 && <div><span className="text-slate-400">Styles:</span> <span className="font-medium">{style.length} selected</span></div>}
                 {selectedBrand && <div><span className="text-slate-400">Brand:</span> <span className="font-medium">{selectedBrand.brand_name}</span></div>}
                 {lighting && <div><span className="text-slate-400">Lighting:</span> <span className="font-medium">{LIGHTING.find(l => l.value === lighting)?.label}</span></div>}
                 {mood && <div><span className="text-slate-400">Mood:</span> <span className="font-medium">{MOOD.find(m => m.value === mood)?.label}</span></div>}
@@ -630,7 +807,7 @@ export default function EditImageModal({
       </div>
 
       {/* Footer */}
-      {!resultImage && (
+      {!resultImage && multiResults.length === 0 && (
         <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
           <div className="text-xs text-slate-500">
             {step === 0 && images.length === 0 && <span>Add at least one image</span>}
