@@ -61,7 +61,7 @@ export default function InputsStep({
   const [expandedSection, setExpandedSection] = useState('startImage');
 
   const isKlingModel = globalModel?.startsWith('kling-r2v');
-  const isVeoModel = globalModel?.startsWith('veo3') && !globalModel?.includes('fast');
+  const isVeoModel = (globalModel?.startsWith('veo3') && !globalModel?.includes('fast')) || globalModel === 'grok-r2v';
 
   const togglePill = (category, pill) => {
     const current = sceneDirection[category] || [];
