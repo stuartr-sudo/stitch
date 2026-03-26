@@ -40,6 +40,13 @@ const MODEL_OPTIONS = [
   { value: "fal-flux", label: "Flux 2 (+ LoRA)", needsRef: false },
 ];
 
+const SCENE_ENVIRONMENTS = [
+  'Meadow', 'Forest', 'Beach', 'Mountain', 'Desert', 'Snowy Landscape',
+  'Urban Street', 'Cityscape', 'Castle', 'Village', 'Market',
+  'Living Room', 'Kitchen', 'Classroom', 'Library', 'Studio',
+  'Space', 'Underwater', 'Cave', 'Rooftop', 'Garden', 'Playground',
+];
+
 const PROP_CATEGORIES = [
   { label: 'Vehicles & Transport', props: [
     { value: 'bicycle', label: 'Bicycle' },
@@ -217,6 +224,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   const [selectedNegPills, setSelectedNegPills] = useState([]);
   const [negativePrompt, setNegativePrompt] = useState("");
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const [backgroundMode, setBackgroundMode] = useState('white'); // 'white' or 'scene'
+  const [sceneEnvironment, setSceneEnvironment] = useState('');
 
   const updateCharacter = (id, field, value) => {
     setCharacters(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
@@ -561,6 +570,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           model: selectedModel,
           negativePrompt: combinedNegativePrompt,
           brandStyleGuide: extractBrandStyleData(selectedBrand),
+          backgroundMode,
+          sceneEnvironment: backgroundMode === 'scene' ? sceneEnvironment : undefined,
         }),
       });
 
@@ -1373,6 +1384,57 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           <>
             <div className="flex-1 overflow-y-auto p-5">
               <div className="max-w-2xl mx-auto space-y-6">
+
+                {/* Background Mode */}
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700 mb-3 block">Background</Label>
+                  <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+                    <div className="flex gap-2">
+                      <button type="button"
+                        onClick={() => { setBackgroundMode('white'); setSceneEnvironment(''); }}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                          backgroundMode === 'white'
+                            ? 'bg-[#07393C] text-white border-[#07393C]'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                        }`}>
+                        White Background
+                      </button>
+                      <button type="button"
+                        onClick={() => setBackgroundMode('scene')}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                          backgroundMode === 'scene'
+                            ? 'bg-[#07393C] text-white border-[#07393C]'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                        }`}>
+                        Scene Environment
+                      </button>
+                    </div>
+                    {backgroundMode === 'scene' && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-500">Each pose will be rendered in a scene environment instead of a white background. Useful for R2V reference images.</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {SCENE_ENVIRONMENTS.map(env => (
+                            <button key={env} type="button"
+                              onClick={() => setSceneEnvironment(env)}
+                              className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                sceneEnvironment === env
+                                  ? 'bg-[#07393C] text-white border-[#07393C]'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                              }`}>
+                              {env}
+                            </button>
+                          ))}
+                        </div>
+                        <Input
+                          value={sceneEnvironment}
+                          onChange={(e) => setSceneEnvironment(e.target.value)}
+                          placeholder="Or type a custom environment..."
+                          className="bg-white text-sm mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Negative Prompt Pills */}
                 <div>

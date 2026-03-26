@@ -20,7 +20,7 @@ import { getPoseSetById } from '../lib/turnaroundPoseSets.js';
  * Builds a single cohesive prompt from all structured inputs.
  * This is the ONLY place prompt text is assembled — the frontend sends raw data.
  */
-function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide, poseSet }) {
+function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide, poseSet, backgroundMode, sceneEnvironment }) {
   // Style rendering instructions
   const stylePrompt = (style && style.trim())
     ? `Rendered in ${style.trim()} style with high quality, detailed ${style.trim()} aesthetic throughout every cell`
@@ -77,9 +77,14 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
   // Avoidance goes FIRST — models pay most attention to the beginning of the prompt
   if (avoidNote) parts.push(avoidNote);
 
+  // Background: white (default) or scene environment for R2V-compatible references
+  const backgroundText = backgroundMode === 'scene' && sceneEnvironment
+    ? `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), each pose set in a ${sceneEnvironment.trim()} environment with contextual background, clear cell separation`
+    : `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`;
+
   parts.push(
     `${stylePrompt}`,
-    `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`,
+    backgroundText,
     `Character: ${characterDescription}`,
     propsNote,
     // Dynamic rows from pose set
@@ -236,8 +241,10 @@ export default async function handler(req, res) {
     negativePrompt,
     props,
     brandStyleGuide,
-    poseSet,         // NEW
-    characterName,   // NEW — for auto-tagging
+    poseSet,
+    characterName,
+    backgroundMode,    // 'white' (default) or 'scene'
+    sceneEnvironment,  // e.g. 'Meadow', 'Forest', etc.
   } = req.body;
 
   if (!characterDescription) {
@@ -261,7 +268,9 @@ export default async function handler(req, res) {
     props: Array.isArray(props) ? props : undefined,
     negativePrompt: negPrompt,
     brandStyleGuide: brandStyleGuide || undefined,
-    poseSet,  // NEW
+    poseSet,
+    backgroundMode,
+    sceneEnvironment,
   });
 
   // Validate: edit models REQUIRE a reference image
