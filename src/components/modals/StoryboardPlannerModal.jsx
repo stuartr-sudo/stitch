@@ -720,6 +720,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
           type: 'video',
           title: `[Storyboard] Scene ${nextIndex + 1} - ${storyboardTitle}`,
           source: 'storyboard',
+          storyboard_name: storyboardTitle,
         }),
       }).catch(err => console.warn('Failed to save to library:', err));
 
@@ -790,6 +791,7 @@ export default function StoryboardPlannerModal({ isOpen, onClose, onScenesComple
             type: 'video',
             title: `[Storyboard] Scene ${i + 1} - ${storyboardTitle}`,
             source: 'storyboard',
+            storyboard_name: storyboardTitle,
           }),
         }).catch(err => console.warn('Failed to save to library:', err));
 

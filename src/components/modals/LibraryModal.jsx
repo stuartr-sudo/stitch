@@ -525,6 +525,7 @@ export default function LibraryModal({
 
   useEffect(() => {
     if (open) {
+      setActiveFilters({ video_style: '', visual_style: '', model_name: '', storyboard_name: '', short_name: '' });
       setItems([]);
       setOffsets({ images: 0, videos: 0, audio: 0 });
       setHasMore({ images: true, videos: true, audio: true });
