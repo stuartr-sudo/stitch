@@ -371,7 +371,7 @@ function ProposalContent() {
             <video
               className="w-full aspect-video bg-[#f1f5f9]"
               controls
-              src="https://v3b.fal.media/files/b/0a93aa3f/inEOuiNijS_GYLS5P5A5F_3ccea1dfe5874e8da3eb0fa00e492128.mp4"
+              src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/videos/library/storyboard-1774496027533-hgp0nd.mp4"
             />
             <p className="p-4 text-xs text-[#64748b]">
               Character animation test — Veo 3.1 Reference-to-Video
