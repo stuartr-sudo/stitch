@@ -245,6 +245,19 @@ app.post('/api/lens/generate', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// 3D Viewer routes (with auth)
+app.post('/api/viewer3d/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/viewer3d/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Smoosh route (with auth)
 app.post('/api/smoosh/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('smoosh/generate.js');
