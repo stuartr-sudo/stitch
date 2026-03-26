@@ -735,6 +735,9 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         videoUrl: null,
         lastFrameUrl: null,
       })));
+      // Auto-proceed to Review Scenes after script generation
+      markStepCompleted('script');
+      setTimeout(() => setStep('review'), 300);
     } catch (err) {
       console.error('[Storyboard] Script generation failed:', err);
       setScriptError(err.message);
@@ -777,8 +780,9 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   };
 
   // ── Video Generation (sequential with frame chaining) ──
-  const pollForResult = async (requestId, modelId) => {
+  const pollForResult = async (requestId, modelId, statusUrl, responseUrl) => {
     const maxAttempts = 120;
+    let consecutiveErrors = 0;
     for (let i = 0; i < maxAttempts; i++) {
       if (cancelRef.current) throw new Error('Cancelled');
       await new Promise(r => setTimeout(r, 5000));
@@ -786,13 +790,18 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         const res = await apiFetch('/api/jumpstart/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId, model: modelId }),
+          body: JSON.stringify({ requestId, model: modelId, statusUrl, responseUrl }),
         });
         const data = await res.json();
         if (data.videoUrl) return data.videoUrl;
         if (data.status === 'failed' || data.error) throw new Error(data.error || 'Generation failed');
+        consecutiveErrors = 0; // Reset on successful poll
       } catch (err) {
         if (err.message === 'Cancelled') throw err;
+        consecutiveErrors++;
+        console.warn(`[Storyboard] Poll error (${consecutiveErrors}/3):`, err.message);
+        // Stop after 3 consecutive errors — prevents infinite loop on expired/failed requests
+        if (consecutiveErrors >= 3) throw err;
       }
     }
     throw new Error('Generation timed out');
@@ -808,21 +817,44 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
     const isR2V = (sceneModel === 'kling-r2v-pro' || sceneModel === 'kling-r2v-standard') && elementsWithRefs.length > 0;
 
+    // Build cohesive prompt via LLM instead of concatenation
     const styleText = getPromptText(style);
-    let prompt = scene.visualPrompt;
-    if (scene.motionPrompt) {
-      prompt += `. Camera: ${scene.motionPrompt}`;
-    }
-    if (styleText) {
-      prompt += `. Style: ${styleText}`;
-    }
-    if (builderStyle) prompt += `. Style: ${builderStyle}`;
-    if (overallMood) prompt += `. Mood: ${overallMood}`;
-    if (builderLighting) prompt += `. Lighting: ${builderLighting}`;
-    if (builderColorGrade) prompt += `. Color grade: ${builderColorGrade}`;
     const selectedVideoStylePreset = videoStylesList.find(s => s.key === videoStyle);
-    if (selectedVideoStylePreset?.prompt) {
-      prompt += `. Video style: ${selectedVideoStylePreset.prompt}`;
+
+    let prompt;
+    try {
+      const cohesiveRes = await apiFetch('/api/prompt/build-cohesive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool: 'storyboard',
+          description: scene.visualPrompt,
+          style: styleText || builderStyle || undefined,
+          cameraDirection: scene.motionPrompt || undefined,
+          mood: overallMood || undefined,
+          lighting: builderLighting || undefined,
+          colorGrade: builderColorGrade || undefined,
+          videoStylePrompt: selectedVideoStylePreset?.prompt || undefined,
+          negativePrompt: 'blur, blurry, out of focus, distorted, deformed, disfigured, low quality, low resolution, pixelated, text, words, watermark, logo, letterbox, black bars',
+        }),
+      });
+      const cohesiveData = await cohesiveRes.json();
+      if (cohesiveData.success && cohesiveData.prompt) {
+        prompt = cohesiveData.prompt;
+        console.log('[Storyboard] Cohesive prompt built:', prompt.substring(0, 120) + '...');
+      } else {
+        console.warn('[Storyboard] Cohesive prompt failed, falling back to concatenation:', cohesiveData.error);
+        prompt = scene.visualPrompt;
+        if (scene.motionPrompt) prompt += `. Camera: ${scene.motionPrompt}`;
+        if (styleText) prompt += `. Style: ${styleText}`;
+        if (overallMood) prompt += `. Mood: ${overallMood}`;
+      }
+    } catch (err) {
+      console.warn('[Storyboard] Cohesive prompt error, falling back:', err.message);
+      prompt = scene.visualPrompt;
+      if (scene.motionPrompt) prompt += `. Camera: ${scene.motionPrompt}`;
+      if (styleText) prompt += `. Style: ${styleText}`;
+      if (overallMood) prompt += `. Mood: ${overallMood}`;
     }
 
     const formData = new FormData();
@@ -888,7 +920,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     if (data.videoUrl) return data.videoUrl;
     if (data.requestId) {
       setPollingScene(scene.id);
-      const videoUrl = await pollForResult(data.requestId, data.model || sceneModel);
+      const videoUrl = await pollForResult(data.requestId, data.model || sceneModel, data.statusUrl, data.responseUrl);
       setPollingScene(null);
       return videoUrl;
     }
@@ -1291,7 +1323,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Desired Length</label>
               <div className="flex gap-2">
-                {[30, 45, 60, 90].map(len => (
+                {[8, 15, 30, 45, 60, 90].map(len => (
                   <button
                     key={len}
                     type="button"
@@ -1387,7 +1419,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Style Preset</h3>
-              <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-4" />
+              <StyleGrid value={style} onChange={(v) => { setStyle(v); setTimeout(() => handleNext(), 150); }} maxHeight="none" columns="grid-cols-4" />
             </div>
 
             <div className="space-y-4 p-5 bg-white rounded-lg border border-gray-200">
@@ -1438,7 +1470,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             <p className="text-sm text-gray-500">Choose the motion and cinematography style for your video scenes.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {videoStylesList.map(s => (
-                <button key={s.key} onClick={() => setVideoStyle(videoStyle === s.key ? '' : s.key)}
+                <button key={s.key} onClick={() => { const newVal = videoStyle === s.key ? '' : s.key; setVideoStyle(newVal); if (newVal) setTimeout(() => handleNext(), 150); }}
                   className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
                   {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" loading="lazy" />}
                   <div className="p-2">
@@ -1529,6 +1561,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             }}
             onLibraryStartFrame={() => setShowLibraryForStartFrame(true)}
             onGenerateStartFrame={() => setShowImagineerForStartFrame(true)}
+            onRemoveStartFrame={() => { setStartFrameUrl(null); setStartFrameDescription(''); }}
             isAnalyzingFrame={analyzingStartFrame}
             globalModel={globalModel}
             needsCharacters={needsCharacters}
@@ -1692,7 +1725,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                 }}
                 onRefineWithV2V={(videoUrl) => openV2VRefinement(scene, videoUrl)}
                 isGenerating={scene.status === 'generating'}
-                isPending={scene.status === 'pending'}
+                isPending={generating && scene.status === 'pending'}
               />
             ))}
 
@@ -1800,6 +1833,31 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         isOpen={showLibraryForStartFrame}
         onClose={() => setShowLibraryForStartFrame(false)}
         onSelect={handleStartFrameFromLibrary}
+        mediaType="images"
+      />
+
+      {/* Library modal for character reference images */}
+      <LibraryModal
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onSelect={(item) => {
+          const url = item.url;
+          if (globalModel?.startsWith('kling-r2v')) {
+            // Kling R2V — add to element refs
+            const el = elements[activeElementIndex];
+            if (el && el.refs.length < 3) {
+              const isFirstRef = el.refs.length === 0;
+              updateElement(activeElementIndex, { refs: [...el.refs, url] });
+              if (isFirstRef && !el.description) {
+                describeCharacterFromImage(url, activeElementIndex);
+              }
+            }
+          } else {
+            // Veo / other — add to flat reference images
+            setVeoReferenceImages(prev => prev.length < 5 ? [...prev, url] : prev);
+          }
+          setShowLibrary(false);
+        }}
         mediaType="images"
       />
     </SlideOverPanel>

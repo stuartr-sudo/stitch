@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
 export default async function handler(req, res) {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   // GET — list presets
   if (req.method === 'GET') {
@@ -14,7 +14,10 @@ export default async function handler(req, res) {
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[Presets] GET error:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
     return res.json({ presets: data });
   }
 
@@ -33,7 +36,10 @@ export default async function handler(req, res) {
         .select('id, name, config, updated_at')
         .single();
 
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error('[Presets] POST update error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
       return res.json({ preset: data });
     } else {
       // Insert new (upsert on name)
@@ -46,7 +52,10 @@ export default async function handler(req, res) {
         .select('id, name, config, updated_at')
         .single();
 
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error('[Presets] POST upsert error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
       return res.json({ preset: data });
     }
   }
@@ -62,7 +71,10 @@ export default async function handler(req, res) {
       .eq('id', id)
       .eq('user_id', userId);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[Presets] DELETE error:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
     return res.json({ ok: true });
   }
 

@@ -49,6 +49,10 @@ export default async function handler(req, res) {
     elementsToInclude,
     editStrength,
     hasReference,
+    // Storyboard-specific fields
+    cameraDirection,
+    videoStylePrompt,
+    colorGrade,
   } = req.body;
 
   if (!description && !referenceDescription) {
@@ -86,6 +90,9 @@ export default async function handler(req, res) {
   if (mood) sections.push(`MOOD: ${mood}`);
   if (elementsToInclude) sections.push(`ELEMENTS TO INCLUDE: ${elementsToInclude}`);
   if (props?.length > 0) sections.push(`PROPS & ACCESSORIES: ${props.join(', ')}`);
+  if (cameraDirection) sections.push(`CAMERA DIRECTION: ${cameraDirection}`);
+  if (videoStylePrompt) sections.push(`VIDEO STYLE / CINEMATOGRAPHY: ${videoStylePrompt}`);
+  if (colorGrade) sections.push(`COLOR GRADE: ${colorGrade}`);
   if (negativePrompt) sections.push(`THINGS TO AVOID: ${negativePrompt}`);
   if (hasReference) sections.push(`HAS REFERENCE IMAGE: yes — recreate the exact character from the reference`);
 
@@ -162,12 +169,19 @@ IMAGE EDITING SPECIFIC:
   }
 
   if (tool === 'storyboard') {
-    return `${base}
+    return `You are an expert AI video prompt engineer. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for an AI video generator (Google Veo 3.1).
 
-STORYBOARD / VIDEO SCENE SPECIFIC:
-- The prompt describes a scene for AI video generation
-- Include environment, character action, camera angle, and mood
-- Be cinematic and descriptive of motion and timing`;
+Rules:
+- Output ONLY the prompt text — no preamble, no explanation, no quotes
+- Weave all elements together naturally into flowing, cinematic descriptive text
+- Describe the SCENE: environment, characters, action, movement, lighting, atmosphere
+- Describe the CAMERA: movement, angle, framing, transitions
+- Describe the MOOD: emotional tone, pacing, energy
+- Be extremely specific with visual details (colors, materials, lighting, composition)
+- Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, etc.) — describe the style instead
+- Keep the prompt under 300 words — concise but vivid
+- If a video style direction is provided, integrate its cinematography naturally
+- If negative/avoidance items are listed, end with "AVOID: [items]" as the final line`;
   }
 
   return base; // imagineer default

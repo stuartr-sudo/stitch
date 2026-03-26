@@ -446,6 +446,13 @@ export const VIDEO_STYLE_PRESETS = {
     thumb: 'https://v3b.fal.media/files/b/0a93723b/aLF65T33tf8yPztJIM8jF.jpg',
     prompt: 'colorful kids cartoon animation style, bright friendly characters with big expressive eyes and rounded features, vibrant primary color palette with cheerful saturation, smooth clean outlines, sunny welcoming environments, playful bouncy movement energy, Bluey or Peppa Pig inspired 2D aesthetic, simple readable compositions for young audiences, wholesome positive atmosphere, soft shadows and gentle lighting',
   },
+  kids_3d_animation: {
+    label: '3D Kids Animation',
+    category: 'kids',
+    description: 'Pixar-style 3D animation with soft lighting, rounded characters, vibrant colorful worlds',
+    thumb: 'https://v3b.fal.media/files/b/0a93a83d/VdyZcvJXsIocbiRpR-_Sg.jpg',
+    prompt: '3D animated kids style inspired by Pixar and DreamWorks, soft rounded character designs with expressive oversized eyes and smooth plastic-like skin textures, vibrant saturated color palette with candy-bright hues, warm diffused global illumination with soft ambient occlusion, playful bouncy character animation with squash and stretch principles, richly detailed miniature environments with depth of field bokeh, volumetric lighting with gentle god rays, whimsical props and exaggerated proportions, cheerful uplifting atmosphere, clean crisp rendering with subtle subsurface scattering on skin',
+  },
   whiteboard_explainer: {
     label: 'Whiteboard / Explainer',
     category: 'kids',

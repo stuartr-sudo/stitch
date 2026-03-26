@@ -113,7 +113,7 @@ export default async function handler(req, res) {
       const avgDuration = modelDurationConstraints?.allowed
         ? modelDurationConstraints.allowed[Math.floor(modelDurationConstraints.allowed.length / 2)]
         : defaultDuration;
-      targetSceneCount = Math.max(2, Math.min(12, Math.round(desiredLength / avgDuration)));
+      targetSceneCount = Math.max(1, Math.min(12, Math.round(desiredLength / avgDuration)));
     }
 
     // If no explicit description but we have beats, construct one

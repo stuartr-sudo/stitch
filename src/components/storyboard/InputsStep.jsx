@@ -5,7 +5,7 @@ import CharactersVeo from './CharactersVeo';
 
 const SCENE_PILLS = {
   environment: ['Urban', 'Nature', 'Indoor', 'Studio', 'Underwater', 'Space', 'Desert', 'Forest', 'Beach', 'Mountain', 'Cityscape', 'Rural'],
-  action: ['Walking', 'Running', 'Dancing', 'Sitting', 'Standing', 'Flying', 'Swimming', 'Fighting', 'Talking', 'Working', 'Playing', 'Sleeping'],
+  action: ['Walking', 'Running', 'Biking', 'Push-Scooter', 'Dancing', 'Sitting', 'Standing', 'Flying', 'Swimming', 'Fighting', 'Talking', 'Working', 'Playing', 'Sleeping'],
   expression: ['Happy', 'Sad', 'Angry', 'Surprised', 'Thoughtful', 'Determined', 'Peaceful', 'Excited', 'Fearful', 'Confident'],
   lighting: ['Golden Hour', 'Blue Hour', 'Midday Sun', 'Overcast', 'Neon', 'Candlelight', 'Moonlight', 'Studio Light', 'Backlit', 'Dramatic Shadow'],
   camera: ['Slow Pan', 'Tracking Shot', 'Static', 'Dolly In', 'Dolly Out', 'Orbit', 'Crane Up', 'Crane Down', 'Handheld', 'Aerial'],
@@ -41,6 +41,7 @@ export default function InputsStep({
   onUploadStartFrame,
   onLibraryStartFrame,
   onGenerateStartFrame,
+  onRemoveStartFrame,
   isAnalyzingFrame,
 
   // Characters (5b)
@@ -104,12 +105,20 @@ export default function InputsStep({
                     <p className="text-sm text-gray-700">{startFrameDescription}</p>
                   </div>
                 )}
-                <button
-                  onClick={onGenerateStartFrame}
-                  className="text-xs text-[#2C666E] hover:text-[#1e4d54]"
-                >
-                  Replace image
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={onGenerateStartFrame}
+                    className="text-xs text-[#2C666E] hover:text-[#1e4d54]"
+                  >
+                    Replace image
+                  </button>
+                  <button
+                    onClick={onRemoveStartFrame}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex gap-2">

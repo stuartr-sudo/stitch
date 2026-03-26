@@ -132,7 +132,7 @@ async function handleVeo3FastExtend(req, res, params) {
     duration: '7s', // Veo 3.1 Fast Extend is fixed at 7 seconds
     resolution: resolution || '720p',
     generate_audio: generate_audio !== false,
-    auto_fix: false,
+    auto_fix: true,
   };
 
   console.log('[JumpStart/Veo3 Extend] Request:', {

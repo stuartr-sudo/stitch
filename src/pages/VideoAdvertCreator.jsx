@@ -321,9 +321,20 @@ export default function VideoAdvertCreator() {
 
   const handleSendToTool = (tool) => {
     if (!lastGeneratedImage) return;
-    setPendingImage(lastGeneratedImage.url);
-    setActiveModal(tool);
+    const imageUrl = lastGeneratedImage.url;
     setLastGeneratedImage(null);
+    // Close any open modal first, then open the target after a brief delay
+    // to avoid Radix Dialog conflicts when two dialogs transition simultaneously
+    if (activeModal) {
+      setActiveModal(null);
+      setTimeout(() => {
+        setPendingImage(imageUrl);
+        setActiveModal(tool);
+      }, 150);
+    } else {
+      setPendingImage(imageUrl);
+      setActiveModal(tool);
+    }
   };
 
   const pollForImageResult = async (requestId, model, maxAttempts = 60, statusUrl = null, responseUrl = null) => {

@@ -367,6 +367,16 @@ function ProposalContent() {
               Sample animation. Final style will be tailored to Movin&apos; Martin
             </p>
           </div>
+          <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
+            <video
+              className="w-full aspect-video bg-[#f1f5f9]"
+              controls
+              src="https://v3b.fal.media/files/b/0a93aa3f/inEOuiNijS_GYLS5P5A5F_3ccea1dfe5874e8da3eb0fa00e492128.mp4"
+            />
+            <p className="p-4 text-xs text-[#64748b]">
+              Character animation test — Veo 3.1 Reference-to-Video
+            </p>
+          </div>
         </div>
       </section>
 

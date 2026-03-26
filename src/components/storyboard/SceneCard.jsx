@@ -240,7 +240,7 @@ export default function SceneCard({
               onChange={e => onChange('action', e.target.value)}
               placeholder="Describe the action in this scene..."
               rows={3}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] resize-none"
+              className="w-full rounded-lg border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] resize-none"
             />
           </div>
 

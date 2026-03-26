@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   try {
     const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
 
-    const form = formidable({ maxFileSize: 10 * 1024 * 1024 });
+    const form = formidable({ maxFileSize: 50 * 1024 * 1024 });
 
     const [fields, files] = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png';
         tempFileName = `jumpstart-temp-${Date.now()}.${extension}`;
         
-        const bucketName = 'videos';
+        const bucketName = 'media';
         const uploadResult = await supabase.storage
           .from(bucketName)
           .upload(`temp/${tempFileName}`, imageBuffer, {
@@ -108,7 +108,9 @@ export default async function handler(req, res) {
             .from(bucketName)
             .getPublicUrl(`temp/${tempFileName}`);
           imageUrl = publicUrl;
-          console.log('[JumpStart] Using Supabase URL');
+          console.log('[JumpStart] Using Supabase URL:', imageUrl?.substring(0, 80));
+        } else {
+          console.warn('[JumpStart] Supabase upload failed:', uploadResult.error.message);
         }
       } catch (uploadError) {
         console.warn('[JumpStart] Supabase error:', uploadError.message);
@@ -116,9 +118,36 @@ export default async function handler(req, res) {
     }
 
     if (!imageUrl) {
-      const base64Image = imageBuffer.toString('base64');
-      imageUrl = `data:${mimeType};base64,${base64Image}`;
-      console.log('[JumpStart] Using base64 data URL');
+      // For models that require HTTPS URLs (Veo 3.1 R2V), upload to FAL storage
+      if (model === 'veo3' && FAL_KEY) {
+        try {
+          const uploadResp = await fetch('https://fal.ai/api/storage/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Key ${FAL_KEY}`,
+              'Content-Type': mimeType,
+              'X-Fal-File-Name': `jumpstart-${Date.now()}.${mimeType === 'image/jpeg' ? 'jpg' : 'png'}`,
+            },
+            body: imageBuffer,
+          });
+          if (uploadResp.ok) {
+            const uploadData = await uploadResp.json();
+            imageUrl = uploadData.url || uploadData.file_url;
+            console.log('[JumpStart] Using FAL storage URL:', imageUrl?.substring(0, 80));
+          } else {
+            const errText = await uploadResp.text();
+            console.warn('[JumpStart] FAL storage upload failed:', uploadResp.status, errText.substring(0, 200));
+          }
+        } catch (falUploadErr) {
+          console.warn('[JumpStart] FAL upload error:', falUploadErr.message);
+        }
+      }
+
+      if (!imageUrl) {
+        const base64Image = imageBuffer.toString('base64');
+        imageUrl = `data:${mimeType};base64,${base64Image}`;
+        console.log('[JumpStart] Using base64 data URL');
+      }
     }
 
     // Route to appropriate provider
@@ -553,39 +582,46 @@ async function handleSeedance(req, res, params) {
 }
 
 /**
- * Handle Google Veo 3.1 (FAL.ai)
+ * Handle Google Veo 3.1 Reference-to-Video (FAL.ai queue)
  */
 async function handleVeo3(req, res, params) {
   const { imageUrl, prompt, aspectRatio, resolution, enableAudio, additionalImages = [], FAL_KEY } = params;
-  
+
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
-  console.log('[JumpStart/Veo3] Submitting to Google Veo 3.1...');
+  console.log('[JumpStart/Veo3] Submitting to Google Veo 3.1 R2V queue...');
   console.log('[JumpStart/Veo3] Settings:', { aspectRatio, resolution, enableAudio, additionalImagesCount: additionalImages.length });
-  
-  // Veo 3.1 uses image_urls array - supports multiple reference images
+
+  // Veo 3.1 R2V uses image_urls array - supports multiple reference images
   const allImages = [imageUrl, ...additionalImages];
-  
+
+  // Strip copyrighted brand names that trigger Veo content policy
+  const cleanPrompt = prompt
+    .replace(/\b(Pixar|Cocomelon|DreamWorks|Disney|Illumination|Laika|Blue Sky|Aardman)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
   const requestBody = {
-    prompt: prompt,
+    prompt: cleanPrompt,
     image_urls: allImages,
-    aspect_ratio: aspectRatio,
-    duration: '8s', // Veo 3.1 only supports 8 seconds
-    resolution: resolution,
-    generate_audio: enableAudio !== false, // Default true
-    auto_fix: false,
+    aspect_ratio: aspectRatio || '16:9',
+    duration: '8s',
+    resolution: resolution || '720p',
+    generate_audio: enableAudio !== false,
+    auto_fix: true,
     safety_tolerance: '4',
   };
 
-  console.log('[JumpStart/Veo3] Request:', { 
-    ...requestBody, 
+  console.log('[JumpStart/Veo3] Request:', {
+    ...requestBody,
     image_urls: `[${allImages.length} images]`,
     prompt: requestBody.prompt.substring(0, 100) + '...'
   });
-  
-  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/reference-to-video', {
+
+  // Use queue endpoint — Veo 3.1 R2V is slow, synchronous fal.run times out
+  const submitResponse = await fetch('https://queue.fal.run/fal-ai/veo3.1/reference-to-video', {
     method: 'POST',
     headers: {
       'Authorization': `Key ${FAL_KEY}`,
@@ -596,35 +632,26 @@ async function handleVeo3(req, res, params) {
 
   if (!submitResponse.ok) {
     const errorText = await submitResponse.text();
-    console.error('[JumpStart/Veo3] Error:', errorText);
+    console.error('[JumpStart/Veo3] Queue submit error:', errorText);
     return res.status(500).json({ error: 'Veo 3.1 API error: ' + errorText.substring(0, 200) });
   }
 
   const data = await submitResponse.json();
-  console.log('[JumpStart/Veo3] Response:', JSON.stringify(data).substring(0, 500));
+  console.log('[JumpStart/Veo3] Queue response:', JSON.stringify(data).substring(0, 500));
 
-  // FAL returns video directly or a request_id for queuing
-  if (data.video?.url) {
-    console.log('[JumpStart/Veo3] Video ready:', data.video.url);
-    return res.status(200).json({
-      success: true,
-      videoUrl: data.video.url,
-      status: 'completed',
-    });
-  }
-
-  // If queued, return request ID for polling
-  const requestId = data.request_id || data.requestId;
+  const requestId = data.request_id;
   if (requestId) {
     return res.status(200).json({
       success: true,
       requestId: requestId,
       model: 'veo3',
+      statusUrl: data.status_url,
+      responseUrl: data.response_url,
       status: 'processing',
     });
   }
 
-  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 API' });
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 queue API' });
 }
 
 /**
@@ -648,7 +675,7 @@ async function handleVeo3Fast(req, res, params) {
     duration: `${duration}s`, // Veo Fast uses string format: "4s", "6s", "8s"
     resolution: resolution,
     generate_audio: enableAudio !== false,
-    auto_fix: false,
+    auto_fix: true,
     safety_tolerance: '4',
   };
 
@@ -657,8 +684,8 @@ async function handleVeo3Fast(req, res, params) {
     requestBody.negative_prompt = negativePrompt;
   }
 
-  console.log('[JumpStart/Veo3Fast] Request:', { 
-    ...requestBody, 
+  console.log('[JumpStart/Veo3Fast] Request:', {
+    ...requestBody,
     image_url: '[image]',
     prompt: requestBody.prompt.substring(0, 100) + '...'
   });
@@ -729,7 +756,7 @@ async function handleVeo3FirstLast(req, res, params) {
     duration: `${duration}s`, // "4s", "6s", "8s"
     resolution: resolution,
     generate_audio: enableAudio !== false,
-    auto_fix: false,
+    auto_fix: true,
     safety_tolerance: '4',
   };
 

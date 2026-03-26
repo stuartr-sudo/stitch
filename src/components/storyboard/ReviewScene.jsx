@@ -35,11 +35,11 @@ export default function ReviewScene({
     return (
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</span>
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</span>
           {!isEditing && (
             <button
               onClick={() => startEdit(field)}
-              className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
               title={`Edit ${label}`}
             >
               <Edit2 size={12} />
@@ -52,7 +52,7 @@ export default function ReviewScene({
               <textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500 resize-y"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]/30 resize-y"
                 rows={3}
                 autoFocus
               />
@@ -61,46 +61,46 @@ export default function ReviewScene({
                 type="text"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]/30"
                 autoFocus
               />
             )}
             <div className="flex gap-2">
-              <button onClick={saveEdit} className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-500 rounded text-white">
+              <button onClick={saveEdit} className="flex items-center gap-1 px-2 py-1 text-xs bg-[#2C666E] hover:bg-[#1e4d54] rounded text-white">
                 <Check size={12} /> Save
               </button>
-              <button onClick={cancelEdit} className="flex items-center gap-1 px-2 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 rounded text-zinc-300">
+              <button onClick={cancelEdit} className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600">
                 <X size={12} /> Cancel
               </button>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-300 leading-relaxed">{value || <span className="italic text-zinc-500">Empty</span>}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{value || <span className="italic text-gray-400">Empty</span>}</p>
         )}
       </div>
     );
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
       >
-        {expanded ? <ChevronDown size={16} className="text-zinc-400" /> : <ChevronRight size={16} className="text-zinc-400" />}
+        {expanded ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
         <span className="flex items-center gap-2">
-          <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          <span className="bg-[#2C666E] text-white text-xs font-bold px-2 py-0.5 rounded-full">
             {index + 1}
           </span>
-          <span className="text-sm font-medium text-zinc-200">
+          <span className="text-sm font-medium text-gray-800">
             {scene.narrativeNote || `Scene ${index + 1}`}
           </span>
         </span>
-        <span className="ml-auto text-xs text-zinc-500">{scene.durationSeconds}s</span>
+        <span className="ml-auto text-xs text-gray-400">{scene.durationSeconds}s</span>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-zinc-800">
+        <div className="px-4 pb-4 border-t border-gray-100">
           <div className="pt-3">
             {renderField('Visual Prompt', 'visualPrompt', true)}
             {renderField('Motion & Camera', 'motionPrompt', true)}
@@ -110,7 +110,7 @@ export default function ReviewScene({
             <div className="flex justify-end mt-2">
               <button
                 onClick={() => onRegenerate?.(index)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-300 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 transition-colors"
               >
                 <RotateCcw size={12} /> Regenerate this scene
               </button>

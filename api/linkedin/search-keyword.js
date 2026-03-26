@@ -11,8 +11,8 @@ export default async function handler(req, res) {
     const serpKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
     if (!serpKey) return res.status(500).json({ error: 'SerpAPI key not configured' });
 
-    // Search Google News via SerpAPI
-    const serpUrl = `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&api_key=${serpKey}`;
+    // Search Google News via SerpAPI — limit to past week for freshness
+    const serpUrl = `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&tbs=qdr:w&api_key=${serpKey}`;
     const serpRes = await fetch(serpUrl);
     if (!serpRes.ok) return res.status(502).json({ error: `SerpAPI returned ${serpRes.status}` });
 
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
       snippet: a.snippet || a.description || '',
       url: a.link || a.url || '',
       source_domain: a.source?.name || new URL(a.link || a.url || 'https://unknown').hostname,
+      published_at: a.date ? new Date(a.date).toISOString() : null,
     }));
 
     if (articles.length === 0) return res.json({ success: true, results: [] });
@@ -35,14 +36,18 @@ export default async function handler(req, res) {
       ? await scoreTopics(articles, {}, keys.openaiKey, req.user.email)
       : articles.map(a => ({ ...a, score: null, angle: null }));
 
-    const results = scored.map(t => ({
-      headline: t.headline,
-      snippet: t.snippet,
-      url: t.url,
-      source_domain: t.source_domain || articles.find(a => a.url === t.url)?.source_domain,
-      relevance_score: t.score,
-      suggested_angle: t.angle,
-    }));
+    const results = scored.map(t => {
+      const original = articles.find(a => a.url === t.url);
+      return {
+        headline: t.headline,
+        snippet: t.snippet,
+        url: t.url,
+        source_domain: t.source_domain || original?.source_domain,
+        relevance_score: t.score,
+        suggested_angle: t.angle,
+        published_at: original?.published_at || null,
+      };
+    });
 
     return res.json({ success: true, results });
   } catch (err) {

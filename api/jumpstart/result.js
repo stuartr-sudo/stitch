@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { requestId, model = 'wavespeed-wan' } = req.body;
+    const { requestId, model = 'wavespeed-wan', statusUrl, responseUrl } = req.body;
 
     if (!requestId) {
       return res.status(400).json({ error: 'Missing requestId' });
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       // Try distilled image-to-video first (most common path)
       return await checkFalResult(req, res, requestId, FAL_KEY, 'fal-ai/ltx-2-19b/distilled/image-to-video/lora', model);
     } else if (model === 'veo3') {
-      return await checkVeo3Result(req, res, requestId, FAL_KEY);
+      return await checkVeo3Result(req, res, requestId, FAL_KEY, statusUrl, responseUrl);
     } else if (model === 'veo3-fast') {
       return await checkVeo3FastResult(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-first-last') {
@@ -486,14 +486,17 @@ async function getSeedanceResult(req, res, requestId, FAL_KEY) {
 /**
  * Check Veo 3.1/FAL result
  */
-async function checkVeo3Result(req, res, requestId, FAL_KEY) {
+async function checkVeo3Result(req, res, requestId, FAL_KEY, statusUrl, responseUrl) {
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
   }
 
-  // FAL uses a status endpoint for queued requests
+  // Use the status URL returned by FAL's queue — don't construct URLs manually
+  const actualStatusUrl = statusUrl || `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`;
+  console.log('[JumpStart/Veo3] Polling:', actualStatusUrl);
+
   const pollResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
+    actualStatusUrl,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -507,7 +510,8 @@ async function checkVeo3Result(req, res, requestId, FAL_KEY) {
     
     // FAL returns 404 when request is complete, try getting result directly
     if (pollResponse.status === 404) {
-      return await getVeo3Result(req, res, requestId, FAL_KEY);
+      const fallbackResultUrl = responseUrl || `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`;
+      return await getVeo3Result(req, res, requestId, FAL_KEY, fallbackResultUrl);
     }
     
     return res.status(pollResponse.status).json({ 
@@ -522,7 +526,9 @@ async function checkVeo3Result(req, res, requestId, FAL_KEY) {
   const status = data.status?.toLowerCase() || 'processing';
 
   if (status === 'completed') {
-    return await getVeo3Result(req, res, requestId, FAL_KEY);
+    // Use response_url from status response or the one passed from frontend
+    const actualResponseUrl = data.response_url || responseUrl || `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`;
+    return await getVeo3Result(req, res, requestId, FAL_KEY, actualResponseUrl);
   }
 
   return res.status(200).json({
@@ -537,9 +543,10 @@ async function checkVeo3Result(req, res, requestId, FAL_KEY) {
 /**
  * Get completed Veo 3.1 result
  */
-async function getVeo3Result(req, res, requestId, FAL_KEY) {
+async function getVeo3Result(req, res, requestId, FAL_KEY, resultUrl) {
+  console.log('[JumpStart/Veo3] Fetching result from:', resultUrl);
   const resultResponse = await fetch(
-    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
+    resultUrl,
     {
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -550,27 +557,31 @@ async function getVeo3Result(req, res, requestId, FAL_KEY) {
   if (!resultResponse.ok) {
     const errorText = await resultResponse.text();
     console.error('[JumpStart/Veo3] Result fetch error:', errorText);
-    return res.status(500).json({ error: 'Failed to get result' });
+    return res.status(200).json({ status: 'failed', error: 'Result expired or not found. The generation may have failed on FAL side.' });
   }
 
   const data = await resultResponse.json();
-  console.log('[JumpStart/Veo3] Result:', JSON.stringify(data).substring(0, 300));
+  console.log('[JumpStart/Veo3] Full result keys:', Object.keys(data));
+  console.log('[JumpStart/Veo3] Result:', JSON.stringify(data).substring(0, 500));
 
-  if (data.video?.url) {
+  // Try multiple response formats — R2V may differ from standard Veo
+  const videoUrl = data.video?.url || data.output?.video?.url || data.videos?.[0]?.url || data.url;
+
+  if (videoUrl) {
     return res.status(200).json({
       success: true,
       status: 'completed',
       requestId,
-      videoUrl: data.video.url,
+      videoUrl,
       model: 'veo3',
     });
   }
 
+  // If no video URL found, return failed status so frontend stops polling
+  console.error('[JumpStart/Veo3] No video URL in completed result:', JSON.stringify(data).substring(0, 500));
   return res.status(200).json({
-    success: true,
-    status: 'processing',
-    requestId,
-    model: 'veo3',
+    status: 'failed',
+    error: 'Generation completed but no video URL in response',
   });
 }
 
