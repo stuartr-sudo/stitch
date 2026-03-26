@@ -977,10 +977,19 @@ app.patch('/api/proposals/:slug/media/:id', authenticateToken, async (req, res) 
   res.status(500).json({ error: 'Handler not found' });
 });
 
-// Static proposal pages — served as plain HTML (no React/JS required)
-// This ensures government/corporate networks that block JS bundles can still view proposals
-app.get('/proposal/hamilton-city-council', (req, res) => {
-  res.sendFile(join(__dirname, 'dist', 'proposal', 'hamilton-city-council.html'));
+// Proposal pages — server-rendered with dynamic media from database
+// Static HTML template in public/proposal/ gets media grids injected server-side
+// Works without JS (for networks that block it), edit mode requires auth + JS
+app.get('/proposal/:slug', async (req, res) => {
+  try {
+    const handler = await loadApiRoute('proposals/render.js');
+    if (handler) return handler(req, res);
+    res.status(500).send('Handler not found');
+  } catch (err) {
+    console.error('[proposal] render error:', err.message);
+    // Fallback to static file
+    res.sendFile(join(__dirname, 'dist', 'proposal', 'hamilton-city-council.html'));
+  }
 });
 
 // Serve Vite build output
