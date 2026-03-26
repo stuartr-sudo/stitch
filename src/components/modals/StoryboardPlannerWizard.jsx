@@ -1854,20 +1854,23 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         onSelect={(item) => {
           const url = item.url;
           if (globalModel?.startsWith('kling-r2v')) {
-            // Kling R2V — add to element refs
-            const el = elements[activeElementIndex];
-            if (el && el.refs.length < 3) {
-              const isFirstRef = el.refs.length === 0;
-              updateElement(activeElementIndex, { refs: [...el.refs, url] });
-              if (isFirstRef && !el.description) {
-                describeCharacterFromImage(url, activeElementIndex);
+            // Kling R2V — add to element refs (functional updater for multi-select compat)
+            setElements(prev => {
+              const next = [...prev];
+              const el = next[activeElementIndex];
+              if (el && el.refs.length < 3) {
+                const isFirstRef = el.refs.length === 0;
+                next[activeElementIndex] = { ...el, refs: [...el.refs, url] };
+                if (isFirstRef && !el.description) {
+                  describeCharacterFromImage(url, activeElementIndex);
+                }
               }
-            }
+              return next;
+            });
           } else {
             // Veo / other — add to flat reference images
             setVeoReferenceImages(prev => prev.length < 5 ? [...prev, url] : prev);
           }
-          setShowLibrary(false);
         }}
         mediaType="images"
       />

@@ -24,6 +24,7 @@ import {
   X,
   Tag,
   Plus,
+  ImagePlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
@@ -999,17 +1000,31 @@ export default function LibraryModal({
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <Button
-            onClick={handleCreateTurnaroundSheet}
-            disabled={creatingSheet || multiSelectedItems.length < 2}
-            className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-          >
-            {creatingSheet ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
-            ) : (
-              <><Grid3X3 className="w-4 h-4 mr-2" /> Create Turnaround Sheet</>
+          <div className="flex items-center gap-2">
+            {onSelect && multiSelectedItems.length > 0 && (
+              <Button
+                onClick={() => {
+                  multiSelectedItems.forEach(item => onSelect(item));
+                  onClose();
+                }}
+                className="bg-[#2C666E] hover:bg-[#07393C] text-white"
+              >
+                <ImagePlus className="w-4 h-4 mr-2" /> Add {multiSelectedItems.length} to Editor
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={handleCreateTurnaroundSheet}
+              disabled={creatingSheet || multiSelectedItems.length < 2}
+              variant={onSelect ? 'outline' : 'default'}
+              className={onSelect ? '' : 'bg-[#2C666E] hover:bg-[#07393C] text-white'}
+            >
+              {creatingSheet ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
+              ) : (
+                <><Grid3X3 className="w-4 h-4 mr-2" /> Create Turnaround Sheet</>
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </Tabs>

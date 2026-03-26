@@ -14,20 +14,20 @@ export const VISUAL_STYLES = {
     prompt_suffix: 'pixel art style, retro 16-bit aesthetic, clean pixel edges, vibrant limited color palette, nostalgic video game visual style',
   },
   studio_ghibli: {
-    label: 'Studio Ghibli',
+    label: 'Anime Watercolor',
     category: 'illustration',
     image_strategy: 'fresh_per_scene',
     description: 'Soft watercolor anime with lush backgrounds and warm, whimsical atmosphere',
     thumb: '/assets/styles/studio_ghibli.jpg',
-    prompt_suffix: 'Studio Ghibli anime style, soft watercolor textures, lush detailed backgrounds, gentle warm lighting, whimsical atmospheric perspective, hand-painted feel',
+    prompt_suffix: 'soft watercolor anime style, lush detailed backgrounds, gentle warm lighting, whimsical atmospheric perspective, hand-painted feel',
   },
   disney_pixar: {
-    label: 'Disney Pixar',
+    label: '3D Animation',
     category: 'illustration',
     image_strategy: 'fresh_per_scene',
     description: 'Polished 3D animation with expressive characters and vibrant cinematic lighting',
     thumb: '/assets/styles/disney_pixar.jpg',
-    prompt_suffix: 'Disney Pixar 3D animation style, expressive cartoon characters, vibrant saturated colors, polished render quality, warm cinematic lighting, family-friendly aesthetic',
+    prompt_suffix: 'polished 3D animation style, expressive cartoon characters, vibrant saturated colors, polished render quality, warm cinematic lighting, family-friendly aesthetic',
   },
   cartoon: {
     label: 'Cartoon',
@@ -62,12 +62,12 @@ export const VISUAL_STYLES = {
     prompt_suffix: 'comic book illustration, bold black outlines, halftone dot shading, vivid pop art colors, dynamic action composition, speech bubble aesthetic, Ben-Day dots',
   },
   pixar_3d: {
-    label: 'Pixar 3D',
+    label: 'Premium 3D',
     category: 'illustration',
     image_strategy: 'fresh_per_scene',
     description: 'Smooth CGI rendering with warm studio lighting and appealing character design',
     thumb: '/assets/styles/pixar_3d.jpg',
-    prompt_suffix: '3D Pixar-style rendering, smooth plastic-like character surfaces, subsurface scattering skin, warm studio lighting, polished CGI quality, appealing character design',
+    prompt_suffix: 'premium 3D CGI rendering, smooth plastic-like character surfaces, subsurface scattering skin, warm studio lighting, polished CGI quality, appealing character design',
   },
   photorealistic: {
     label: 'Photorealistic',
@@ -115,7 +115,7 @@ export const VISUAL_STYLES = {
     image_strategy: 'fresh_per_scene',
     description: 'Loose brushstrokes with dappled light effects and vibrant broken color',
     thumb: '/assets/styles/impressionist.jpg',
-    prompt_suffix: 'impressionist painting style, loose visible brushstrokes, dappled light effects, vibrant broken color, en plein air aesthetic, Monet-inspired atmospheric quality',
+    prompt_suffix: 'impressionist painting style, loose visible brushstrokes, dappled light effects, vibrant broken color, en plein air aesthetic, soft atmospheric quality with luminous diffused light',
   },
 };
 
