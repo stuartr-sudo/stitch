@@ -467,7 +467,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
 
     const initialResults = stylesToGenerate.map(s => ({
       styleKey: s.key, styleLabel: s.label,
-      status: 'prompting', imageUrl: null, error: null, saved: false,
+      status: 'prompting', imageUrl: null, error: null, saved: false, tags: '',
     }));
     setI2iMultiResults(initialResults);
     setI2iResultUrl('');
@@ -597,15 +597,31 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
 
   // ─── Multi-result save/retry handlers ────────────────────────────────
 
+  const autoTagI2iImage = async (imageId, result) => {
+    const tagNames = [];
+    if (result.styleLabel && result.styleLabel !== 'No Style') tagNames.push(result.styleLabel);
+    const manualTags = (result.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+    tagNames.push(...manualTags);
+    if (tagNames.length === 0) return;
+    try {
+      await apiFetch('/api/library/tags/auto-tag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId, tagNames }),
+      });
+    } catch {}
+  };
+
   const handleI2iSaveOne = async (index) => {
     const result = i2iMultiResults[index];
     if (!result || result.saved || !result.imageUrl) return;
     setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
     try {
-      await apiFetch('/api/library/save', {
+      const res = await apiFetch('/api/library/save', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `[Imagineer] ${result.styleLabel}`, source: 'imagineer-i2i' }),
       });
+      const data = await res.json();
+      if (data.id) await autoTagI2iImage(data.id, result);
     } catch {
       setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
     }
@@ -620,10 +636,12 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     ));
     for (const item of unsaved) {
       try {
-        await apiFetch('/api/library/save', {
+        const res = await apiFetch('/api/library/save', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `[Imagineer] ${item.styleLabel}`, source: 'imagineer-i2i' }),
         });
+        const data = await res.json();
+        if (data.id) await autoTagI2iImage(data.id, item);
       } catch {
         setI2iMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
       }
@@ -1002,16 +1020,22 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
                     )}
                   </div>
                   {result.status === 'completed' && (
-                    <div className="flex gap-1.5 p-2 border-t border-slate-100">
-                      <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
-                        disabled={result.saved}
-                        onClick={() => handleI2iSaveOne(index)}>
-                        {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
-                      </Button>
-                      <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
-                        onClick={() => { setI2iResultUrl(result.imageUrl); setI2iMultiResults([]); }}>
-                        Use
-                      </Button>
+                    <div className="p-2 border-t border-slate-100 space-y-1.5">
+                      <input type="text" placeholder="Tags (comma-separated)"
+                        value={result.tags || ''} disabled={result.saved}
+                        onChange={(e) => setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, tags: e.target.value } : r))}
+                        className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded focus:border-[#2C666E] focus:outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                          disabled={result.saved}
+                          onClick={() => handleI2iSaveOne(index)}>
+                          {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                        </Button>
+                        <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                          onClick={() => { setI2iResultUrl(result.imageUrl); setI2iMultiResults([]); }}>
+                          Use
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -292,7 +292,7 @@ export default function EditImageModal({
 
     const initialResults = stylesToGenerate.map(s => ({
       styleKey: s.key, styleLabel: s.label,
-      status: 'prompting', imageUrl: null, error: null, saved: false,
+      status: 'prompting', imageUrl: null, error: null, saved: false, tags: '',
     }));
     setMultiResults(initialResults);
     setResultImage(null);
@@ -350,15 +350,31 @@ export default function EditImageModal({
     if (mountedRef.current) setIsLoading(false);
   };
 
+  const autoTagImage = async (imageId, result) => {
+    const tagNames = [];
+    if (result.styleLabel && result.styleLabel !== 'No Style') tagNames.push(result.styleLabel);
+    const manualTags = (result.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+    tagNames.push(...manualTags);
+    if (tagNames.length === 0) return;
+    try {
+      await apiFetch('/api/library/tags/auto-tag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId, tagNames }),
+      });
+    } catch {}
+  };
+
   const handleSaveOne = async (index) => {
     const result = multiResults[index];
     if (!result || result.saved || !result.imageUrl) return;
     setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
     try {
-      await apiFetch('/api/library/save', {
+      const res = await apiFetch('/api/library/save', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `Edited Image — ${result.styleLabel}`, source: 'editimage' }),
       });
+      const data = await res.json();
+      if (data.id) await autoTagImage(data.id, result);
     } catch {
       setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
     }
@@ -373,10 +389,12 @@ export default function EditImageModal({
     ));
     for (const item of unsaved) {
       try {
-        await apiFetch('/api/library/save', {
+        const res = await apiFetch('/api/library/save', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `Edited Image — ${item.styleLabel}`, source: 'editimage' }),
         });
+        const data = await res.json();
+        if (data.id) await autoTagImage(data.id, item);
       } catch {
         setMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
       }
@@ -492,16 +510,22 @@ export default function EditImageModal({
                     )}
                   </div>
                   {result.status === 'completed' && (
-                    <div className="flex gap-1.5 p-2 border-t border-slate-100">
-                      <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
-                        disabled={result.saved}
-                        onClick={() => handleSaveOne(index)}>
-                        {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
-                      </Button>
-                      <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
-                        onClick={() => { if (onImageEdited) onImageEdited(result.imageUrl); onClose(); }}>
-                        Use
-                      </Button>
+                    <div className="p-2 border-t border-slate-100 space-y-1.5">
+                      <input type="text" placeholder="Tags (comma-separated)"
+                        value={result.tags || ''} disabled={result.saved}
+                        onChange={(e) => setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, tags: e.target.value } : r))}
+                        className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded focus:border-[#2C666E] focus:outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                          disabled={result.saved}
+                          onClick={() => handleSaveOne(index)}>
+                          {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                        </Button>
+                        <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                          onClick={() => { if (onImageEdited) onImageEdited(result.imageUrl); onClose(); }}>
+                          Use
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
