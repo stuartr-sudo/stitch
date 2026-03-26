@@ -5,6 +5,7 @@
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { writeMediaMetadata } from '../lib/mediaMetadata.js';
+import { logCost } from '../lib/costLogger.js';
 import { createClient } from '@supabase/supabase-js';
 
 const STYLE_PROMPTS = {
@@ -135,6 +136,9 @@ export default async function handler(req, res) {
     }
     if (model === 'seedream') {
       return handleSeedream(req, res, enhancedPrompt, dimensions);
+    }
+    if (model === 'kling-image-o3') {
+      return handleKlingImageO3(req, res, enhancedPrompt, dimensions);
     }
     return handleNanoBanana2(req, res, enhancedPrompt, dimensions);
   } catch (error) {
@@ -331,4 +335,69 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
   }
 
   return res.status(500).json({ error: 'Unexpected Flux response' });
+}
+
+async function handleKlingImageO3(req, res, enhancedPrompt, dimensions) {
+  let { wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!WAVESPEED_API_KEY) WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
+  if (!WAVESPEED_API_KEY) {
+    return res.status(400).json({ error: 'Wavespeed API key not configured. Please add it in API Keys settings.' });
+  }
+
+  const validRatios = ['16:9', '9:16', '1:1', '4:3', '3:4', '3:2', '2:3', '21:9'];
+  const aspectRatio = validRatios.includes(dimensions) ? dimensions : 'auto';
+
+  const response = await fetch('https://api.wavespeed.ai/api/v3/kwaivgi/kling-image-o3', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: enhancedPrompt,
+      aspect_ratio: aspectRatio,
+      resolution: '2k',
+      num_images: 1,
+      result_type: 'single',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Imagineer/KlingImageO3] API Error:', errorText);
+    return res.status(response.status).json({ error: 'Kling Image O3 API error', details: errorText });
+  }
+
+  const data = await response.json();
+  console.log('[Imagineer/KlingImageO3] Response:', JSON.stringify(data).substring(0, 300));
+
+  const username = req.user.email || req.user.id;
+  await logCost({ username, category: 'wavespeed', operation: 'image_generate', model: 'kling-image-o3' }).catch(() => {});
+
+  // Wavespeed may return completed immediately or need polling
+  const outputs = data.outputs || data.data?.outputs || [];
+  if (outputs.length > 0 && data.status === 'completed') {
+    const imageUrl = typeof outputs[0] === 'string' ? outputs[0] : outputs[0]?.url;
+    if (imageUrl) {
+      const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      writeMediaMetadata(sb, req.user?.id, imageUrl, {
+        model_name: 'kling-image-o3',
+        visual_style: req.body.style || null,
+      });
+      return res.status(200).json({ success: true, imageUrl, status: 'completed' });
+    }
+  }
+
+  const requestId = data.id || data.data?.id;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId,
+      model: 'kling-image-o3',
+      status: data.status || 'processing',
+      pollEndpoint: '/api/imagineer/result',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected Kling Image O3 response format' });
 }

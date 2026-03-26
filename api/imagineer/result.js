@@ -8,6 +8,9 @@
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 
+// Models that use Wavespeed polling instead of FAL queue
+const WAVESPEED_MODELS = new Set(['kling-image-o3']);
+
 // Map model poll IDs → fal.ai queue endpoints
 const ENDPOINT_MAP = {
   'nano-banana-2':         'fal-ai/nano-banana-2',
@@ -37,6 +40,11 @@ export default async function handler(req, res) {
     }
 
     console.log('[Imagineer/Result] Checking:', requestId, '| Model:', model);
+
+    // ── Wavespeed models use a different polling endpoint ──────────────
+    if (WAVESPEED_MODELS.has(model)) {
+      return await pollWavespeed(req, res, requestId, model);
+    }
 
     const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
     if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
@@ -132,4 +140,43 @@ export default async function handler(req, res) {
     console.error('[Imagineer/Result] Error:', error);
     return res.status(500).json({ error: error.message });
   }
+}
+
+async function pollWavespeed(req, res, requestId, model) {
+  let { wavespeedKey: WAVESPEED_API_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!WAVESPEED_API_KEY) WAVESPEED_API_KEY = process.env.WAVESPEED_API_KEY;
+  if (!WAVESPEED_API_KEY) {
+    return res.status(400).json({ error: 'Wavespeed API key not configured.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://api.wavespeed.ai/api/v3/predictions/${requestId}/result`,
+    { headers: { 'Authorization': `Bearer ${WAVESPEED_API_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.warn(`[Imagineer/Wavespeed] Poll error ${pollResponse.status}:`, errorText.substring(0, 200));
+    return res.json({ success: true, status: 'processing', requestId, imageUrl: null });
+  }
+
+  const pollDataRaw = await pollResponse.json();
+  const data = pollDataRaw?.data ?? pollDataRaw;
+  const statusRaw = data?.status ?? pollDataRaw?.status ?? null;
+  const status = typeof statusRaw === 'string' ? statusRaw.toLowerCase() : statusRaw;
+
+  console.log('[Imagineer/Wavespeed] Status:', status, '| Model:', model);
+
+  if (status === 'completed') {
+    const outputs = data?.outputs ?? pollDataRaw?.outputs ?? [];
+    const first = Array.isArray(outputs) ? outputs[0] : null;
+    const imageUrl = typeof first === 'string' ? first : (first?.url ?? null);
+    return res.json({ success: true, status: 'completed', requestId, imageUrl });
+  }
+
+  if (status === 'failed') {
+    return res.json({ success: true, status: 'failed', requestId, imageUrl: null, error: data?.error || 'Generation failed' });
+  }
+
+  return res.json({ success: true, status: 'processing', requestId, imageUrl: null });
 }

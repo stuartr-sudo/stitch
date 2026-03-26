@@ -100,6 +100,23 @@ export default async function handler(req, res) {
           prompt: prompt,
         }),
       });
+    } else if (model === 'wavespeed-kling-o3') {
+      endpoint = 'https://api.wavespeed.ai/api/v3/kwaivgi/kling-image-o3/edit';
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${WAVESPEED_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: images,
+          prompt: prompt,
+          aspect_ratio: aspectRatio || 'auto',
+          resolution: '2k',
+          num_images: 1,
+          shot_type: 'customize',
+        }),
+      });
     } else if (model === 'fal-flux' && FAL_KEY) {
       endpoint = 'https://fal.run/fal-ai/flux-2-pro/edit';
       response = await fetch(endpoint, {

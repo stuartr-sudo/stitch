@@ -25,6 +25,7 @@ import { getPropsLabels, getCombinedNegativePrompt } from "@/lib/creativePresets
 // ─── Text-to-Image Models ────────────────────────────────────────────────────
 const T2I_MODELS = [
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast, high-quality image generation" },
+  { value: "kling-image-o3", label: "Kling Image O3", description: "Multi-ref support, up to 4K resolution" },
   { value: "seedream", label: "Seedream v4 (ByteDance)", description: "Excellent prompt adherence & detail" },
   { value: "fal-flux", label: "Flux 2 Dev (Supports LoRA)", description: "Best for Brand Kits & Custom Products" },
 ];
@@ -33,6 +34,7 @@ const T2I_MODELS = [
 const I2I_MODELS = [
   { value: "wavespeed-nano-ultra", label: "Nano Banana Pro Ultra (4K/8K)", description: "Multi-image blending, high resolution", multiImage: true },
   { value: "wavespeed-qwen", label: "Qwen Image Edit", description: "Multi-image blending, great detail", multiImage: true },
+  { value: "wavespeed-kling-o3", label: "Kling Image O3 Edit", description: "Multi-ref @Image syntax, up to 4K", multiImage: true },
   { value: "fal-flux", label: "Flux 2 Dev (LoRA)", description: "Brand Kits & custom products", multiImage: false, supportsLora: true },
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast multi-image composition", multiImage: true },
   { value: "seedream", label: "Seedream v4.5", description: "High detail editing", multiImage: false },
