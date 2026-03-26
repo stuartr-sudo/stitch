@@ -266,6 +266,12 @@ app.post('/api/trystyle/result', authenticateToken, async (req, res) => {
 });
 
 // Library routes (with auth)
+app.get('/api/library/filters', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/filters.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.post('/api/library/save', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('library/save.js');
   if (handler) return handler(req, res);
