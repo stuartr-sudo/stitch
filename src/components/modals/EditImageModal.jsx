@@ -435,7 +435,7 @@ export default function EditImageModal({
 
   const content = (
     <div className="flex flex-col h-full">
-      <StepIndicator steps={STEPS} current={step} />
+      {multiResults.length === 0 && <StepIndicator steps={STEPS} current={step} />}
 
       <div className="flex-1 overflow-y-auto">
         {/* Multi-Results Grid */}

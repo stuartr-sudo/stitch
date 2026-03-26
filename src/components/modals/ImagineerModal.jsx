@@ -718,7 +718,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       </div>
 
       {/* Step indicator */}
-      <StepIndicator steps={steps} current={step} />
+      {!(mode === "i2i" && (i2iMultiResults.length > 0 || i2iResultUrl)) && <StepIndicator steps={steps} current={step} />}
 
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
