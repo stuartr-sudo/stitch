@@ -178,7 +178,7 @@ Rules:
 - Describe the CAMERA: movement, angle, framing, transitions
 - Describe the MOOD: emotional tone, pacing, energy
 - Be extremely specific with visual details (colors, materials, lighting, composition)
-- Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, etc.) — describe the style instead
+- Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, Sarah and Duck, Bluey, Peppa Pig, Paw Patrol, Studio Ghibli, Nickelodeon, etc.) — describe the visual style characteristics instead (e.g., "soft watercolor 2D animation" not "Sarah and Duck style")
 - Keep the prompt under 300 words — concise but vivid
 - If a video style direction is provided, integrate its cinematography naturally
 - If negative/avoidance items are listed, end with "AVOID: [items]" as the final line`;

@@ -599,7 +599,10 @@ async function handleVeo3(req, res, params) {
 
   // Strip copyrighted brand names that trigger Veo content policy
   const cleanPrompt = prompt
-    .replace(/\b(Pixar|Cocomelon|DreamWorks|Disney|Illumination|Laika|Blue Sky|Aardman)\b/gi, '')
+    .replace(/\b(Pixar|Cocomelon|DreamWorks|Disney|Illumination|Laika|Blue Sky|Aardman|Sarah and Duck|Bluey|Peppa Pig|Paw Patrol|Sesame Street|Nickelodeon|Cartoon Network|Studio Ghibli|Ghibli|Nintendo|Pokémon|Pokemon|Marvel|DC Comics|Warner Bros|Paramount|Sony Pictures|Universal|Netflix|Hulu|HBO|Nick Jr|PBS Kids)\b/gi, '')
+    // Clean up orphaned grammar from stripping: "inspired by and ," → "inspired by"
+    .replace(/\b(inspired by|style of|like|similar to|reminiscent of)\s+(and\s*,?\s*|,\s*and\s*,?\s*)/gi, '$1 ')
+    .replace(/,\s*,/g, ',')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
