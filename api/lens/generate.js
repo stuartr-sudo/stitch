@@ -2,6 +2,34 @@
  * Lens API - Image Angle Adjustment using FAL.ai
  */
 import { getUserKeys } from '../lib/getUserKeys.js';
+import { createClient } from '@supabase/supabase-js';
+
+async function uploadDataUrlToSupabase(dataUrl) {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+
+  try {
+    const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) return null;
+
+    const contentType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    const fileName = `lens/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { error } = await supabase.storage.from('media').upload(fileName, buffer, { contentType });
+    if (error) { console.error('[Lens] Supabase upload error:', error); return null; }
+
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
+    return publicUrl;
+  } catch (err) {
+    console.error('[Lens] Data URL upload failed:', err);
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,15 +42,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { 
-      image_url, 
-      horizontal_angle = 0, 
-      vertical_angle = 0, 
-      zoom = 0 
+    let {
+      image_url,
+      horizontal_angle = 0,
+      vertical_angle = 0,
+      zoom = 0
     } = req.body;
 
     if (!image_url) {
       return res.status(400).json({ error: 'Missing image_url' });
+    }
+
+    // Data URLs can't be processed by FAL — upload to Supabase first
+    if (image_url.startsWith('data:')) {
+      console.log('[Lens] Converting data URL to hosted URL...');
+      const hostedUrl = await uploadDataUrlToSupabase(image_url);
+      if (!hostedUrl) {
+        return res.status(400).json({ error: 'Failed to upload image. Please use a URL or library image instead.' });
+      }
+      image_url = hostedUrl;
     }
 
     console.log('[Lens] Adjusting angles - H:', horizontal_angle, 'V:', vertical_angle, 'Zoom:', zoom);
@@ -36,7 +74,7 @@ export default async function handler(req, res) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image_url: image_url,
+          image_urls: [image_url],
           horizontal_angle: horizontal_angle,
           vertical_angle: vertical_angle,
           zoom: zoom,
@@ -45,7 +83,7 @@ export default async function handler(req, res) {
 
       if (response.ok) {
         const data = await response.json();
-        const imageUrl = data.image?.url || data.images?.[0]?.url || data.output;
+        const imageUrl = data.images?.[0]?.url || data.image?.url || data.output;
 
         if (imageUrl) {
           return res.status(200).json({ success: true, imageUrl, status: 'completed' });
@@ -55,6 +93,9 @@ export default async function handler(req, res) {
         if (requestId) {
           return res.status(200).json({ success: true, requestId, status: 'processing' });
         }
+      } else {
+        const errorText = await response.text();
+        console.error('[Lens] FAL API Error:', response.status, errorText);
       }
     }
 

@@ -39,6 +39,7 @@ export default function LensModal({
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [showLibrary, setShowLibrary] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
   const fileInputRef = useRef(null);
 
   // Reset modal state when opened
@@ -52,6 +53,7 @@ export default function LensModal({
       setResultImage(null);
       setShowUrlInput(false);
       setUrlInput('');
+      setErrorMsg(null);
     }
   }, [isOpen]);
 
@@ -95,6 +97,8 @@ export default function LensModal({
     }
 
     setIsLoading(true);
+    setErrorMsg(null);
+    setResultImage(null);
     try {
       const response = await apiFetch('/api/lens/generate', {
         method: 'POST',
@@ -112,15 +116,16 @@ export default function LensModal({
 
       if (data.imageUrl) {
         setResultImage(data.imageUrl);
-        toast.success('Angle adjustment complete!');
+        setIsLoading(false);
       } else if (data.requestId) {
-        toast.info('Processing...');
         pollForResult(data.requestId);
+      } else {
+        throw new Error('No result returned from API');
       }
     } catch (error) {
       console.error('Lens error:', error);
+      setErrorMsg(error.message);
       toast.error(error.message);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -196,6 +201,16 @@ export default function LensModal({
               <div className="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center">
                 {resultImage ? (
                   <img src={resultImage} alt="Adjusted" className="max-w-full max-h-full object-contain" />
+                ) : isLoading ? (
+                  <div className="text-slate-500 text-center p-4">
+                    <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm font-medium">Adjusting angles...</p>
+                  </div>
+                ) : errorMsg ? (
+                  <div className="text-red-500 text-center p-4">
+                    <p className="text-sm font-medium">Error: {errorMsg}</p>
+                    <p className="text-xs text-slate-400 mt-1">Try again or use a different image</p>
+                  </div>
                 ) : (
                   <div className="text-slate-400 text-center p-4">
                     <Focus className="w-8 h-8 mx-auto mb-2 opacity-50" />
