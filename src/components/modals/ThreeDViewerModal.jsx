@@ -42,6 +42,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   const [showLibrary, setShowLibrary] = useState(false);
   const [activeSlot, setActiveSlot] = useState(null);
   const activeSlotRef = useRef(null);
+  const pendingImagesRef = useRef({});
   const [glbError, setGlbError] = useState(null);
   const [cameraInfo, setCameraInfo] = useState('');
   const modelViewerRef = useRef(null);
@@ -124,25 +125,29 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
       setActiveSlot(null);
       return;
     }
-    // Read ref INSIDE the updater so batched calls see prior updater's ref mutation
-    setImages(prev => {
-      const currentSlot = activeSlotRef.current;
-      if (!currentSlot) return prev;
-      const next = { ...prev, [currentSlot]: url };
-      // Auto-advance to next empty slot for multi-select support
-      const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
-      const nextEmpty = angleSlots.find(s => s.key !== currentSlot && !next[s.key]);
-      if (nextEmpty) {
-        activeSlotRef.current = nextEmpty.key;
-        setActiveSlot(nextEmpty.key);
-      } else {
-        // All slots full
-        activeSlotRef.current = null;
-        setShowLibrary(false);
-        setActiveSlot(null);
-      }
-      return next;
-    });
+    const currentSlot = activeSlotRef.current;
+    if (!currentSlot) return;
+
+    // Accumulate synchronously in ref — immune to React batching and onClose nulling the ref
+    pendingImagesRef.current[currentSlot] = url;
+
+    // Advance to next empty slot considering both current state and pending assignments
+    const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
+    const filled = { ...images, ...pendingImagesRef.current };
+    const nextEmpty = angleSlots.find(s => !filled[s.key]);
+
+    if (nextEmpty) {
+      activeSlotRef.current = nextEmpty.key;
+      setActiveSlot(nextEmpty.key);
+    } else {
+      activeSlotRef.current = null;
+      setShowLibrary(false);
+      setActiveSlot(null);
+    }
+
+    // Flush all accumulated assignments to state
+    const pending = { ...pendingImagesRef.current };
+    setImages(prev => ({ ...prev, ...pending }));
   };
 
   const removeImage = (slotKey) => {
@@ -361,7 +366,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { activeSlotRef.current = 'front_image_url'; setActiveSlot('front_image_url'); setShowLibrary(true); }}
+                          onClick={() => { pendingImagesRef.current = {}; activeSlotRef.current = 'front_image_url'; setActiveSlot('front_image_url'); setShowLibrary(true); }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
                           <FolderOpen className="w-3 h-3 mr-1" /> Library
@@ -420,7 +425,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           size="sm"
                           onClick={() => {
                             const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
-                            if (emptySlot) { activeSlotRef.current = emptySlot.key; setActiveSlot(emptySlot.key); setShowLibrary(true); }
+                            if (emptySlot) { pendingImagesRef.current = {}; activeSlotRef.current = emptySlot.key; setActiveSlot(emptySlot.key); setShowLibrary(true); }
                           }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
@@ -534,7 +539,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
       {/* Library modal */}
       <LibraryModal
         isOpen={showLibrary}
-        onClose={() => { setShowLibrary(false); activeSlotRef.current = null; setActiveSlot(null); }}
+        onClose={() => { setShowLibrary(false); activeSlotRef.current = null; setActiveSlot(null); pendingImagesRef.current = {}; }}
         onSelect={handleLibrarySelect}
         mediaType="images"
       />
