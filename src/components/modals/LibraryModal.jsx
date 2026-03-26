@@ -508,6 +508,14 @@ export default function LibraryModal({
   const [tags, setTags] = useState([]);
   const [activeTags, setActiveTags] = useState(new Set());
 
+  // Metadata filters
+  const [filterOptions, setFilterOptions] = useState({
+    video_style: [], visual_style: [], model_name: [], storyboard_name: [], short_name: []
+  });
+  const [activeFilters, setActiveFilters] = useState({
+    video_style: '', visual_style: '', model_name: '', storyboard_name: '', short_name: ''
+  });
+
   // Multi-select mode for creating turnaround sheets
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
@@ -538,6 +546,28 @@ export default function LibraryModal({
     if (!open) return;
     fetchTags();
   }, [open]);
+
+  const fetchFilterOptions = async () => {
+    try {
+      const res = await apiFetch('/api/library/filters');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data) setFilterOptions(data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    fetchFilterOptions();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setItems([]);
+    setOffsets({ images: 0, videos: 0, audio: 0 });
+    setHasMore({ images: true, videos: true, audio: true });
+    loadLibrary(true);
+  }, [activeFilters]);
 
   // Batch-load tags for a set of items (images only — tags only apply to image_library_items)
   const loadTagsForItems = async (items) => {
@@ -592,11 +622,18 @@ export default function LibraryModal({
 
       // Only fetch types that have more data
       if (isInitial || hasMore.images) {
-        const { data: images } = await supabase
+        let imgQuery = supabase
           .from('image_library_items')
-          .select('id, url, thumbnail_url, title, prompt, created_at, alt_text')
-          .order('created_at', { ascending: false })
-          .range(currentOffsets.images, currentOffsets.images + PAGE_SIZE - 1);
+          .select('id, url, thumbnail_url, title, prompt, created_at, alt_text, video_style, visual_style, model_name, storyboard_name, short_name')
+          .order('created_at', { ascending: false });
+
+        // Apply metadata filters
+        Object.entries(activeFilters).forEach(([key, val]) => {
+          if (val) imgQuery = imgQuery.eq(key, val);
+        });
+
+        imgQuery = imgQuery.range(currentOffsets.images, currentOffsets.images + PAGE_SIZE - 1);
+        const { data: images } = await imgQuery;
         if (images) {
           results.push(...images.map(img => ({ ...img, type: 'image' })));
           newHasMore.images = images.length === PAGE_SIZE;
@@ -607,11 +644,18 @@ export default function LibraryModal({
       }
 
       if (isInitial || hasMore.videos) {
-        const { data: videos } = await supabase
+        let vidQuery = supabase
           .from('generated_videos')
-          .select('id, url, thumbnail_url, title, prompt, created_at')
-          .order('created_at', { ascending: false })
-          .range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
+          .select('id, url, thumbnail_url, title, prompt, created_at, video_style, visual_style, model_name, storyboard_name, short_name')
+          .order('created_at', { ascending: false });
+
+        // Apply metadata filters
+        Object.entries(activeFilters).forEach(([key, val]) => {
+          if (val) vidQuery = vidQuery.eq(key, val);
+        });
+
+        vidQuery = vidQuery.range(currentOffsets.videos, currentOffsets.videos + PAGE_SIZE - 1);
+        const { data: videos } = await vidQuery;
         if (videos) {
           results.push(...videos.map(vid => ({ ...vid, type: 'video' })));
           newHasMore.videos = videos.length === PAGE_SIZE;
@@ -906,6 +950,41 @@ export default function LibraryModal({
           <Button variant="outline" size="sm" onClick={() => { setItems([]); setOffsets({ images: 0, videos: 0, audio: 0 }); setHasMore({ images: true, videos: true, audio: true }); loadLibrary(true); }} disabled={isLoading}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
           </Button>
+        </div>
+
+        {/* Metadata filter dropdowns */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { key: 'video_style', label: 'Video Style' },
+            { key: 'visual_style', label: 'Visual Style' },
+            { key: 'model_name', label: 'Model' },
+            { key: 'storyboard_name', label: 'Storyboard' },
+            { key: 'short_name', label: 'Short' },
+          ].map(({ key, label }) => {
+            const options = filterOptions[key] || [];
+            if (options.length === 0) return null;
+            return (
+              <select
+                key={key}
+                value={activeFilters[key]}
+                onChange={(e) => setActiveFilters(prev => ({ ...prev, [key]: e.target.value }))}
+                className="text-xs bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1.5 text-zinc-700 focus:outline-none focus:ring-1 focus:ring-[#2C666E]"
+              >
+                <option value="">{label}</option>
+                {options.map(val => (
+                  <option key={val} value={val}>{val}</option>
+                ))}
+              </select>
+            );
+          })}
+          {Object.values(activeFilters).some(v => v) && (
+            <button
+              onClick={() => setActiveFilters({ video_style: '', visual_style: '', model_name: '', storyboard_name: '', short_name: '' })}
+              className="text-xs text-zinc-500 hover:text-zinc-700 flex items-center gap-1 px-2 py-1.5"
+            >
+              <X className="w-3 h-3" /> Clear filters
+            </button>
+          )}
         </div>
 
         {/* Tag filter bar */}

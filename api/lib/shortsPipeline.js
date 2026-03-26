@@ -36,6 +36,8 @@ import { getVideoStylePrompt } from './videoStylePresets.js';
 import { getFramework } from './videoStyleFrameworks.js';
 import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
+import { saveToLibrary } from './librarySave.js';
+import { writeMediaMetadata } from './mediaMetadata.js';
 
 /**
  * Get the actual video duration after model-specific clamping.
@@ -108,6 +110,13 @@ function estimateDurationFromText(text) {
  * @param {string} opts.userId
  * @param {object} [opts.nicheTemplate]
  */
+/** Fire-and-forget library auto-save — never blocks or fails the pipeline */
+function autoSave(supabase, userId, userEmail, opts) {
+  saveToLibrary(supabase, userId, userEmail, opts).catch(err =>
+    console.warn(`[shortsPipeline] autoSave failed for ${opts.title}:`, err.message)
+  );
+}
+
 export async function runShortsPipeline(opts) {
   const {
     niche,
@@ -139,6 +148,7 @@ export async function runShortsPipeline(opts) {
     jobId,
     campaignId,
     userId,
+    userEmail,
     nicheTemplate,
   } = opts;
 
@@ -337,6 +347,16 @@ export async function runShortsPipeline(opts) {
       });
     }
 
+    if (voiceoverUrl) {
+      autoSave(supabase, userId, userEmail, {
+        url: voiceoverUrl, type: 'video',
+        title: `[Short] ${topic} - Voiceover`,
+        source: 'shorts',
+        model_name: gemini_voice ? 'Gemini TTS' : 'ElevenLabs',
+        short_name: topic || null,
+      });
+    }
+
     // ── Step 3: Measure/Estimate Audio Durations ────────────────────────────────
     currentStep = 'measuring_audio';
     await updateJob({ current_step: 'measuring_audio', completed_steps: 2 });
@@ -431,6 +451,15 @@ export async function runShortsPipeline(opts) {
             model: hasLoras ? 'flux-2-lora' : (resolvedImageModel || 'flux-pro'),
             metadata: { image_count: 1, lora_count: loraConfigs.length },
           });
+
+          autoSave(supabase, userId, userEmail, {
+            url: imageUrl, type: 'image',
+            title: `[Short] ${topic} - Scene ${i + 1} Image`,
+            source: 'shorts',
+            visual_style: visualStyle || null,
+            model_name: resolvedImageModel || 'fal_nano_banana',
+            short_name: topic || null,
+          });
         }
 
         // ── Video Clip ─────────────────────────────────────────────────────────
@@ -460,6 +489,16 @@ export async function runShortsPipeline(opts) {
           operation: 'shorts_video_clip',
           model: videoModel || 'fal_kling',
           metadata: { video_count: 1, duration: actualDuration },
+        });
+
+        autoSave(supabase, userId, userEmail, {
+          url: clipUrl, type: 'video',
+          title: `[Short] ${topic} - Scene ${i + 1} Video`,
+          source: 'shorts',
+          video_style: framework?.name || frameworkId || null,
+          visual_style: visualStyle || null,
+          model_name: videoModel || null,
+          short_name: topic || null,
         });
 
         // ── Step 6 (per-scene): Extract first and last frames ──────────────────
@@ -558,6 +597,14 @@ export async function runShortsPipeline(opts) {
           model: 'lyria2',
           metadata: { track_count: 1 },
         });
+
+        autoSave(supabase, userId, userEmail, {
+          url: musicUrl, type: 'video',
+          title: `[Short] ${topic} - Music`,
+          source: 'shorts',
+          model_name: 'Lyria 2',
+          short_name: topic || null,
+        });
       }
     } else {
       console.log('[shortsPipeline] Step 7: Background music disabled, skipping');
@@ -571,6 +618,16 @@ export async function runShortsPipeline(opts) {
     console.log(`[shortsPipeline] Step 8: Assembling video (${validClips.length} clips + voiceover${musicUrl ? ` + music vol=${effectiveMusicVolume}` : ''})`);
 
     assembledVideoUrl = await assembleShort(validClips, voiceoverUrl, musicUrl, keys.falKey, supabase, validDurations, effectiveMusicVolume);
+
+    autoSave(supabase, userId, userEmail, {
+      url: assembledVideoUrl, type: 'video',
+      title: `[Short] ${topic} - Final`,
+      source: 'shorts',
+      video_style: framework?.name || frameworkId || null,
+      visual_style: visualStyle || null,
+      model_name: videoModel || null,
+      short_name: topic || null,
+    });
 
     // ── Step 9: Burn Captions ─────────────────────────────────────────────────────
     currentStep = 'burning_captions';
@@ -593,6 +650,16 @@ export async function runShortsPipeline(opts) {
       console.warn(`[shortsPipeline] Caption burning failed, using uncaptioned video: ${captionErr.message}`);
       captionedVideoUrl = assembledVideoUrl;
     }
+
+    autoSave(supabase, userId, userEmail, {
+      url: captionedVideoUrl, type: 'video',
+      title: `[Short] ${topic} - Final (Captioned)`,
+      source: 'shorts',
+      video_style: framework?.name || frameworkId || null,
+      visual_style: visualStyle || null,
+      model_name: videoModel || null,
+      short_name: topic || null,
+    });
 
     // ── Step 10: Finalize ─────────────────────────────────────────────────────────
     currentStep = 'finalizing';

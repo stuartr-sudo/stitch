@@ -562,7 +562,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         apiFetch('/api/library/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: data.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard' }),
+          body: JSON.stringify({ url: data.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard', visual_style: style || null, storyboard_name: storyboardName || null }),
         }).catch(() => {});
       } else if (data.requestId) {
         setPollingStartFrame(true);
@@ -583,7 +583,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
               apiFetch('/api/library/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: pollData.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard' }),
+                body: JSON.stringify({ url: pollData.imageUrl, type: 'image', title: '[Storyboard] Start Frame', source: 'storyboard', visual_style: style || null, storyboard_name: storyboardName || null }),
               }).catch(() => {});
               break;
             }
@@ -945,7 +945,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         const saveRes = await apiFetch('/api/library/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: videoUrl, type: 'video', title: `[Storyboard] Scene ${scene.sceneNumber} - ${storyboardTitle || storyboardName}`, source: 'storyboard' }),
+          body: JSON.stringify({ url: videoUrl, type: 'video', title: `[Storyboard] Scene ${scene.sceneNumber} - ${storyboardTitle || storyboardName}`, source: 'storyboard', video_style: videoStyle || null, visual_style: style || null, model_name: selectedModel?.label || null, storyboard_name: storyboardName || null }),
         });
         const saveData = await saveRes.json();
         if (saveData.url && saveData.uploadedToStorage) {
@@ -1056,6 +1056,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             type: 'video',
             title: `[Storyboard] Scene ${i + 1} - ${storyboardTitle}`,
             source: 'storyboard',
+            video_style: videoStyle || null,
+            visual_style: style || null,
+            model_name: selectedModelInfo?.label || null,
+            storyboard_name: storyboardName || null,
           }),
         }).catch(err => console.warn('Failed to save to library:', err));
 
