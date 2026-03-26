@@ -46,49 +46,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Check queue status
-    const statusResponse = await fetch(
-      `https://queue.fal.run/fal-ai/hunyuan-3d/v3.1/pro/image-to-3d/requests/${requestId}/status`,
-      { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-    );
-
-    // 404 can mean completed — fetch result directly
-    if (!statusResponse.ok && statusResponse.status !== 404) {
-      const errorText = await statusResponse.text();
-      console.error('[3DViewer] Poll error:', statusResponse.status, errorText);
-      return res.status(200).json({ status: 'processing', requestId });
-    }
-
-    let status = 'processing';
-    let queuePosition = null;
-
-    if (statusResponse.ok) {
-      const statusData = await statusResponse.json();
-      status = statusData.status?.toLowerCase() || 'processing';
-      queuePosition = statusData.queue_position;
-
-      if (status !== 'completed') {
-        return res.status(200).json({
-          status: status === 'in_queue' ? 'queued' : 'processing',
-          requestId,
-          queuePosition,
-        });
-      }
-    }
-
-    // Fetch the actual result
-    const resultResponse = await fetch(
-      `https://queue.fal.run/fal-ai/hunyuan-3d/v3.1/pro/image-to-3d/requests/${requestId}`,
-      { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-    );
+    // Poll the request URL directly (FAL returns status + result in one call)
+    const pollUrl = `https://queue.fal.run/fal-ai/hunyuan-3d/v3.1/pro/image-to-3d/requests/${requestId}`;
+    const resultResponse = await fetch(pollUrl, {
+      headers: { 'Authorization': `Key ${FAL_KEY}` },
+    });
 
     if (!resultResponse.ok) {
       const errorText = await resultResponse.text();
-      console.error('[3DViewer] Result fetch error:', errorText);
-      return res.status(200).json({ status: 'failed', error: 'Failed to retrieve result' });
+      console.error('[3DViewer] Poll error:', resultResponse.status, errorText);
+      return res.status(200).json({ status: 'processing', requestId });
     }
 
     const data = await resultResponse.json();
+
+    // Check if still in queue or processing
+    if (data.status === 'IN_QUEUE') {
+      return res.status(200).json({
+        status: 'queued',
+        requestId,
+        queuePosition: data.queue_position || null,
+      });
+    }
+    if (data.status === 'IN_PROGRESS') {
+      return res.status(200).json({ status: 'processing', requestId });
+    }
+    if (data.status === 'FAILED') {
+      return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
+    }
 
     // Get GLB URL
     const glbUrl = data.model_glb?.url || data.model_urls?.glb;
