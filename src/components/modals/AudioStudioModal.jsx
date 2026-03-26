@@ -109,7 +109,8 @@ export default function AudioStudioModal({ isOpen, onClose, onAudioGenerated }) 
             duration_seconds: model === 'fal-ai/elevenlabs/music' ? musicLengthSeconds : duration,
             refinement: refinement,
             creativity: creativity,
-            seed: seed ? parseInt(seed) : null
+            seed: seed ? parseInt(seed) : null,
+            app_source: 'stitch'
           });
           toast.success('Audio saved to library!');
         }

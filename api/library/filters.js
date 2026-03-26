@@ -26,8 +26,8 @@ export default async function handler(req, res) {
       }
       // Fallback: query both tables via client
       const [{ data: imgVals }, { data: vidVals }] = await Promise.all([
-        supabase.from('image_library_items').select(col).eq('user_id', userId).not(col, 'is', null),
-        supabase.from('generated_videos').select(col).eq('user_id', userId).not(col, 'is', null),
+        supabase.from('image_library_items').select(col).eq('user_id', userId).eq('app_source', 'stitch').not(col, 'is', null),
+        supabase.from('generated_videos').select(col).eq('user_id', userId).eq('app_source', 'stitch').not(col, 'is', null),
       ]);
       const allVals = new Set([
         ...(imgVals || []).map(r => r[col]),

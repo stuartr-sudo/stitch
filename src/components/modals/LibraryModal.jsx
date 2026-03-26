@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { SlideOverPanel, SlideOverBody } from '@/components/ui/slide-over-panel';
+import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -495,6 +496,7 @@ export default function LibraryModal({
   mediaType = 'all',
   isEmbedded = false
 }) {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -628,6 +630,10 @@ export default function LibraryModal({
           .select('id, url, thumbnail_url, title, prompt, created_at, alt_text, video_style, visual_style, model_name, storyboard_name, short_name')
           .order('created_at', { ascending: false });
 
+        // Scope to current user and app
+        if (user?.id) imgQuery = imgQuery.eq('user_id', user.id);
+        imgQuery = imgQuery.eq('app_source', 'stitch');
+
         // Apply metadata filters
         Object.entries(activeFilters).forEach(([key, val]) => {
           if (val) imgQuery = imgQuery.eq(key, val);
@@ -650,6 +656,10 @@ export default function LibraryModal({
           .select('id, url, thumbnail_url, title, prompt, created_at, video_style, visual_style, model_name, storyboard_name, short_name')
           .order('created_at', { ascending: false });
 
+        // Scope to current user and app
+        if (user?.id) vidQuery = vidQuery.eq('user_id', user.id);
+        vidQuery = vidQuery.eq('app_source', 'stitch');
+
         // Apply metadata filters
         Object.entries(activeFilters).forEach(([key, val]) => {
           if (val) vidQuery = vidQuery.eq(key, val);
@@ -667,10 +677,13 @@ export default function LibraryModal({
       }
 
       if (isInitial || hasMore.audio) {
-        const { data: audio } = await supabase
+        let audioQuery = supabase
           .from('generated_audio')
           .select('id, audio_url, title, prompt, created_at, duration_seconds')
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (user?.id) audioQuery = audioQuery.eq('user_id', user.id);
+        audioQuery = audioQuery.eq('app_source', 'stitch');
+        const { data: audio } = await audioQuery
           .range(currentOffsets.audio, currentOffsets.audio + PAGE_SIZE - 1);
         if (audio) {
           results.push(...audio.map(aud => ({ ...aud, type: 'audio' })));

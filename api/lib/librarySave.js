@@ -246,6 +246,9 @@ export async function saveToLibrary(supabase, userId, userEmail, opts) {
     insertData.user_name = userName;
   }
 
+  // Tag with app source for multi-app Supabase filtering
+  insertData.app_source = 'stitch';
+
   // Add metadata fields if provided
   if (opts.video_style) insertData.video_style = opts.video_style;
   if (opts.visual_style) insertData.visual_style = opts.visual_style;
