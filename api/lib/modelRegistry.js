@@ -8,7 +8,7 @@
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
 
 // Duration format converters per model family
-function veoDuration(seconds) {
+export function veoDuration(seconds) {
   // Veo 3.1 accepts ONLY '4s', '6s', '8s'
   const n = Number(seconds) || 5;
   if (n <= 4) return '4s';
