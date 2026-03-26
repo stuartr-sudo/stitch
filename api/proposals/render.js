@@ -92,8 +92,11 @@ export default async function handler(req, res) {
   html = html.replace(sampleWorkRegex, newSampleWork);
 
   // Inject Supabase credentials for edit mode (auth check in browser)
+  // SUPABASE_ANON_KEY (JWT format) must match the key the frontend app uses,
+  // so the CDN Supabase client can access the same session from localStorage.
+  // VITE_SUPABASE_ANON_KEY may be in sb_publishable_ format which won't work.
   const supabasePublicUrl = process.env.VITE_SUPABASE_URL || supabaseUrl;
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
   const configScript = `<script>window.__PROPOSAL_CONFIG__={supabaseUrl:"${supabasePublicUrl}",supabaseAnonKey:"${supabaseAnonKey}",slug:"${slug}"};</script>`;
   html = html.replace('</head>', `${configScript}\n</head>`);
 
