@@ -122,7 +122,7 @@ Image prompt construction (clean, structured — not concatenated blobs):
 
 #### Step 6: Generate Music
 - Mood from niche template (e.g., "dark ambient horror drones" for Horror)
-- Automatic fallback chain: ElevenLabs Music → Lyria 2 → Beatoven (same as existing Shorts pipeline in `pipelineHelpers.js`). Not user-selectable.
+- Automatic fallback chain: Lyria 2 → MiniMax v2 (same as existing Shorts pipeline in `pipelineHelpers.js`). Not user-selectable.
 
 #### Step 7: Assemble Video
 - FFmpeg concat clips + mix voiceover (100%) + music (15%)

@@ -12,7 +12,7 @@ Created new `generated_audio` table with the following fields:
 - `title` - Audio title/name
 - `prompt` - Original generation prompt
 - `negative_prompt` - Negative prompt used
-- `model` - Which model generated it (beatoven/music-generation, etc)
+- `model` - Which model generated it (fal-ai/lyria2, etc)
 - `audio_url` - URL to the audio file in Supabase storage
 - `duration_seconds` - Length of audio
 - `refinement` - Refinement level used
@@ -98,8 +98,8 @@ supabase.from('generated_audio').insert({
 
 ## Supported Models
 All audio generation models save to library:
-- Beatoven Music Generation
-- Beatoven Sound Effects
+- Lyria 2 Music Generation
+- Lyria 2 Sound Effects
 - MiniMax Music v2
 - ElevenLabs Music
 

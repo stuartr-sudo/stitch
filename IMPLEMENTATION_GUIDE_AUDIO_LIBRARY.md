@@ -186,7 +186,7 @@ if (filter === 'all' || filter === 'audio') {
 
 ### Generation to Library
 1. User opens Audio Studio modal
-2. Selects model (Beatoven, ElevenLabs, MiniMax)
+2. Selects model (Lyria 2, ElevenLabs, MiniMax)
 3. Enters prompt and optional parameters
 4. Clicks "Generate Audio"
 5. Audio generates successfully
@@ -223,7 +223,7 @@ When audio is saved, these fields are stored:
 | `user_id` | UUID | User ownership (RLS) |
 | `title` | text | Display name in library |
 | `prompt` | text | Original generation prompt |
-| `negative_prompt` | text | What to avoid (Beatoven) |
+| `negative_prompt` | text | What to avoid (Lyria 2) |
 | `model` | text | Which model was used |
 | `audio_url` | text | URL to audio file in storage |
 | `duration_seconds` | float | Length of audio in seconds |
@@ -254,8 +254,8 @@ When audio is saved, these fields are stored:
 ## Testing Checklist
 
 ### Basic Functionality
-- [ ] Generate Beatoven music → appears in library
-- [ ] Generate Beatoven sound effects → appears in library
+- [ ] Generate Lyria 2 music → appears in library
+- [ ] Generate Lyria 2 sound effects → appears in library
 - [ ] Generate ElevenLabs music → appears in library
 - [ ] Generate MiniMax music → appears in library
 

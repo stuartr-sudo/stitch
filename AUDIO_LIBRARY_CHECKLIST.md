@@ -60,7 +60,7 @@ When audio is saved, these fields are captured:
   "title": "Audio Track - <prompt>",
   "prompt": "full generation prompt",
   "negative_prompt": "what to avoid",
-  "model": "beatoven/music-generation",
+  "model": "fal-ai/lyria2",
   "audio_url": "https://...",
   "duration_seconds": 90,
   "refinement": 100,
@@ -91,8 +91,8 @@ When audio is saved, these fields are captured:
 9. Test delete functionality
 
 ### Test Cases
-- [ ] Generate Beatoven Music → saves to library
-- [ ] Generate Beatoven Sound Effects → saves to library
+- [ ] Generate Lyria 2 Music → saves to library
+- [ ] Generate Lyria 2 Sound Effects → saves to library
 - [ ] Generate ElevenLabs Music → saves to library
 - [ ] Play audio in library modal
 - [ ] Mute/unmute audio

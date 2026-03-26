@@ -159,7 +159,7 @@ Columns:
   title           text
   prompt          text
   negative_prompt text
-  model           text (beatoven/music-generation, etc)
+  model           text (fal-ai/lyria2, etc)
   audio_url       text (Supabase storage URL)
   duration_seconds float
   refinement      integer

@@ -62,7 +62,7 @@ Stitch API  (Express, port 3003)
         │    GPT-5-mini → Storyboard
         │    Wavespeed/FAL → Images (per scene, per ratio, + LoRA)
         │    Wavespeed/FAL → Videos (animate each image)
-        │    Beatoven/MiniMax → Music
+        │    Lyria 2/MiniMax → Music
         │    → Saves Draft record to Supabase
         │
         ▼
@@ -174,7 +174,7 @@ Free text strings that get passed to the music generation and inform the voiceov
 | Image Generation | Wavespeed (fastest), SeedDream (photorealistic), FLUX 2 Dev (creative/artistic, LoRA support), Imagen 4, Kling Image V3, Grok Imagine, Ideogram V2 |
 | Video Animation | Wavespeed WAN (fastest), Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Hailuo/Minimax (cinematic), Veo 2, Veo 3 (best quality + audio), Wan 2.5, Wan Pro, PixVerse V4.5 |
 | Motion Style | Standard (AI animates the image freely), Motion Transfer (Kling mimics a reference video's movement) |
-| Music | Beatoven AI (custom generated), MiniMax Music, None (no music) |
+| Music | Lyria 2 (custom generated), MiniMax Music, None (no music) |
 
 These preferences are stored per-template and used in the pipeline at generation time.
 
@@ -485,7 +485,7 @@ If LoRAs are configured and the video model is Wavespeed WAN, the LoRA configs a
 This step is skipped if `output_type === 'static'`.
 
 #### 5d — Generate Music
-Beatoven generates background music using the storyboard's `music_mood` string.
+Lyria 2 generates background music using the storyboard's `music_mood` string.
 Duration = total scene duration + 5 seconds buffer.
 Music generation is non-blocking — if it fails, the draft still saves successfully.
 
@@ -757,7 +757,7 @@ Save any generated asset (image, video, audio) to a personal library for later r
 | Video animation (alt 7) | Wan 2.5 Preview | FAL.ai | Yes | ~$0.15/vid |
 | Video animation (alt 8) | Wan Pro | FAL.ai | Yes | ~$0.20/vid |
 | Video animation (alt 9) | PixVerse V4.5 | FAL.ai | Yes | ~$0.15/vid |
-| Music | Custom generation | Beatoven / MiniMax | Yes (or disable) | ~$0.05/track |
+| Music | Custom generation | Lyria 2 / MiniMax | Yes (or disable) | ~$0.05/track |
 | LoRA training | FLUX LoRA Fast Training | FAL.ai | Yes | $0.50/training |
 | Template extraction | GPT-4o (vision) | OpenAI | No | ~$0.01 |
 
@@ -1231,7 +1231,7 @@ OPENAI_API_KEY=
 ### AI Generation (at least one image + one video provider needed)
 ```env
 WAVESPEED_KEY=          # Wavespeed AI — image + video (fastest, cheapest)
-FAL_KEY=                # FAL.ai — SeedDream, FLUX, Kling, Hailuo, Beatoven
+FAL_KEY=                # FAL.ai — SeedDream, FLUX, Kling, Hailuo, Lyria 2
 ```
 
 ### Optional

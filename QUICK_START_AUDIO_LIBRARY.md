@@ -19,7 +19,7 @@ npm run dev
 
 ### Step 3: Test the Feature (1 minute)
 1. Open app in browser
-2. Go to Audio Studio (Music/Beatoven/etc)
+2. Go to Audio Studio (Music/Lyria 2/etc)
 3. Enter prompt: "Happy upbeat music"
 4. Click "Generate Audio"
 5. Wait for generation
