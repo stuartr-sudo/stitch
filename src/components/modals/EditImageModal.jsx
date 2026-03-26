@@ -17,7 +17,7 @@ import { getPropsLabels, getCombinedNegativePrompt } from '@/lib/creativePresets
 import LoRAPicker from '@/components/LoRAPicker';
 import {
   Edit3, Upload, Link2, Loader2, Plus, X, Sparkles,
-  CheckCircle2, Download, ExternalLink, FolderOpen,
+  CheckCircle2, FolderOpen,
   ChevronLeft, ChevronRight, Cpu, AlertCircle,
 } from 'lucide-react';
 
@@ -358,43 +358,189 @@ export default function EditImageModal({
     if (mountedRef.current) setIsLoading(false);
   };
 
-  const handleUseResult = () => { if (onImageEdited && resultImage) onImageEdited(resultImage); onClose(); };
+  const handleSaveOne = async (index) => {
+    const result = multiResults[index];
+    if (!result || result.saved || !result.imageUrl) return;
+    setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
+    try {
+      await apiFetch('/api/library/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `Edited Image — ${result.styleLabel}`, source: 'editimage' }),
+      });
+    } catch {
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
+    }
+  };
+
+  const handleSaveAll = async () => {
+    const unsaved = multiResults
+      .map((r, i) => ({ ...r, index: i }))
+      .filter(r => r.status === 'completed' && !r.saved && r.imageUrl);
+    setMultiResults(prev => prev.map(r =>
+      r.status === 'completed' && !r.saved && r.imageUrl ? { ...r, saved: true } : r
+    ));
+    for (const item of unsaved) {
+      try {
+        await apiFetch('/api/library/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `Edited Image — ${item.styleLabel}`, source: 'editimage' }),
+        });
+      } catch {
+        setMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
+      }
+    }
+  };
+
+  const handleRetry = async (index) => {
+    const result = multiResults[index];
+    if (!result) return;
+    setMultiResults(prev => prev.map((r, i) => i === index
+      ? { ...r, status: 'prompting', imageUrl: null, error: null } : r));
+
+    const updateSlot = (updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    try {
+      const cohesivePrompt = await buildCohesivePrompt(result.styleKey);
+      if (!mountedRef.current) return;
+      updateSlot({ status: 'generating' });
+      const baseImage = images.find(img => img.isBase) || images[0];
+
+      if (isWavespeed) {
+        const response = await apiFetch('/api/images/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: images.map(img => img.url), prompt: cohesivePrompt, model, outputSize }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollForResultAsync(data.requestId, 'wavespeed');
+          updateSlot({ status: 'completed', imageUrl: url });
+        }
+      } else {
+        const loraPayload = loras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const response = await apiFetch('/api/imagineer/edit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: baseImage.url, prompt: cohesivePrompt, model, strength, dimensions, loras: loraPayload }),
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Edit failed');
+        if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+        else if (data.requestId) {
+          updateSlot({ status: 'polling' });
+          const url = await pollForResultAsync(data.requestId, 'fal', data.model || model);
+          updateSlot({ status: 'completed', imageUrl: url });
+        }
+      }
+    } catch (error) {
+      updateSlot({ status: 'failed', error: error.message });
+    }
+  };
 
   const content = (
     <div className="flex flex-col h-full">
       <StepIndicator steps={STEPS} current={step} />
 
       <div className="flex-1 overflow-y-auto">
-        {/* Result view */}
-        {resultImage && (
-          <div className="max-w-3xl mx-auto p-6 space-y-4">
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                <CheckCircle2 className="w-4 h-4" /> Edit Complete!
+        {/* Multi-Results Grid */}
+        {multiResults.length > 0 && (
+          <div className="p-5 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-700">
+                {(() => {
+                  const completed = multiResults.filter(r => r.status === 'completed').length;
+                  const total = multiResults.length;
+                  return completed === total
+                    ? <span className="text-green-600">All {total} images complete</span>
+                    : <span>Generating... {completed}/{total} complete</span>;
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setMultiResults([]); setIsLoading(false); }}>
+                  <ChevronLeft className="w-3 h-3 mr-1" /> Back to Editor
+                </Button>
+                {multiResults.some(r => r.status === 'completed' && !r.saved) && (
+                  <Button size="sm" className="bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={handleSaveAll}>
+                    <FolderOpen className="w-3 h-3 mr-1" /> Save All
+                  </Button>
+                )}
               </div>
             </div>
-            <div className="bg-slate-100 rounded-xl overflow-hidden">
-              <img src={resultImage} alt="Edited" className="w-full object-contain max-h-[500px]" />
+
+            {/* Results Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {multiResults.map((result, index) => (
+                <div key={result.styleKey || index} className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="text-xs font-medium text-slate-600">{result.styleLabel}</span>
+                  </div>
+                  <div className="aspect-square relative">
+                    {(result.status === 'prompting' || result.status === 'generating' || result.status === 'polling') && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <span className="text-xs capitalize">{result.status}...</span>
+                      </div>
+                    )}
+                    {result.status === 'completed' && result.imageUrl && (
+                      <img src={result.imageUrl} alt={result.styleLabel}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setExpandedImage(result)} />
+                    )}
+                    {result.status === 'failed' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-500 p-4">
+                        <AlertCircle className="w-6 h-6 mb-2" />
+                        <span className="text-xs text-center mb-2">{result.error || 'Failed'}</span>
+                        <Button size="sm" variant="outline" onClick={() => handleRetry(index)}>Retry</Button>
+                      </div>
+                    )}
+                  </div>
+                  {result.status === 'completed' && (
+                    <div className="flex gap-1.5 p-2 border-t border-slate-100">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                        disabled={result.saved}
+                        onClick={() => handleSaveOne(index)}>
+                        {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                      </Button>
+                      <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                        onClick={() => { if (onImageEdited) onImageEdited(result.imageUrl); onClose(); }}>
+                        Use
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" onClick={() => setResultImage(null)}>Edit Again</Button>
-              <a href={resultImage} download="edited-image.png"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
-                <Download className="w-4 h-4" /> Download
-              </a>
-              <a href={resultImage} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
-                <ExternalLink className="w-4 h-4" /> Open
-              </a>
-              <Button onClick={handleUseResult} className="bg-[#2C666E] hover:bg-[#07393C]">
-                <Plus className="w-4 h-4 mr-2" /> Use This Image
-              </Button>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {expandedImage && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8"
+            onClick={() => setExpandedImage(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setExpandedImage(null)}>
+            <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setExpandedImage(null)}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="bg-white rounded-lg overflow-hidden shadow-2xl">
+                <div className="px-4 py-2 bg-slate-50 border-b">
+                  <span className="text-sm font-medium text-slate-700">{expandedImage.styleLabel}</span>
+                </div>
+                <img src={expandedImage.imageUrl} alt={expandedImage.styleLabel}
+                  className="max-w-[85vw] max-h-[80vh] object-contain" />
+              </div>
             </div>
           </div>
         )}
 
         {/* Step 0: Images */}
-        {step === 0 && !resultImage && (
+        {step === 0 && !resultImage && multiResults.length === 0 && (
           <div className="max-w-2xl p-6 space-y-4">
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800 font-medium mb-1">Multi-image blending</p>
@@ -452,7 +598,7 @@ export default function EditImageModal({
         )}
 
         {/* Step 1: Instructions & Style */}
-        {step === 1 && !resultImage && (
+        {step === 1 && !resultImage && multiResults.length === 0 && (
           <div className="p-6">
             <div className="flex gap-6">
               <div className="w-1/2 min-w-0 space-y-4">
@@ -484,7 +630,7 @@ export default function EditImageModal({
         )}
 
         {/* Step 2: Enhance */}
-        {step === 2 && !resultImage && (
+        {step === 2 && !resultImage && multiResults.length === 0 && (
           <div className="p-6 space-y-5 max-w-2xl">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enhancements (optional)</h3>
 
@@ -546,7 +692,7 @@ export default function EditImageModal({
         )}
 
         {/* Step 3: Model & Output */}
-        {step === 3 && !resultImage && (
+        {step === 3 && !resultImage && multiResults.length === 0 && (
           <div className="p-6 space-y-5 max-w-2xl">
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -668,7 +814,7 @@ export default function EditImageModal({
       </div>
 
       {/* Footer */}
-      {!resultImage && (
+      {!resultImage && multiResults.length === 0 && (
         <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
           <div className="text-xs text-slate-500">
             {step === 0 && images.length === 0 && <span>Add at least one image</span>}
