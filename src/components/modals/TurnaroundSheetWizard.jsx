@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import StyleGrid from "@/components/ui/StyleGrid";
-import { getPromptText } from "@/lib/stylePresets";
+import { getPromptText, getStyleLabel } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import WizardStepper from "@/components/ui/WizardStepper";
@@ -878,7 +878,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           tagNames: [
             sheet.character?.name,
             'turnaround',
-            sheet.styleText,
+            getStyleLabel(sheet.style),
             sheet.poseSetName,
           ].filter(Boolean),
         }),
