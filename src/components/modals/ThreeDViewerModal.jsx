@@ -118,10 +118,27 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
     if (url && activeSlot) {
-      setImages(prev => ({ ...prev, [activeSlot]: url }));
+      setImages(prev => {
+        const next = { ...prev, [activeSlot]: url };
+        // If filling an angle slot, auto-advance to next empty angle slot and keep library open
+        const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
+        const isAngleSlot = angleSlots.some(s => s.key === activeSlot);
+        if (isAngleSlot) {
+          const nextEmpty = angleSlots.find(s => s.key !== activeSlot && !next[s.key]);
+          if (nextEmpty) {
+            setActiveSlot(nextEmpty.key);
+            // Keep library open for bulk selection
+            return next;
+          }
+        }
+        setShowLibrary(false);
+        setActiveSlot(null);
+        return next;
+      });
+    } else {
+      setShowLibrary(false);
+      setActiveSlot(null);
     }
-    setShowLibrary(false);
-    setActiveSlot(null);
   };
 
   const removeImage = (slotKey) => {
@@ -264,21 +281,23 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   return (
     <>
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
-        <div className="bg-gray-900 rounded-2xl shadow-2xl flex flex-col"
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-2xl flex flex-col"
           style={{ width: '95vw', height: '90vh' }}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <Box className="w-5 h-5 text-[#2C666E]" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-[#2C666E] to-[#07393C] text-white shadow-sm">
+                <Box className="w-4 h-4" />
+              </div>
               <div>
-                <h2 className="text-white font-semibold text-lg">3D Viewer</h2>
-                <p className="text-gray-400 text-xs">Generate 3D models from images</p>
+                <h2 className="text-slate-900 font-semibold text-lg">3D Viewer</h2>
+                <p className="text-slate-500 text-xs">Generate 3D models from images</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition-colors">
+              <X className="w-5 h-5 text-slate-500" />
             </button>
           </div>
 
@@ -290,22 +309,22 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                 {isGenerating ? (
                   <div className="text-center">
                     <Loader2 className="w-12 h-12 text-[#2C666E] animate-spin mx-auto mb-4" />
-                    <p className="text-white font-medium text-lg">{generationStatus}</p>
-                    <p className="text-gray-400 text-sm mt-2">This typically takes 30-60 seconds</p>
+                    <p className="text-slate-900 font-medium text-lg">{generationStatus}</p>
+                    <p className="text-slate-500 text-sm mt-2">This typically takes 30-60 seconds</p>
                   </div>
                 ) : (
                   <>
                     {/* Front image (required) */}
                     <div className="mb-6 w-full max-w-2xl">
-                      <Label className="text-gray-300 text-sm font-medium mb-2 block">
-                        Front Image <span className="text-red-400">*</span>
+                      <Label className="text-slate-700 text-sm font-medium mb-2 block">
+                        Front Image <span className="text-red-500">*</span>
                       </Label>
                       {images.front_image_url ? (
                         <div className="relative group">
                           <img
                             src={images.front_image_url}
                             alt="Front"
-                            className="w-full max-h-64 object-contain rounded-xl bg-gray-800"
+                            className="w-full max-h-64 object-contain rounded-xl bg-slate-100"
                           />
                           <button
                             onClick={() => removeImage('front_image_url')}
@@ -319,11 +338,11 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           onClick={() => { setActiveSlot('front_image_url'); fileInputRef.current?.click(); }}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, 'front_image_url')}
-                          className="border-2 border-dashed border-gray-600 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-[#2C666E] transition-colors"
+                          className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-[#2C666E] transition-colors bg-slate-50"
                         >
-                          <Upload className="w-10 h-10 text-gray-500 mb-2" />
-                          <p className="text-gray-400 font-medium">Upload front view</p>
-                          <p className="text-gray-500 text-xs mt-1">Required — click or drag to upload</p>
+                          <Upload className="w-10 h-10 text-slate-400 mb-2" />
+                          <p className="text-slate-600 font-medium">Upload front view</p>
+                          <p className="text-slate-400 text-xs mt-1">Required — click or drag to upload</p>
                         </div>
                       )}
                       <div className="flex gap-2 mt-2">
@@ -331,7 +350,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           variant="outline"
                           size="sm"
                           onClick={() => { setActiveSlot('front_image_url'); fileInputRef.current?.click(); }}
-                          className="text-xs border-gray-600 text-gray-300 hover:bg-gray-800"
+                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
                           <Upload className="w-3 h-3 mr-1" /> Upload
                         </Button>
@@ -339,7 +358,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           variant="outline"
                           size="sm"
                           onClick={() => { setActiveSlot('front_image_url'); setShowLibrary(true); }}
-                          className="text-xs border-gray-600 text-gray-300 hover:bg-gray-800"
+                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
                           <FolderOpen className="w-3 h-3 mr-1" /> Library
                         </Button>
@@ -348,8 +367,8 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
 
                     {/* Optional angle slots */}
                     <div className="w-full max-w-2xl">
-                      <Label className="text-gray-300 text-sm font-medium mb-2 block">
-                        Additional Angles <span className="text-gray-500">(optional — improves quality)</span>
+                      <Label className="text-slate-700 text-sm font-medium mb-2 block">
+                        Additional Angles <span className="text-slate-400">(optional — improves quality)</span>
                       </Label>
                       <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {ANGLE_SLOTS.filter(s => !s.required).map(slot => (
@@ -371,14 +390,38 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                             ) : (
                               <button
                                 onClick={() => { setActiveSlot(slot.key); fileInputRef.current?.click(); }}
-                                className="w-full aspect-square border border-dashed border-gray-600 rounded-lg flex items-center justify-center hover:border-[#2C666E] transition-colors"
+                                className="w-full aspect-square border border-dashed border-slate-300 rounded-lg flex items-center justify-center hover:border-[#2C666E] transition-colors bg-slate-50"
                               >
-                                <Plus className="w-4 h-4 text-gray-500" />
+                                <Plus className="w-4 h-4 text-slate-400" />
                               </button>
                             )}
-                            <span className="text-gray-500 text-[10px] mt-1">{slot.label}</span>
+                            <span className="text-slate-500 text-[10px] mt-1">{slot.label}</span>
                           </div>
                         ))}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
+                            if (emptySlot) { setActiveSlot(emptySlot.key); fileInputRef.current?.click(); }
+                          }}
+                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
+                        >
+                          <Upload className="w-3 h-3 mr-1" /> Upload
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
+                            if (emptySlot) { setActiveSlot(emptySlot.key); setShowLibrary(true); }
+                          }}
+                          className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
+                        >
+                          <FolderOpen className="w-3 h-3 mr-1" /> Library
+                        </Button>
                       </div>
                     </div>
 
@@ -391,7 +434,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                       >
                         <Box className="w-5 h-5 mr-2" /> Generate 3D Model
                       </Button>
-                      <p className="text-gray-500 text-xs text-center mt-2">
+                      <p className="text-slate-400 text-xs text-center mt-2">
                         Hunyuan 3D Pro — ~$0.38 per generation
                       </p>
                     </div>
@@ -405,9 +448,9 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                 <div className="flex-1 bg-gray-950 flex items-center justify-center p-4">
                   {glbError ? (
                     <div className="text-center">
-                      <p className="text-red-400 font-medium mb-2">Failed to load 3D model</p>
-                      <p className="text-gray-400 text-sm mb-4">Your browser may not support WebGL, or the model file is corrupted.</p>
-                      <Button onClick={handleDownloadGlb} variant="outline" className="border-gray-600 text-gray-300">
+                      <p className="text-red-500 font-medium mb-2">Failed to load 3D model</p>
+                      <p className="text-slate-500 text-sm mb-4">Your browser may not support WebGL, or the model file is corrupted.</p>
+                      <Button onClick={handleDownloadGlb} variant="outline" className="border-slate-300 text-slate-600">
                         <Download className="w-4 h-4 mr-2" /> Download GLB File
                       </Button>
                     </div>
@@ -428,16 +471,16 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                 </div>
 
                 {/* Controls strip */}
-                <div className="w-64 border-l border-gray-700 p-4 flex flex-col gap-4 overflow-y-auto">
+                <div className="w-64 border-l border-slate-200 p-4 flex flex-col gap-4 overflow-y-auto bg-white">
                   <div>
-                    <h3 className="text-white font-medium text-sm mb-1">3D Model</h3>
-                    <p className="text-gray-400 text-xs">Orbit: drag | Zoom: scroll | Pan: right-drag</p>
+                    <h3 className="text-slate-900 font-medium text-sm mb-1">3D Model</h3>
+                    <p className="text-slate-500 text-xs">Orbit: drag | Zoom: scroll | Pan: right-drag</p>
                     {cameraInfo && (
-                      <p className="text-gray-500 text-xs mt-1 font-mono">{cameraInfo}</p>
+                      <p className="text-slate-400 text-xs mt-1 font-mono">{cameraInfo}</p>
                     )}
                   </div>
 
-                  <hr className="border-gray-700" />
+                  <hr className="border-slate-200" />
 
                   <Button
                     onClick={handleCaptureAngle}
@@ -454,17 +497,17 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                   <Button
                     variant="outline"
                     onClick={handleDownloadGlb}
-                    className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="w-full border-slate-300 text-slate-600 hover:bg-slate-100"
                   >
                     <Download className="w-4 h-4 mr-2" /> Download GLB
                   </Button>
 
-                  <hr className="border-gray-700" />
+                  <hr className="border-slate-200" />
 
                   <Button
                     variant="outline"
                     onClick={handleNewModel}
-                    className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="w-full border-slate-300 text-slate-600 hover:bg-slate-100"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" /> New Model
                   </Button>
