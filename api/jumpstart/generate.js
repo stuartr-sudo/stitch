@@ -288,7 +288,7 @@ export default async function handler(req, res) {
         console.warn('[JumpStart] Failed to parse referenceImageUrls:', e);
       }
       return await handleGrokR2V(req, res, {
-        imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls, FAL_KEY
+        imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls, enableAudio, FAL_KEY
       });
     } else {
       return await handleWavespeed(req, res, {
@@ -461,7 +461,7 @@ async function handleGrokImagine(req, res, params) {
  * Uses @Image1, @Image2 syntax in prompts with up to 7 reference images
  */
 async function handleGrokR2V(req, res, params) {
-  const { imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls = [], FAL_KEY } = params;
+  const { imageUrl, prompt, duration, aspectRatio, resolution, referenceImageUrls = [], enableAudio, FAL_KEY } = params;
 
   if (!FAL_KEY) {
     return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
@@ -472,19 +472,16 @@ async function handleGrokR2V(req, res, params) {
   // Build reference_image_urls — primary image + any additional references (max 7 total)
   const allRefs = [imageUrl, ...referenceImageUrls].slice(0, 7);
 
-  // Auto-inject @Image references into prompt if not already present
-  let enhancedPrompt = prompt;
-  if (!prompt.includes('@Image')) {
-    const imageRefs = allRefs.map((_, i) => `@Image${i + 1}`).join(', ');
-    enhancedPrompt = `${imageRefs} ${prompt}`;
-  }
+  // Do NOT auto-inject @Image tags — the cohesive prompt builder creates natural-language prompts.
+  // Grok R2V uses reference_image_urls array directly; @Image syntax is NOT required.
 
   const requestBody = {
-    prompt: enhancedPrompt,
+    prompt,
     reference_image_urls: allRefs,
     duration: Math.min(Math.max(duration, 1), 10),
     aspect_ratio: aspectRatio === 'auto' ? '16:9' : aspectRatio,
     resolution: resolution || '720p',
+    generate_audio: enableAudio === true,
   };
 
   console.log('[JumpStart/GrokR2V] Request:', {
