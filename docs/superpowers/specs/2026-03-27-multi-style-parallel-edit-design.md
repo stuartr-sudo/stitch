@@ -84,7 +84,7 @@ Replaces the wizard steps when generation starts.
 
 **Per-image actions:**
 - **Save** — Saves to library via existing `saveToLibrary()`. Button tracks `saved` boolean per result. After first save, button disables and shows "Saved" with checkmark. Prevents double-saving.
-- **Use** — EditImageModal: calls existing `onUse(imageUrl)` callback and closes modal. ImagineerModal: sets `i2iResultUrl` to the selected image (same as current single-result flow) and closes the results grid, showing the standard result view with its existing action buttons.
+- **Use** — EditImageModal: calls existing `onImageEdited(imageUrl)` callback and closes modal. ImagineerModal: sets `i2iResultUrl` to the selected image (same as current single-result flow) and closes the results grid, showing the standard result view with its existing action buttons.
 
 **Bulk actions:**
 - **Save All** — Iterates completed results, skips any with `saved: true`, saves the rest. Disables after running. Updates each result's `saved` flag.
