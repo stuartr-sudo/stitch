@@ -36,6 +36,7 @@ import {
   Mic,
   Zap,
   RotateCcw,
+  Box,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -59,6 +60,7 @@ import LensModal from '@/components/modals/LensModal';
 import SmooshModal from '@/components/modals/SmooshModal';
 import LibraryModal from '@/components/modals/LibraryModal';
 import TryStyleModal from '@/components/modals/TryStyleModal';
+import ThreeDViewerModal from '@/components/modals/ThreeDViewerModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import ProviderStatusChip from '@/components/ProviderStatusChip';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
@@ -572,6 +574,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => setActiveModal('3dviewer')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Box className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">3D Viewer</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Image to 3D model</p>
+                  </div>
+
+                  <div
                     onClick={() => setActiveModal('trystyle')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -1017,7 +1030,12 @@ export default function VideoAdvertCreator() {
         }}
       />
 
-      <SmooshModal 
+      <ThreeDViewerModal
+        isOpen={activeModal === '3dviewer'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <SmooshModal
         isOpen={activeModal === 'smoosh'} 
         onClose={() => setActiveModal(null)}
         onImageGenerated={(url) => {
