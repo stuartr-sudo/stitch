@@ -118,30 +118,31 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
-    // Use ref for synchronous slot tracking (supports rapid multi-select calls)
-    const currentSlot = activeSlotRef.current;
-    if (url && currentSlot) {
-      setImages(prev => {
-        const next = { ...prev, [currentSlot]: url };
-        // Auto-advance to next empty slot for multi-select support
-        const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
-        const nextEmpty = angleSlots.find(s => s.key !== currentSlot && !next[s.key]);
-        if (nextEmpty) {
-          activeSlotRef.current = nextEmpty.key;
-          setActiveSlot(nextEmpty.key);
-          return next;
-        }
+    if (!url) {
+      activeSlotRef.current = null;
+      setShowLibrary(false);
+      setActiveSlot(null);
+      return;
+    }
+    // Read ref INSIDE the updater so batched calls see prior updater's ref mutation
+    setImages(prev => {
+      const currentSlot = activeSlotRef.current;
+      if (!currentSlot) return prev;
+      const next = { ...prev, [currentSlot]: url };
+      // Auto-advance to next empty slot for multi-select support
+      const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
+      const nextEmpty = angleSlots.find(s => s.key !== currentSlot && !next[s.key]);
+      if (nextEmpty) {
+        activeSlotRef.current = nextEmpty.key;
+        setActiveSlot(nextEmpty.key);
+      } else {
         // All slots full
         activeSlotRef.current = null;
         setShowLibrary(false);
         setActiveSlot(null);
-        return next;
-      });
-    } else {
-      activeSlotRef.current = null;
-      setShowLibrary(false);
-      setActiveSlot(null);
-    }
+      }
+      return next;
+    });
   };
 
   const removeImage = (slotKey) => {
