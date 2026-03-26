@@ -74,8 +74,7 @@ const TIERS = [
 
 function useScrollAnimation() {
   useEffect(() => {
-    const elements = document.querySelectorAll('[data-animate]');
-    const observer = new IntersectionObserver(
+    const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
@@ -85,8 +84,23 @@ function useScrollAnimation() {
       },
       { threshold: 0.1 }
     );
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+
+    // Observe all current elements
+    document.querySelectorAll('[data-animate]').forEach((el) => io.observe(el));
+
+    // Watch for dynamically added [data-animate] elements (e.g. after media fetch)
+    const mo = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+          if (node.hasAttribute('data-animate')) io.observe(node);
+          node.querySelectorAll?.('[data-animate]').forEach((el) => io.observe(el));
+        });
+      });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => { io.disconnect(); mo.disconnect(); };
   }, []);
 }
 
