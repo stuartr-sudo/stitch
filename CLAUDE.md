@@ -81,7 +81,129 @@ Both work identically. Follow whichever pattern the surrounding routes use.
 
 **LinkedIn Posting Tool** (`src/pages/LinkedInPage.jsx` + `api/linkedin/` + `src/components/linkedin/`): Internal LinkedIn content creation tool at `/linkedin`. Two-panel layout: topic queue (left) + post feed (right). Topic discovery: two-step keyword search (`search-keyword` returns scored previews without DB insert → user clicks "Add to Queue" → `add-search-result` inserts selected topic), or paste URL directly (`add-topic`). Scoring via GPT-4.1 mini structured output + Exa API content extraction (auto-fetches full article when summary <500 chars). Post generation: 3 parallel GPT-4.1 variations per topic (Contrarian, Story-Led, Data/Stat Punch) with anti-slop rules + text cleaning (emoji/markdown/hashtag strip, camelCase fix, punctuation spacing). Source appended as plain `src: domain.com/path` (UTM stripped), only CTA hyperlinked. Images generated at post creation time (not publish): gpt-5-mini excerpt → Nano Banana 2 base image → branded square-only (1080×1080) composition via `sharp` SVG overlay → upload to Supabase storage. Color template selectable via 6 gradient swatches on topic card (or auto-cycles by post number). 13 API endpoints under `/api/linkedin/*` (config CRUD, search, search-keyword, add-topic, add-search-result, topics list, update-topic, generate, posts list, update-post, regenerate-post, publish). Database: `linkedin_config` (per-user settings, LinkedIn token, Exa key), `linkedin_topics` (discovery queue with scores, full_content), `linkedin_posts` (generated variations with featured_image_square, scheduled_for). Migration: `supabase-migration-linkedin.sql`. Image composition: `api/lib/composeImage.js` (9-layer SVG: gradient + orb + noise + quote mark at 85% opacity + quote text 72px DejaVu Serif + series pill + watch number + logo container top-left — circular for round logos, pill for wide) + `api/lib/colorTemplates.js` (6 color templates: arctic-steel, sunset-coral, electric-violet, royal-gold, midnight-rose, purple-burst). Publishing: `api/lib/linkedinPublisher.js` (LinkedIn API v2 with square image upload). Publish endpoint is now lightweight — uses pre-generated image, no image gen at publish time. Fonts required in Docker: `fonts-dejavu-core`, `fonts-liberation`. Cost categories: `openai` (scoring/generation/excerpt via gpt-5-mini), `fal` (base image), `serpapi` (search), `exa` (content fetch).
 
+## AI Model & Provider Inventory
+
+~50 endpoints across two providers: **FAL.ai** (~43) and **Wavespeed** (~7). All accessed via `FAL_KEY` or `WAVESPEED_API_KEY` resolved through `getUserKeys()`.
+
+### Image Generation (Text-to-Image)
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Nano Banana 2 | FAL | `fal-ai/nano-banana-2` | Best quality T2I, fast generation | Imagineer, Shorts, LinkedIn |
+| Seedream v4 | FAL | `fal-ai/bytedance/seedream/v4/text-to-image` | High detail T2I from ByteDance | Imagineer |
+| SeedDream v4.5 | FAL | `fal-ai/bytedance/seedream/v4.5/text-to-image` | Updated Seedream for pipeline use | Shorts pipeline |
+| FLUX 2 (LoRA) | FAL | `fal-ai/flux-2/lora` | T2I with custom LoRA style support | Imagineer, Shorts |
+| Imagen 4 | FAL | `fal-ai/imagen4/preview/fast` | Google T2I, fast preview | Shorts pipeline |
+| Kling Image v3 | FAL | `fal-ai/kling-image/v3/text-to-image` | Kling T2I with negative prompt support | Shorts pipeline |
+| Grok Imagine | FAL | `xai/grok-imagine-image` | xAI T2I model | Shorts pipeline |
+| Ideogram v2 | FAL | `fal-ai/ideogram/v2` | Strong at text rendering in images | Shorts pipeline |
+| Wavespeed Nano Banana Pro | Wavespeed | `google/nano-banana-pro/text-to-image` | Wavespeed-hosted Nano Banana T2I | Shorts pipeline |
+
+### Image Editing (Image-to-Image)
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Nano Banana Pro Ultra (4K/8K) | Wavespeed | `google/nano-banana-pro/edit-ultra` | Multi-image blending at 4K/8K | Edit Image modal |
+| Qwen Image Edit | Wavespeed | `wavespeed-ai/qwen-image/edit-2511` | Multi-image blending, great detail | Edit Image modal |
+| FLUX 2 Pro Edit | FAL | `fal-ai/flux-2-pro/edit` | Single-image editing (no multi-image) | Edit Image modal |
+| FLUX 2 LoRA Edit | FAL | `fal-ai/flux-2/lora/edit` | Single-image edit with LoRA support | Imagineer I2I |
+| Nano Banana 2 Edit | FAL | `fal-ai/nano-banana-2/edit` | Multi-image composition/blending | Imagineer I2I |
+| Seedream v4.5 Edit | FAL | `fal-ai/bytedance/seedream/v4.5/edit` | High-detail multi-image editing | Imagineer I2I |
+| Nano Banana Pro Edit | Wavespeed | `google/nano-banana-pro/edit` | Multi-image composition/blending | Smoosh |
+| Qwen Image Edit Inpaint | FAL | `fal-ai/qwen-image-edit/inpaint` | Mask-based inpainting to remove/replace | Inpaint |
+
+### Image Utilities
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Bria Background Remove | FAL | `fal-ai/bria/background/remove` | Removes image background | Brand kit |
+| Qwen Multi-Angle Edit | FAL | `fal-ai/qwen-image-edit-2511-multiple-angles` | Multiple camera angles from one image | Lens |
+| Qwen Edit (fallback) | Wavespeed | `wavespeed-ai/qwen-image/edit-2511` | Fallback angle generation | Lens |
+| FASHN Try-On v1.6 | FAL | `fal-ai/fashn/tryon/v1.6` | Virtual clothing try-on | Try Style |
+| Flux 2 Virtual Try-On | FAL | `fal-ai/flux-2-lora-gallery/virtual-tryon` | Alternative virtual try-on | Try Style |
+| SeedVR Upscale | FAL | `fal-ai/seedvr/upscale/image` | AI upscaling for low-res images | JumpStart |
+| Hunyuan 3D Pro | FAL | `fal-ai/hunyuan-3d/v3.1/pro/image-to-3d` | Image-to-3D model (GLB), multi-angle input | 3D Viewer |
+
+### Video Generation (Image-to-Video)
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Kling 2.0 Master | FAL | `fal-ai/kling-video/v2/master/image-to-video` | Older Kling I2V, 5s or 10s | Shorts |
+| Kling V3 Pro | FAL | `fal-ai/kling-video/v3/pro/image-to-video` | Mid-gen Kling I2V with audio, 3-15s | Shorts |
+| Kling O3 Pro | FAL | `fal-ai/kling-video/o3/pro/image-to-video` | Latest Kling I2V with audio, 3-15s | Shorts |
+| Kling 2.5 Turbo Pro | FAL | `fal-ai/kling-video/v2.5-turbo/pro/image-to-video` | Fast Kling I2V for storyboard | JumpStart, Storyboard |
+| Veo 2 | FAL | `fal-ai/veo2/image-to-video` | Google Veo 2 I2V, 4-8s | Shorts |
+| Veo 3.1 Fast I2V | FAL | `fal-ai/veo3.1/fast/image-to-video` | Google Veo 3.1 I2V with optional audio, 4-8s | JumpStart, Storyboard, Shorts |
+| Wan 2.5 Preview | FAL | `fal-ai/wan-25-preview/image-to-video` | Alibaba Wan I2V, 5s or 10s | Shorts |
+| Wan Pro | FAL | `fal-ai/wan-pro/image-to-video` | Higher quality Wan I2V, fixed duration | Shorts |
+| PixVerse v4.5 | FAL | `fal-ai/pixverse/v4.5/image-to-video` | PixVerse I2V, 5s or 8s | Shorts |
+| Hailuo (MiniMax) | FAL | `fal-ai/minimax/video-01/image-to-video` | MiniMax I2V, fixed duration, smooth motion | Shorts |
+| Wavespeed WAN 2.2 Spicy | Wavespeed | `wavespeed-ai/wan-2.2-spicy/image-to-video` | Wavespeed Wan I2V with LoRA support | JumpStart, Shorts |
+| Seedance 1.5 Pro | FAL | `fal-ai/bytedance/seedance/v1.5/pro/image-to-video` | ByteDance I2V, good motion quality | JumpStart, Storyboard |
+| Grok Imagine I2V | FAL | `xai/grok-imagine-video/image-to-video` | xAI I2V, 1-10s duration | JumpStart, Storyboard |
+
+### Video Generation (Reference-to-Video)
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Veo 3.1 R2V | FAL | `fal-ai/veo3.1/reference-to-video` | Video from reference images + prompt (character consistency) | JumpStart, Storyboard |
+| Kling O3 R2V | FAL | `fal-ai/kling-video/o3/{tier}/reference-to-video` | Video with @Element1-4 character references | JumpStart, Storyboard |
+| Grok Imagine R2V | FAL | `xai/grok-imagine-video/reference-to-video` | Video with @Image1-7 reference syntax, 1-10s | JumpStart, Storyboard |
+
+### Video Generation (First-Last-Frame)
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Veo 3.1 FLF | FAL | `fal-ai/veo3.1/fast/first-last-frame-to-video` | Video transitioning between two keyframes | JumpStart, Storyboard, Scene Repair |
+
+### Video Editing & Extend
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| WAN 2.2 Video Edit | Wavespeed | `wavespeed-ai/wan-2.2/video-edit` | Restyle/modify existing video with prompt | JumpStart edit |
+| Grok Imagine Video Edit | FAL | `xai/grok-imagine-video/edit-video` | Edit existing video with text instructions | JumpStart edit |
+| Seedance 1.5 Pro Extend | Wavespeed | `bytedance/seedance-v1.5-pro/video-extend-fast` | Extend video duration, 4-12s | JumpStart extend |
+| Veo 3.1 Extend | FAL | `fal-ai/veo3.1/fast/extend-video` | Extend video by fixed 7s | JumpStart extend |
+| Grok Imagine Extend | FAL | `xai/grok-imagine-video/extend-video` | Extend video, returns original+extension stitched | JumpStart extend |
+| Bria Video Erase | FAL | `bria/video/erase/prompt` | Remove objects from video via text prompt | JumpStart erase |
+| Lucy Restyle | Wavespeed | `decart/lucy-restyle` | Restyle entire video to a new visual style | Trip |
+
+### Video Utilities
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| FFmpeg Extract Frame | FAL | `fal-ai/ffmpeg-api/extract-frame` | Extract first/middle/last frame from video | Frame chaining, pipeline |
+| FFmpeg Compose | FAL | `fal-ai/ffmpeg-api/compose` | Assemble clips + audio tracks into final video | Shorts assembly, Storyboard |
+
+### Animation
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| WAN Animate Move | FAL | `fal-ai/wan/v2.2-14b/animate/move` | Animate still image with motion transfer | Animate modal |
+| WAN Animate Replace | FAL | `fal-ai/wan/v2.2-14b/animate/replace` | Replace subject in motion reference video | Animate modal |
+| LTX-2-19b Audio-to-Video | FAL | `fal-ai/ltx-2-19b/distilled/audio-to-video/lora` | Generate video synced to audio track | JumpStart |
+
+### Audio / TTS / Captions
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Gemini TTS | FAL | `fal-ai/gemini-tts` | Google Gemini TTS, 30 voices (default) | Shorts voiceover |
+| ElevenLabs TTS v3 | FAL | `fal-ai/elevenlabs/tts/eleven-v3` | ElevenLabs TTS via FAL proxy (legacy) | Shorts voiceover |
+| Lyria 2 | FAL | `fal-ai/lyria2` | Google Lyria 2 instrumental music (default) | Shorts music |
+| MiniMax Music v2 | FAL | `fal-ai/minimax-music/v2` | MiniMax music, ~60s fixed length (fallback) | Shorts music |
+| ElevenLabs Music | FAL | `fal-ai/elevenlabs/music` | ElevenLabs music generation | Audio endpoint |
+| Auto-Subtitle | FAL | `fal-ai/workflow-utilities/auto-subtitle` | Burns captions onto video with styling/animation | Caption system |
+| Whisper | FAL | `fal-ai/whisper` | Audio transcription for timing alignment | Voiceover pipeline |
+
+### LoRA Training
+
+| Model | Provider | Endpoint | Description | Used By |
+|-------|----------|----------|-------------|---------|
+| Flux LoRA Fast Training | FAL | `fal-ai/flux-lora-fast-training` | Train custom LoRA style models on user images | LoRA trainer |
+
 ## Other API Subsystems
+
+**3D Viewer** (`api/viewer3d/` + `src/components/modals/ThreeDViewerModal.jsx`): Image-to-3D model generation via Hunyuan 3D Pro (`fal-ai/hunyuan-3d/v3.1/pro/image-to-3d`, $0.375/gen). Accepts front image (required) + up to 7 optional angles. Interactive `<model-viewer>` orbit viewer with "Capture This Angle" (saves PNG to Library) and GLB download. Full-screen modal, dark theme. Uses `@google/model-viewer` web component. GLB files stored in Supabase storage (`media/3d/{userId}/`). Routes: `POST /api/viewer3d/generate`, `POST /api/viewer3d/result`.
 
 **Smoosh** (`api/smoosh/`): Image combination/blending tool. **Lens** (`api/lens/`): Image generation endpoint. **Trip** (`api/trip/`): Video restyle. **TryStyle** (`api/trystyle/`): Style try-on with polling. **Audio** (`api/audio/`): Captions, music, and voiceover generation endpoints. **Voice** (`api/voice/` + `api/voices/`): Voice preview and ElevenLabs voice library browsing. **Brand** (`api/brand/`): Brand kit management — logo, colors, guidelines extraction from PDFs (`extract-pdf.js`), background removal (`remove-bg.js`), avatar training (`train-avatar.js`), and username registry. Data in `brand_kit` table. Frontend: `BrandKitModal.jsx`, `BrandAssetsModal.jsx`, `BrandStyleGuideSelector.jsx`. **Library** (`api/library/`): Image library with save, thumbnail updates, and a tag system. Tag tables: `image_tags` (user-scoped, unique name per user) + `image_tag_links` (junction to `image_library_items`). Endpoints: `GET/POST /api/library/tags` (list/create), `POST /api/library/tags/assign` (bulk assign), `DELETE /api/library/tags/unassign`, `POST /api/library/tags/auto-tag` (create-if-not-exists + assign atomically). RPC function `get_user_tags_with_counts` returns tags with usage count and last_used. Frontend `LibraryModal.jsx` has tag filter bar, tag chips on cards, and TagDropdown for assignment. Migration: `supabase-migration-tags.sql`. **Images** (`api/images/`): Image search (SERP/Google CSE), import-url, edit, and inpaint — separate from Imagineer's editing endpoints. **Animate** (`api/animate/`): Standalone image-to-video animation endpoints (`generate.js`, `result.js`), separate from JumpStart. Frontend: `AnimateModal.jsx`. **Costs** (`api/costs/summary.js`): Dedicated cost summary endpoint for the Provider Health Dashboard.
 
@@ -180,7 +302,8 @@ Verification **IS required** for:
 
 - **Primary**: Fly.io (`fly.toml`) — Sydney region, Express serves both API and built frontend on port 3000.
 - **Fly.io only** — Never use Vercel.
-- **CI/CD**: GitHub Actions (`.github/workflows/fly-deploy.yml`) auto-deploys to Fly.io on every push to `main`. Manual `fly deploy` also works.
+- **CI/CD**: GitHub Actions (`.github/workflows/fly-deploy.yml`) auto-deploys to Fly.io on every push to `main` (uses `FLY_API_TOKEN` secret). Manual `fly deploy` also works.
 - **Docker**: Multi-stage `Dockerfile` at project root (deps → builder → runner). Used by Fly.io builds.
 - Fly.io deploys can fail with lease conflicts if a previous deploy is still rolling out. Wait ~60s and retry `fly deploy`.
+- Pushing to `main` triggers GitHub Actions auto-deploy, which restarts the Fly machine and KILLS any running pipeline mid-generation. This caused multiple failed generations. ALWAYS: `git push` first, THEN `fly deploy`. Never push during active generation.
 - Pushing to `main` triggers GitHub Actions auto-deploy, which restarts the Fly machine and KILLS any running pipeline mid-generation. This caused multiple failed generations. ALWAYS: `git push` first, THEN `fly deploy`. Never push during active generation.
