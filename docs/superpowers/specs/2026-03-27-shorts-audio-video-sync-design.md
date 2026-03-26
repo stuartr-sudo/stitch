@@ -8,7 +8,7 @@
 The Shorts pipeline has two sync issues:
 
 1. **Voiceover duration is estimated** from word count (~150 wpm), not measured. TTS engines produce variable-length audio, causing mismatches.
-2. **Video clip durations are clamped** to model-specific values (e.g., Veo only accepts 4/6/8s), creating further drift. Assembly then **stretches the voiceover** to fit total video duration, distorting audio.
+2. **Video clip durations are clamped** to model-specific values (e.g., Veo only accepts 4/6/8s), creating further drift. Assembly places the voiceover at timestamp 0 with duration set to total video length — if video is longer than audio, there's silence at the end; if shorter, audio is truncated. Neither produces good results.
 
 Additionally, the pipeline treats all scenes the same — frame chaining is applied uniformly. Cut-style frameworks (top_x_countdown, before_after) need independent scenes with character consistency via reference-to-video (R2V).
 
@@ -31,6 +31,9 @@ Introduce two distinct pipeline flows based on framework type:
 | Character detection | Inferred from scene 1 having a generated/provided starting image | Simple inference, no manual toggle |
 | Scene 1 behavior | Always generate image → video | Current behavior, cleaned up |
 | Duration solver algorithm | Minimize total deviation (Approach B) | Optimal distribution, preserves framework pacing |
+| TTS mode | All frameworks use `single` (one continuous track) | Simplifies pipeline — per_scene TTS eliminated |
+| Solver fallback | Expand tolerance incrementally (±2, ±4, ±6) then adjust scene count | Always finds a valid solution |
+| Wizard model reset | Clear model selection when switching between continuous/cut frameworks | Prevents invalid model + framework combinations |
 
 ## Architecture
 
@@ -46,11 +49,14 @@ Three strategies based on model type:
 - Enumerate all combinations of valid durations that sum to `targetTotal`
 - Score each by total deviation from each scene's `durationRange` midpoint
 - Return the lowest-scoring combination
-- If no exact sum exists, find combinations summing to `targetTotal ± 2`, prefer closest to target
+- If no exact sum exists, expand tolerance incrementally: `targetTotal ± 2`, then `± 4`, then `± 6`
+- If still no valid combination (e.g., Kling v2 `[5,10]` with 3 scenes targeting 18s), adjust scene count: try `sceneCount ± 1` and re-solve
+- Upper bound: max 12 scenes (from framework), so worst case 3^12 = 531k combinations — acceptable for a one-time solve
 
 **Continuous-range models** (Kling v3/O3: 3-15 integers, Wavespeed WAN: 5-8):
 - Proportionally distribute `targetTotal` across scenes weighted by `durationRange` midpoints
-- Round to valid integers, adjust remainder across scenes to hit exact total
+- Round to valid integers, clamp each to the scene's `durationRange` bounds
+- Adjust remainder across scenes (prefer adjusting scenes with most headroom) to hit exact total
 
 **Fixed-duration models** (Hailuo, Wan Pro — no duration param):
 - Use model's fixed duration for all scenes
@@ -75,7 +81,7 @@ Three strategies based on model type:
 1. Load framework, read `sceneStructure` for target duration
 2. **Duration solver** → locked per-scene durations
 3. **Script generator** → narration + visual descriptions fitted to exact durations
-4. **TTS voiceover** → one continuous track from full narration
+4. **TTS voiceover** → one continuous track from full narration (all frameworks now use `ttsMode: 'single'` — per-scene TTS is eliminated)
 5. **Video generation loop** — branched by `frameChain`:
 
 **Continuous (`frameChain: true`):**
@@ -85,7 +91,7 @@ Three strategies based on model type:
 **Cut (`frameChain: false`):**
 - Scene 1: generate image from visual desc → I2V with locked duration. Capture image as `characterRef`
 - Scene 2+ (characterRef exists): `characterRef` → R2V with locked duration, full visual prompt
-- Scene 2+ (no characterRef): generate fresh image → I2V with locked duration, full visual prompt
+- Scene 2+ (no characterRef — only if scene 1 image generation failed): generate fresh image → I2V with locked duration, full visual prompt
 
 6. **Assembly** — concatenate clips with continuous voiceover on top. No stretching.
 
@@ -93,7 +99,8 @@ Three strategies based on model type:
 - `estimateDurationFromText()` function
 - `getActualDuration()` function (solver handles upstream)
 - Proportional duration distribution logic
-- Audio stretching in assembly
+- Per-scene TTS concatenation logic (all frameworks now use single voiceover)
+- Voiceover duration placeholder in assembly (durations now match by construction)
 
 ### 4. Model Registry Changes
 
@@ -113,7 +120,7 @@ Models with `r2vEndpoint` are R2V-capable. The pipeline reads this to switch end
 R2V-capable families:
 - **Veo 3.1** → `fal-ai/veo3.1/reference-to-video`
 - **Grok** → `xai/grok-imagine-video/reference-to-video`
-- **Kling O3** → `fal-ai/kling-video/o3/{tier}/reference-to-video`
+- **Kling O3** → `fal-ai/kling-video/o3/pro/reference-to-video` (always `pro` tier)
 
 ### 5. Wizard Model Filtering
 
@@ -121,6 +128,7 @@ R2V-capable families:
 
 - When a **cut** framework is selected: Video Model step filters to models with `r2vEndpoint` (Veo 3.1, Grok, Kling O3)
 - When a **continuous** framework is selected: all I2V models available, no filtering
+- When user switches between continuous/cut frameworks: **clear video model selection** to prevent invalid combinations
 
 ## Pipeline Flow Diagram
 
@@ -172,14 +180,14 @@ R2V-capable families:
 | `api/lib/scriptGenerator.js` | Accept exact durations, differentiate continuous/cut visual prompts |
 | `api/lib/shortsPipeline.js` | New flow order, remove estimation logic, branch on frameChain |
 | `api/lib/modelRegistry.js` | Add `r2vEndpoint` field to R2V-capable models |
-| `api/lib/pipelineHelpers.js` | Remove audio stretching from `assembleShort()` |
-| `src/pages/CampaignsNewPage.jsx` | Filter video models by framework type |
-| `api/lib/videoStyleFrameworks.js` | No schema changes needed — existing `frameChain` boolean sufficient |
+| `api/lib/pipelineHelpers.js` | Update `assembleShort()` — voiceover placed with actual total duration, no mismatch |
+| `src/pages/CampaignsNewPage.jsx` | Filter video models by framework type, reset model on framework switch |
+| `api/lib/videoStyleFrameworks.js` | Update all `frameChain: false` frameworks to `ttsMode: 'single'` |
 
 ## Out of Scope
 
 - Voiceover duration measurement/verification (trust TTS output)
 - Per-scene mixed continuous/cut transitions
 - Lip-sync (voiceover only, not lip-synced)
-- Changes to framework definitions (existing `frameChain` boolean maps directly)
+- Adding new framework fields (existing `frameChain` boolean maps directly; only `ttsMode` values change)
 - Storyboard pipeline (separate system, not affected)
