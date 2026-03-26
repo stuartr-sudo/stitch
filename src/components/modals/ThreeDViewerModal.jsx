@@ -41,6 +41,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [activeSlot, setActiveSlot] = useState(null);
+  const activeSlotRef = useRef(null);
   const [glbError, setGlbError] = useState(null);
   const [cameraInfo, setCameraInfo] = useState('');
   const modelViewerRef = useRef(null);
@@ -117,25 +118,27 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
 
   const handleLibrarySelect = (item) => {
     const url = item.url || item.image_url;
-    if (url && activeSlot) {
+    // Use ref for synchronous slot tracking (supports rapid multi-select calls)
+    const currentSlot = activeSlotRef.current;
+    if (url && currentSlot) {
       setImages(prev => {
-        const next = { ...prev, [activeSlot]: url };
-        // If filling an angle slot, auto-advance to next empty angle slot and keep library open
+        const next = { ...prev, [currentSlot]: url };
+        // Auto-advance to next empty slot for multi-select support
         const angleSlots = ANGLE_SLOTS.filter(s => !s.required);
-        const isAngleSlot = angleSlots.some(s => s.key === activeSlot);
-        if (isAngleSlot) {
-          const nextEmpty = angleSlots.find(s => s.key !== activeSlot && !next[s.key]);
-          if (nextEmpty) {
-            setActiveSlot(nextEmpty.key);
-            // Keep library open for bulk selection
-            return next;
-          }
+        const nextEmpty = angleSlots.find(s => s.key !== currentSlot && !next[s.key]);
+        if (nextEmpty) {
+          activeSlotRef.current = nextEmpty.key;
+          setActiveSlot(nextEmpty.key);
+          return next;
         }
+        // All slots full
+        activeSlotRef.current = null;
         setShowLibrary(false);
         setActiveSlot(null);
         return next;
       });
     } else {
+      activeSlotRef.current = null;
       setShowLibrary(false);
       setActiveSlot(null);
     }
@@ -357,7 +360,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { setActiveSlot('front_image_url'); setShowLibrary(true); }}
+                          onClick={() => { activeSlotRef.current = 'front_image_url'; setActiveSlot('front_image_url'); setShowLibrary(true); }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
                           <FolderOpen className="w-3 h-3 mr-1" /> Library
@@ -416,7 +419,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                           size="sm"
                           onClick={() => {
                             const emptySlot = ANGLE_SLOTS.filter(s => !s.required).find(s => !images[s.key]);
-                            if (emptySlot) { setActiveSlot(emptySlot.key); setShowLibrary(true); }
+                            if (emptySlot) { activeSlotRef.current = emptySlot.key; setActiveSlot(emptySlot.key); setShowLibrary(true); }
                           }}
                           className="text-xs border-slate-300 text-slate-600 hover:bg-slate-100"
                         >
@@ -530,7 +533,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
       {/* Library modal */}
       <LibraryModal
         isOpen={showLibrary}
-        onClose={() => { setShowLibrary(false); setActiveSlot(null); }}
+        onClose={() => { setShowLibrary(false); activeSlotRef.current = null; setActiveSlot(null); }}
         onSelect={handleLibrarySelect}
         mediaType="images"
       />
