@@ -939,13 +939,24 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       } catch (err) {
         console.warn('[Storyboard] Frame extraction failed:', err.message);
       }
-      updateScene(scene.id, { status: 'done', videoUrl, lastFrameUrl: lastFrame });
+      // Save to library and get permanent Supabase URL
+      let permanentUrl = videoUrl;
+      try {
+        const saveRes = await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: videoUrl, type: 'video', title: `[Storyboard] Scene ${scene.sceneNumber} - ${storyboardTitle || storyboardName}`, source: 'storyboard' }),
+        });
+        const saveData = await saveRes.json();
+        if (saveData.url && saveData.uploadedToStorage) {
+          permanentUrl = saveData.url;
+          console.log('[Storyboard] Saved to Supabase:', permanentUrl.substring(0, 80));
+        }
+      } catch (e) {
+        console.warn('[Storyboard] Library save failed, using original URL:', e.message);
+      }
+      updateScene(scene.id, { status: 'done', videoUrl: permanentUrl, lastFrameUrl: lastFrame });
       toast.success(`Scene ${scene.sceneNumber} generated`);
-      apiFetch('/api/library/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: videoUrl, type: 'video', title: `[Storyboard] Scene ${scene.sceneNumber} - ${storyboardTitle || storyboardName}`, source: 'storyboard' }),
-      }).catch(() => {});
     } catch (err) {
       if (err.message !== 'Cancelled') {
         updateScene(scene.id, { status: 'error' });
