@@ -56,6 +56,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
   const pollTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const providerRef = useRef('fal');
+  const pollUrlsRef = useRef({});
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -187,7 +188,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
         const response = await apiFetch('/api/viewer3d/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId, provider: providerRef.current }),
+          body: JSON.stringify({ requestId, provider: providerRef.current, ...pollUrlsRef.current }),
         });
         if (!response.ok) {
           pollTimerRef.current = setTimeout(poll, 5000);
@@ -256,6 +257,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
 
       if (data.requestId) {
         providerRef.current = data.provider || modelConfig.provider;
+        pollUrlsRef.current = { statusUrl: data.statusUrl, responseUrl: data.responseUrl };
         setGenerationStatus('Queued...');
         pollForResult(data.requestId);
       }

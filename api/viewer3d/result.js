@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
   const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_KEY } = await getUserKeys(req.user.id, req.user.email);
 
-  const { requestId, provider } = req.body;
+  const { requestId, provider, statusUrl, responseUrl } = req.body;
   if (!requestId) {
     return res.status(400).json({ error: 'Missing requestId' });
   }
@@ -89,35 +89,48 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'FAL API key not configured.' });
       }
 
-      const pollUrl = `https://queue.fal.run/fal-ai/meshy/v5/multi-image-to-3d/requests/${requestId}`;
-      const resultResponse = await fetch(pollUrl, {
+      // Step 1: Check status via status URL
+      const checkStatusUrl = statusUrl || `https://queue.fal.run/fal-ai/meshy/v5/multi-image-to-3d/requests/${requestId}/status`;
+      const statusResponse = await fetch(checkStatusUrl, {
+        headers: { 'Authorization': `Key ${FAL_KEY}` },
+      });
+
+      if (!statusResponse.ok) {
+        console.error('[3DViewer] FAL status error:', statusResponse.status);
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+
+      const statusData = await statusResponse.json();
+
+      if (statusData.status === 'IN_QUEUE') {
+        return res.status(200).json({
+          status: 'queued',
+          requestId,
+          queuePosition: statusData.queue_position || null,
+        });
+      }
+      if (statusData.status === 'IN_PROGRESS') {
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+      if (statusData.status === 'FAILED') {
+        return res.status(200).json({ status: 'failed', error: statusData.error || 'Generation failed' });
+      }
+
+      // Step 2: Status is COMPLETED — fetch the result
+      const resultUrl = responseUrl || `https://queue.fal.run/fal-ai/meshy/v5/multi-image-to-3d/requests/${requestId}`;
+      const resultResponse = await fetch(resultUrl, {
         headers: { 'Authorization': `Key ${FAL_KEY}` },
       });
 
       if (!resultResponse.ok) {
         const errorText = await resultResponse.text();
-        console.error('[3DViewer] FAL poll error:', resultResponse.status, errorText);
-        return res.status(200).json({ status: 'processing', requestId });
+        console.error('[3DViewer] FAL result error:', resultResponse.status, errorText);
+        return res.status(200).json({ status: 'failed', error: 'Failed to retrieve result' });
       }
 
       const data = await resultResponse.json();
 
-      // Check if still in queue or processing
-      if (data.status === 'IN_QUEUE') {
-        return res.status(200).json({
-          status: 'queued',
-          requestId,
-          queuePosition: data.queue_position || null,
-        });
-      }
-      if (data.status === 'IN_PROGRESS') {
-        return res.status(200).json({ status: 'processing', requestId });
-      }
-      if (data.status === 'FAILED') {
-        return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
-      }
-
-      // Completed — extract GLB
+      // Extract GLB
       const glbUrl = data.model_glb?.url || data.model_urls?.glb?.url || data.model_urls?.glb;
       if (!glbUrl) {
         return res.status(200).json({ status: 'failed', error: 'No 3D model in result' });

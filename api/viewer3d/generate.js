@@ -160,9 +160,18 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'No request ID returned from FAL' });
       }
 
+      console.log('[3DViewer] FAL queue response:', JSON.stringify({ request_id: requestId, status_url: data.status_url, response_url: data.response_url }));
+
       logCost(req.user.email, 'fal', 'meshy-v5-3d', 0.40, { requestId });
 
-      return res.status(200).json({ success: true, requestId, provider: 'fal', status: 'processing' });
+      return res.status(200).json({
+        success: true,
+        requestId,
+        provider: 'fal',
+        status: 'processing',
+        statusUrl: data.status_url,
+        responseUrl: data.response_url,
+      });
     }
 
   } catch (error) {
