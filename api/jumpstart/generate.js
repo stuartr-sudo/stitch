@@ -598,13 +598,18 @@ async function handleVeo3(req, res, params) {
   const allImages = [imageUrl, ...additionalImages];
 
   // Strip copyrighted brand names that trigger Veo content policy
-  const cleanPrompt = prompt
+  let cleanPrompt = prompt
     .replace(/\b(Pixar|Cocomelon|DreamWorks|Disney|Illumination|Laika|Blue Sky|Aardman|Sarah and Duck|Bluey|Peppa Pig|Paw Patrol|Sesame Street|Nickelodeon|Cartoon Network|Studio Ghibli|Ghibli|Nintendo|Pokémon|Pokemon|Marvel|DC Comics|Warner Bros|Paramount|Sony Pictures|Universal|Netflix|Hulu|HBO|Nick Jr|PBS Kids)\b/gi, '')
     // Clean up orphaned grammar from stripping: "inspired by and ," → "inspired by"
     .replace(/\b(inspired by|style of|like|similar to|reminiscent of)\s+(and\s*,?\s*|,\s*and\s*,?\s*)/gi, '$1 ')
     .replace(/,\s*,/g, ',')
     .replace(/\s{2,}/g, ' ')
     .trim();
+
+  // Veo 3.1 R2V has no negative_prompt field — strip any "AVOID:" section
+  // the cohesive prompt builder appends. Embedding it in the main prompt
+  // confuses the model and contributes to no_media_generated rejections.
+  cleanPrompt = cleanPrompt.replace(/\s*AVOID:\s*.*/i, '').trim();
 
   const requestBody = {
     prompt: cleanPrompt,
@@ -614,7 +619,7 @@ async function handleVeo3(req, res, params) {
     resolution: resolution || '720p',
     generate_audio: enableAudio !== false,
     auto_fix: true,
-    safety_tolerance: '4',
+    safety_tolerance: '6',
   };
 
   console.log('[JumpStart/Veo3] Request:', {
@@ -679,7 +684,7 @@ async function handleVeo3Fast(req, res, params) {
     resolution: resolution,
     generate_audio: enableAudio !== false,
     auto_fix: true,
-    safety_tolerance: '4',
+    safety_tolerance: '6',
   };
 
   // Add negative prompt if provided
@@ -760,7 +765,7 @@ async function handleVeo3FirstLast(req, res, params) {
     resolution: resolution,
     generate_audio: enableAudio !== false,
     auto_fix: true,
-    safety_tolerance: '4',
+    safety_tolerance: '6',
   };
 
   // Add negative prompt if provided

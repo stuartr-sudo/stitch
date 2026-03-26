@@ -181,7 +181,8 @@ Rules:
 - Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, Sarah and Duck, Bluey, Peppa Pig, Paw Patrol, Studio Ghibli, Nickelodeon, etc.) — describe the visual style characteristics instead (e.g., "soft watercolor 2D animation" not "Sarah and Duck style")
 - Keep the prompt under 300 words — concise but vivid
 - If a video style direction is provided, integrate its cinematography naturally
-- If negative/avoidance items are listed, end with "AVOID: [items]" as the final line`;
+- Do NOT include any "AVOID:" or negative prompt section — video models handle negatives separately
+- Focus entirely on what the scene SHOULD look like, not what to avoid`;
   }
 
   return base; // imagineer default

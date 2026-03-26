@@ -75,7 +75,8 @@ export default async function handler(req, res) {
     duration: veoDuration,
     resolution: '720p',
     generate_audio: false,
-    safety_tolerance: '4',
+    safety_tolerance: '6',
+    auto_fix: true,
   };
 
   const submitRes = await fetch('https://queue.fal.run/fal-ai/veo3.1/fast/first-last-frame-to-video', {
