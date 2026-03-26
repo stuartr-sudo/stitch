@@ -419,6 +419,12 @@ export default function CampaignsNewPage() {
       if (fw.defaults.imageModel) setImageModel(fw.defaults.imageModel);
       if (fw.defaults.videoModel) setVideoModel(fw.defaults.videoModel);
     }
+    if (fw.frameChain === false) {
+      const currentModel = VIDEO_MODELS.find(m => m.value === videoModel);
+      if (currentModel && !currentModel.r2v) {
+        setVideoModel(fw.defaults?.videoModel || 'fal_veo3');
+      }
+    }
     setTimeout(() => goNext(), 150);
   };
 
@@ -693,6 +699,9 @@ export default function CampaignsNewPage() {
   const fastFrameworks = universalFrameworks.filter(f => f.category === 'fast_paced');
   const nicheStoryFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'story');
   const nicheFastFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'fast_paced');
+
+  const isCutFramework = selectedFramework && selectedFramework.frameChain === false;
+  const availableModels = isCutFramework ? VIDEO_MODELS.filter(m => m.r2v) : VIDEO_MODELS;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -1114,7 +1123,7 @@ export default function CampaignsNewPage() {
             {wizardStep === 'video_model' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-2">
-                  {VIDEO_MODELS.map(m => (
+                  {availableModels.map(m => (
                     <button key={m.value} onClick={() => setVideoModel(m.value)}
                       className={`p-3 rounded-xl border text-left transition-all ${videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
                       <div className="flex justify-between items-center">
