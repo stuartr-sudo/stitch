@@ -225,14 +225,6 @@ export default function EditImageModal({
 
   const handleSetAsBase = (id) => { setImages(prev => prev.map(img => ({ ...img, isBase: img.id === id }))); };
 
-  const saveToLibrary = (url) => {
-    apiFetch('/api/library/save', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, type: 'image', title: 'Edited Image', source: 'editimage' }),
-    }).then(r => r.json()).then(data => { if (data.saved) toast.success('Saved to library!'); })
-      .catch(() => {});
-  };
-
   const modelDef = MODELS.find(m => m.id === model) || MODELS[0];
   const isWavespeed = modelDef.multiImage;
 
@@ -522,7 +514,8 @@ export default function EditImageModal({
         {expandedImage && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8"
             onClick={() => setExpandedImage(null)}
-            onKeyDown={(e) => e.key === 'Escape' && setExpandedImage(null)}>
+            onKeyDown={(e) => e.key === 'Escape' && setExpandedImage(null)}
+            tabIndex={-1} ref={el => el && el.focus()}>
             <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setExpandedImage(null)}
                 className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-100">
