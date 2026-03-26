@@ -13,8 +13,8 @@ New sidebar tool for generating 3D models from images and interactively viewing 
 ### Components
 
 - `src/components/modals/ThreeDViewerModal.jsx` — full-width modal with 3D viewer + controls
-- `api/3d/generate.js` — backend endpoint, sends image(s) to FAL Hunyuan 3D Pro, polls for result
-- `api/3d/result.js` — polling endpoint for async generation status
+- `api/viewer3d/generate.js` — backend endpoint, submits image(s) to FAL queue, returns requestId
+- `api/viewer3d/result.js` — polling endpoint for async generation status
 
 ### 3D Rendering
 
@@ -22,7 +22,7 @@ Google's `<model-viewer>` web component. Handles orbit controls, zoom, lighting,
 
 ### Export
 
-`<model-viewer>` has a built-in `toDataURL()` method that captures the current camera view as a PNG. Upload to Supabase via `/api/library/save` with `source: '3d-viewer'`.
+`<model-viewer>` exposes `toBlob({mimeType: 'image/png'})` to capture the current camera view. The frontend converts the blob to a data URL, then sends it to the Lens-style `uploadDataUrlToSupabase()` pattern (upload base64 to Supabase storage directly) and saves via `/api/library/save` with the resulting hosted URL.
 
 ## UI Layout
 
@@ -32,6 +32,7 @@ Google's `<model-viewer>` web component. Handles orbit controls, zoom, lighting,
 
 - Center area: upload zone with drag-and-drop for front image (required)
 - Below: grid of optional angle input slots (Back, Left, Right, Top, Bottom, Left-Front, Right-Front). Each slot is a small thumbnail with an upload button. All optional — more angles = better reconstruction.
+- Image upload flow: user selects file → read as data URL for preview → on "Generate", backend uploads data URLs to Supabase storage to get hosted URLs, then passes those to FAL. Same pattern as Lens `uploadDataUrlToSupabase()`.
 - Bottom bar: "Generate 3D Model" button + model info (Hunyuan 3D Pro, ~$0.38/gen)
 
 ### State 2 — Viewer (after generation)
@@ -42,40 +43,45 @@ Google's `<model-viewer>` web component. Handles orbit controls, zoom, lighting,
   - "Download GLB" button — download the raw 3D file
   - "New Model" button — go back to input state
   - Camera info display (current rotation/zoom values)
+- Error handling: if GLB fails to load in `<model-viewer>` (corrupt file, WebGL unavailable), show error message with "Download GLB" link as fallback.
 
 ## Backend
 
-### Generation endpoint (`POST /api/3d/generate`)
+### Generation endpoint (`POST /api/viewer3d/generate`)
 
 - Auth: JWT (standard `authenticateToken` middleware)
 - Input: `{ front_image_url, back_image_url?, left_image_url?, right_image_url?, top_image_url?, bottom_image_url?, left_front_image_url?, right_front_image_url? }`
-- Submits to FAL queue endpoint `fal-ai/hunyuan-3d/v3.1/pro/image-to-3d`
+- If any image URL is a data URL (`data:`), upload to Supabase storage first to get a hosted URL (reuse `uploadDataUrlToSupabase()` pattern from Lens)
+- Submits to FAL queue endpoint (`queue.fal.run/fal-ai/hunyuan-3d/v3.1/pro/image-to-3d`), returns immediately
 - Returns `{ requestId, status: 'processing' }`
 - Uses `getUserKeys()` for FAL key resolution
+- Hardcoded defaults: `generate_type: 'Normal'`, `enable_pbr: false` (no UI toggle — keep simple)
 
-### Polling endpoint (`POST /api/3d/result`)
+### Polling endpoint (`POST /api/viewer3d/result`)
 
 - Auth: JWT
 - Input: `{ requestId }`
 - Polls FAL queue status for `fal-ai/hunyuan-3d/v3.1/pro/image-to-3d`
-- On completion: uploads GLB to Supabase storage (`media/3d/` folder), returns `{ status: 'completed', glbUrl, thumbnailUrl }`
+- On completion: uploads GLB to Supabase storage (`media/3d/{userId}/{uuid}.glb`), returns `{ status: 'completed', glbUrl, thumbnailUrl }`
 - On pending: returns `{ status: 'processing' }`
 - On failure: returns `{ status: 'failed', error }`
+- Frontend polls every 5 seconds (follow JumpStart polling pattern with `setTimeout` + cleanup on unmount)
 
 ### Export flow
 
-1. Frontend captures current `<model-viewer>` view via `toDataURL()`
-2. Sends data URL to existing `/api/library/save` with `{ url: dataUrl, type: 'image', source: '3d-viewer', title: '3D View Export' }`
-3. Image appears in Library immediately
+1. Frontend captures current `<model-viewer>` view via `modelViewerRef.current.toBlob({mimeType: 'image/png'})`
+2. Convert blob to data URL, upload to Supabase storage (`media/3d-exports/{userId}/{uuid}.png`)
+3. Save to library via `/api/library/save` with `{ url: hostedUrl, type: 'image', source: '3d-viewer', title: '3D View Export' }`
+4. Image appears in Library immediately
 
 ## Data Storage
 
-- **No new database tables** — GLB files go in Supabase storage (`media/3d/` folder), exported views go through the existing library save flow
-- **Cost logging**: calls `logCost()` with category `fal` and model `hunyuan-3d-pro`
+- **No new database tables** — GLB files go in Supabase storage (`media/3d/{userId}/`), exported views go through the existing library save flow
+- **Cost logging**: calls `logCost()` with category `fal`, model `hunyuan-3d-pro`, estimated cost `0.375`
 
 ## Route Registration
 
-- `server.js`: register `POST /api/3d/generate` and `POST /api/3d/result` with `authenticateToken`
+- `server.js`: register `POST /api/viewer3d/generate` and `POST /api/viewer3d/result` with `authenticateToken`
 - `App.jsx`: no new page route needed — modal opens from sidebar
 
 ## Sidebar Entry
@@ -112,3 +118,4 @@ Add "3D Viewer" to the Image Tools section in `HomePage.jsx` sidebar, between Le
 - No "Edit in Imagineer" button (save to Library only)
 - No new database tables or migrations
 - No Rapid tier — Pro only for multi-angle input support
+- No PBR toggle — hardcoded to off for simplicity
