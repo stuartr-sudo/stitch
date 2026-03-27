@@ -96,7 +96,8 @@ export default async function handler(req, res) {
       });
 
       if (!statusResponse.ok) {
-        console.error('[3DViewer] FAL status error:', statusResponse.status);
+        const errorText = await statusResponse.text();
+        console.error('[3DViewer] FAL status error:', statusResponse.status, errorText);
         return res.status(200).json({ status: 'processing', requestId });
       }
 
