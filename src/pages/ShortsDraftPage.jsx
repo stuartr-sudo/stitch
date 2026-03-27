@@ -175,6 +175,18 @@ export default function ShortsDraftPage() {
   // ── Generating state (pipeline running, draft not yet created) ───────────
   if (!draft && jobStatus && !error) {
     const stepLabels = {
+      // V3 pipeline steps
+      generating_narrative: 'Writing narrative…',
+      generating_voiceover: 'Creating voiceover…',
+      analyzing_voiceover: 'Analyzing word timing…',
+      aligning_blocks: 'Aligning scene blocks…',
+      directing_scenes: 'Directing keyframe prompts…',
+      generating_assets: 'Generating images & videos…',
+      validating_assembly: 'Validating timing…',
+      assembling_video: 'Assembling video…',
+      burning_captions: 'Adding captions…',
+      finalizing: 'Finalizing draft…',
+      // Legacy step labels
       research: 'Researching topic…',
       script: 'Writing script…',
       images: 'Generating images…',
@@ -183,7 +195,6 @@ export default function ShortsDraftPage() {
       music: 'Generating music…',
       captions: 'Adding captions…',
       assembly: 'Assembling video…',
-      finalizing: 'Finalizing draft…',
     };
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-6">
@@ -215,6 +226,8 @@ export default function ShortsDraftPage() {
   const meta = draft.shorts_metadata_json || {};
   const sceneInputs = draft.scene_inputs_json || [];
   const scriptScenes = meta.script?.scenes || meta.scenes || [];
+  const keyframes = meta.keyframes || [];
+  const isV3 = meta.pipeline_version === 'v3';
   const videoUrl = draft.captioned_video_url || draft.assets_json?.final_video_url;
   const posterUrl = sceneInputs[0]?.image_url || null;
   const isReady = draft.generation_status === 'ready';
@@ -284,7 +297,43 @@ export default function ShortsDraftPage() {
           {meta.music_url && (
             <MetaBadge icon={Music} label="Music" value="Included" />
           )}
+          {isV3 && meta.generation_mode && (
+            <MetaBadge icon={Film} label="Mode" value={meta.generation_mode === 'first-last-frame' ? 'First+Last Frame' : 'I2V'} />
+          )}
+          {isV3 && meta.framework && (
+            <MetaBadge icon={Hash} label="Framework" value={meta.framework} />
+          )}
         </section>
+
+        {/* ── Keyframe Gallery (V3) ──────────────────────────────────────── */}
+        {isV3 && keyframes.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">
+              Keyframes ({keyframes.length} boundary images)
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {keyframes.map((kf, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                  {kf.imageUrl && (
+                    <img
+                      src={kf.imageUrl}
+                      alt={`Keyframe ${i}`}
+                      className="w-full aspect-[9/16] object-cover"
+                    />
+                  )}
+                  <div className="p-2 space-y-1">
+                    <p className="text-xs font-medium text-slate-600">
+                      KF {i} {i === 0 ? '(opening)' : i === keyframes.length - 1 ? '(closing)' : `(scene ${i}→${i + 1})`}
+                    </p>
+                    {kf.motionHint && (
+                      <p className="text-xs text-slate-400 line-clamp-2">{kf.motionHint}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Scene Breakdown ───────────────────────────────────────────────── */}
         {sceneInputs.length > 0 && (
@@ -295,7 +344,7 @@ export default function ShortsDraftPage() {
             <div className="space-y-4">
               {sceneInputs.map((scene, i) => {
                 const scriptScene = scriptScenes[i] || {};
-                const narration = scriptScene.narration_segment || scriptScene.narration || '';
+                const narration = scene.narration || scriptScene.narration_segment || scriptScene.narration || '';
 
                 return (
                   <div
@@ -320,6 +369,9 @@ export default function ShortsDraftPage() {
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 space-y-2">
+                      {scene.framework_label && (
+                        <p className="text-xs font-semibold text-[#2C666E] uppercase">{scene.framework_label}</p>
+                      )}
                       {narration && (
                         <p className="text-sm text-slate-700 leading-relaxed">
                           {narration}
@@ -327,11 +379,11 @@ export default function ShortsDraftPage() {
                       )}
 
                       {/* Clip player */}
-                      {scene.clip_url && (
+                      {(scene.clip_url || scene.video_url) && (
                         <div>
                           {playingClip === i ? (
                             <video
-                              src={scene.clip_url}
+                              src={scene.clip_url || scene.video_url}
                               controls
                               autoPlay
                               className="w-full max-w-xs rounded-lg bg-black"
@@ -351,6 +403,11 @@ export default function ShortsDraftPage() {
 
                       {/* Metadata pills */}
                       <div className="flex flex-wrap gap-1.5">
+                        {scene.clip_duration && (
+                          <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                            {scene.clip_duration}s
+                          </span>
+                        )}
                         {scene.visual_style && (
                           <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
                             {scene.visual_style}
