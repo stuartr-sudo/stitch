@@ -319,17 +319,20 @@ export async function runShortsPipeline(opts) {
         ).catch(err => { console.warn('[shortsPipeline] Music failed:', err.message); return null; })
       : Promise.resolve(null);
 
-    // Phase A: Keyframe images — I2I chain with parallel Scene 1
+    // Phase A: Keyframe images — fully sequential I2I chain
     //
-    // Scene 1: FIRST and LAST images generated IN PARALLEL (both T2I, independent)
-    // Scene 2: FIRST = Scene 1 LAST (reuse). LAST = I2I from Scene 1 LAST.
-    // Scene 3: FIRST = Scene 2 LAST (reuse). LAST = I2I from Scene 2 LAST.
-    // ...sequential I2I chain from Scene 2 onward.
+    // For N scenes we store N+1 images: sceneImages[0..N]
+    //   sceneImages[0] = Scene 1 FIRST frame (T2I or starting_image)
+    //   sceneImages[1] = Scene 1 LAST frame = Scene 2 FIRST frame (I2I from sceneImages[0])
+    //   sceneImages[2] = Scene 2 LAST frame = Scene 3 FIRST frame (I2I from sceneImages[1])
+    //   ...
+    //   sceneImages[N] = Scene N LAST frame (I2I from sceneImages[N-1])
     //
-    // keyframeImageUrls[i] = scene i+1 first frame = scene i last frame (for i>0)
-    // keyframeImageUrls[0] = scene 1 first, keyframeImageUrls[1] = scene 1 last / scene 2 first
-    console.log(`[shortsPipeline] Phase A: Generating ${keyframes.length} keyframe images (parallel scene 1 + I2I chain)`);
-    const keyframeImageUrls = new Array(keyframes.length).fill(null);
+    // Scene i video uses: first=sceneImages[i], last=sceneImages[i+1]
+    // ALL image generation is sequential — each depends on the previous.
+    // Once all images exist, ALL video clips fire in parallel.
+    console.log(`[shortsPipeline] Phase A: Generating ${sceneCount + 1} keyframe images (sequential I2I chain)`);
+    const keyframeImageUrls = new Array(sceneCount + 1).fill(null);
 
     // I2I helper — uses nano-banana-2/edit (synchronous, accepts image_urls + prompt)
     const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
@@ -352,48 +355,49 @@ export async function runShortsPipeline(opts) {
       return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
     }
 
-    // T2I helper for generating a keyframe from text prompt
-    async function generateT2I(kfIndex) {
-      const { imagePrompt: prompt } = composePrompts({
-        sceneDirection: { imagePrompt: keyframes[kfIndex].imagePrompt, motionPrompt: keyframes[kfIndex].motionHint },
+    // Step 1: Scene 1 FIRST frame (T2I or starting_image)
+    if (starting_image) {
+      keyframeImageUrls[0] = starting_image;
+      console.log(`[shortsPipeline] KF[0] Scene 1 FIRST: using starting_image`);
+    } else {
+      const { imagePrompt: prompt0 } = composePrompts({
+        sceneDirection: { imagePrompt: keyframes[0].imagePrompt, motionPrompt: keyframes[0].motionHint },
         visualStyle, visualStylePrompt,
         frameworkDefaults: framework?.sceneDefaults,
         aspectRatio, loraConfigs,
-        isFirstScene: kfIndex === 0, frameChain: false,
+        isFirstScene: true, frameChain: false,
       });
-      return withRetry(
-        () => generateImageV2(resolvedImageModel || 'fal_flux', prompt, aspectRatio, keys, supabase, {
+      keyframeImageUrls[0] = await withRetry(
+        () => generateImageV2(resolvedImageModel || 'fal_flux', prompt0, aspectRatio, keys, supabase, {
           loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
         }),
         { maxAttempts: 2, baseDelayMs: 2000 }
-      );
+      ).catch(err => { console.error(`[shortsPipeline] KF[0] T2I failed: ${err.message}`); return null; });
+      console.log(`[shortsPipeline] KF[0] Scene 1 FIRST: ${keyframeImageUrls[0] ? 'OK' : 'FAILED'}`);
     }
 
-    // ── Scene 1: First + Last in PARALLEL ──
-    const scene1FirstPromise = starting_image
-      ? Promise.resolve(starting_image)
-      : generateT2I(0).catch(err => { console.error(`[shortsPipeline] KF0 T2I failed: ${err.message}`); return null; });
-
-    const scene1LastPromise = keyframes.length > 1
-      ? generateT2I(1).catch(err => { console.error(`[shortsPipeline] KF1 T2I failed: ${err.message}`); return null; })
-      : Promise.resolve(null);
-
-    const [scene1First, scene1Last] = await Promise.all([scene1FirstPromise, scene1LastPromise]);
-    keyframeImageUrls[0] = scene1First;
-    if (keyframes.length > 1) keyframeImageUrls[1] = scene1Last;
-    console.log(`[shortsPipeline] Scene 1 parallel: first=${scene1First ? 'OK' : 'FAILED'}, last=${scene1Last ? 'OK' : 'FAILED'}`);
-
-    // ── Scenes 2..N: Sequential I2I chain from previous scene's last image ──
-    // keyframeImageUrls[k] already has scene k's first frame (= previous scene's last).
-    // We generate keyframeImageUrls[k+1] = scene k's last frame via I2I from keyframeImageUrls[k].
-    for (let k = 2; k < keyframes.length; k++) {
-      const prevLastImage = keyframeImageUrls[k - 1]; // previous scene's last = this scene's first
-      if (!prevLastImage) {
-        console.error(`[shortsPipeline] Keyframe ${k}: chain broken, falling back to T2I`);
-        keyframeImageUrls[k] = await generateT2I(k).catch(err => {
-          console.error(`[shortsPipeline] KF${k} T2I fallback failed: ${err.message}`);
-          return null;
+    // Step 2: Sequential I2I chain — each scene's LAST frame from its FIRST frame
+    // KF[1] = Scene 1 LAST (I2I from KF[0]) = Scene 2 FIRST
+    // KF[2] = Scene 2 LAST (I2I from KF[1]) = Scene 3 FIRST
+    // ...
+    // KF[N] = Scene N LAST (I2I from KF[N-1])
+    for (let k = 1; k <= sceneCount; k++) {
+      const prevImage = keyframeImageUrls[k - 1];
+      if (!prevImage) {
+        console.error(`[shortsPipeline] KF[${k}]: chain broken (no KF[${k - 1}]), falling back to T2I`);
+        const { imagePrompt: fallbackPrompt } = composePrompts({
+          sceneDirection: { imagePrompt: keyframes[k].imagePrompt, motionPrompt: keyframes[k].motionHint },
+          visualStyle, visualStylePrompt,
+          frameworkDefaults: framework?.sceneDefaults,
+          aspectRatio, loraConfigs,
+          isFirstScene: false, frameChain: false,
         });
+        keyframeImageUrls[k] = await withRetry(
+          () => generateImageV2(resolvedImageModel || 'fal_flux', fallbackPrompt, aspectRatio, keys, supabase, {
+            loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+          }),
+          { maxAttempts: 2, baseDelayMs: 2000 }
+        ).catch(err => { console.error(`[shortsPipeline] KF[${k}] T2I fallback failed: ${err.message}`); return null; });
       } else {
         const { imagePrompt: i2iPrompt } = composePrompts({
           sceneDirection: { imagePrompt: keyframes[k].imagePrompt, motionPrompt: keyframes[k].motionHint },
@@ -403,14 +407,11 @@ export async function runShortsPipeline(opts) {
           isFirstScene: false, frameChain: true,
         });
         keyframeImageUrls[k] = await withRetry(
-          () => generateI2I(prevLastImage, i2iPrompt, aspectRatio),
+          () => generateI2I(prevImage, i2iPrompt, aspectRatio),
           { maxAttempts: 2, baseDelayMs: 2000 }
-        ).catch(err => {
-          console.error(`[shortsPipeline] KF${k} I2I failed: ${err.message}`);
-          return null;
-        });
+        ).catch(err => { console.error(`[shortsPipeline] KF[${k}] I2I failed: ${err.message}`); return null; });
       }
-      console.log(`[shortsPipeline] Keyframe ${k}/${keyframes.length - 1}: ${keyframeImageUrls[k] ? 'OK' : 'FAILED'}`);
+      console.log(`[shortsPipeline] KF[${k}] Scene ${k} LAST / Scene ${k + 1} FIRST: ${keyframeImageUrls[k] ? 'OK' : 'FAILED'}`);
     }
 
     characterRef = keyframeImageUrls[0];
