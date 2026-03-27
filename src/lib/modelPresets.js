@@ -10,14 +10,14 @@ export const IMAGE_MODELS = [
 ];
 
 export const VIDEO_MODELS = [
-  { value: 'wavespeed_wan', label: 'Wavespeed WAN', strength: 'Fastest, budget-friendly', price: '~$0.10/vid', r2v: false },
-  { value: 'fal_kling', label: 'Kling 2.0 Master', strength: 'Realistic motion', price: '$0.28/sec', r2v: false },
-  { value: 'fal_hailuo', label: 'Hailuo (MiniMax)', strength: 'Cinematic', price: '$0.50/vid', r2v: false },
-  { value: 'fal_veo3', label: 'Veo 3.1 (Google)', strength: 'Best quality + audio', price: '$0.10/sec', r2v: true },
-  { value: 'fal_veo2', label: 'Veo 2 (Google)', strength: 'Excellent realism', price: '$0.50/sec', r2v: false },
-  { value: 'fal_kling_v3', label: 'Kling V3 Pro', strength: 'Latest Kling + audio', price: '$0.28/sec', r2v: false },
-  { value: 'fal_kling_o3', label: 'Kling O3 Pro', strength: 'Start+end frame control', price: '$0.28/sec', r2v: true },
-  { value: 'fal_wan25', label: 'Wan 2.5 Preview', strength: 'Good quality, cheap', price: '$0.05/sec', r2v: false },
-  { value: 'fal_wan_pro', label: 'Wan Pro', strength: 'Premium WAN, 1080p', price: '$0.80/vid', r2v: false },
-  { value: 'fal_pixverse', label: 'PixVerse V4.5', strength: 'Great value', price: '$0.05/seg', r2v: false },
+  { value: 'wavespeed_wan', label: 'Wavespeed WAN', strength: 'Fastest, budget-friendly', price: '~$0.10/vid', r2v: false, flf: false },
+  { value: 'fal_kling', label: 'Kling 2.0 Master', strength: 'Realistic motion', price: '$0.28/sec', r2v: false, flf: false },
+  { value: 'fal_hailuo', label: 'Hailuo (MiniMax)', strength: 'Cinematic', price: '$0.50/vid', r2v: false, flf: false },
+  { value: 'fal_veo3', label: 'Veo 3.1 (Google)', strength: 'Best quality, first+last frame', price: '$0.10/sec', r2v: true, flf: true },
+  { value: 'fal_veo2', label: 'Veo 2 (Google)', strength: 'Excellent realism', price: '$0.50/sec', r2v: false, flf: false },
+  { value: 'fal_kling_v3', label: 'Kling V3 Pro', strength: 'Latest Kling, first+last frame', price: '$0.28/sec', r2v: false, flf: true },
+  { value: 'fal_kling_o3', label: 'Kling O3 Pro', strength: 'Start+end frame control', price: '$0.28/sec', r2v: true, flf: true },
+  { value: 'fal_wan25', label: 'Wan 2.5 Preview', strength: 'Good quality, cheap', price: '$0.05/sec', r2v: false, flf: false },
+  { value: 'fal_wan_pro', label: 'Wan Pro', strength: 'Premium WAN, 1080p', price: '$0.80/vid', r2v: false, flf: false },
+  { value: 'fal_pixverse', label: 'PixVerse V4.5', strength: 'Great value', price: '$0.05/seg', r2v: false, flf: false },
 ];

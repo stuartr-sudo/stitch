@@ -562,14 +562,16 @@ export default function CampaignsNewPage() {
 
   const handlePreviewImage = async () => {
     const scene1 = scriptScenes[0];
-    if (!scene1?.visual_prompt) { toast.error('No script scenes — generate a script first'); return; }
+    if (!scene1) { toast.error('No script scenes — generate a script first'); return; }
+    const previewPrompt = scene1.visual_prompt || scene1.narration_segment || scene1.narration || '';
+    if (!previewPrompt) { toast.error('No scene content — generate a script first'); return; }
     setPreviewImageLoading(true);
     setPreviewImageUrl(null);
     try {
       const res = await apiFetch('/api/campaigns/preview-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          visual_prompt: scene1.visual_prompt,
+          visual_prompt: previewPrompt,
           visual_style: visualStyle,
           visual_style_prompt: getVisualStylePrompt(visualStyle),
           video_style: videoStyle,
@@ -701,7 +703,10 @@ export default function CampaignsNewPage() {
   const nicheFastFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'fast_paced');
 
   const isCutFramework = selectedFramework && selectedFramework.frameChain === false;
-  const availableModels = isCutFramework ? VIDEO_MODELS.filter(m => m.r2v) : VIDEO_MODELS;
+  // V3 pipeline: only show first-last-frame models (Veo 3.1, Kling O3, Kling V3)
+  const availableModels = contentType === 'shorts'
+    ? VIDEO_MODELS.filter(m => m.flf)
+    : isCutFramework ? VIDEO_MODELS.filter(m => m.r2v) : VIDEO_MODELS;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
