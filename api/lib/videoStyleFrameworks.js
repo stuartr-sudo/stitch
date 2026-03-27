@@ -54,6 +54,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Call to meaning', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'story-open',
+      hookExamples: ['Six months ago, I couldn\'t walk up a flight of stairs without stopping.', 'I spent three years building something that nobody wanted.'],
+      narrativeArc: 'setup → inciting moment → struggle → turning point → resolution',
+      toneDescriptor: 'reflective and honest, building from vulnerability to strength',
+      forbiddenPatterns: ['generic motivation quotes', 'vague "I learned so much" without specifics'],
+    },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['everything', 'never', 'finally', 'realized'] },
+    tts: { defaultVoice: 'Aoede', styleInstructions: 'Speak slowly with deliberate pacing, sound reflective and contemplative, gradually build energy and intensity toward the end. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Ambient piano with subtle strings, emotionally reflective and gentle. Quiet intimate opening, building warmth through middle, uplifting resolution at end. Soft pads and reverb throughout.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'warm natural light, golden hour tones', colorPaletteDefault: 'warm earth tones, soft golden highlights', cameraDefault: 'medium close-up, gentle handheld movement, 50mm lens' },
   },
 
   origin_story: {
@@ -102,6 +113,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Legacy/future', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'story-open',
+      hookExamples: ['It started with a $50 loan and a borrowed laptop.', 'Before they were famous, they were sleeping on a friend\'s couch.'],
+      narrativeArc: 'humble beginning → spark of ambition → early struggles → breakthrough → current success',
+      toneDescriptor: 'nostalgic and inspirational, building from small to epic',
+      forbiddenPatterns: ['overnight success narratives', 'glossing over the hard parts'],
+    },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['nobody', 'everything', 'started', 'became'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Start with a warm storytelling tone, gradually build energy and excitement as the story progresses, peak with pride and admiration in the final scenes. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Gentle acoustic guitar opening, building to full orchestral swell. Quiet nostalgia at start, growing confidence through middle, triumphant and inspiring at climax.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'natural light transitioning from dim to bright', colorPaletteDefault: 'muted desaturated tones shifting to vibrant warm colors', cameraDefault: 'wide establishing shots narrowing to intimate close-ups, tracking movement' },
   },
 
   mini_documentary: {
@@ -150,6 +172,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Closing thought', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'mystery-reveal',
+      hookExamples: ['Behind these walls lies a secret that changed an entire industry.', 'What you are about to see has never been shown publicly before.'],
+      narrativeArc: 'cold open hook → context → deep investigation → complication → insight',
+      toneDescriptor: 'authoritative and measured, intellectually engaging',
+      forbiddenPatterns: ['sensationalism without substance', 'unsupported claims presented as fact'],
+    },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['actually', 'hidden', 'reveals', 'evidence'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with authoritative documentary narrator tone, maintain steady measured pace throughout, add subtle gravitas to key revelations. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Cinematic underscore with low strings and atmospheric pads. Subtle tension building throughout, restrained but weighty. Brief swells at key moments of revelation.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'cinematic, dramatic side-lighting with deep shadows', colorPaletteDefault: 'desaturated cool tones with selective warm highlights', cameraDefault: 'slow push-in, shallow depth of field, 85mm lens' },
   },
 
   day_in_the_life: {
@@ -195,6 +228,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Why they love it', beat: 'reflection', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'story-open',
+      hookExamples: ['My alarm goes off at 4:30 AM and most people think I\'m crazy.', 'This is what 12 hours in a Michelin-star kitchen actually looks like.'],
+      narrativeArc: 'morning routine → core work → unexpected moment → evening wind-down → reflection',
+      toneDescriptor: 'casual and warm, authentic first-person vlog energy',
+      forbiddenPatterns: ['overly polished narration', 'making mundane tasks sound dramatic'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['actually', 'honestly', 'favorite', 'real'] },
+    tts: { defaultVoice: 'Zephyr', styleInstructions: 'Speak casually like talking to a friend, keep energy warm and natural, match the relaxed vlog tone with genuine enthusiasm at highlight moments. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Lo-fi hip-hop beats with soft piano and vinyl crackle. Continuous relaxed groove throughout, never overwhelming the narration. Gentle and consistent.', genre: 'lo-fi', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'natural daylight, shifting with time of day', colorPaletteDefault: 'warm casual tones, soft and inviting', cameraDefault: 'handheld POV, wide angle 24mm, natural movement' },
   },
 
   before_after: {
@@ -238,6 +282,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The detail', beat: 'detail', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'mystery-reveal',
+      hookExamples: ['You won\'t believe this is the same room.', 'Three weeks ago this looked completely different.'],
+      narrativeArc: 'before state → transformation process → dramatic reveal → detail appreciation',
+      toneDescriptor: 'building anticipation to a satisfying visual payoff',
+      forbiddenPatterns: ['spoiling the reveal early', 'underselling the transformation'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['watch', 'completely', 'transformation', 'reveal'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Build excitement steadily from calm description to peak energy at the reveal moment, use dramatic pauses right before showing the after. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Building tension with rhythmic percussion and rising synth layers. Quiet anticipation at start, escalating energy through process, dramatic release and satisfaction at the reveal.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'clean even lighting for clear comparison', colorPaletteDefault: 'neutral tones for before, vibrant saturated for after', cameraDefault: 'locked tripod for matched angles, slow reveal pan' },
   },
 
   explainer_story: {
@@ -283,6 +338,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'So what?', beat: 'payoff', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'question',
+      hookExamples: ['Ever wonder why your phone battery dies faster in the cold?', 'There\'s a reason traffic always gets worse at exactly 5:17 PM.'],
+      narrativeArc: 'curiosity question → common assumption → real answer → proof → implications',
+      toneDescriptor: 'curious and slightly energetic, like explaining to a smart friend',
+      forbiddenPatterns: ['condescending explanations', 'burying the answer too deep'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['actually', 'really', 'turns out', 'because'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with genuine curiosity and slight excitement, emphasize the reveal moment when the real answer lands, keep the tone conversational and accessible. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Light plucked strings with curious melodic patterns. Playful and inquisitive opening, building subtle momentum through explanation, satisfying harmonic resolution when the answer lands.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'bright clean lighting with slight warmth', colorPaletteDefault: 'clean modern tones, whites and accent colors', cameraDefault: 'medium shots with gentle zoom transitions, clear framing' },
   },
 
   emotional_tribute: {
@@ -329,6 +395,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Closing reflection', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: {
+      hookPattern: 'story-open',
+      hookExamples: ['Some things are too beautiful to forget.', 'They don\'t make them like this anymore.'],
+      narrativeArc: 'opening beauty → significance → cherished moments → emotional core → closing reflection',
+      toneDescriptor: 'slow, warm, and deeply emotional with reverent beauty',
+      forbiddenPatterns: ['rushing emotional beats', 'generic sentimentality without specifics'],
+    },
+    pacing: { wordsPerSecond: 2.3, pauseBetweenScenes: 0.6, emphasisWords: ['beautiful', 'remember', 'always', 'forever'] },
+    tts: { defaultVoice: 'Aoede', styleInstructions: 'Speak with deep warmth and emotional weight, allow pauses to breathe, let the beauty of the words carry their own impact. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Solo piano with gradually entering strings. Deeply emotional and intimate, like a memory unfolding. Gentle swells at emotional peaks, never overwhelming, ending with bittersweet beauty.', genre: 'orchestral', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'soft diffused golden light, dreamy and warm', colorPaletteDefault: 'warm sepia tones, soft pastels, nostalgic warmth', cameraDefault: 'slow dolly, 85mm with shallow depth of field, gentle movement' },
   },
 
   top_x_countdown: {
@@ -381,6 +458,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Item #1', beat: 'item', durationRange: [10, 12], overlayText: '#1' },
       ],
     },
+    narrative: {
+      hookPattern: 'list-countdown',
+      hookExamples: ['Number five alone will change how you think about breakfast.', 'I ranked every single one and the winner shocked me.'],
+      narrativeArc: 'hook → item N → item N-1 → ... → number one reveal',
+      toneDescriptor: 'energetic and punchy, each item building anticipation for the next',
+      forbiddenPatterns: ['burying the best item too early', 'items that feel like filler'],
+    },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['number', 'best', 'worst', 'winner'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver each item with punchy energy, build excitement as numbers count down, give number one extra dramatic weight and slower delivery. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat electronic with driving rhythm and energetic synth hooks. High energy throughout with building intensity as countdown progresses. Brief musical stings between items, climactic swell for number one.', genre: 'electronic', energy: 'high' },
+    sceneDefaults: { lightingDefault: 'bold dramatic lighting with high contrast', colorPaletteDefault: 'vibrant saturated colors, bold accent pops', cameraDefault: 'quick snap zooms, dynamic angles, fast cuts' },
   },
 
   everything_you_need_to_know: {
@@ -425,6 +513,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Bottom line', beat: 'takeaway', durationRange: [6, 8], overlayText: '{takeaway}' },
       ],
     },
+    narrative: {
+      hookPattern: 'question',
+      hookExamples: ['In the next 60 seconds you will know more about quantum computing than 99% of people.', 'Everything about the housing market crash in under a minute.'],
+      narrativeArc: 'what is it → why it matters → how it works → key fact → bottom line',
+      toneDescriptor: 'fast but clear, information-dense without being breathless',
+      forbiddenPatterns: ['wasting time on obvious definitions', 'leaving out the most important fact'],
+    },
+    pacing: { wordsPerSecond: 3.3, pauseBetweenScenes: 0.2, emphasisWords: ['everything', 'need', 'know', 'key'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Speak rapidly but with crystal clarity, never sacrifice comprehension for speed, emphasize the bottom line takeaway at the end with slightly slower delivery. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Ticking clock percussion with urgent electronic undertone. Driving momentum from start, creating sense of time pressure and information density. Brief satisfying resolution at the end.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'clean bright studio lighting', colorPaletteDefault: 'high contrast with info-graphic accent colors', cameraDefault: 'tight framing, jump cuts, kinetic text-friendly composition' },
   },
 
   myth_busting: {
@@ -475,6 +574,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What to do instead', beat: 'takeaway', durationRange: [8, 10], overlayText: '{takeaway}' },
       ],
     },
+    narrative: {
+      hookPattern: 'contrarian',
+      hookExamples: ['Everything you were taught about stretching before exercise is wrong.', 'The advice your dentist gives you is based on a study from 1945.'],
+      narrativeArc: 'provocative claim → myth stated → evidence against → truth revealed → what to do instead',
+      toneDescriptor: 'confident and slightly provocative, backed by evidence',
+      forbiddenPatterns: ['debunking without providing the correct alternative', 'being smug without substance'],
+    },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['wrong', 'actually', 'truth', 'instead'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver myths with skeptical emphasis, hit the truth reveal with confident authority, maintain debunking energy throughout without becoming preachy. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dramatic orchestral stabs for myth reveals with confident electronic groove underneath. Tension on each myth statement, satisfying resolution on each truth. Building dramatic energy throughout.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'high contrast dramatic lighting', colorPaletteDefault: 'red for myths, green for truths, bold graphic colors', cameraDefault: 'punchy zoom-ins, graphic overlay friendly framing' },
   },
 
   comparison_versus: {
@@ -518,6 +628,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The verdict', beat: 'verdict', durationRange: [8, 10], overlayText: 'WINNER: {X}' },
       ],
     },
+    narrative: {
+      hookPattern: 'question',
+      hookExamples: ['I bought both and tested them side by side for 30 days.', 'Everyone has an opinion but nobody actually tested it until now.'],
+      narrativeArc: 'matchup intro → contender A analysis → contender B analysis → decisive verdict',
+      toneDescriptor: 'analytical and fair, building to a decisive conclusion',
+      forbiddenPatterns: ['obvious bias from the start', 'wishy-washy verdict that picks neither'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['versus', 'winner', 'better', 'clearly'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Maintain analytical fairness throughout both contender sections, shift to decisive confident energy at the verdict, give clear emphasis to the winner announcement. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Competitive sports-style electronic with rhythmic tension. Even-handed energy during analysis, dramatic pause before verdict, triumphant reveal for the winner.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'clean split lighting for comparison shots', colorPaletteDefault: 'neutral tones with team-colored accents for each contender', cameraDefault: 'matched framing for fair comparison, side-by-side compositions' },
   },
 
   did_you_know: {
@@ -562,6 +683,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Mind-blower', beat: 'climax', durationRange: [8, 10], overlayText: '{phrase}' },
       ],
     },
+    narrative: {
+      hookPattern: 'mystery-reveal',
+      hookExamples: ['There is a lake in Canada that turns purple every autumn and nobody knows why.', 'Your body replaces itself so completely that none of your atoms are older than ten years.'],
+      narrativeArc: 'teaser hook → fact 1 → fact 2 → fact 3 → mind-blowing finale',
+      toneDescriptor: 'conspiratorial and surprising, each fact landing with impact',
+      forbiddenPatterns: ['commonly known facts', 'facts without a wow factor'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['secret', 'nobody', 'actually', 'impossible'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with conspiratorial energy like sharing secrets, give each fact a moment to land before moving on, build to the mind-blowing finale with maximum impact. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Mysterious plucked strings with subtle electronic pulses. Curious and intriguing atmosphere building with each fact, growing intensity and wonder throughout, dramatic reveal accent for the finale.', genre: 'ambient', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'moody atmospheric lighting with spotlight accents', colorPaletteDefault: 'deep blues and purples with golden highlights', cameraDefault: 'slow dramatic push-ins, mystery-reveal framing' },
   },
 
   challenge_experiment: {
@@ -607,6 +739,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Verdict', beat: 'verdict', durationRange: [8, 10], overlayText: '{verdict}' },
       ],
     },
+    narrative: {
+      hookPattern: 'story-open',
+      hookExamples: ['I ate nothing but potatoes for 30 days and the results were insane.', 'I deleted social media for 90 days to see what would happen to my brain.'],
+      narrativeArc: 'premise → early days → struggle → unexpected discovery → results and verdict',
+      toneDescriptor: 'excited and personal, authentic vlog energy with honest outcomes',
+      forbiddenPatterns: ['fake or exaggerated results', 'skipping the struggle part'],
+    },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['day', 'happened', 'results', 'verdict'] },
+    tts: { defaultVoice: 'Zephyr', styleInstructions: 'Start with excited energy at the premise, show genuine struggle during the middle, build suspense before the results, deliver the verdict with honest conviction. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat motivational indie rock with driving rhythm. Excited energy at start, determined undertone through struggle, building anticipation toward results, satisfying payoff.', genre: 'indie', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'natural light, vlog-style authenticity', colorPaletteDefault: 'warm energetic tones, slightly desaturated for authenticity', cameraDefault: 'handheld vlog angles, wide-to-close transitions, POV shots' },
   },
 
   history_timeline: {
@@ -655,6 +798,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What comes next', beat: 'future', durationRange: [8, 10], overlayText: 'FUTURE' },
       ],
     },
+    narrative: {
+      hookPattern: 'list-countdown',
+      hookExamples: ['In 1901 there were 45 car companies in America. Here is what happened to all of them.', 'The entire 3000-year history of written language in under a minute.'],
+      narrativeArc: 'origin → early growth → golden era → modern shift → present and future',
+      toneDescriptor: 'fast and factual, giving each era equal energy and weight',
+      forbiddenPatterns: ['spending too long on one era', 'skipping significant periods'],
+    },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.2, emphasisWords: ['year', 'era', 'revolution', 'changed'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Deliver each era with equal energy and authority, maintain a rapid but clear pace through the timeline, shift vocal tone to match the era being described. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Era-shifting soundtrack blending historical instruments with modern electronic. Starting with simple acoustic tones, evolving through orchestral and jazz influences, arriving at contemporary electronic.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'era-appropriate lighting shifting from warm to modern', colorPaletteDefault: 'sepia tones for early eras, shifting to modern vibrant colors', cameraDefault: 'quick cuts between eras, matched composition across time periods' },
   },
 
   hot_take: {
@@ -698,6 +852,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The alternative', beat: 'recommendation', durationRange: [8, 10], overlayText: '{recommendation}' },
       ],
     },
+    narrative: {
+      hookPattern: 'contrarian',
+      hookExamples: ['College degrees are the biggest scam of the 21st century and I can prove it.', 'The most popular productivity advice is actually making you less productive.'],
+      narrativeArc: 'bold opinion → why everyone is wrong → the evidence → the better alternative',
+      toneDescriptor: 'bold, opinionated, and slightly provocative but backed by reasoning',
+      forbiddenPatterns: ['hot takes without supporting evidence', 'being contrarian just for clicks'],
+    },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['wrong', 'overrated', 'instead', 'actually'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Open with bold confident energy, deliver the opinion like you genuinely believe it, back it up with authoritative evidence delivery, close with a compelling alternative. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Confident electronic beat with dramatic stabs. Bold opening energy, intensifying through the argument, decisive and victorious at the recommendation. Attitude-driven rhythm throughout.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'bold dramatic spotlight with dark background', colorPaletteDefault: 'high contrast, bold reds and blacks', cameraDefault: 'tight close-ups, confrontational framing, dynamic angles' },
   },
 
   how_it_works: {
@@ -743,6 +908,17 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Why it matters', beat: 'payoff', durationRange: [8, 10], overlayText: '{takeaway}' },
       ],
     },
+    narrative: {
+      hookPattern: 'question',
+      hookExamples: ['You use WiFi every day but do you actually know how it works?', 'There are 60,000 miles of blood vessels in your body and they do something incredible.'],
+      narrativeArc: 'question hook → basic foundation → core mechanism → fascinating detail → real-world significance',
+      toneDescriptor: 'clear and teacher-like with genuine enthusiasm for the subject',
+      forbiddenPatterns: ['overcomplicating explanations', 'using jargon without defining it'],
+    },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['works', 'basically', 'cool part', 'means'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak like an enthusiastic teacher explaining to a curious student, build excitement at the cool mechanism reveal, maintain clarity throughout even when concepts are complex. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Light curious melody with gentle electronic textures. Playful and educational opening, building subtle wonder through the mechanism explanation, satisfying resolution at the payoff.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'clean bright lighting, educational clarity', colorPaletteDefault: 'clean whites with blue and teal accents', cameraDefault: 'medium shots with diagram-friendly framing, smooth transitions' },
   },
 
   // ──────────────────────────────────────────────────────────────────
@@ -794,6 +970,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Final verdict', beat: 'payoff', durationRange: [10, 12], overlayText: '{verdict}' },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['I just spent 48 hours testing the tool everyone is talking about.', 'This AI tool does in 10 seconds what used to take me 3 hours.'], narrativeArc: 'problem statement → tool introduction → live demo → unexpected result → final verdict', toneDescriptor: 'enthusiastic tech reviewer, showing rather than telling', forbiddenPatterns: ['only showing best results', 'ignoring obvious flaws'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['watch', 'look', 'actually', 'works'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with tech enthusiast energy, add genuine surprise during demo results, maintain honest assessment tone throughout, deliver verdict with clear conviction. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Techy electronic with curious synth arpeggios and subtle glitch textures. Clean modern feel, building curiosity through demo, punctuated surprise at results, clean resolution at verdict.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'clean modern tech-style lighting, slight blue cast', colorPaletteDefault: 'dark UI backgrounds with neon accent colors', cameraDefault: 'screen capture style framing, close-ups on results, clean UI shots' },
   },
 
   ai_breaking_news: {
@@ -838,6 +1019,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Bottom line', beat: 'takeaway', durationRange: [6, 8], overlayText: '{takeaway}' },
       ],
     },
+    narrative: { hookPattern: 'contrarian', hookExamples: ['The announcement that just dropped will affect every single person reading this.', 'This is not a drill — the entire AI landscape just shifted.'], narrativeArc: 'breaking headline → key details → context → implications → what to watch', toneDescriptor: 'urgent and authoritative, news-anchor energy with tech expertise', forbiddenPatterns: ['burying the lead', 'speculation presented as fact'] },
+    pacing: { wordsPerSecond: 3.3, pauseBetweenScenes: 0.2, emphasisWords: ['breaking', 'just', 'changes', 'everything'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Open with urgent news-anchor authority, deliver details rapidly but clearly, provide context with expert confidence, close with forward-looking prediction. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Urgent news-style percussion with driving electronic rhythm. Immediate high energy, sustained intensity through details, brief analytical calm for context, forward-momentum close.', genre: 'electronic', energy: 'high' },
+    sceneDefaults: { lightingDefault: 'news studio lighting, clean and bright', colorPaletteDefault: 'breaking news reds and whites, high contrast', cameraDefault: 'tight anchor framing, lower-third graphic space, urgent quick cuts' },
   },
 
   ai_tool_review: {
@@ -882,6 +1068,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Final rating', beat: 'verdict', durationRange: [8, 10], overlayText: '{rating}' },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['Is this the tool that finally replaces Photoshop?', 'Everyone says this AI is the best — I tested it for a month to find out.'], narrativeArc: 'what is it → best features → biggest flaws → who should use it → final rating', toneDescriptor: 'confident reviewer with direct honest opinions', forbiddenPatterns: ['sponsored-feeling praise without criticism', 'rating without clear criteria'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.2, emphasisWords: ['best', 'worst', 'rating', 'worth'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with confident reviewer authority, be enthusiastic about pros and honest about cons, deliver the final rating with decisive energy. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat tech-review electronic with clean synth layers. Energetic and modern throughout, brief dramatic dip during cons section, confident resolution at the rating.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'clean tech studio lighting with slight blue tint', colorPaletteDefault: 'modern dark theme with neon accents', cameraDefault: 'product showcase framing, rating overlay friendly, clean compositions' },
   },
 
   // ── Finance / Money ───────────────────────────────────────────────
@@ -932,6 +1123,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Start now', beat: 'close', durationRange: [8, 10], overlayText: '{takeaway}' },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['I followed this exact plan and paid off $87,000 in debt in 26 months.', 'The wealth-building strategy that Wall Street uses but never tells retail investors.'], narrativeArc: 'the goal → common mistakes → step-by-step plan → evidence of results → start now', toneDescriptor: 'authoritative mentor delivering a clear wealth-building plan', forbiddenPatterns: ['get-rich-quick promises', 'financial advice without acknowledging risk'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['exactly', 'step', 'wealth', 'strategy'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with confident mentor authority, deliver each step with clear actionable energy, build conviction throughout, close with motivating urgency to start. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Confident corporate ambient with subtle motivational undertone. Professional and trustworthy foundation, building momentum through steps, inspirational crescendo at results.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'clean corporate lighting, warm and trustworthy', colorPaletteDefault: 'navy blue, gold accents, professional tones', cameraDefault: 'clean medium shots, infographic-friendly framing, professional composition' },
   },
 
   finance_market_pulse: {
@@ -975,6 +1171,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What to watch', beat: 'outlook', durationRange: [8, 10], overlayText: '{action}' },
       ],
     },
+    narrative: { hookPattern: 'contrarian', hookExamples: ['The market just did something it hasn\'t done since 2008.', 'This one chart explains everything happening in the economy right now.'], narrativeArc: 'big move → cause analysis → sector impact → what to watch next', toneDescriptor: 'fast, data-driven, financial news anchor style', forbiddenPatterns: ['giving specific investment advice', 'panic-inducing language without context'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['moved', 'percent', 'watch', 'impact'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Deliver with rapid financial anchor authority, emphasize key numbers and percentages, maintain urgency without panic. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Urgent financial news underscore with ticking clock elements and subtle tension. Professional urgency throughout, data-driven rhythm, clean analytical resolution at outlook.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'financial studio lighting, clean and professional', colorPaletteDefault: 'green for gains, red for losses, dark terminal backgrounds', cameraDefault: 'chart overlay framing, ticker-friendly composition, clean data shots' },
   },
 
   finance_money_mistakes: {
@@ -1019,6 +1220,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What to do instead', beat: 'fix', durationRange: [8, 10], overlayText: '{fix}' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Mistake number three costs the average person $47,000 over their lifetime.', 'I made all five of these mistakes and it took me a decade to recover.'], narrativeArc: 'attention hook → mistake sequence escalating in severity → corrective action', toneDescriptor: 'direct and slightly urgent teaching tone, cautionary but helpful', forbiddenPatterns: ['shaming people for financial mistakes', 'listing mistakes without fixes'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['mistake', 'costs', 'stop', 'instead'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with urgent teaching energy, make each mistake feel consequential, deliver the fix with clear actionable authority. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dramatic cautionary electronic with tension-building bass. Warning energy on each mistake, escalating intensity, resolving into confident solution-oriented groove at the fix.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'dramatic warning-style lighting, red accents', colorPaletteDefault: 'warning reds shifting to solution greens', cameraDefault: 'tight punchy framing, numbered graphic overlays, impact-focused' },
   },
 
   // ── Motivation / Self-Help ────────────────────────────────────────
@@ -1066,6 +1272,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The breakthrough', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['It is 4:47 AM and the world is still asleep.', 'While everyone else hit snooze, I was already two miles deep into my run.'], narrativeArc: 'the alarm → the routine → the grind → the doubt → the breakthrough', toneDescriptor: 'intense warrior energy, building from discipline to triumph', forbiddenPatterns: ['toxic hustle culture without balance', 'bragging without substance'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.3, emphasisWords: ['discipline', 'grind', 'never', 'earn'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Start with intense quiet determination at the alarm, build through gritty physical energy during the grind, hit raw vulnerability at doubt, explode with triumphant power at breakthrough. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dark motivational beats building from minimal bass to full cinematic power. Quiet intensity at dawn, driving rhythm through the grind, brief vulnerable dip, explosive triumphant crescendo.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'pre-dawn darkness shifting to golden morning light', colorPaletteDefault: 'dark cool tones warming to golden triumph', cameraDefault: 'wide establishing then tight intense close-ups, tracking movement' },
   },
 
   motivation_mindset_shift: {
@@ -1111,6 +1322,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Living differently', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'contrarian', hookExamples: ['The belief that hard work equals success is the biggest lie you were ever told.', 'I stopped trying to be productive and accomplished more in a month than the entire previous year.'], narrativeArc: 'the old way → why it fails → moment of clarity → the new lens → living differently', toneDescriptor: 'reflective coaching tone, building from questioning to conviction', forbiddenPatterns: ['toxic positivity', 'mindset shifts without practical application'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['realize', 'shift', 'different', 'changed'] },
+    tts: { defaultVoice: 'Aoede', styleInstructions: 'Begin with reflective questioning tone, build through genuine insight at the clarity moment, shift to confident conviction for the new lens, close with warm inspiring certainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Thoughtful ambient piano with evolving string textures. Contemplative questioning at start, building through moment of clarity, shifting to warm inspirational swell, confident resolution.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'shifting from harsh to soft warm lighting', colorPaletteDefault: 'cool grays transitioning to warm golden tones', cameraDefault: 'medium close-ups with reflective depth, gradual opening to wider framing' },
   },
 
   motivation_life_lesson: {
@@ -1159,6 +1375,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Pass it on', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['The worst day of my life taught me the most important lesson I have ever learned.', 'Nobody warns you about this part of success.'], narrativeArc: 'the experience → the mistake → the consequence → the lesson → the wisdom shared', toneDescriptor: 'vulnerable and honest, building from pain to earned wisdom', forbiddenPatterns: ['pretending failure was planned', 'lessons without showing the pain'] },
+    pacing: { wordsPerSecond: 2.4, pauseBetweenScenes: 0.5, emphasisWords: ['learned', 'mistake', 'truth', 'wish'] },
+    tts: { defaultVoice: 'Aoede', styleInstructions: 'Speak with deep vulnerability and honesty, allow emotional weight in the consequence scene, build to quiet wisdom, deliver the lesson with hard-earned authority and warmth. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Emotional piano with minimal strings, deeply personal and intimate. Quiet pain at the mistake, heavy emotional weight at consequence, gradual lifting at realization, warm wisdom at close.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'intimate warm lighting, candlelit or golden hour', colorPaletteDefault: 'deep warm tones, amber and burgundy', cameraDefault: 'intimate close-ups, shallow focus, 85mm portrait lens' },
   },
 
   // ── Scary / Horror ────────────────────────────────────────────────
@@ -1209,6 +1430,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The twist', beat: 'twist', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['My neighbor disappeared for three days and when she came back she could not remember her own name.', 'The last thing the campers heard before the screaming started was absolute silence.'], narrativeArc: 'atmospheric setting → first warning sign → escalating wrongness → horrifying climax → aftermath', toneDescriptor: 'slow dread building from whispered calm to visceral terror', forbiddenPatterns: ['jump scares without buildup', 'gore for shock value without story'] },
+    pacing: { wordsPerSecond: 2.3, pauseBetweenScenes: 0.6, emphasisWords: ['silence', 'dark', 'something', 'behind'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Begin with quiet atmospheric whisper, gradually build tension through pauses and lowered volume, hit the horror climax with controlled intensity, end with haunted uncertainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dark ambient drones with unsettling textures and distant sounds. Quiet unease at opening, growing dissonance and tension, jarring horror accents at climax, haunting fade to silence.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'deep shadows with minimal light sources, flickering', colorPaletteDefault: 'deep blacks, desaturated blues, sickly greens', cameraDefault: 'slow stalking movement, wide dark frames, claustrophobic close-ups' },
   },
 
   horror_creepy_countdown: {
@@ -1254,6 +1480,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: '#1 - Terrifying', beat: 'climax', durationRange: [8, 10], overlayText: '#1' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Number three happened in a town just like yours.', 'The last entry on this list has never been explained.'], narrativeArc: 'hook → escalating entries from unsettling to horrifying → terrifying finale', toneDescriptor: 'dramatic and building intensity, each entry scarier than the last', forbiddenPatterns: ['starting with the scariest entry', 'entries that feel flat after a scary one'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['creepiest', 'never', 'found', 'terrifying'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Start with dark intrigue, escalate vocal intensity with each entry, use dramatic pauses between entries, deliver the final terrifying entry with maximum dread. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Eerie suspense building with each entry. Unsettling plucked strings and distant drones growing louder, more dissonant with each number. Climactic horror swell for the final entry.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'increasingly dark and distorted lighting per entry', colorPaletteDefault: 'desaturated shifting to sickly green and blood red', cameraDefault: 'tightening framing with each entry, disturbing angles, found footage feel' },
   },
 
   horror_urban_legend: {
@@ -1299,6 +1530,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Is it real?', beat: 'twist', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['Every town has a road nobody drives down after midnight.', 'The locals call it the crying bridge and they refuse to tell outsiders why.'], narrativeArc: 'legend introduction → historical context → witness accounts → encounter → is it real?', toneDescriptor: 'storytelling with eerie atmospheric world-building', forbiddenPatterns: ['dismissing the legend too quickly', 'modern explanations that kill the mystery'] },
+    pacing: { wordsPerSecond: 2.4, pauseBetweenScenes: 0.5, emphasisWords: ['legend', 'swear', 'disappeared', 'still'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with conspiratorial storytelling energy, build atmospheric dread through the history, peak tension at the encounter, end with haunting ambiguity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Mysterious dark folklore-inspired ambient with ethnic undertones. Ancient and weathered sound building into modern horror tension. Whispered textures and distant voices throughout.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'misty atmospheric lighting, moonlit and eerie', colorPaletteDefault: 'cold blues, grey mist, desaturated earth tones', cameraDefault: 'slow atmospheric pans, fog-filled wide shots, creeping movement' },
   },
 
   // ── History / Did You Know ────────────────────────────────────────
@@ -1349,6 +1585,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What remains', beat: 'legacy', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['Beneath the sand lies a city that historians said could not exist.', 'This empire ruled half the world for 400 years and then vanished completely.'], narrativeArc: 'discovery → origins and rise → peak glory → decline and fall → what remains today', toneDescriptor: 'documentary narrator with wonder and gravitas', forbiddenPatterns: ['oversimplifying complex civilizations', 'eurocentric framing of non-Western histories'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['vanished', 'empire', 'ancient', 'remains'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with documentary gravitas and wonder, convey the epic scale of civilizations rising and falling, let each era breathe with appropriate weight. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic ancient-feeling orchestral with world music elements. Grand and sweeping for the rise, triumphant at peak glory, melancholic at the fall, contemplative for what remains.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'golden ancient light, dramatic desert or ruin lighting', colorPaletteDefault: 'warm golds, sandy earth tones, aged stone colors', cameraDefault: 'sweeping aerial establishing shots, detailed close-ups of ruins' },
   },
 
   history_what_if: {
@@ -1394,6 +1635,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What it teaches us', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['What if the Roman Empire never fell?', 'One bullet missed and the entire 20th century unfolded differently.'], narrativeArc: 'what happened → the turning point → alternate timeline exploration → what it teaches us', toneDescriptor: 'speculative and intellectually engaging, building intrigue', forbiddenPatterns: ['treating speculation as fact', 'ignoring the complexity of historical causation'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['imagine', 'instead', 'would', 'changed'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Start with grounded historical authority, shift to speculative wonder at the turning point, explore alternate paths with genuine intellectual curiosity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Thoughtful orchestral with philosophical ambient textures. Grounded historical tone at start, dreamlike quality during alternate timeline, dramatic swells at divergence moments, reflective resolution.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'split lighting contrasting real and imagined', colorPaletteDefault: 'muted historical tones vs vivid alternate reality colors', cameraDefault: 'documentary framing shifting to dreamlike alternate angles' },
   },
 
   history_forgotten_heroes: {
@@ -1442,6 +1688,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Their legacy', beat: 'payoff', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['The person who saved 10,000 lives never received a single word of thanks.', 'History books left out the most important scientist of the 20th century.'], narrativeArc: 'who they were → the challenge → their contribution → why forgotten → their lasting legacy', toneDescriptor: 'respectful documentary building admiration and righteous frustration', forbiddenPatterns: ['reducing heroes to their oppression', 'ignoring systemic reasons they were forgotten'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['never', 'forgotten', 'hero', 'deserved'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with respectful reverence, build admiration through their achievements, convey righteous frustration at their being forgotten. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Inspiring orchestral building from humble solo instrument to full ensemble. Quiet dignity at introduction, growing pride through achievement, melancholic injustice, triumphant redemption at legacy.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'warm portrait lighting, dignified and respectful', colorPaletteDefault: 'sepia and warm historical tones, golden highlights', cameraDefault: 'portrait-style framing, documentary pans across historical settings' },
   },
 
   // ── True Crime ────────────────────────────────────────────────────
@@ -1492,6 +1743,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Justice served', beat: 'resolution', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['Case File 2847: for eleven years, nobody knew who left the roses.', 'The detective who solved this case said it was the one that almost broke him.'], narrativeArc: 'the crime → the victims → suspects and investigation → the breakthrough → justice', toneDescriptor: 'serious and measured true-crime narrator', forbiddenPatterns: ['glorifying violence', 'sensationalizing victim suffering'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['evidence', 'suspect', 'discovered', 'convicted'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with serious measured authority of a true-crime narrator, maintain respectful tone regarding victims, build investigative tension, deliver breakthrough with controlled revelation. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dark investigative underscore with low piano and tension strings. Ominous at the crime, respectful during victims, methodical through investigation, dramatic at breakthrough, solemn resolution.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'dark noir lighting with sharp shadows and single sources', colorPaletteDefault: 'deep noir blacks, amber streetlight, cold forensic whites', cameraDefault: 'slow deliberate pans, crime scene framing, evidence close-ups' },
   },
 
   crime_evidence_trail: {
@@ -1537,6 +1793,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The truth revealed', beat: 'revelation', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['One fiber. That is all it took to unravel a 15-year lie.', 'The evidence was right there all along but everyone was looking in the wrong place.'], narrativeArc: 'the scene → evidence piece by piece → misdirection → the connection → truth revealed', toneDescriptor: 'methodical detective energy building to a stunning revelation', forbiddenPatterns: ['jumping to conclusions without evidence', 'ignoring contradictory evidence'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.4, emphasisWords: ['evidence', 'overlooked', 'connects', 'proves'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with methodical detective precision, present each piece of evidence with weight, build the puzzle deliberately, deliver the connection with revelatory impact. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Suspenseful investigative score with ticking clock elements and building tension strings. Each evidence piece adding a layer, misdirection creating dissonance, dramatic clarity at revelation.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'forensic lab lighting mixed with noir shadows', colorPaletteDefault: 'cool clinical blues with warm evidence highlight spots', cameraDefault: 'extreme close-ups on evidence, macro detail shots, investigation board wide shots' },
   },
 
   crime_cold_case: {
@@ -1585,6 +1846,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Still unsolved?', beat: 'cliffhanger', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['For 23 years the file sat untouched in a basement. Then someone opened it.', 'The cold case detective said she only took one look at the evidence before she knew.'], narrativeArc: 'original case → investigation stalls → years pass → new evidence → fresh theory → still unsolved?', toneDescriptor: 'slow and haunted, building hope then leaving uncertainty', forbiddenPatterns: ['fake resolution to unsolved cases', 'disrespecting victims with speculation'] },
+    pacing: { wordsPerSecond: 2.4, pauseBetweenScenes: 0.5, emphasisWords: ['cold', 'years', 'reopened', 'unsolved'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with haunted gravity, convey the weight of passing years, build cautious hope with new evidence, leave the ending with appropriate uncertainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Haunting ambient with distant piano notes and unresolved harmonics. Melancholic opening, eerie emptiness during years passing, cautious hope with new evidence, ending unresolved.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'cold fluorescent and dusty attic lighting, aged', colorPaletteDefault: 'desaturated cold grays, yellowed paper tones, forensic blue', cameraDefault: 'slow pans across old evidence, time-lapse decay, dusty file close-ups' },
   },
 
   // ── Science / Nature ──────────────────────────────────────────────
@@ -1632,6 +1898,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What it means', beat: 'impact', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['The researcher expected the experiment to fail. Instead it rewrote the textbook.', 'A routine lab test revealed something that should have been physically impossible.'], narrativeArc: 'the question → what we assumed → the experiment → the surprise → why it matters', toneDescriptor: 'enthusiastic science communicator building wonder', forbiddenPatterns: ['oversimplifying to the point of inaccuracy', 'claiming discoveries are bigger than they are'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['discovered', 'impossible', 'breakthrough', 'changes'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with genuine scientific enthusiasm, build curiosity through the experiment, deliver the surprise with wonder, explain the impact with accessible authority. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Curious ambient with building orchestral wonder. Questioning opening, methodical rhythm during experiment, dramatic awe-inspiring swell at discovery, warm triumphant resolution.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'clean lab lighting with dramatic accent on discoveries', colorPaletteDefault: 'clinical whites with vibrant scientific visualization colors', cameraDefault: 'macro lab detail shots, wide facility establishing, dramatic discovery framing' },
   },
 
   science_nature_secrets: {
@@ -1675,6 +1946,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Secret #3', beat: 'reveal', durationRange: [10, 12], overlayText: '#3' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Trees talk to each other through an underground network and we just figured out how.', 'There is a lake that turns animals to stone and it is not magic.'], narrativeArc: 'hook → rapid revelations → each more mind-blowing than the last', toneDescriptor: 'excited and awe-struck, nature documentary meets social media energy', forbiddenPatterns: ['exaggerating natural phenomena', 'claiming science cannot explain well-understood processes'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['impossible', 'insane', 'nature', 'secret'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver each secret with genuine awe and excitement, maintain rapid pace between reveals, build to the most incredible one. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic nature documentary score with driving percussion and sweeping strings. Wonder and excitement throughout, building with each secret, climactic orchestral swell for the final one.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'dramatic nature lighting, sunrise/sunset golds', colorPaletteDefault: 'vivid natural greens, ocean blues, volcanic oranges', cameraDefault: 'sweeping nature cinematography, macro detail, aerial wide shots' },
   },
 
   science_thought_experiment: {
@@ -1720,6 +1996,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Mind blown', beat: 'insight', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['If you could travel at the speed of light, time would stop. But what happens at 99.9 percent?', 'Imagine a box with a cat inside. Until you open it, the cat is both alive and dead.'], narrativeArc: 'the premise → the rules → playing it out → the mind-bending conclusion', toneDescriptor: 'professorial and mind-bending, building intellectual curiosity', forbiddenPatterns: ['oversimplifying complex physics', 'presenting thought experiments as literal truth'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['imagine', 'impossible', 'means', 'therefore'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with professorial curiosity and wonder, set up the premise clearly, explore scenarios with building excitement, deliver the conclusion with genuine amazement. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Cerebral ambient with evolving synth textures and philosophical piano. Questioning opening, abstract through scenarios, revelatory moment at conclusion, contemplative fade.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'abstract dramatic lighting, chiaroscuro contrasts', colorPaletteDefault: 'deep space blacks, quantum blues, ethereal purples', cameraDefault: 'abstract compositions, impossible angles, conceptual framing' },
   },
 
   // ── Relationships / Dating ────────────────────────────────────────
@@ -1770,6 +2051,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Together', beat: 'payoff', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['We almost never met. My flight was delayed by six hours.', 'I swiped left the first time. Thank God the algorithm showed me again.'], narrativeArc: 'life before → the meeting → falling → the challenge → together', toneDescriptor: 'warm and nostalgic, emotionally honest without being saccharine', forbiddenPatterns: ['fairy-tale perfection', 'love stories without real obstacles'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['moment', 'knew', 'love', 'together'] },
+    tts: { defaultVoice: 'Leda', styleInstructions: 'Speak with warm nostalgic tenderness, let romantic moments breathe, handle the challenge with honest vulnerability, close with quiet certainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Romantic piano with gentle strings and ambient warmth. Lonely but hopeful opening, sparkling at the meeting, warm during falling in love, brief tension, deeply satisfying resolution.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'soft romantic golden light, bokeh and warmth', colorPaletteDefault: 'warm rose, golden amber, soft pastels', cameraDefault: 'intimate close-ups, dreamy shallow focus, gentle handheld, 50mm' },
   },
 
   dating_red_flags: {
@@ -1813,6 +2099,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Red flag #3', beat: 'flag', durationRange: [10, 12], overlayText: '🚩 #3' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['If they do number two on this list, leave immediately.', 'I ignored every single one of these and paid the price for three years.'], narrativeArc: 'attention hook → red flags escalating in severity → what to do about it', toneDescriptor: 'direct and no-nonsense, protective energy with real examples', forbiddenPatterns: ['trivializing genuine relationship concerns', 'being judgmental without compassion'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['flag', 'run', 'never', 'toxic'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with direct protective energy, make each red flag feel serious, escalate urgency through the list, deliver advice with empowering clarity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dramatic urgent electronic with warning undertones. Alert opening, intensifying urgency with each flag, empowering and decisive at the advice section.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'dramatic warning lighting, red accents', colorPaletteDefault: 'red warning tones shifting to empowering gold', cameraDefault: 'punchy tight framing, graphic overlay friendly, numbered compositions' },
   },
 
   dating_attachment: {
@@ -1858,6 +2149,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Breaking the cycle', beat: 'solution', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['The reason you keep choosing partners who pull away has nothing to do with them.', 'Your childhood is running your love life and you don\'t even know it.'], narrativeArc: 'the pattern → the psychology → real-world example → root cause → how to break the cycle', toneDescriptor: 'warm educational therapist energy, empathetic and insightful', forbiddenPatterns: ['pathologizing attachment styles', 'pop psychology without nuance'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['attachment', 'pattern', 'why', 'heal'] },
+    tts: { defaultVoice: 'Leda', styleInstructions: 'Speak with warm therapist-like empathy, make the psychology feel personal, deliver root cause with compassionate clarity, offer the solution with genuine hope. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Thoughtful ambient piano with gentle emotional textures. Empathetic opening, building insight through education, vulnerability at root cause, warm hopeful resolution.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'warm soft therapeutic lighting, safe and intimate', colorPaletteDefault: 'soft warm neutrals, calming blues and gentle greens', cameraDefault: 'intimate medium close-ups, soft focus background, therapy-session framing' },
   },
 
   // ── Health / Fitness ──────────────────────────────────────────────
@@ -1905,6 +2201,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The after', beat: 'payoff', durationRange: [10, 12], overlayText: 'AFTER' },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['Twelve weeks ago I could not do a single pull-up.', 'This is the same person. Same mirror. Same light. 90 days apart.'], narrativeArc: 'the before → the plan → the grind → the breakthrough → the after reveal', toneDescriptor: 'motivating and honest, showing the real work behind the result', forbiddenPatterns: ['unrealistic timelines', 'hiding the hard parts of transformation'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['transformation', 'weeks', 'before', 'after'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Start with honest vulnerability at the before, build through determined grit, show genuine pride at breakthrough, deliver the after reveal with earned satisfaction. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Motivational hip-hop inspired beat building from minimal to full production. Vulnerable start, driving rhythm through the grind, powerful crescendo at breakthrough, triumphant energy at after.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'gym lighting transitioning from harsh to heroic', colorPaletteDefault: 'muted at before, vibrant and strong at after', cameraDefault: 'matched mirror angles for comparison, workout action shots, progress tracking' },
   },
 
   fitness_health_hack: {
@@ -1948,6 +2249,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'How to start', beat: 'action', durationRange: [10, 12], overlayText: '{step}' },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['Adding this one ingredient to your morning water improved my sleep by 40 percent.', 'Doctors in Japan have been prescribing this for decades but it just reached the West.'], narrativeArc: 'the hack → the science behind it → how to start doing it today', toneDescriptor: 'enthusiastic and actionable, backed by real science', forbiddenPatterns: ['miracle cure language', 'health claims without scientific basis'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['hack', 'science', 'proven', 'start'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver the hack with enthusiastic clarity, back it up with confident science delivery, make the action steps feel immediately doable. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat energetic electronic with clean positive vibes. Bright opening, confident educational middle, motivating action-oriented close. Fresh and health-focused energy throughout.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'bright clean health and wellness lighting', colorPaletteDefault: 'fresh greens, clean whites, energetic orange accents', cameraDefault: 'clean product shots, infographic-friendly framing, action step compositions' },
   },
 
   fitness_myth_buster: {
@@ -1992,6 +2298,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What actually works', beat: 'action', durationRange: [8, 10], overlayText: '{action}' },
       ],
     },
+    narrative: { hookPattern: 'contrarian', hookExamples: ['Your personal trainer is telling you to do this and it is actually making you weaker.', 'The most popular pre-workout supplement does literally nothing and here is the proof.'], narrativeArc: 'provocative claim → myth stated → scientific debunk → what actually works', toneDescriptor: 'direct coach energy, debunking with authority and real science', forbiddenPatterns: ['debunking without offering alternatives', 'cherry-picking studies'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['myth', 'wrong', 'actually', 'works'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with confident debunking authority, present myths with skeptical emphasis, deliver truth with evidence-backed conviction, offer alternatives with coaching energy. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Confident energetic electronic with bold debunking stabs. Provocative opening, dramatic myth-reveals, satisfying truth drops, empowering close with what actually works.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'gym lighting with dramatic myth vs truth contrast', colorPaletteDefault: 'red for myths, green for truths, bold contrast', cameraDefault: 'exercise demonstration framing, split-screen myth vs truth, coaching angles' },
   },
 
   // ── Gaming / Pop Culture ──────────────────────────────────────────
@@ -2042,6 +2353,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What it means', beat: 'payoff', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['There is a room in this game that the developers never wanted you to find.', 'The true ending has been hiding in the code since launch and nobody noticed for seven years.'], narrativeArc: 'surface story → deeper layer → hidden lore → connections revealed → what it means', toneDescriptor: 'reverent storytelling for the source material, building discovery', forbiddenPatterns: ['dismissing fan theories without consideration', 'spoilers without warning'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['hidden', 'lore', 'secret', 'connected'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with reverent enthusiasm for the source material, build discovery layer by layer, deliver hidden lore reveals with genuine excitement. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic mysterious orchestral with fantasy game-score influence. Familiar opening, deepening mystery through discovery, dramatic revelation swells, epic satisfying conclusion.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'atmospheric game-world lighting, fantasy glow', colorPaletteDefault: 'rich fantasy colors, deep purples and golds, magical accents', cameraDefault: 'cinematic game-capture style, dramatic reveals, lore-discovery framing' },
   },
 
   gaming_easter_eggs: {
@@ -2086,6 +2402,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The best one', beat: 'climax', durationRange: [10, 12], overlayText: 'BEST' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['This Easter egg was hidden so well it took the community nine years to find it.', 'The developers left a personal message in the code that will make you cry.'], narrativeArc: 'hook → rapid Easter egg reveals → each more hidden → the best one saved for last', toneDescriptor: 'excited fan energy with rapid discovery reveals', forbiddenPatterns: ['well-known Easter eggs everyone already found', 'Easter eggs that are just bugs'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['hidden', 'found', 'secret', 'missed'] },
+    tts: { defaultVoice: 'Zephyr', styleInstructions: 'Deliver each Easter egg with excited fan discovery energy, build excitement as they get more obscure, save maximum enthusiasm for the best one. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Playful exciting electronic with game-inspired chiptune elements. Fun and energetic, brief discovery jingles for each egg, triumphant celebration for the best one.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'vibrant game-inspired neon and screen glow', colorPaletteDefault: 'bright game UI colors, neon accents, dark backgrounds', cameraDefault: 'screen-capture framing, zoom-in on hidden details, reveal animations' },
   },
 
   gaming_pop_breakdown: {
@@ -2129,6 +2450,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Hot take', beat: 'verdict', durationRange: [8, 10], overlayText: '{take}' },
       ],
     },
+    narrative: { hookPattern: 'contrarian', hookExamples: ['Everyone is celebrating this announcement but nobody noticed the red flag in the fine print.', 'The internet is divided and both sides are missing the real point.'], narrativeArc: 'what happened → context → analysis → hot take verdict', toneDescriptor: 'fast opinionated commentary with informed analysis', forbiddenPatterns: ['uninformed takes', 'outrage bait without substance'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['trending', 'drama', 'means', 'take'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Speak with fast commentary energy, deliver context with informed authority, give the hot take with confident opinion. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Energetic dramatic electronic with pop culture flair. Trending-news energy, analytical groove during context, building drama toward the take, decisive verdict punctuation.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'bold media-style lighting, high energy', colorPaletteDefault: 'vivid pop culture colors, trending gradient accents', cameraDefault: 'fast jump cuts, reaction-shot framing, graphic overlay compositions' },
   },
 
   // ── Conspiracy / Mystery ──────────────────────────────────────────
@@ -2179,6 +2505,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Make your own conclusion', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['I started with a simple question and ended up discovering something I was not supposed to find.', 'Each layer goes deeper than the last and at the bottom is something nobody talks about.'], narrativeArc: 'surface level → deeper layer → hidden connections → the bottom → draw your own conclusion', toneDescriptor: 'conspiratorial energy building paranoia layer by layer', forbiddenPatterns: ['presenting speculation as confirmed fact', 'targeting real individuals without evidence'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.4, emphasisWords: ['deeper', 'hidden', 'connected', 'coincidence'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Start with casual curiosity, build conspiratorial intensity with each layer, increase urgency and paranoia deeper down, end with provocative open-ended uncertainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dark conspiratorial ambient with descending bass tones and unsettling textures. Surface curiosity shifting to paranoid depth, each layer adding dissonance, never fully resolving.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'progressively darker lighting with each level', colorPaletteDefault: 'surface bright shifting to deep dark reds and blacks', cameraDefault: 'tightening framing with each level, corkboard connection shots, red string visuals' },
   },
 
   conspiracy_cover_up: {
@@ -2227,6 +2558,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Decide for yourself', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['The official report was 400 pages long. The redacted version was 12.', 'Three journalists tried to publish this story. All three were reassigned.'], narrativeArc: 'official story → cracks appear → evidence of concealment → who covered it up → what really happened', toneDescriptor: 'investigative journalist building measured outrage with evidence', forbiddenPatterns: ['accusations without evidence', 'conspiracy without acknowledging counter-explanations'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['classified', 'redacted', 'evidence', 'truth'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Speak with investigative journalist intensity, present the official story with skeptical undertone, build measured outrage as evidence mounts, deliver truth with powerful conviction. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Tense revelatory score with investigative percussion and building string tension. Official calm at start, growing unease, dramatic evidence reveals, powerful truth-telling crescendo.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'stark contrast between official bright and hidden dark', colorPaletteDefault: 'government grays and blacks with truth-revealing whites', cameraDefault: 'document close-ups, redaction reveals, investigative board shots' },
   },
 
   conspiracy_unsolved: {
@@ -2275,6 +2611,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Still unsolved', beat: 'cliffhanger', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['We have mapped the entire ocean floor. 80 percent of it remains unexplored.', 'This question has haunted researchers for a century and we are no closer to an answer.'], narrativeArc: 'the mystery → known facts → theory exploration → why it remains unsolved → lingering wonder', toneDescriptor: 'slow and thoughtful, leaving space for wonder and genuine mystery', forbiddenPatterns: ['claiming to have solved what is genuinely unsolved', 'dismissing all theories'] },
+    pacing: { wordsPerSecond: 2.4, pauseBetweenScenes: 0.5, emphasisWords: ['nobody', 'unsolved', 'mystery', 'explain'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with contemplative mystery, present theories with genuine curiosity, maintain wonder and openness to the unknown, end with haunting unresolved ambiguity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Mysterious haunting ambient with unresolved harmonics and distant textures. Deep contemplative opening, building curiosity through theories, never resolving, fading into cosmic wonder.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'dim ethereal lighting, fog and shadow', colorPaletteDefault: 'deep midnight blues, misty grays, faint starlight', cameraDefault: 'slow contemplative pans, empty space framing, mystery-preserving compositions' },
   },
 
   // ── Business / Entrepreneur ───────────────────────────────────────
@@ -2325,6 +2666,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Lessons learned', beat: 'close', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['They launched with $400 and a broken printer. Now they do $30 million a year.', 'The first 50 customers said no. Customer number 51 changed everything.'], narrativeArc: 'the idea → first move → early traction → the obstacle → the pivot → the scale', toneDescriptor: 'founder storytelling energy, building excitement from humble to huge', forbiddenPatterns: ['survivorship bias without acknowledging luck', 'making it sound easy'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['started', 'pivot', 'revenue', 'scale'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Tell the story with genuine founder excitement, convey scrappy early-days energy, hit the obstacle with real tension, deliver scale-up with earned pride. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Inspirational indie-corporate with building momentum. Humble acoustic beginning, driving rhythm through traction, tense at obstacle, explosive growth energy at pivot, triumphant close.', genre: 'indie', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'garage/co-working space shifting to modern office', colorPaletteDefault: 'humble warm tones building to corporate polished colors', cameraDefault: 'scrappy handheld for early days, polished tracking for scale-up' },
   },
 
   business_breakdown: {
@@ -2369,6 +2715,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Key takeaway', beat: 'insight', durationRange: [8, 10], overlayText: '{takeaway}' },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['This company makes $180,000 every single minute. Here is exactly how.', 'The business model is so simple it seems like it should not work. But it does.'], narrativeArc: 'the company → how they actually make money → their competitive moat → key insight', toneDescriptor: 'analytical MBA-style breakdown, confident and clear', forbiddenPatterns: ['oversimplifying complex business models', 'ignoring risks and weaknesses'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.2, emphasisWords: ['revenue', 'model', 'moat', 'billion'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Speak with analytical business authority, break down revenue streams with clear confidence, emphasize the moat with strategic insight, deliver takeaway sharply. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Smart analytical electronic with corporate confidence. Clean professional opening, data-driven rhythm through revenue streams, strategic weight at the moat, sharp insight at close.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'clean corporate boardroom lighting', colorPaletteDefault: 'professional navy, white, and data-green accents', cameraDefault: 'infographic-friendly framing, data visualization overlays, corporate clean' },
   },
 
   business_revenue_playbook: {
@@ -2413,6 +2764,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Expected results', beat: 'proof', durationRange: [8, 10], overlayText: '{revenue}' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Step one takes 20 minutes and can generate your first $500 this week.', 'Three income streams you can launch with nothing but a laptop and WiFi.'], narrativeArc: 'the opportunity → tactical steps → expected results → start now', toneDescriptor: 'direct no-fluff hustle energy, every word is actionable', forbiddenPatterns: ['income claims without context', 'steps that require significant capital without saying so'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['step', 'revenue', 'start', 'money'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver with direct hustle energy, make each step feel immediately actionable, build momentum, close with urgent call to start now. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Confident hustle electronic with driving bass and entrepreneur energy. Opportunity-grabbing opening, tactical rhythm through steps, proof energy building, decisive action close.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'modern workspace lighting, productive and bright', colorPaletteDefault: 'money greens, professional blacks, gold accents', cameraDefault: 'laptop and workspace framing, step-by-step process shots, results dashboard' },
   },
 
   // ── Food / Cooking ────────────────────────────────────────────────
@@ -2460,6 +2816,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The reveal', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['My grandmother kept this recipe secret for 60 years. Today I am sharing it.', 'Three ingredients. Five minutes. The result made a professional chef ask for the recipe.'], narrativeArc: 'the dish promise → ingredients → the secret technique → the beautiful reveal', toneDescriptor: 'enthusiastic chef energy with rich sensory descriptions', forbiddenPatterns: ['skipping the why behind techniques', 'recipes without showing the final result'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['secret', 'perfect', 'crispy', 'golden'] },
+    tts: { defaultVoice: 'Pegasus', styleInstructions: 'Speak with warm enthusiastic chef energy, use sensory language, build anticipation through technique, deliver the reveal with visual pride. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Warm inviting acoustic with gentle percussion and kitchen-friendly groove. Appetizing warmth throughout, building anticipation through cooking, celebratory satisfaction at the reveal.', genre: 'acoustic', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'warm kitchen lighting, food photography style', colorPaletteDefault: 'rich food colors, warm woods, rustic tones', cameraDefault: 'overhead cooking shots, close-up food detail, steam and sizzle close-ups' },
   },
 
   food_science: {
@@ -2505,6 +2866,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Pro tip', beat: 'application', durationRange: [10, 12], overlayText: '{tip}' },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['Why does cutting onions make you cry and why does chilling them stop it?', 'The Maillard reaction is happening in your kitchen right now and it is the reason food tastes good.'], narrativeArc: 'the food question → common understanding → the actual science → practical application', toneDescriptor: 'curious science communicator with genuine food passion', forbiddenPatterns: ['making science boring', 'food science without practical cooking application'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['science', 'reaction', 'why', 'perfect'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with food-obsessed scientific curiosity, make chemistry feel delicious and accessible, deliver the practical tip with chef authority. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Curious educational ambient with culinary warmth. Questioning opening, warm through the science, satisfying resolution at the practical tip. Clean and appetizing throughout.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'lab-meets-kitchen lighting, scientific clarity with warmth', colorPaletteDefault: 'food-science whites with rich food colors', cameraDefault: 'macro food detail, molecular close-ups, cooking process documentation' },
   },
 
   food_street_tour: {
@@ -2549,6 +2915,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The winner', beat: 'verdict', durationRange: [8, 10], overlayText: 'BEST' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['This street has 47 food stalls. I tried every single one to find the best.', 'The vendor at stop three has been making this dish for 40 years using the same recipe.'], narrativeArc: 'tour begins → rapid stops with reactions → each dish showcased → the winner', toneDescriptor: 'excited foodie energy with rapid tasting notes and genuine reactions', forbiddenPatterns: ['negative food reviews', 'focusing on location over actual food'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['delicious', 'incredible', 'best', 'flavor'] },
+    tts: { defaultVoice: 'Zephyr', styleInstructions: 'Speak with excited foodie adventure energy, give rapid sensory tasting notes, show genuine reactions, build to enthusiastic winner announcement. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat world music fusion with regional instruments and driving rhythm. Adventurous and energetic, culturally rich at each stop, celebratory crescendo at the winner.', genre: 'world', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'street vendor ambient lighting, steam and glow', colorPaletteDefault: 'rich street food colors, market vibrancy, cultural tones', cameraDefault: 'handheld market walk, food close-ups, vendor action shots, POV bites' },
   },
 
   // ── Travel / Adventure ────────────────────────────────────────────
@@ -2596,6 +2967,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Why it\'s special', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['The taxi driver told me not to go there. It turned out to be the highlight of my trip.', 'I found this place by getting completely lost. And I am so glad I did.'], narrativeArc: 'the journey → first impressions → the hidden spot → why it is special', toneDescriptor: 'dreamy and awe-struck travel vlogger energy', forbiddenPatterns: ['revealing exact locations of fragile hidden spots', 'making everywhere sound the same'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['hidden', 'discovered', 'beautiful', 'secret'] },
+    tts: { defaultVoice: 'Leda', styleInstructions: 'Speak with dreamy wanderlust and genuine awe, let the beauty of discovery breathe, convey the magic of finding something unexpected. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Wanderlust ambient with world music influences and dreamy synth pads. Adventurous anticipation, awe-struck wonder at arrival, magical warmth at the hidden spot, peaceful close.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'golden hour travel lighting, natural and epic', colorPaletteDefault: 'vivid travel blues, sunset golds, lush greens', cameraDefault: 'sweeping landscape reveals, intimate discovery shots, drone aerials' },
   },
 
   travel_hacks: {
@@ -2639,6 +3015,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Hack #3', beat: 'tip', durationRange: [10, 12], overlayText: '#3' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Hack number two saved me $2,400 on my last international trip.', 'Flight attendants use this trick every time they travel.'], narrativeArc: 'hook → rapid hacks → each one more useful → saves money or time', toneDescriptor: 'fast insider knowledge energy, sharing travel secrets', forbiddenPatterns: ['hacks that no longer work', 'travel advice that only works for the wealthy'] },
+    pacing: { wordsPerSecond: 3.2, pauseBetweenScenes: 0.2, emphasisWords: ['hack', 'save', 'secret', 'free'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver hacks with insider-knowledge energy, make each one feel immediately usable, build value through the sequence. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Upbeat adventurous electronic with driving rhythm. Exciting insider-tip energy, hack accents building usefulness, satisfying helpful close.', genre: 'electronic', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'bright travel-ready lighting, airport and destination mix', colorPaletteDefault: 'travel brand colors, passport blues, destination warm tones', cameraDefault: 'quick-tip framing, graphic overlay friendly, travel action shots' },
   },
 
   travel_adventure_log: {
@@ -2687,6 +3068,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What I learned', beat: 'reflection', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['I had no plan, no map, and 48 hours in a country where I did not speak the language.', 'The guide said the trail was closed for a reason. We went anyway.'], narrativeArc: 'setting out → the unexpected → the beauty → human connection → what I learned', toneDescriptor: 'storytelling with wonder, adrenaline, and personal growth', forbiddenPatterns: ['adventure tourism without respect for local culture', 'dangerous activities without context'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['adventure', 'incredible', 'changed', 'world'] },
+    tts: { defaultVoice: 'Zephyr', styleInstructions: 'Tell the adventure with genuine wonder, convey adrenaline during challenges, show deep appreciation for beauty, reflect with authentic growth. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Cinematic adventure score with driving percussion and sweeping melodies. Exciting departure, thrilling challenges, breathtaking beauty, warm reflective resolution.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'epic adventure lighting, dramatic natural landscapes', colorPaletteDefault: 'vivid adventure colors, mountain blues, jungle greens, desert golds', cameraDefault: 'wide epic landscapes, action POV, intimate cultural portraits' },
   },
 
   // ── Psychology / Mind Blown ────────────────────────────────────────
@@ -2734,6 +3120,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Mind blown', beat: 'payoff', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['Right now your brain is filtering out 99 percent of what your eyes see.', 'I can make you see something that is not there using just three words.'], narrativeArc: 'the illusion → what you think → the psychology behind it → mind-blown revelation', toneDescriptor: 'conspiratorial mind-bending energy, questioning reality', forbiddenPatterns: ['pseudoscience claims', 'tricks that do not actually work'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['brain', 'trick', 'actually', 'illusion'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Open with conspiratorial intrigue, guide through the illusion with building wonder, deliver the psychological explanation with clarity, land the mind-blown moment. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Mysterious cerebral ambient with evolving textures and subtle dissonance. Intriguing opening, building through illusion, revelatory clarity at psychology, mind-expanding resolution.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'optical illusion-friendly lighting, clean contrasts', colorPaletteDefault: 'high contrast blacks and whites with surreal color accents', cameraDefault: 'illusion-revealing compositions, perspective tricks, clean demonstration framing' },
   },
 
   psych_social_experiment: {
@@ -2782,6 +3173,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What it means for us', beat: 'reflection', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['They put 24 strangers in a room and what happened next disturbed every psychologist.', 'The experiment was supposed to last two weeks. They shut it down after six days.'], narrativeArc: 'the hypothesis → the setup → what happened → the disturbing truth → what it means for us', toneDescriptor: 'measured documentary building to uncomfortable revelation', forbiddenPatterns: ['glorifying unethical experiments', 'oversimplifying human behavior'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['experiment', 'discovered', 'disturbing', 'human'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Narrate with documentary authority, build discomfort as results unfold, deliver the disturbing truth with measured gravity, close with thoughtful reflection. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Unsettling orchestral ambient building discomfort gradually. Clinical at setup, growing unease through results, deeply unsettling at truth, contemplative and heavy in reflection.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'clinical observation lighting shifting to harsh', colorPaletteDefault: 'sterile whites degrading to unsettling institutional tones', cameraDefault: 'surveillance-style framing, clinical observation angles, experimental documentation' },
   },
 
   psych_facts: {
@@ -2826,6 +3222,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The darkest one', beat: 'climax', durationRange: [10, 12], overlayText: '#4' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['Fact three explains why you check your phone 150 times a day without realizing it.', 'Psychologists call this the most dangerous bias and everyone has it.'], narrativeArc: 'hook → rapid psychology facts → each more mind-bending → the darkest one last', toneDescriptor: 'confident and impactful, each fact landing with weight', forbiddenPatterns: ['pop psychology without real research', 'armchair diagnosing'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['psychology', 'brain', 'behavior', 'dark'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver each fact with confident authority and impact, let each one land before moving on, give the darkest fact maximum weight. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Intriguing mysterious electronic with building intensity. Curious opening, each fact adding darker layers, building to the most disturbing revelation, heavy contemplative close.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'moody psychology-themed lighting, brain-scan glow', colorPaletteDefault: 'neural network blues, synaptic purples, dark mind tones', cameraDefault: 'clean fact-display framing, thought-provoking compositions, numbered overlays' },
   },
 
   // ── Space / Cosmos ────────────────────────────────────────────────
@@ -2876,6 +3277,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The edge', beat: 'climax', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['We are about to leave Earth and travel to the edge of everything that exists.', 'The farthest humans have ever traveled is 400 kilometers. We are going 46 billion light-years.'], narrativeArc: 'Earth → solar system → galaxy → deep space → the edge of the observable universe', toneDescriptor: 'awe-struck and vast, evoking the grandeur of cosmic exploration', forbiddenPatterns: ['rushing past cosmic scale', 'factual inaccuracies about distances'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['billion', 'light-years', 'edge', 'universe'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with deep cosmic wonder and awe, let the vastness breathe in pauses, build a sense of scale that makes viewers feel small and amazed. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic cosmic ambient with sweeping orchestral swells and deep space synthesizers. Familiar warmth leaving Earth, expanding wonder, vast through the galaxy, overwhelming awe at the edge.', genre: 'orchestral', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'cosmic lighting, starlight and nebula glow', colorPaletteDefault: 'deep space blacks, nebula purples, star-field whites', cameraDefault: 'sweeping cosmic fly-throughs, scale-revealing zooms, vast establishing shots' },
   },
 
   space_mystery: {
@@ -2921,6 +3327,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What we still don\'t know', beat: 'mystery', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['Something is sending radio signals from 3 billion light-years away and it follows a pattern.', 'There is a region of space where the laws of physics stop working as expected.'], narrativeArc: 'the anomaly → what we expected → why it is strange → theories → what remains unknown', toneDescriptor: 'wonder and intrigue, science documentary meets cosmic mystery', forbiddenPatterns: ['claiming aliens without evidence', 'oversimplifying complex astrophysics'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.5, emphasisWords: ['mystery', 'impossible', 'signal', 'unknown'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with scientific wonder and cosmic intrigue, present the anomaly with genuine curiosity, explore theories with open-minded fascination, end with humility. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Mysterious cosmic ambient with ethereal textures and distant signals. Strange opening, building wonder through anomaly, speculative during theories, lingering cosmic mystery.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'deep space lighting with anomalous glows and flickers', colorPaletteDefault: 'cosmic purples, anomaly-red accents, deep void blacks', cameraDefault: 'telescope-view framing, data visualization overlays, vast empty compositions' },
   },
 
   space_cosmic_scale: {
@@ -2965,6 +3376,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The full picture', beat: 'awe', durationRange: [8, 10], overlayText: '{scale}' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['If Earth were the size of a marble, the Sun would be a beach ball two football fields away.', 'The largest known star is so big its surface would reach Saturn if placed where our Sun is.'], narrativeArc: 'familiar anchor → increasingly staggering comparisons → incomprehensible finale', toneDescriptor: 'building awe with each comparison, making the vast tangible', forbiddenPatterns: ['comparisons that are hard to visualize', 'inaccurate scale representations'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['bigger', 'million', 'billion', 'incomprehensible'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Start with conversational scale, let each step up land with growing amazement, deliver the final comparison with genuine awe. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic building orchestral with each comparison triggering a larger swell. Starting small and intimate, expanding with each jump, overwhelming and majestic at the cosmic finale.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'scale-appropriate lighting from terrestrial to cosmic', colorPaletteDefault: 'Earth familiar colors scaling to cosmic nebula palette', cameraDefault: 'scale-revealing zoom-outs, size comparison split frames, cosmic perspective' },
   },
 
   // ── Animals / Wildlife ────────────────────────────────────────────
@@ -3012,6 +3428,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Its future', beat: 'conservation', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['This animal can survive in the vacuum of space and scientists still do not know how.', 'There is a fish at the bottom of the ocean that is essentially immortal.'], narrativeArc: 'meet the animal → habitat → superpower → survival strategy → ecological significance', toneDescriptor: 'reverent and detailed nature documentary with genuine wonder', forbiddenPatterns: ['anthropomorphizing animal behavior', 'ignoring conservation status'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['incredible', 'survive', 'evolved', 'nature'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Speak with reverent nature documentary authority, convey genuine wonder at abilities, describe habitat with atmospheric presence, close with conservation awareness. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Nature documentary orchestral with regional flavor and wonder. Majestic introduction, atmospheric habitat, dramatic superpower reveal, contemplative conservation close.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'natural wildlife lighting, golden savanna or deep ocean', colorPaletteDefault: 'rich natural habitat colors, earth tones and ocean blues', cameraDefault: 'wildlife telephoto framing, habitat wide shots, intimate behavior close-ups' },
   },
 
   animals_superpowers: {
@@ -3056,6 +3477,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The most insane one', beat: 'climax', durationRange: [10, 12], overlayText: '{animal}' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['This shrimp punches with the force of a bullet and can see 16 types of color.', 'The animal at number one has a power so extreme it sounds like science fiction.'], narrativeArc: 'hook → rapid superpower reveals → each more extreme → the most insane one last', toneDescriptor: 'excited and mind-blown, nature documentary meets superhero energy', forbiddenPatterns: ['exaggerating animal abilities', 'superpowers that are just normal behavior'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['superpower', 'insane', 'impossible', 'power'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver each superpower with genuine amazement, let each one top the last, build to the most incredible ability with maximum wonder. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Epic exciting orchestral with superhero energy. Bold and attention-grabbing, each reveal getting dramatic accent, building to full cinematic power at the finale.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'dramatic wildlife lighting with superhero contrast', colorPaletteDefault: 'bold vivid animal colors, dramatic contrast backgrounds', cameraDefault: 'action wildlife shots, slow-motion ability demonstrations, dramatic reveal framing' },
   },
 
   animals_nature_hunt: {
@@ -3101,6 +3527,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The outcome', beat: 'resolution', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['The cheetah has three seconds to close the gap or the gazelle lives another day.', 'Beneath the surface, a silent predator has been tracking its prey for six hours.'], narrativeArc: 'predator introduction → stalking → the chase → the outcome → circle of life', toneDescriptor: 'tense whisper building to explosive intensity, wildlife narrator', forbiddenPatterns: ['glorifying violence in nature', 'ignoring the prey\'s perspective'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.4, emphasisWords: ['stalking', 'strike', 'survival', 'chase'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Begin with tense hushed narration during stalking, build through whispered intensity, explode with energy at the chase, deliver outcome with nature documentary gravity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Tense nature dramatic score with predatory percussion and building strings. Quiet stalking tension, heartbeat percussion building, explosive chase energy, solemn resolution.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'natural safari lighting, dust and golden hour', colorPaletteDefault: 'savanna golds, predator earth tones, natural camouflage', cameraDefault: 'telephoto wildlife tracking, slow-motion chase, predator-prey perspective shots' },
   },
 
   // ── Sports / Athletes ─────────────────────────────────────────────
@@ -3151,6 +3582,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Legacy', beat: 'payoff', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['He was cut from three teams before anyone would give him a chance.', 'The scout said she was too small to play. She went on to break every record.'], narrativeArc: 'humble beginnings → the grind → the setback → the comeback → glory and legacy', toneDescriptor: 'sports narrator building to goosebump triumph', forbiddenPatterns: ['ignoring the support system', 'making setbacks seem trivial'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['champion', 'greatest', 'overcame', 'history'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Narrate with sports documentary gravitas, build from humble origins through adversity, explode with triumphant energy at comeback, close with legacy reverence. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Inspirational sports epic building from humble acoustic to full orchestral triumph. Quiet origins, driving training rhythm, tense adversity, explosive comeback crescendo, victorious close.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'sports arena lighting from practice gym to championship', colorPaletteDefault: 'team colors building to victory gold', cameraDefault: 'training montage angles, slow-motion triumph, crowd-reaction wide shots' },
   },
 
   sports_game_changer: {
@@ -3196,6 +3632,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The aftermath', beat: 'impact', durationRange: [10, 12], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['Fourth quarter. Three seconds left. Down by two. This is the moment.', 'One decision in the 73rd minute changed the outcome of the entire tournament.'], narrativeArc: 'the stakes → the buildup → the pivotal moment → the aftermath and impact', toneDescriptor: 'sports commentary energy, slow-motion then explosive', forbiddenPatterns: ['spoiling the outcome too early', 'ignoring broader context'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['moment', 'changed', 'history', 'everything'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Build tension like a sports commentator, slow down before the pivotal play, explode with energy at the moment, deliver aftermath with historical weight. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dramatic sports score with building tension drums and orchestral swells. Heartbeat tension in buildup, time-stopping silence before the moment, explosive climax, echoing impact.', genre: 'orchestral', energy: 'medium-to-high' },
+    sceneDefaults: { lightingDefault: 'stadium lighting, dramatic spotlights and crowd glow', colorPaletteDefault: 'vivid team colors, stadium whites, dramatic shadows', cameraDefault: 'slow-motion decisive moments, wide crowd reactions, close-up intensity' },
   },
 
   sports_stats_showdown: {
@@ -3240,6 +3681,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The verdict', beat: 'verdict', durationRange: [8, 10], overlayText: 'WINNER' },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['The numbers say one thing but the fans refuse to believe it.', 'Put the stats side by side and the debate is over in 60 seconds.'], narrativeArc: 'the matchup → key stats compared → the decisive number → the data verdict', toneDescriptor: 'data-driven sports analyst with decisive authority', forbiddenPatterns: ['cherry-picking stats', 'ignoring context behind numbers'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['stats', 'percent', 'record', 'numbers'] },
+    tts: { defaultVoice: 'Orus', styleInstructions: 'Deliver stats with sports analyst precision, let each number land with authority, build the case methodically, deliver verdict with decisive finality. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Competitive analytical electronic with sports-broadcast energy. Matchup tension, data-driven rhythm through stats, anticipation to verdict, decisive triumphant resolution.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'sports broadcast studio lighting, clean and bright', colorPaletteDefault: 'data visualization colors, stat-highlight accents, versus split', cameraDefault: 'stat overlay framing, side-by-side comparison, scoreboard compositions' },
   },
 
   // ── Education / Learning ──────────────────────────────────────────
@@ -3285,6 +3731,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Remember this', beat: 'takeaway', durationRange: [8, 10], overlayText: '{takeaway}' },
       ],
     },
+    narrative: { hookPattern: 'question', hookExamples: ['You will understand quantum entanglement better than most physics students in 30 seconds.', 'The concept that runs the entire global economy explained in one sentence.'], narrativeArc: 'the concept → why it matters → how it works → memorable takeaway', toneDescriptor: 'clear teacher energy making complex things simple', forbiddenPatterns: ['oversimplifying to the point of being wrong', 'using jargon without explanation'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['simple', 'basically', 'means', 'remember'] },
+    tts: { defaultVoice: 'Puck', styleInstructions: 'Speak with clear enthusiastic teacher energy, make the concept accessible, deliver the explanation with confident clarity, land the takeaway memorably. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Light educational ambient with clean positive energy. Clear opening, supportive during explanation, satisfying completion at takeaway. Never distracting from teaching.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'clean classroom-bright lighting, welcoming', colorPaletteDefault: 'clean whites with educational blue and green accents', cameraDefault: 'clean lesson framing, diagram-friendly compositions, whiteboard-style' },
   },
 
   edu_fact_blast: {
@@ -3329,6 +3780,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Bonus fact', beat: 'climax', durationRange: [10, 12], overlayText: 'BONUS' },
       ],
     },
+    narrative: { hookPattern: 'list-countdown', hookExamples: ['After this video you will know five things that make you the smartest person in any room.', 'Fact number three is so surprising researchers double-checked it seven times.'], narrativeArc: 'hook → rapid educational facts → each more surprising → bonus fact finale', toneDescriptor: 'enthusiastic teacher delivering each fact with energy', forbiddenPatterns: ['commonly known trivia', 'facts without a surprise element'] },
+    pacing: { wordsPerSecond: 3.0, pauseBetweenScenes: 0.3, emphasisWords: ['fact', 'actually', 'incredible', 'bonus'] },
+    tts: { defaultVoice: 'Kore', styleInstructions: 'Deliver each fact with enthusiastic teaching energy, make each feel like a genuine surprise, build excitement, give the bonus fact extra amazement. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Curious upbeat electronic with educational energy and discovery accents. Engaging hook, rhythmic delivery through facts, brief discovery jingles, celebratory bonus finale.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'bright engaging classroom-meets-studio lighting', colorPaletteDefault: 'vibrant educational colors, numbered accent highlights', cameraDefault: 'fact-display framing, numbered overlay compositions, visual evidence shots' },
   },
 
   edu_discovery: {
@@ -3377,6 +3833,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'The impact', beat: 'legacy', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['She spilled the wrong chemical on the wrong plate and accidentally saved a million lives.', 'The discovery was right there for 200 years. Nobody thought to look.'], narrativeArc: 'the problem → the seeker → dead ends → the eureka moment → the lasting impact', toneDescriptor: 'storytelling building to eureka moment, documentary narrator', forbiddenPatterns: ['reducing discoveries to accidents without acknowledging preparation', 'ignoring failed attempts'] },
+    pacing: { wordsPerSecond: 2.7, pauseBetweenScenes: 0.4, emphasisWords: ['discovered', 'eureka', 'changed', 'breakthrough'] },
+    tts: { defaultVoice: 'Perseus', styleInstructions: 'Narrate with documentary storytelling authority, build through struggle with tension, deliver eureka with wonder, close with lasting impact significance. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Wonder-building orchestral with educational warmth. Contemplative problem-setting, determined searching, frustrated dead-ends, triumphant eureka swell, warm inspiring legacy.', genre: 'orchestral', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'laboratory and historical setting lighting, warm discovery glow', colorPaletteDefault: 'historical earth tones with eureka moment golden highlights', cameraDefault: 'documentary pans, historical recreation framing, discovery close-ups' },
   },
 
   // ── Paranormal / UFO ──────────────────────────────────────────────
@@ -3427,6 +3888,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'What was it?', beat: 'mystery', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['I know how this sounds. I did not believe in any of this until it happened to me.', 'The footage on my phone from that night shows something that should not exist.'], narrativeArc: 'the ordinary setting → first sign → escalating wrongness → the encounter → aftermath and mystery', toneDescriptor: 'hushed confessional building from unease to genuine dread', forbiddenPatterns: ['fake evidence presented as real', 'mocking believers or skeptics'] },
+    pacing: { wordsPerSecond: 2.3, pauseBetweenScenes: 0.6, emphasisWords: ['something', 'explain', 'saw', 'real'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Speak with hushed confessional intimacy, build dread through controlled tension, let the encounter carry maximum eerie weight, end with genuine uncertainty. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Eerie alien ambient with unsettling frequencies and distant textures. Quiet unease at opening, growing dissonance through signs, terrifying peak at encounter, haunting unresolved fade.', genre: 'ambient', energy: 'low' },
+    sceneDefaults: { lightingDefault: 'night sky lighting, eerie glows, unexplained light sources', colorPaletteDefault: 'deep night blacks, alien greens, cold blues', cameraDefault: 'found-footage feel, shaky night vision, wide empty skies, POV encounters' },
   },
 
   paranormal_evidence: {
@@ -3471,6 +3937,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'You decide', beat: 'verdict', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'mystery-reveal', hookExamples: ['This photograph has been analyzed by seven experts and none can explain what is in it.', 'The government document was declassified last month. Read what it says.'], narrativeArc: 'the claim → evidence pieces → skeptical counterpoint → viewer decides', toneDescriptor: 'investigative evidence-presenter with conspiratorial edge', forbiddenPatterns: ['presenting clearly debunked evidence as genuine', 'ignoring legitimate explanations'] },
+    pacing: { wordsPerSecond: 2.8, pauseBetweenScenes: 0.3, emphasisWords: ['evidence', 'classified', 'unexplained', 'debunk'] },
+    tts: { defaultVoice: 'Charon', styleInstructions: 'Present evidence with investigative authority and conspiratorial edge, let each piece build weight, acknowledge skeptics fairly, leave decision to viewer. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Tense X-Files style electronic with investigation percussion and conspiracy undertones. Evidence-presenting tension, dramatic key reveals, skeptical calm, unresolved conspiratorial fade.', genre: 'electronic', energy: 'medium' },
+    sceneDefaults: { lightingDefault: 'harsh fluorescent mixed with classified-document amber', colorPaletteDefault: 'government file tan, redaction black, evidence spotlight white', cameraDefault: 'evidence close-ups, document reveals, photo analysis framing' },
   },
 
   paranormal_investigation: {
@@ -3519,6 +3990,11 @@ export const VIDEO_STYLE_FRAMEWORKS = {
         { label: 'Conclusion', beat: 'verdict', durationRange: [8, 10], overlayText: null },
       ],
     },
+    narrative: { hookPattern: 'story-open', hookExamples: ['The building has been abandoned since 1987. But every night at 3 AM, the lights turn on.', 'We went in with cameras, EMF detectors, and an open mind. We came out with questions.'], narrativeArc: 'the location → the history → witness reports → the investigation → findings → conclusion', toneDescriptor: 'investigative documentary building to revelation, balanced approach', forbiddenPatterns: ['faking evidence during investigation', 'predetermined conclusions'] },
+    pacing: { wordsPerSecond: 2.5, pauseBetweenScenes: 0.4, emphasisWords: ['investigated', 'found', 'unexplained', 'evidence'] },
+    tts: { defaultVoice: 'Fenrir', styleInstructions: 'Narrate with serious investigative documentary authority, build atmospheric tension at the location, present findings with measured objectivity, deliver conclusion with appropriate ambiguity. Do not drag words out or over-enunciate. Keep delivery crisp even when slow.' },
+    music: { moodProgression: 'Dark investigation suspense with atmospheric location-building textures. Ominous introduction, historical weight, tense investigation, dramatic discovery moments, contemplative conclusion.', genre: 'ambient', energy: 'low-to-medium' },
+    sceneDefaults: { lightingDefault: 'investigation flashlight lighting, dark atmospheric locations', colorPaletteDefault: 'night investigation greens, flashlight whites, historical sepia', cameraDefault: 'night vision investigation shots, location establishing, evidence documentation' },
   },
 };
 
