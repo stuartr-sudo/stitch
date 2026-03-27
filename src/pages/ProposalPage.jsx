@@ -242,6 +242,9 @@ function ProposalContent() {
   const [lightbox, setLightbox] = useState(null);
   const [showVideoLibrary, setShowVideoLibrary] = useState(false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
+  const [pasteUrl, setPasteUrl] = useState('');
+  const [pasteType, setPasteType] = useState(null); // 'video' or 'image'
+  const [pasting, setPasting] = useState(false);
 
   const fetchMedia = async () => {
     try {
@@ -302,6 +305,28 @@ function ProposalContent() {
       fetchMedia();
     } catch (err) {
       console.error('Failed to update caption:', err);
+    }
+  };
+
+  const importFromUrl = async (url, mediaType) => {
+    setPasting(true);
+    try {
+      // Save to library first (re-uploads to Supabase for permanent URL)
+      const saveRes = await apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type: mediaType, title: 'Imported from URL', source: 'proposal' }),
+      });
+      const saveData = await saveRes.json();
+      const permanentUrl = saveData?.url || url;
+      // Add to proposal
+      await addMedia({ url: permanentUrl }, mediaType);
+      setPasteUrl('');
+      setPasteType(null);
+    } catch (err) {
+      console.error('Failed to import from URL:', err);
+    } finally {
+      setPasting(false);
     }
   };
 
@@ -500,14 +525,47 @@ function ProposalContent() {
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-3xl font-bold text-[#0f172a]">Sample Work</h2>
             {editMode && (
-              <button
-                onClick={() => setShowVideoLibrary(true)}
-                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                + Add Videos
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPasteType('video'); setPasteUrl(''); }}
+                  className="text-sm border border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/10 px-4 py-2 rounded-lg transition-colors"
+                >
+                  Paste URL
+                </button>
+                <button
+                  onClick={() => setShowVideoLibrary(true)}
+                  className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  + Add Videos
+                </button>
+              </div>
             )}
           </div>
+          {editMode && pasteType === 'video' && (
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={pasteUrl}
+                onChange={(e) => setPasteUrl(e.target.value)}
+                placeholder="Paste video URL (e.g. from FAL.ai)..."
+                autoFocus
+                className="flex-1 px-4 py-2 border border-[#e2e8f0] rounded-lg text-sm text-[#0f172a] outline-none focus:border-[#2C666E]"
+              />
+              <button
+                onClick={() => importFromUrl(pasteUrl, 'video')}
+                disabled={!pasteUrl.trim() || pasting}
+                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {pasting ? 'Importing...' : 'Import'}
+              </button>
+              <button
+                onClick={() => { setPasteType(null); setPasteUrl(''); }}
+                className="text-sm text-[#64748b] hover:text-[#0f172a] px-2"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <p className="text-[#64748b] mb-10">Examples from our animation pipeline</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {videos.map((v) => (
@@ -564,14 +622,47 @@ function ProposalContent() {
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-3xl font-bold text-[#0f172a]">Images</h2>
             {editMode && (
-              <button
-                onClick={() => setShowImageLibrary(true)}
-                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                + Add Images
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPasteType('image'); setPasteUrl(''); }}
+                  className="text-sm border border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/10 px-4 py-2 rounded-lg transition-colors"
+                >
+                  Paste URL
+                </button>
+                <button
+                  onClick={() => setShowImageLibrary(true)}
+                  className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  + Add Images
+                </button>
+              </div>
             )}
           </div>
+          {editMode && pasteType === 'image' && (
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={pasteUrl}
+                onChange={(e) => setPasteUrl(e.target.value)}
+                placeholder="Paste image URL..."
+                autoFocus
+                className="flex-1 px-4 py-2 border border-[#e2e8f0] rounded-lg text-sm text-[#0f172a] outline-none focus:border-[#2C666E]"
+              />
+              <button
+                onClick={() => importFromUrl(pasteUrl, 'image')}
+                disabled={!pasteUrl.trim() || pasting}
+                className="text-sm bg-[#2C666E] hover:bg-[#235158] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {pasting ? 'Importing...' : 'Import'}
+              </button>
+              <button
+                onClick={() => { setPasteType(null); setPasteUrl(''); }}
+                className="text-sm text-[#64748b] hover:text-[#0f172a] px-2"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <p className="text-[#64748b] mb-10">Selected work from our portfolio</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {images.map((img) => (

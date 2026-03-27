@@ -1125,8 +1125,23 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Assembly failed');
-      setAssembledUrl(data.captionedUrl || data.assembledUrl);
-      toast.success('Video assembled successfully');
+      const finalUrl = data.captionedUrl || data.assembledUrl;
+      setAssembledUrl(finalUrl);
+      // Save assembled video to library
+      try {
+        await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: finalUrl,
+            type: 'video',
+            title: `[Storyboard] ${storyboardTitle || storyboardName || 'Assembled'}`,
+            source: 'storyboard',
+          }),
+        });
+      } catch (saveErr) {
+        console.error('[Storyboard] Failed to save assembled video to library:', saveErr);
+      }
     } catch (err) {
       console.error('[Storyboard] Assembly failed:', err);
       toast.error('Assembly failed: ' + err.message);
