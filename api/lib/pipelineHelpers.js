@@ -419,20 +419,76 @@ export async function extractFirstFrame(videoUrl, falKey) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Build a rich music prompt from a framework's music config or mood label.
+ * Beatoven handles detailed descriptions well — give it genre, instruments, feel.
+ *
+ * @param {object|string} musicConfig - framework.music object or a mood string
+ * @param {string} [category] - framework category ('story' | 'fast_paced')
+ * @returns {string} Rich music prompt
+ */
+export function buildMusicPrompt(musicConfig, category = 'story') {
+  // If it's a full music config object (from expanded framework)
+  if (musicConfig && typeof musicConfig === 'object' && musicConfig.moodProgression) {
+    return `${musicConfig.moodProgression}. Instrumental only, no vocals.`;
+  }
+
+  // String mood label — expand it
+  const mood = typeof musicConfig === 'string' ? musicConfig : '';
+  if (!mood) return 'Cinematic background music with soft dynamics, instrumental only';
+
+  const paceHint = category === 'fast_paced'
+    ? 'driving rhythm, energetic pace, punchy transitions'
+    : 'flowing dynamics, natural builds and releases, smooth transitions';
+
+  return `${mood}. Instrumental only, no vocals. ${paceHint}. Suitable as background music under narration.`;
+}
+
+/**
  * @param {string} moodPrompt - e.g. 'upbeat energetic background music'
  * @param {number} durationSeconds
  * @param {object} keys - { falKey }
  * @param {object} supabase
- * @param {string} [model] - 'minimax' | 'fal_elevenlabs' | 'fal_lyria2'
+ * @param {string} [model] - 'beatoven' | 'minimax' | 'fal_elevenlabs' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
-export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'fal_lyria2') {
+export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'beatoven') {
   if (!keys.falKey) return null; // music is optional — don't block pipeline
 
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
 
   try {
-    // --- MiniMax Music V2 (default) ---
+    // --- Beatoven (duration-aware, higher quality) ---
+    if (model === 'beatoven') {
+      const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: moodPrompt.slice(0, 300),
+          negative_prompt: 'vocals, singing, speech, noise, distortion',
+          duration: clampedDuration,
+          refinement: 100,
+          creativity: 16,
+        }),
+      });
+      if (!res.ok) {
+        console.warn('[pipelineHelpers] Beatoven music gen failed, falling back to Lyria 2:', await res.text());
+        return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'fal_lyria2');
+      }
+      const queueData = await res.json();
+      if (!queueData.request_id) return null;
+      const output = await pollFalQueue(
+        'beatoven/music-generation',
+        queueData.request_id,
+        keys.falKey,
+        180,
+        4000
+      );
+      const audioUrl = output?.audio?.url || output?.audio_file?.url;
+      if (!audioUrl) return null;
+      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    }
+
+    // --- MiniMax Music V2 ---
     if (model === 'minimax') {
       const res = await fetch(`${FAL_BASE}/fal-ai/minimax-music/v2`, {
         method: 'POST',
