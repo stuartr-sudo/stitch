@@ -81,6 +81,9 @@ export async function generateScript({ niche, topic, nicheTemplate, keys, brandU
     .map((s, i) => `Scene ${i + 1} [${s.role}] (${s.duration}s): ${s.hint}`)
     .join('\n');
 
+  const frameworkScenes = framework
+    ? (framework.sceneStructure[targetDurationSeconds] || framework.sceneStructure[framework.supportedDurations[0]])
+    : null;
   const totalDuration = lockedDurations
     ? lockedDurations.reduce((a, b) => a + b, 0)
     : frameworkScenes
