@@ -620,9 +620,13 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `[Imagineer] ${result.styleLabel}`, source: 'imagineer-i2i' }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.id) await autoTagI2iImage(data.id, result);
-    } catch {
+      if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+      await autoTagI2iImage(data.id, result);
+    } catch (err) {
+      console.error('[Imagineer] Save failed:', err);
+      toast.error(`Failed to save: ${err.message || 'Unknown error'}`);
       setI2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
     }
   };
@@ -640,9 +644,12 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `[Imagineer] ${item.styleLabel}`, source: 'imagineer-i2i' }),
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (data.id) await autoTagI2iImage(data.id, item);
-      } catch {
+        if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+        await autoTagI2iImage(data.id, item);
+      } catch (err) {
+        console.error('[Imagineer] Save failed:', err);
         setI2iMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
       }
     }
