@@ -703,9 +703,9 @@ export default function CampaignsNewPage() {
   const nicheFastFrameworks = nicheSpecificFrameworks.filter(f => f.category === 'fast_paced');
 
   const isCutFramework = selectedFramework && selectedFramework.frameChain === false;
-  // V3 pipeline: only show first-last-frame models (Veo 3.1, Kling O3, Kling V3)
+  // Shorts: all video models — FLF models use V3 parallel pipeline, others use V2 sequential extract-last-frame
   const availableModels = contentType === 'shorts'
-    ? VIDEO_MODELS.filter(m => m.flf)
+    ? VIDEO_MODELS
     : isCutFramework ? VIDEO_MODELS.filter(m => m.r2v) : VIDEO_MODELS;
 
   return (

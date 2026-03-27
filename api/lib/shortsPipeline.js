@@ -29,7 +29,7 @@ import { burnCaptions } from './captionBurner.js';
 import { generateImageV2, animateImageV2 } from './mediaGenerator.js';
 import { VIDEO_MODELS, veoDuration } from './modelRegistry.js';
 import { solveDurations } from './durationSolver.js';
-import { generateMusic, assembleShort, buildMusicPrompt, uploadUrlToSupabase, pollFalQueue } from './pipelineHelpers.js';
+import { generateMusic, assembleShort, buildMusicPrompt, uploadUrlToSupabase, pollFalQueue, extractLastFrame } from './pipelineHelpers.js';
 import { getVisualStyleSuffix, getImageStrategy } from './visualStyles.js';
 import { getFramework } from './videoStyleFrameworks.js';
 import { withRetry } from './retryHelper.js';
@@ -319,20 +319,16 @@ export async function runShortsPipeline(opts) {
         ).catch(err => { console.warn('[shortsPipeline] Music failed:', err.message); return null; })
       : Promise.resolve(null);
 
-    // Phase A: Keyframe images — fully sequential I2I chain
-    //
-    // For N scenes we store N+1 images: sceneImages[0..N]
-    //   sceneImages[0] = Scene 1 FIRST frame (T2I or starting_image)
-    //   sceneImages[1] = Scene 1 LAST frame = Scene 2 FIRST frame (I2I from sceneImages[0])
-    //   sceneImages[2] = Scene 2 LAST frame = Scene 3 FIRST frame (I2I from sceneImages[1])
-    //   ...
-    //   sceneImages[N] = Scene N LAST frame (I2I from sceneImages[N-1])
-    //
-    // Scene i video uses: first=sceneImages[i], last=sceneImages[i+1]
-    // ALL image generation is sequential — each depends on the previous.
-    // Once all images exist, ALL video clips fire in parallel.
-    console.log(`[shortsPipeline] Phase A: Generating ${sceneCount + 1} keyframe images (sequential I2I chain)`);
+    // Determine generation mode: V3 (FLF) or V2 (extract-last-frame)
+    const FIRST_LAST_FRAME_MODELS = ['fal_veo3', 'fal_kling_o3', 'fal_kling_v3'];
+    const useFirstLastFrame = FIRST_LAST_FRAME_MODELS.includes(videoModel || 'fal_veo3');
+    const generationMode = useFirstLastFrame ? 'v3_flf' : 'v2_extract';
+    console.log(`[shortsPipeline] Generation mode: ${generationMode} (model=${videoModel})`);
+
     const keyframeImageUrls = new Array(sceneCount + 1).fill(null);
+
+    if (useFirstLastFrame) {
+    // ═══ V3 PATH: I2I keyframe chain → parallel FLF video ═══
 
     // I2I helper — uses nano-banana-2/edit (synchronous, accepts image_urls + prompt)
     const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
@@ -422,15 +418,11 @@ export async function runShortsPipeline(opts) {
       },
     });
 
-    // Phase B: Video clips
-    const FIRST_LAST_FRAME_MODELS = ['fal_veo3', 'fal_kling_o3', 'fal_kling_v3'];
-    const useFirstLastFrame = FIRST_LAST_FRAME_MODELS.includes(videoModel || 'fal_veo3');
-
+    // Phase B: FLF video clips — all fire in parallel
     const sceneAssets = [];
     const clips = [];
 
-    if (useFirstLastFrame) {
-      console.log(`[shortsPipeline] Phase B: Firing ${sceneCount} first-last-frame videos IN PARALLEL (model=${videoModel})`);
+      console.log(`[shortsPipeline] Phase B (V3): Firing ${sceneCount} first-last-frame videos IN PARALLEL (model=${videoModel})`);
       const isVeo = (videoModel || 'fal_veo3') === 'fal_veo3';
       const veoClampDuration = (dur) => dur <= 4 ? '4s' : dur <= 6 ? '6s' : '8s';
       const klingDuration = (dur) => String(Math.max(3, Math.min(15, Math.round(dur))));
@@ -537,58 +529,119 @@ export async function runShortsPipeline(opts) {
       console.log(`[shortsPipeline] Phase B complete: ${clips.filter(c => c.url).length}/${sceneCount} videos generated`);
 
     } else {
-      // FALLBACK: Sequential I2V for models without first-last-frame
-      console.log(`[shortsPipeline] Phase B (fallback): Sequential I2V — model ${videoModel} does not support first-last-frame`);
+      // V2 PATH: Sequential I2V with last-frame extraction for non-FLF models
+      // Flow: generate image → animate → extract last frame → use as next scene's image → repeat
+      // Fully sequential — each scene depends on the previous scene's video
+      console.log(`[shortsPipeline] Phase A+B (V2): Sequential I2V + extract-last-frame — model ${videoModel}`);
+
+      let currentImage = null;
+
+      // Scene 1 image: T2I or starting_image
+      if (starting_image) {
+        currentImage = starting_image;
+        console.log(`[shortsPipeline] V2 Scene 1 image: using starting_image`);
+      } else {
+        const { imagePrompt: prompt0 } = composePrompts({
+          sceneDirection: { imagePrompt: keyframes[0].imagePrompt, motionPrompt: keyframes[0].motionHint },
+          visualStyle, visualStylePrompt,
+          frameworkDefaults: framework?.sceneDefaults,
+          aspectRatio, loraConfigs,
+          isFirstScene: true, frameChain: false,
+        });
+        currentImage = await withRetry(
+          () => generateImageV2(resolvedImageModel || 'fal_flux', prompt0, aspectRatio, keys, supabase, {
+            loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+          }),
+          { maxAttempts: 2, baseDelayMs: 2000 }
+        ).catch(err => { console.error(`[shortsPipeline] V2 Scene 1 image failed: ${err.message}`); return null; });
+        console.log(`[shortsPipeline] V2 Scene 1 image: ${currentImage ? 'OK' : 'FAILED'}`);
+      }
+
+      // Override keyframeImageUrls[0] for checkpoint data
+      keyframeImageUrls[0] = currentImage;
+      characterRef = currentImage;
 
       for (let i = 0; i < alignedBlocks.length; i++) {
         const block = alignedBlocks[i];
         currentSceneIndex = i;
 
-        const imageUrl = keyframeImageUrls[i];
         let clipUrl = null;
+        let lastFrameUrl = null;
+        const sceneFirstFrame = currentImage;
 
-        try {
-          const motionPrompt = keyframes[i].motionHint || 'Smooth cinematic movement';
-          const { motionPrompt: composedMotion } = composePrompts({
-            sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt },
+        if (!currentImage) {
+          console.error(`[shortsPipeline] V2 Scene ${i + 1}: no image, attempting T2I fallback`);
+          const { imagePrompt: fallbackPrompt } = composePrompts({
+            sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt: keyframes[i].motionHint },
             visualStyle, visualStylePrompt,
             frameworkDefaults: framework?.sceneDefaults,
             aspectRatio, loraConfigs,
             isFirstScene: i === 0, frameChain: false,
           });
-
-          const fullPrompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt);
-
-          currentModel = videoModel;
-          clipUrl = await withRetry(
-            () => animateImageV2(videoModel || 'fal_kling', imageUrl, fullPrompt, aspectRatio, block.clipDuration, keys, supabase, {
-              loras: loraConfigs, generate_audio: false,
+          currentImage = await withRetry(
+            () => generateImageV2(resolvedImageModel || 'fal_flux', fallbackPrompt, aspectRatio, keys, supabase, {
+              loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
             }),
-            { maxAttempts: 2, baseDelayMs: 5000 }
-          );
-        } catch (sceneErr) {
-          console.error(`[shortsPipeline] Scene ${i + 1} I2V fallback failed: ${sceneErr.message}`);
+            { maxAttempts: 2, baseDelayMs: 2000 }
+          ).catch(err => { console.error(`[shortsPipeline] V2 Scene ${i + 1} T2I fallback failed: ${err.message}`); return null; });
+        }
+
+        if (currentImage) {
+          try {
+            const motionPrompt = keyframes[i].motionHint || 'Smooth cinematic movement';
+            const { motionPrompt: composedMotion } = composePrompts({
+              sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt },
+              visualStyle, visualStylePrompt,
+              frameworkDefaults: framework?.sceneDefaults,
+              aspectRatio, loraConfigs,
+              isFirstScene: i === 0, frameChain: i > 0,
+            });
+
+            const fullPrompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt);
+
+            currentModel = videoModel;
+            clipUrl = await withRetry(
+              () => animateImageV2(videoModel || 'fal_kling', currentImage, fullPrompt, aspectRatio, block.clipDuration, keys, supabase, {
+                loras: loraConfigs, generate_audio: false,
+              }),
+              { maxAttempts: 2, baseDelayMs: 5000 }
+            );
+
+            // Extract last frame → becomes next scene's starting image
+            if (clipUrl && i < alignedBlocks.length - 1) {
+              lastFrameUrl = await extractLastFrame(clipUrl, block.clipDuration, keys.falKey);
+              if (lastFrameUrl) {
+                lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/images');
+              }
+              console.log(`[shortsPipeline] V2 Scene ${i + 1}: last frame extracted: ${lastFrameUrl ? 'OK' : 'FAILED'}`);
+            }
+          } catch (sceneErr) {
+            console.error(`[shortsPipeline] V2 Scene ${i + 1} failed: ${sceneErr.message}`);
+          }
         }
 
         clips.push({
           url: clipUrl,
-          firstFrameUrl: keyframeImageUrls[i],
-          lastFrameUrl: keyframeImageUrls[i + 1],
-          imageUrl: keyframeImageUrls[i],
+          firstFrameUrl: sceneFirstFrame,
+          lastFrameUrl: lastFrameUrl,
+          imageUrl: sceneFirstFrame,
         });
 
         sceneAssets.push({
-          image_url: keyframeImageUrls[i],
+          image_url: sceneFirstFrame,
           video_url: clipUrl,
-          first_frame_url: keyframeImageUrls[i],
-          last_frame_url: keyframeImageUrls[i + 1],
+          first_frame_url: sceneFirstFrame,
+          last_frame_url: lastFrameUrl,
           voiceover_url: voiceoverUrl,
           clip_duration: block.clipDuration,
           start_time: block.startTime, end_time: block.endTime,
           narration: block.narration, framework_label: block.frameworkLabel,
         });
 
-        console.log(`[shortsPipeline] Scene ${i + 1}/${sceneCount} complete (I2V fallback)`);
+        // Chain: next scene's image = this scene's last frame
+        currentImage = lastFrameUrl || null;
+
+        console.log(`[shortsPipeline] V2 Scene ${i + 1}/${sceneCount} complete`);
       }
     }
 
@@ -734,7 +787,7 @@ export async function runShortsPipeline(opts) {
         music_volume: effectiveMusicVolume,
         tts_duration: ttsDuration,
         pipeline_version: 'v3',
-        generation_mode: useFirstLastFrame ? 'first-last-frame' : 'i2v-fallback',
+        generation_mode: generationMode, // 'v3_flf' or 'v2_extract'
       },
     });
 
