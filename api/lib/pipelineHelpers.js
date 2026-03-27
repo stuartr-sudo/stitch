@@ -335,7 +335,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {number[]} [clipDurations] - Actual duration of each clip in seconds
  * @returns {Promise<string>} Public URL of the assembled video
  */
-export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15) {
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
@@ -348,7 +348,10 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
     runningTimestamp += durationMs;
     return kf;
   });
-  const totalDurationMs = runningTimestamp;
+  // Master duration: TTS duration if provided, otherwise sum of clips
+  const totalDurationMs = ttsDuration
+    ? Math.ceil(ttsDuration * 1000)
+    : runningTimestamp;
 
   const tracks = [
     { id: 'video', type: 'video', keyframes: videoKeyframes },
