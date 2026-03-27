@@ -1041,13 +1041,15 @@ async function handleLtxAudioVideo(req, res, params) {
  * Uses elements array for character-consistent video generation
  */
 /**
- * Upscale an image using SeedVR2 via FAL — ensures reference images meet the 300x300 minimum.
- * Uses target mode to upscale to 720p. Returns the upscaled image URL, or the original on error.
+ * Upscale an image using Topaz via FAL — ensures reference images meet the 300x300 minimum.
+ * Returns the upscaled image URL, or the original on error.
  */
+const TOPAZ_ENDPOINT = 'fal-ai/topaz/upscale/image';
+
 async function upscaleImage(imageUrl, FAL_KEY) {
   try {
-    console.log(`[Upscale] Upscaling: ${imageUrl.substring(0, 80)}...`);
-    const submitRes = await fetch('https://fal.run/fal-ai/seedvr/upscale/image', {
+    console.log(`[Upscale] Upscaling (Topaz): ${imageUrl.substring(0, 80)}...`);
+    const submitRes = await fetch(`https://queue.fal.run/${TOPAZ_ENDPOINT}`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -1055,44 +1057,13 @@ async function upscaleImage(imageUrl, FAL_KEY) {
       },
       body: JSON.stringify({
         image_url: imageUrl,
-        upscale_mode: 'factor',
+        model: 'Standard V2',
         upscale_factor: 2,
-        output_format: 'jpg',
+        output_format: 'jpeg',
+        subject_detection: 'All',
+        face_enhancement: false,
       }),
     });
-
-    if (!submitRes.ok) {
-      // May be queued — check for request_id
-      const data = await submitRes.json().catch(() => null);
-      if (data?.request_id) {
-        // Use response_url/status_url from FAL (avoids path-truncation bugs with multi-segment model IDs)
-        const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
-        const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
-        // Poll queue
-        for (let i = 0; i < 60; i++) {
-          await new Promise(r => setTimeout(r, 2000));
-          const statusRes = await fetch(
-            statusUrl,
-            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-          );
-          const status = await statusRes.json();
-          if (status.status === 'COMPLETED') {
-            const resultRes = await fetch(
-              responseUrl,
-              { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-            );
-            const result = await resultRes.json();
-            if (result.image?.url) {
-              console.log(`[Upscale] Done (queued): ${result.image.url.substring(0, 80)}`);
-              return result.image.url;
-            }
-          }
-          if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
-        }
-      }
-      console.warn(`[Upscale] Failed, using original. Status: ${submitRes.status}`);
-      return imageUrl;
-    }
 
     const data = await submitRes.json();
 
@@ -1102,23 +1073,16 @@ async function upscaleImage(imageUrl, FAL_KEY) {
       return data.image.url;
     }
 
-    // Queued result
+    // Queued — poll
     if (data.request_id) {
-      // Use response_url/status_url from FAL (avoids path-truncation bugs with multi-segment model IDs)
-      const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
-      const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
+      const statusUrl = data.status_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}/status`;
+      const responseUrl = data.response_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}`;
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 2000));
-        const statusRes = await fetch(
-          statusUrl,
-          { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-        );
+        const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
         const status = await statusRes.json();
         if (status.status === 'COMPLETED') {
-          const resultRes = await fetch(
-            responseUrl,
-            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-          );
+          const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
           const result = await resultRes.json();
           if (result.image?.url) {
             console.log(`[Upscale] Done (queued): ${result.image.url.substring(0, 80)}`);

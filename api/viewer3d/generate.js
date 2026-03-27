@@ -39,10 +39,12 @@ async function ensureHostedUrl(url) {
   return url;
 }
 
+const TOPAZ_ENDPOINT = 'fal-ai/topaz/upscale/image';
+
 async function upscaleImage(imageUrl, FAL_KEY) {
   try {
-    console.log(`[3DViewer] Upscaling: ${imageUrl.substring(0, 80)}...`);
-    const submitRes = await fetch('https://fal.run/fal-ai/seedvr/upscale/image', {
+    console.log(`[3DViewer] Upscaling (Topaz): ${imageUrl.substring(0, 80)}...`);
+    const submitRes = await fetch(`https://queue.fal.run/${TOPAZ_ENDPOINT}`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${FAL_KEY}`,
@@ -50,46 +52,26 @@ async function upscaleImage(imageUrl, FAL_KEY) {
       },
       body: JSON.stringify({
         image_url: imageUrl,
-        upscale_mode: 'factor',
+        model: 'Standard V2',
         upscale_factor: 2,
-        output_format: 'jpg',
+        output_format: 'jpeg',
+        subject_detection: 'All',
+        face_enhancement: false,
       }),
     });
 
-    if (!submitRes.ok) {
-      const data = await submitRes.json().catch(() => null);
-      if (data?.request_id) {
-        const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
-        const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
-        for (let i = 0; i < 60; i++) {
-          await new Promise(r => setTimeout(r, 2000));
-          const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
-          const status = await statusRes.json();
-          if (status.status === 'COMPLETED') {
-            const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
-            const result = await resultRes.json();
-            if (result.image?.url) {
-              console.log(`[3DViewer] Upscaled (queued): ${result.image.url.substring(0, 80)}`);
-              return result.image.url;
-            }
-          }
-          if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
-        }
-      }
-      console.warn(`[3DViewer] Upscale failed, using original. Status: ${submitRes.status}`);
-      return imageUrl;
-    }
-
     const data = await submitRes.json();
 
+    // Synchronous result
     if (data.image?.url) {
       console.log(`[3DViewer] Upscaled (sync): ${data.image.url.substring(0, 80)}`);
       return data.image.url;
     }
 
+    // Queued — poll
     if (data.request_id) {
-      const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
-      const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
+      const statusUrl = data.status_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}/status`;
+      const responseUrl = data.response_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}`;
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 2000));
         const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
