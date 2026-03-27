@@ -37,7 +37,7 @@ export default async function handler(req, res) {
         .from('proposal_media')
         .select('id, media_type, media_url, thumbnail_url, caption, sort_order, created_at')
         .eq('proposal_slug', slug)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .range(0, 9999);
 
       if (data) {
