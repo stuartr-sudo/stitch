@@ -14,7 +14,7 @@
 
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
-import { getPoseSetById } from '../lib/turnaroundPoseSets.js';
+import { getPoseSetById, getPoseSetGrid } from '../lib/turnaroundPoseSets.js';
 
 /**
  * Builds a single cohesive prompt from all structured inputs.
@@ -77,10 +77,13 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
   // Avoidance goes FIRST — models pay most attention to the beginning of the prompt
   if (avoidNote) parts.push(avoidNote);
 
+  // Derive grid dimensions from pose set structure
+  const { cols: gridCols, rows: gridRows, total: gridTotal } = getPoseSetGrid(poseSet || 'standard-24');
+
   // Background: white (default) or scene environment for R2V-compatible references
   const backgroundText = backgroundMode === 'scene' && sceneEnvironment
-    ? `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), each pose set in a ${sceneEnvironment.trim()} environment with contextual background, clear cell separation`
-    : `Professional character turnaround model sheet, organized grid layout with 4 columns and 6 rows (24 poses total), clean white background with clear cell separation`;
+    ? `Professional character turnaround model sheet, organized grid layout with ${gridCols} columns and ${gridRows} rows (${gridTotal} poses total), each pose set in a ${sceneEnvironment.trim()} environment with contextual background, clear cell separation, each cell should be large and detailed`
+    : `Professional character turnaround model sheet, organized grid layout with ${gridCols} columns and ${gridRows} rows (${gridTotal} poses total), clean white background with clear cell separation, each cell should be large and detailed`;
 
   parts.push(
     `${stylePrompt}`,
@@ -131,6 +134,13 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
 // type: 'generate' = text-to-image, uses queue.fal.run
 // type: 'both' = can do either (like fal-flux)
 
+// Grid-aware aspect ratio & dimensions:
+// 4×6 grids → 2:3 portrait (1024×1536) — more rows than cols
+// 2×2 grids → 1:1 square (1536×1536) — equal rows and cols, maximize per-cell resolution
+function gridAspect(extras) { return extras?.gridSquare ? '1:1' : '2:3'; }
+function gridSeedreamDims(extras) { return extras?.gridSquare ? { width: 2048, height: 2048 } : { width: 1440, height: 2560 }; }
+function gridFluxDims(extras) { return extras?.gridSquare ? { width: 1536, height: 1536 } : { width: 1024, height: 1536 }; }
+
 const MODELS = {
   'nano-banana-2-edit': {
     endpoint: 'fal-ai/nano-banana-2/edit',
@@ -140,7 +150,7 @@ const MODELS = {
       image_urls: [refUrl],
       num_images: 1,
       output_format: 'png',
-      aspect_ratio: '2:3',
+      aspect_ratio: gridAspect(extras),
       resolution: '1K',
       safety_tolerance: '4',
       ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
@@ -154,7 +164,7 @@ const MODELS = {
       image_urls: [refUrl],
       num_images: 1,
       output_format: 'png',
-      aspect_ratio: '2:3',
+      aspect_ratio: gridAspect(extras),
       resolution: '1K',
       safety_tolerance: '4',
       ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
@@ -167,8 +177,7 @@ const MODELS = {
       prompt,
       image_urls: [refUrl],
       num_images: 1,
-      width: 1440,
-      height: 2560,
+      ...gridSeedreamDims(extras),
       ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
     }),
   },
@@ -179,7 +188,7 @@ const MODELS = {
       prompt,
       num_images: 1,
       output_format: 'png',
-      aspect_ratio: '2:3',
+      aspect_ratio: gridAspect(extras),
       resolution: '1K',
       safety_tolerance: '4',
       ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
@@ -188,13 +197,16 @@ const MODELS = {
   'seedream-generate': {
     endpoint: 'fal-ai/bytedance/seedream/v4/text-to-image',
     type: 'generate',
-    buildPayload: (prompt, _refUrl, extras) => ({
-      prompt,
-      num_images: 1,
-      width: 1024,
-      height: 1536,
-      ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
-    }),
+    buildPayload: (prompt, _refUrl, extras) => {
+      const dims = gridSeedreamDims(extras);
+      return {
+        prompt,
+        num_images: 1,
+        width: dims.width,
+        height: dims.height,
+        ...(extras?.negativePrompt ? { negative_prompt: extras.negativePrompt } : {}),
+      };
+    },
   },
   'fal-flux': {
     endpoint: 'fal-ai/flux-2/lora',
@@ -203,11 +215,12 @@ const MODELS = {
     buildPayload: (prompt, refUrl, extras) => {
       const loraList = extras?.loras;
       const negPrompt = extras?.negativePrompt;
+      const dims = gridFluxDims(extras);
       if (refUrl) {
         return {
           prompt,
           image_urls: [refUrl],
-          image_size: { width: 1024, height: 1536 },
+          image_size: dims,
           strength: 0.85,
           num_images: 1,
           ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
@@ -216,7 +229,7 @@ const MODELS = {
       }
       return {
         prompt,
-        image_size: { width: 1024, height: 1536 },
+        image_size: dims,
         num_images: 1,
         ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
         ...(negPrompt ? { negative_prompt: negPrompt } : {}),
@@ -285,7 +298,9 @@ export default async function handler(req, res) {
 
   try {
     let result;
-    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null), negativePrompt: negPrompt };
+    const { cols: gridCols } = getPoseSetGrid(poseSet || 'standard-24');
+    const gridSquare = gridCols <= 2; // 2×2 grids get square output for max per-cell resolution
+    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null), negativePrompt: negPrompt, gridSquare };
 
     if (modelDef.type === 'edit' || (modelDef.type === 'both' && hasRef)) {
       // Edit path — try with automatic fallback through available models

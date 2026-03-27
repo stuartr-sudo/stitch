@@ -18,7 +18,7 @@ import { getPromptText, getStyleLabel } from "@/lib/stylePresets";
 import LibraryModal from "@/components/modals/LibraryModal";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import WizardStepper from "@/components/ui/WizardStepper";
-import { POSE_SETS, getPoseSetById } from '@/lib/turnaroundPoseSets';
+import { POSE_SETS, getPoseSetById, getPoseSetGrid } from '@/lib/turnaroundPoseSets';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -189,9 +189,9 @@ const ALL_NEG_PROMPTS_LOCAL = NEG_PROMPT_CATEGORIES.flatMap(c => c.prompts);
 
 const DEFAULT_CHARACTER_DESC = '';
 
-const GRID_COLS = 4;
-const GRID_ROWS = 6;
-const TOTAL_CELLS = GRID_COLS * GRID_ROWS;
+// Legacy fallback — grid dimensions are now derived from pose set via getGridForSheet()
+const DEFAULT_GRID_COLS = 4;
+const DEFAULT_GRID_ROWS = 6;
 
 const DEFAULT_CELL_LABELS = [
   "Front", "3/4 Front", "Side", "Back",
@@ -323,6 +323,12 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     if (!poseSetId || poseSetId === 'standard-24') return DEFAULT_CELL_LABELS;
     const ps = getPoseSetById(poseSetId);
     return ps.rows.flatMap(r => r.cells.map(c => c.shortLabel));
+  };
+
+  /** Get grid dimensions for the active sheet's pose set */
+  const getGridForSheet = (poseSetId) => {
+    if (!poseSetId) return { cols: DEFAULT_GRID_COLS, rows: DEFAULT_GRID_ROWS, total: DEFAULT_GRID_COLS * DEFAULT_GRID_ROWS };
+    return getPoseSetGrid(poseSetId);
   };
 
   const toggleNegPill = (val) => {
@@ -726,15 +732,16 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         i.src = sheetImageUrl;
       });
 
-      const cellW = img.width / GRID_COLS;
-      const cellH = img.height / GRID_ROWS;
+      const grid = getGridForSheet(activeSheet?.poseSet);
+      const cellW = img.width / grid.cols;
+      const cellH = img.height / grid.rows;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const cells = [];
 
-      for (let i = 0; i < TOTAL_CELLS; i++) {
-        const col = i % GRID_COLS;
-        const row = Math.floor(i / GRID_COLS);
+      for (let i = 0; i < grid.total; i++) {
+        const col = i % grid.cols;
+        const row = Math.floor(i / grid.cols);
         canvas.width = Math.round(cellW);
         canvas.height = Math.round(cellH);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -942,7 +949,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     const titlePrefix = folder ? `[${folder}] Turnaround` : 'Turnaround';
 
     try {
-      const cols = Math.min(keepCells.length, GRID_COLS);
+      const grid = getGridForSheet(activeSheet?.poseSet);
+      const cols = Math.min(keepCells.length, grid.cols);
       const rows = Math.ceil(keepCells.length / cols);
 
       const loadImg = (src) => new Promise((resolve, reject) => {
@@ -1037,14 +1045,15 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         i.onerror = () => reject(new Error('Failed to load'));
         i.src = saveUrl;
       });
-      const cellW = img.width / GRID_COLS;
-      const cellH = img.height / GRID_ROWS;
+      const grid = getGridForSheet(activeSheet?.poseSet);
+      const cellW = img.width / grid.cols;
+      const cellH = img.height / grid.rows;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       let saved = 0;
       for (const ci of selectedCells) {
-        const col = ci % GRID_COLS;
-        const row = Math.floor(ci / GRID_COLS);
+        const col = ci % grid.cols;
+        const row = Math.floor(ci / grid.cols);
         canvas.width = Math.round(cellW);
         canvas.height = Math.round(cellH);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1691,7 +1700,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                       </button>
                       {showGrid && (
                         <>
-                          <button onClick={() => setSelectedCells(new Set(Array.from({ length: TOTAL_CELLS }, (_, i) => i)))}
+                          <button onClick={() => setSelectedCells(new Set(Array.from({ length: getGridForSheet(activeSheet?.poseSet).total }, (_, i) => i)))}
                             className="text-xs text-[#2C666E] hover:underline font-medium px-2 py-1">Select All</button>
                           <button onClick={() => setSelectedCells(new Set())}
                             className="text-xs text-slate-400 hover:underline font-medium px-2 py-1">Clear</button>
@@ -1708,8 +1717,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                     <img src={activeSheet.imageUrl} alt="Character turnaround sheet" className="w-full h-auto block" crossOrigin="anonymous" />
                     {showGrid && (
                       <div className="absolute inset-0 grid"
-                        style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)` }}>
-                        {Array.from({ length: TOTAL_CELLS }).map((_, i) => (
+                        style={{ gridTemplateColumns: `repeat(${getGridForSheet(activeSheet?.poseSet).cols}, 1fr)`, gridTemplateRows: `repeat(${getGridForSheet(activeSheet?.poseSet).rows}, 1fr)` }}>
+                        {Array.from({ length: getGridForSheet(activeSheet?.poseSet).total }).map((_, i) => (
                           <div key={i} onClick={() => toggleCell(i)}
                             className={`border cursor-pointer transition-all flex items-end justify-center pb-1 ${
                               selectedCells.has(i) ? 'border-[#2C666E] bg-[#2C666E]/20 border-2' : 'border-white/30 hover:bg-white/10'
@@ -1938,7 +1947,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                     <ArrowLeft className="w-3.5 h-3.5" /> Back to sheet
                   </button>
                   <span className="text-xs text-slate-400 ml-2">
-                    {activeCells.length} of {TOTAL_CELLS} cells will be saved
+                    {activeCells.length} of {getGridForSheet(activeSheet?.poseSet).total} cells will be saved
                   </span>
                 </div>
                 <div className="flex gap-2">

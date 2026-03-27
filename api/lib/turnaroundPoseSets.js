@@ -3,12 +3,63 @@
  *
  * SYNC NOTE: Frontend mirror at src/lib/turnaroundPoseSets.js must stay in sync.
  *
- * Each preset defines a 4×6 grid (24 cells) with:
+ * Grid dimensions are derived from the data:
+ *   cols = rows[0].cells.length
+ *   rowCount = rows.length
+ *
+ * Legacy sets are 4×6 (24 cells). New 3D-optimized sets are 2×2 (4 cells)
+ * for dramatically higher per-cell resolution.
+ *
+ * Each cell has:
  *   - prompt: descriptive text injected into the generation prompt
  *   - shortLabel: compact label for grid overlay, cell editor, and library titles
  */
 
 export const POSE_SETS = [
+  {
+    id: '3d-angles',
+    name: '3D Reference — Angles',
+    description: '4 high-resolution orthographic views optimized for 3D model generation',
+    thumbnail: '/assets/pose-sets/3d-angles.svg',
+    rows: [
+      {
+        label: 'Front & Right Side',
+        cells: [
+          { prompt: 'front view, full body, standing neutral A-pose with arms slightly away from body, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Front' },
+          { prompt: 'right side profile view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Right' },
+        ],
+      },
+      {
+        label: 'Back & Left Side',
+        cells: [
+          { prompt: 'back view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Back' },
+          { prompt: 'left side profile view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Left' },
+        ],
+      },
+    ],
+  },
+  {
+    id: '3d-action',
+    name: '3D Reference — Action',
+    description: '4 high-resolution action poses for 3D rigging and animation reference',
+    thumbnail: '/assets/pose-sets/3d-action.svg',
+    rows: [
+      {
+        label: 'Dynamic Front Views',
+        cells: [
+          { prompt: 'three-quarter front view, dynamic action stance, weight shifted forward, full body, centered in frame', shortLabel: '3/4 Action' },
+          { prompt: 'side profile, running mid-stride or combat pose, full body, centered in frame', shortLabel: 'Side Action' },
+        ],
+      },
+      {
+        label: 'Dynamic Rear & Special',
+        cells: [
+          { prompt: 'three-quarter back view, action stance with arms raised, full body, centered in frame', shortLabel: '3/4 Back Action' },
+          { prompt: 'dramatic low angle hero landing pose, full body, centered in frame', shortLabel: 'Hero Pose' },
+        ],
+      },
+    ],
+  },
   {
     id: 'standard-24',
     name: 'Standard 24',
@@ -327,4 +378,12 @@ export function getPoseSetById(id) {
 
 export function listPoseSets() {
   return POSE_SETS.map(({ id, name, description, thumbnail }) => ({ id, name, description, thumbnail }));
+}
+
+/** Derive grid dimensions from a pose set's row/cell structure */
+export function getPoseSetGrid(poseSetId) {
+  const ps = getPoseSetById(poseSetId);
+  const cols = ps.rows[0]?.cells.length || 4;
+  const rows = ps.rows.length;
+  return { cols, rows, total: cols * rows };
 }
