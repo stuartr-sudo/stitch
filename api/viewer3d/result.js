@@ -89,35 +89,51 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'FAL API key not configured.' });
       }
 
-      const pollUrl = `https://queue.fal.run/fal-ai/meshy/v5/multi-image-to-3d/requests/${requestId}`;
-      const resultResponse = await fetch(pollUrl, {
+      const FAL_MODEL = 'fal-ai/meshy/v5/multi-image-to-3d';
+
+      // Step 1: Check status first (Meshy is long-running; result endpoint returns 405 until COMPLETED)
+      const statusUrl = `https://queue.fal.run/${FAL_MODEL}/requests/${requestId}/status`;
+      const statusResponse = await fetch(statusUrl, {
+        headers: { 'Authorization': `Key ${FAL_KEY}` },
+      });
+
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text();
+        console.error('[3DViewer] FAL status error:', statusResponse.status, errorText);
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+
+      const statusData = await statusResponse.json();
+
+      if (statusData.status === 'IN_QUEUE') {
+        return res.status(200).json({
+          status: 'queued',
+          requestId,
+          queuePosition: statusData.queue_position || null,
+        });
+      }
+      if (statusData.status === 'IN_PROGRESS') {
+        return res.status(200).json({ status: 'processing', requestId });
+      }
+      if (statusData.status === 'FAILED') {
+        return res.status(200).json({ status: 'failed', error: statusData.error || 'Generation failed' });
+      }
+
+      // Step 2: Status is COMPLETED — now fetch the full result
+      const resultUrl = `https://queue.fal.run/${FAL_MODEL}/requests/${requestId}`;
+      const resultResponse = await fetch(resultUrl, {
         headers: { 'Authorization': `Key ${FAL_KEY}` },
       });
 
       if (!resultResponse.ok) {
         const errorText = await resultResponse.text();
-        console.error('[3DViewer] FAL poll error:', resultResponse.status, errorText);
-        return res.status(200).json({ status: 'processing', requestId });
+        console.error('[3DViewer] FAL result fetch error:', resultResponse.status, errorText);
+        return res.status(200).json({ status: 'failed', error: 'Failed to fetch completed result' });
       }
 
       const data = await resultResponse.json();
 
-      // Check if still in queue or processing
-      if (data.status === 'IN_QUEUE') {
-        return res.status(200).json({
-          status: 'queued',
-          requestId,
-          queuePosition: data.queue_position || null,
-        });
-      }
-      if (data.status === 'IN_PROGRESS') {
-        return res.status(200).json({ status: 'processing', requestId });
-      }
-      if (data.status === 'FAILED') {
-        return res.status(200).json({ status: 'failed', error: data.error || 'Generation failed' });
-      }
-
-      // Completed — extract GLB
+      // Extract GLB
       const glbUrl = data.model_glb?.url || data.model_urls?.glb?.url || data.model_urls?.glb;
       if (!glbUrl) {
         return res.status(200).json({ status: 'failed', error: 'No 3D model in result' });
