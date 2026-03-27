@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const ALLOWED_SLUGS = ['hamilton-city-council'];
-const MAX_COUNTS = { image: 18, video: 9 };
+const MAX_COUNTS = { image: Infinity, video: Infinity };
 
 export default async function handler(req, res) {
   const { slug } = req.params;
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       .from('proposal_media')
       .select('*')
       .eq('proposal_slug', slug)
-      .order('sort_order', { ascending: true });
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('[Proposal Media] GET error:', error);
