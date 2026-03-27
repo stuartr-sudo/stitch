@@ -373,9 +373,13 @@ export default function EditImageModal({
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `Edited Image — ${result.styleLabel}`, source: 'editimage' }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.id) await autoTagImage(data.id, result);
-    } catch {
+      if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+      await autoTagImage(data.id, result);
+    } catch (err) {
+      console.error('[EditImage] Save failed:', err);
+      toast.error(`Failed to save: ${err.message || 'Unknown error'}`);
       setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
     }
   };
@@ -393,9 +397,12 @@ export default function EditImageModal({
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `Edited Image — ${item.styleLabel}`, source: 'editimage' }),
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (data.id) await autoTagImage(data.id, item);
-      } catch {
+        if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+        await autoTagImage(data.id, item);
+      } catch (err) {
+        console.error('[EditImage] Save failed:', err);
         setMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
       }
     }
