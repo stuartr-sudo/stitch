@@ -704,7 +704,7 @@ async function handleVeo3(req, res, params) {
     aspect_ratio: veoAspect,
     duration: '8s',
     resolution: resolution || '720p',
-    generate_audio: enableAudio !== false,
+    generate_audio: enableAudio === true,
     auto_fix: true,
     safety_tolerance: '6',
   };
@@ -771,7 +771,7 @@ async function handleVeo3Fast(req, res, params) {
     aspect_ratio: veoAspect,
     duration: `${duration}s`, // Veo Fast uses string format: "4s", "6s", "8s"
     resolution: resolution,
-    generate_audio: enableAudio !== false,
+    generate_audio: enableAudio === true,
     auto_fix: true,
     safety_tolerance: '6',
   };
@@ -857,7 +857,7 @@ async function handleVeo3FirstLast(req, res, params) {
     aspect_ratio: veoAspect,
     duration: `${duration}s`, // "4s", "6s", "8s"
     resolution: resolution,
-    generate_audio: enableAudio !== false,
+    generate_audio: enableAudio === true,
     auto_fix: true,
     safety_tolerance: '6',
   };
@@ -1122,7 +1122,7 @@ async function handleKlingR2V(req, res, params) {
 
   // Build elements array — supports up to 4 elements (@Element1, @Element2, etc.)
   // Each element has a frontal_image_url and up to 3 reference_image_urls
-  // All reference images are auto-upscaled via SeedVR2 to meet FAL's 300x300 minimum
+  // All reference images are auto-upscaled via Topaz to meet FAL's 300x300 minimum
 
   if (r2vElementsPreUpscaled && r2vElementsPreUpscaled.length > 0) {
     // Use pre-upscaled elements from a previous scene — no redundant upscaling

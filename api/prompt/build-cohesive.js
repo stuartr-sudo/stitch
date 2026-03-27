@@ -5,7 +5,7 @@
  * Storyboard) and uses GPT to build a single cohesive image generation prompt.
  *
  * Body: {
- *   tool: 'imagineer' | 'edit' | 'turnaround' | 'storyboard',
+ *   tool: 'imagineer' | 'edit' | 'turnaround' | 'storyboard' | 'jumpstart',
  *   description: string,           // subject or character description
  *   style: string,                 // artistic style text
  *   props: string[],               // prop labels
@@ -166,6 +166,25 @@ IMAGE EDITING SPECIFIC:
 - The prompt tells the AI how to modify an existing image
 - Focus on what should change or be enhanced, not what already exists
 - Keep the prompt focused and directive`;
+  }
+
+  if (tool === 'jumpstart') {
+    return `You are an expert AI video prompt engineer. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for an AI video generator.
+
+Rules:
+- Output ONLY the prompt text — no preamble, no explanation, no quotes
+- Weave all elements together naturally into flowing, cinematic descriptive text
+- Describe the SCENE: environment, characters, action, movement, lighting, atmosphere
+- Describe the CAMERA: movement, angle, framing, transitions
+- Describe the MOOD: emotional tone, pacing, energy
+- Be extremely specific with visual details (colors, materials, lighting, composition)
+- The prompt describes what happens to the START IMAGE — the AI will animate it
+- If a visual style is provided, apply that aesthetic to every visual detail
+- If a video/motion style direction is provided, integrate its cinematography naturally
+- Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, Studio Ghibli, etc.) — describe the visual style characteristics instead
+- Keep the prompt under 200 words — concise but vivid
+- Do NOT include any "AVOID:" or negative prompt section — video models handle negatives separately
+- Focus entirely on what the scene SHOULD look like and how it should MOVE`;
   }
 
   if (tool === 'storyboard') {

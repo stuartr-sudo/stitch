@@ -4,6 +4,7 @@ import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import StyleGrid from '@/components/ui/StyleGrid';
 import {
   Upload,
   Link,
@@ -12,11 +13,8 @@ import {
   X,
   Video,
   Play,
-  Clock,
   ArrowRight,
   ArrowLeft,
-  Camera,
-  Move,
   Sparkles,
   FolderOpen,
   Lock,
@@ -25,72 +23,22 @@ import {
   Search,
   Globe,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw,
+  Save,
+  Palette,
+  Film,
 } from 'lucide-react';
 import LoadingModal from '@/components/canvas/LoadingModal';
-import { STYLE_OPTIONS, MOOD_OPTIONS, LIGHTING_OPTIONS, COLOR_GRADE_OPTIONS } from '@/components/ui/PromptBuilder';
 import LibraryModal from './LibraryModal';
 import { apiFetch } from '@/lib/api';
+import { findStyleByValue } from '@/lib/stylePresets';
 
-// Video Generation Models
+// ─── Video Generation Models ──────────────────────────────────────────────────
 const VIDEO_MODELS = [
-  { 
-    id: 'luma-ray', 
-    label: '✨ Luma Dream Machine (Ray)', 
-    shortLabel: 'Luma Ray',
-    description: 'High fidelity, great physics, supports text+image',
-    provider: 'luma',
-    durationOptions: [5],
-    resolutions: ['720p', '1080p'],
-    aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
-    supportsAudio: false,
-    supportsCameraFixed: true,
-    supportsEndFrame: true,
-    supportsMultipleImages: true,
-  },
-  { 
-    id: 'runway-gen3', 
-    label: '🏃 Runway Gen-3 Alpha', 
-    shortLabel: 'Runway G3',
-    description: 'Cinematic quality, extremely realistic motion',
-    provider: 'runway',
-    durationOptions: [5, 10],
-    resolutions: ['720p'],
-    aspectRatios: ['16:9', '9:16'],
-    supportsAudio: false,
-    supportsCameraFixed: true,
-    supportsEndFrame: true,
-    supportsMultipleImages: true,
-  },
-  { 
-    id: 'hailuo-minimax', 
-    label: '🌊 Hailuo Minimax Video', 
-    shortLabel: 'Minimax',
-    description: 'Great for anime, stylized, and high-motion',
-    provider: 'fal',
-    durationOptions: [5],
-    resolutions: ['720p', '1080p'],
-    aspectRatios: ['16:9', '9:16'],
-    supportsAudio: false,
-    supportsCameraFixed: false,
-    supportsEndFrame: false,
-  },
-  { 
-    id: 'svd', 
-    label: '🚀 Stable Video Diffusion (Fast)', 
-    shortLabel: 'SVD Fast',
-    description: 'Ultra-fast image-to-video motion',
-    provider: 'fal',
-    durationOptions: [3, 4],
-    resolutions: ['480p'],
-    aspectRatios: ['16:9'],
-    supportsAudio: false,
-    supportsCameraFixed: false,
-    supportsEndFrame: false,
-  },
-  { 
-    id: 'wavespeed-wan', 
-    label: '🚀 Wavespeed WAN 2.2 Spicy', 
+  {
+    id: 'wavespeed-wan',
+    label: '🚀 Wavespeed WAN 2.2 Spicy',
     shortLabel: 'Wavespeed',
     description: 'Fast generation, good quality',
     provider: 'wavespeed',
@@ -101,9 +49,9 @@ const VIDEO_MODELS = [
     supportsCameraFixed: false,
     supportsEndFrame: false,
   },
-  { 
-    id: 'grok-imagine', 
-    label: '🤖 Grok Imagine Video (xAI)', 
+  {
+    id: 'grok-imagine',
+    label: '🤖 Grok Imagine Video (xAI)',
     shortLabel: 'Grok xAI',
     description: 'High quality with audio generation',
     provider: 'fal',
@@ -114,9 +62,9 @@ const VIDEO_MODELS = [
     supportsCameraFixed: false,
     supportsEndFrame: false,
   },
-  { 
-    id: 'seedance-pro', 
-    label: '🎬 Bytedance Seedance 1.5 Pro', 
+  {
+    id: 'seedance-pro',
+    label: '🎬 Bytedance Seedance 1.5 Pro',
     shortLabel: 'Seedance',
     description: '1080p, audio & end frame support',
     provider: 'fal',
@@ -127,23 +75,23 @@ const VIDEO_MODELS = [
     supportsCameraFixed: true,
     supportsEndFrame: true,
   },
-  { 
-    id: 'veo3', 
-    label: '🌟 Google Veo 3.1', 
+  {
+    id: 'veo3',
+    label: '🌟 Google Veo 3.1',
     shortLabel: 'Veo 3.1',
     description: 'Google\'s best, 4K, multi-image reference',
     provider: 'fal',
-    durationOptions: [8], // Fixed 8 seconds only
+    durationOptions: [8],
     resolutions: ['720p', '1080p', '4k'],
     aspectRatios: ['16:9', '9:16'],
     supportsAudio: true,
     supportsCameraFixed: false,
     supportsEndFrame: false,
-    supportsMultipleImages: true, // Can use multiple reference images
+    supportsMultipleImages: true,
   },
-  { 
-    id: 'veo3-fast', 
-    label: '⚡ Google Veo 3.1 Fast', 
+  {
+    id: 'veo3-fast',
+    label: '⚡ Google Veo 3.1 Fast',
     shortLabel: 'Veo Fast',
     description: 'Faster Veo, 4K, flexible duration',
     provider: 'fal',
@@ -155,9 +103,9 @@ const VIDEO_MODELS = [
     supportsEndFrame: false,
     supportsNegativePrompt: true,
   },
-  { 
-    id: 'veo3-first-last', 
-    label: '🎬 Veo 3.1 First & Last Frame', 
+  {
+    id: 'veo3-first-last',
+    label: '🎬 Veo 3.1 First & Last Frame',
     shortLabel: 'Veo Morph',
     description: 'Generate video transitioning between two keyframes',
     provider: 'fal',
@@ -168,21 +116,48 @@ const VIDEO_MODELS = [
     supportsCameraFixed: false,
     supportsEndFrame: false,
     supportsNegativePrompt: true,
-    requiresFirstLastFrame: true, // Special mode: requires both first AND last frame
+    requiresFirstLastFrame: true,
   },
-  { 
-    id: 'ltx-audio-video', 
-    label: '🎵 LTX 19B Audio-to-Video', 
-    shortLabel: 'LTX A2V',
-    description: 'Generates video driven by an audio track',
-    provider: 'fal',
-    durationOptions: [5], // Adapts to audio length usually
+  {
+    id: 'luma-ray',
+    label: '✨ Luma Dream Machine (Ray)',
+    shortLabel: 'Luma Ray',
+    description: 'High fidelity, great physics',
+    provider: 'luma',
+    durationOptions: [5],
+    resolutions: ['720p', '1080p'],
+    aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
+    supportsAudio: false,
+    supportsCameraFixed: true,
+    supportsEndFrame: true,
+    supportsMultipleImages: true,
+  },
+  {
+    id: 'runway-gen3',
+    label: '🏃 Runway Gen-3 Alpha',
+    shortLabel: 'Runway G3',
+    description: 'Cinematic quality, realistic motion',
+    provider: 'runway',
+    durationOptions: [5, 10],
     resolutions: ['720p'],
-    aspectRatios: ['16:9'],
+    aspectRatios: ['16:9', '9:16'],
+    supportsAudio: false,
+    supportsCameraFixed: true,
+    supportsEndFrame: true,
+    supportsMultipleImages: true,
+  },
+  {
+    id: 'hailuo-minimax',
+    label: '🌊 Hailuo Minimax Video',
+    shortLabel: 'Minimax',
+    description: 'Great for anime and stylized',
+    provider: 'fal',
+    durationOptions: [5],
+    resolutions: ['720p', '1080p'],
+    aspectRatios: ['16:9', '9:16'],
     supportsAudio: false,
     supportsCameraFixed: false,
     supportsEndFrame: false,
-    requiresAudioUrl: true,
   },
   {
     id: 'kling-video',
@@ -203,8 +178,8 @@ const VIDEO_MODELS = [
     id: 'kling-r2v-pro',
     label: '🎭 Kling O3 Pro — Reference-to-Video',
     shortLabel: 'Kling R2V Pro',
-    description: 'Keep your character looking the same across videos — best quality (Pro tier)',
-    tip: 'Upload a front-facing photo of your character plus extra angles. Write "@Element" in your prompt where you want the character to appear, e.g. "@Element walks through a forest". The AI uses the reference photos to keep the character\'s face, outfit, and proportions consistent.',
+    description: 'Character consistency — best quality',
+    tip: 'Upload a front-facing photo plus extra angles. Write "@Element" in scene description where you want the character.',
     provider: 'fal',
     durationOptions: [5, 10],
     resolutions: ['720p'],
@@ -220,8 +195,8 @@ const VIDEO_MODELS = [
     id: 'kling-r2v-standard',
     label: '🎭 Kling O3 Standard — Reference-to-Video',
     shortLabel: 'Kling R2V Std',
-    description: 'Keep your character consistent across videos — faster, lower cost',
-    tip: 'Same as R2V Pro but faster and cheaper. Great for testing ideas before committing to Pro quality. Upload character reference photos and use "@Element" in your prompt.',
+    description: 'Character consistency — faster, lower cost',
+    tip: 'Same as R2V Pro but faster. Upload character references and use "@Element" in your prompt.',
     provider: 'fal',
     durationOptions: [5, 10],
     resolutions: ['720p'],
@@ -234,11 +209,38 @@ const VIDEO_MODELS = [
     supportsReferenceImages: true,
   },
   {
+    id: 'svd',
+    label: '🚀 Stable Video Diffusion (Fast)',
+    shortLabel: 'SVD Fast',
+    description: 'Ultra-fast image-to-video motion',
+    provider: 'fal',
+    durationOptions: [3, 4],
+    resolutions: ['480p'],
+    aspectRatios: ['16:9'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+  },
+  {
+    id: 'ltx-audio-video',
+    label: '🎵 LTX 19B Audio-to-Video',
+    shortLabel: 'LTX A2V',
+    description: 'Generates video driven by an audio track',
+    provider: 'fal',
+    durationOptions: [5],
+    resolutions: ['720p'],
+    aspectRatios: ['16:9'],
+    supportsAudio: false,
+    supportsCameraFixed: false,
+    supportsEndFrame: false,
+    requiresAudioUrl: true,
+  },
+  {
     id: 'ltx-iclora',
     label: '🧬 LTX ICLoRA — Subject-Consistent Video',
     shortLabel: 'LTX ICLoRA',
-    description: 'Uses your start image to control character pose, depth, or edges in video',
-    tip: 'Choose a control type (Pose, Depth, Canny Edge, or Detailer) to tell the AI how to use your start image. "Pose" copies body position, "Depth" preserves 3D layout, "Canny Edge" follows outlines, and "Detailer" refines fine details. Best for keeping a character\'s shape and movement style consistent.',
+    description: 'Uses your start image for pose/depth/edge control',
+    tip: 'Choose a control type (Pose, Depth, Canny Edge, or Detailer) to tell the AI how to use your start image.',
     provider: 'fal',
     durationOptions: [3, 4, 5],
     resolutions: ['720p'],
@@ -266,30 +268,21 @@ const ASPECT_RATIO_LABELS = {
 // Camera Movement Presets
 const CAMERA_MOVEMENTS = [
   { value: '', label: 'No Movement' },
-  // Realistic / Natural (Best for UGC/Selfie)
-  { value: 'static locked-off camera on tripod, perfectly stable with no movement, clean professional stillness', label: '📱 Static/Stable (Selfie)' },
-  { value: 'subtle handheld camera micro-shake, the natural tiny tremor of a real person holding a phone, organic imperfect stability', label: '🤳 Subtle Handheld Shake' },
-  { value: 'gentle rhythmic camera movement matching natural breathing, slight vertical drift up and down at resting breath pace', label: '😮‍💨 Natural Breathing Motion' },
-  { value: 'soft organic lateral sway as if held casually by a relaxed person, gentle weight-shifting motion', label: '🌊 Gentle Natural Sway' },
-  // Zoom
+  { value: 'static locked-off camera on tripod, perfectly stable with no movement', label: '📱 Static/Stable' },
+  { value: 'subtle handheld camera micro-shake, natural tiny tremor', label: '🤳 Subtle Handheld Shake' },
+  { value: 'gentle rhythmic camera movement matching natural breathing', label: '😮‍💨 Natural Breathing' },
+  { value: 'soft organic lateral sway as if held casually', label: '🌊 Gentle Sway' },
   { value: 'slow zoom in', label: 'Slow Zoom In' },
   { value: 'slow zoom out', label: 'Slow Zoom Out' },
   { value: 'fast zoom in', label: 'Fast Zoom (Punch In)' },
   { value: 'dolly zoom', label: 'Dolly Zoom (Vertigo)' },
-  // Pan
   { value: 'pan left to right', label: 'Pan Left to Right' },
   { value: 'pan right to left', label: 'Pan Right to Left' },
-  { value: 'slow pan', label: 'Slow Pan' },
-  // Tilt
   { value: 'tilt up', label: 'Tilt Up' },
   { value: 'tilt down', label: 'Tilt Down' },
-  { value: 'tilt up reveal', label: 'Tilt Up Reveal' },
-  // Dolly/Track
   { value: 'dolly forward', label: 'Dolly Forward' },
   { value: 'dolly backward', label: 'Dolly Backward' },
-  { value: 'tracking shot', label: 'Tracking Shot (Follow)' },
-  { value: 'lateral track', label: 'Lateral Tracking' },
-  // Complex
+  { value: 'tracking shot', label: 'Tracking Shot' },
   { value: 'orbit', label: 'Orbit Around Subject' },
   { value: 'crane up', label: 'Crane Up' },
   { value: 'crane down', label: 'Crane Down' },
@@ -299,157 +292,31 @@ const CAMERA_MOVEMENTS = [
 // Camera Angle Presets
 const CAMERA_ANGLES = [
   { value: '', label: 'Default Angle' },
-  // Realistic / Selfie (Best for UGC)
-  { value: 'selfie close-up from arm\'s length, front-facing smartphone camera angle, slightly below eye level, wide-angle lens distortion on face edges', label: '🤳 Selfie Close-up' },
-  { value: 'talking head framing from chest up, eye-level camera, centered composition with headroom, the standard direct-to-camera setup', label: '🗣️ Talking Head' },
-  { value: 'vlog-style framing showing face and upper body with background context visible, slightly wider than selfie, casual handheld energy', label: '📱 Vlog Style' },
-  { value: 'webcam angle from slightly above eye level looking down, laptop camera perspective, indoor ambient lighting mixing with screen glow', label: '💻 Webcam Angle' },
-  // Standard
+  { value: 'selfie close-up from arm\'s length, front-facing smartphone camera', label: '🤳 Selfie' },
+  { value: 'talking head framing from chest up, eye-level camera', label: '🗣️ Talking Head' },
+  { value: 'vlog-style framing showing face and upper body', label: '📱 Vlog Style' },
+  { value: 'webcam angle from slightly above eye level', label: '💻 Webcam' },
   { value: 'eye level', label: 'Eye Level' },
   { value: 'low angle', label: 'Low Angle (Hero)' },
   { value: 'high angle', label: 'High Angle' },
-  { value: 'dutch angle', label: 'Dutch Angle (Tilted)' },
-  // Wide
+  { value: 'dutch angle', label: 'Dutch Angle' },
   { value: 'wide shot', label: 'Wide Shot' },
   { value: 'medium shot', label: 'Medium Shot' },
   { value: 'close up', label: 'Close Up' },
   { value: 'extreme close up', label: 'Extreme Close Up' },
-  // Special
-  { value: 'birds eye', label: "Bird's Eye View" },
-  { value: 'worms eye', label: "Worm's Eye View" },
+  { value: 'birds eye', label: "Bird's Eye" },
+  { value: 'worms eye', label: "Worm's Eye" },
   { value: 'over the shoulder', label: 'Over the Shoulder' },
   { value: 'point of view', label: 'POV (First Person)' },
 ];
 
-// Video Style Presets
-const VIDEO_STYLES = [
-  { value: '', label: 'Default' },
-  // Realistic / UGC (Best for authentic content)
-  { value: 'iphone-selfie', label: '📱 iPhone Selfie (Raw)', prompt: 'raw iPhone 15 front-facing camera footage, handheld smartphone video with subtle micro-shake, natural ambient room lighting with soft window light on face, visible skin pores and texture, slight lens distortion at edges, authentic unfiltered color profile, natural eye moisture and light reflections in iris, relaxed genuine expression with asymmetric micro-expressions, casual everyday clothing with real fabric wrinkles' },
-  { value: 'ugc-testimonial', label: '🎤 UGC Testimonial', prompt: 'authentic user-generated testimonial video, real person speaking with natural speech cadence and breath pauses, subtle lip movements matching natural talking rhythm, genuine micro-expressions — slight eyebrow raises, natural blinks every 3-4 seconds, real skin with natural imperfections and pores visible, soft ambient indoor lighting from overhead, believable casual setting with slight background depth, conversational eye contact with occasional natural glances away' },
-  { value: 'tiktok-style', label: '📲 TikTok/Reels Style', prompt: 'vertical social media content creator video, direct-to-camera engagement with expressive natural facial movements, quick authentic reactions, real skin texture under ring light or natural window light, slightly warm color temperature, genuine personality showing through micro-expressions, natural hand gestures entering frame, contemporary casual styling, energetic but believable body language' },
-  { value: 'facetime-call', label: '📞 FaceTime/Video Call', prompt: 'video call aesthetic shot from laptop webcam angle, slightly above eye level, natural indoor ambient lighting mixing with screen glow on face, casual at-home appearance, real skin texture with slight webcam softness, authentic conversational micro-expressions — nodding, natural blinks, subtle smile shifts, relaxed posture, genuine unperformed body language, slight compression artifacts for realism' },
-  // Professional
-  { value: 'cinematic', label: '🎬 Cinematic', prompt: 'cinematic film quality shot on Arri Alexa, 2.39:1 anamorphic framing feel, professional three-point lighting with soft key light creating gentle shadow fall-off on face, shallow depth of field with creamy bokeh separation, natural skin tones with subtle color grading, film-like motion cadence at 24fps, atmospheric haze catching light, precise composition with leading lines, rich shadow detail without crushing blacks' },
-  { value: 'documentary', label: '📹 Documentary', prompt: 'observational documentary style, handheld camera with natural stabilization, available light used authentically, candid unposed moments captured naturally, subject unaware of or comfortable with camera, real environments with lived-in detail, natural skin tones without color grading, genuine emotional moments with real facial expressions, ambient sound atmosphere, journalistic truthful aesthetic' },
-  { value: 'commercial', label: '📺 Commercial/Ad', prompt: 'high-end commercial production quality, precisely controlled studio lighting with soft diffusion, product and subject both in sharp focus, polished but natural-looking skin with subtle retouching feel, aspirational warm color palette, smooth controlled camera movement, clean composition with visual breathing room, professional wardrobe and styling, premium feel without looking artificial' },
-  { value: 'product-demo', label: '📦 Product Demo', prompt: 'clean professional product demonstration, neutral background with soft gradient, even studio lighting revealing surface texture and material quality, smooth deliberate product handling with natural hand movements, clear visual focus on product features, slight reflection on surface below, precise framing with product as hero, informative angle choices showing form and function' },
-  // Artistic
-  { value: 'dreamy', label: '✨ Dreamy/Ethereal', prompt: 'ethereal dreamlike quality with soft diffusion filter effect, gentle overexposed highlights wrapping around subject, pastel and desaturated color palette, slow graceful movement, subtle lens glow on light sources, delicate bokeh orbs in background, romantic golden or blue hour natural light, flowing fabric or hair movement suggesting gentle breeze, painterly soft transitions between tones' },
-  { value: 'vintage', label: '📼 Vintage/Retro', prompt: 'authentic vintage 16mm film aesthetic, warm amber color shift with faded blacks lifted to milky grey, organic film grain texture visible on skin and surfaces, slight vignette darkening at frame edges, period-appropriate soft focus quality, gentle gate weave and frame instability, nostalgic halation around bright highlights, muted greens shifted toward teal, tactile analogue texture throughout' },
-  { value: 'noir', label: '🎞️ Film Noir', prompt: 'classic film noir cinematography, high contrast chiaroscuro lighting with deep blacks and bright specular highlights, dramatic single key light source creating long shadows, venetian blind shadow patterns, smoke or atmospheric haze catching light beams, moody monochromatic or desaturated cool palette, low-key lighting revealing only essential details, reflective wet surfaces' },
-  { value: 'anime', label: '🎌 Anime Style', prompt: 'high-quality anime art style animation, vibrant saturated color palette, expressive character animation with fluid motion, dynamic speed lines and impact frames, detailed background art with atmospheric perspective, cel-shaded lighting with crisp shadow edges, wind-blown hair and clothing movement, dramatic camera angles with foreshortening' },
-];
-
-// Effect Combos (Quick Presets)
-const EFFECT_COMBOS = [
-  { id: 'realistic', label: '🤳 Realistic/Raw', effects: ['natural available light with soft shadow transitions', 'visible skin pores and natural texture with subsurface light scattering', 'authentic human movement with natural weight and momentum'] },
-  { id: 'cinematic', label: '🎬 Cinematic', effects: ['subtle organic film grain at ISO 800', 'anamorphic lens flare streaks on highlights', 'shallow depth of field with creamy circular bokeh'] },
-  { id: 'dreamy', label: '✨ Dreamy', effects: ['soft diffusion glow wrapping around highlights', 'large circular bokeh orbs with chromatic fringing', 'tiny floating particles catching backlight'] },
-  { id: 'vintage', label: '📼 Vintage', effects: ['organic 16mm film grain texture', 'natural vignette darkening at frame edges', 'warm amber color shift with lifted blacks'] },
-  { id: 'dynamic', label: '⚡ Dynamic', effects: ['directional motion blur on fast movement', 'bright anamorphic lens flare streaks', 'volumetric god rays through atmospheric haze'] },
-];
-
-// Special Effects (Categorized)
-const SPECIAL_EFFECTS = [
-  // Realistic
-  { value: 'natural available light with soft shadow transitions and true-to-life color temperature', label: 'Natural Lighting', category: 'realistic' },
-  { value: 'visible skin pores, fine facial hair, natural imperfections, subsurface light scattering through skin', label: 'Realistic Skin', category: 'realistic' },
-  { value: 'authentic human movement with natural weight transfer, momentum, and subtle involuntary micro-movements', label: 'Natural Motion', category: 'realistic' },
-  { value: 'natural eye moisture with catchlight reflections, visible iris detail, realistic pupil size', label: 'Realistic Eyes', category: 'realistic' },
-  { value: 'soft focus fall-off mimicking real lens optics with natural depth transition', label: 'Optical Focus', category: 'realistic' },
-  // Light
-  { value: 'anamorphic lens flare streaks across bright light sources with natural rainbow dispersion', label: 'Lens Flare', category: 'light' },
-  { value: 'shallow depth of field with large creamy circular bokeh orbs and slight chromatic fringing', label: 'Bokeh Blur', category: 'light' },
-  { value: 'soft diffusion glow wrapping around highlights and bright edges of subject', label: 'Soft Glow', category: 'light' },
-  { value: 'volumetric god rays streaming through atmospheric haze, visible light beam shafts', label: 'Light Rays', category: 'light' },
-  { value: 'vivid neon light color cast reflecting off wet surfaces and skin, electric color spill', label: 'Neon Glow', category: 'light' },
-  { value: 'dappled sunlight filtering through tree canopy, shifting light patches on face and ground', label: 'Dappled Sunlight', category: 'light' },
-  // Film
-  { value: 'organic photochemical film grain texture visible on skin and midtones, authentic analogue feel', label: 'Film Grain', category: 'film' },
-  { value: 'natural optical vignette with gradual darkening toward frame edges drawing focus to center', label: 'Vignette', category: 'film' },
-  { value: 'subtle chromatic aberration with color fringing on high-contrast edges, vintage lens character', label: 'Chromatic Aberration', category: 'film' },
-  { value: 'directional motion blur on fast movement preserving stillness in static elements', label: 'Motion Blur', category: 'film' },
-  { value: 'warm amber color temperature shift, golden skin tones, orange-tinted highlights', label: 'Warm Tones', category: 'film' },
-  // Particles
-  { value: 'tiny luminous particles floating slowly through air, catching and scattering backlight', label: 'Floating Particles', category: 'particles' },
-  { value: 'fine dust motes drifting through visible light beams, natural indoor atmosphere', label: 'Dust Motes', category: 'particles' },
-  { value: 'delicate glittering sparkle points appearing and fading in air around subject', label: 'Sparkles', category: 'particles' },
-  { value: 'warm glowing embers floating upward through frame, soft orange-red points of light', label: 'Floating Embers', category: 'particles' },
-  // Nature
-  { value: 'natural wind flowing through hair with individual strand movement, gentle fabric motion', label: 'Wind in Hair', category: 'nature' },
-  { value: 'realistic rain falling with visible individual droplets, wet surface reflections, splash impacts', label: 'Rain', category: 'nature' },
-  { value: 'gentle snowflakes drifting down at varied speeds and sizes, settling on surfaces and shoulders', label: 'Snow', category: 'nature' },
-  { value: 'atmospheric fog or mist rolling through scene creating visible depth layers and soft obscuration', label: 'Fog/Mist', category: 'nature' },
-];
-
-// Scene Description Quick Ideas
-const SCENE_IDEAS = [
-  // Facial expressions & micro-movements
-  { label: 'Talking to camera', value: 'person speaking naturally to camera with realistic lip sync and jaw movement, natural breath pauses between sentences, subtle tongue and teeth visible during speech, slight head micro-movements accompanying words, natural blink rhythm every 3-5 seconds, genuine conversational energy', category: 'person' },
-  { label: 'Slow genuine smile', value: 'a slow Duchenne smile forming naturally — corners of mouth lifting first, then cheeks rising, crow\'s feet crinkling at outer eye corners, slight narrowing of eyes, teeth gradually becoming visible, warmth spreading across entire face over 2-3 seconds, authentic joy reaching the eyes', category: 'person' },
-  { label: 'Nodding thoughtfully', value: 'gentle contemplative head nod with natural neck movement, slight pursing of lips while processing thought, eyes maintaining soft focus with occasional micro-glances, brow slightly furrowed in concentration, chin dipping and rising at natural conversational pace', category: 'person' },
-  { label: 'Raised eyebrows', value: 'eyebrows lifting naturally with forehead creasing, eyes widening slightly in genuine surprise or curiosity, mouth parting just slightly, head tilting back almost imperceptibly, the kind of involuntary micro-expression that lasts 1-2 seconds before settling', category: 'person' },
-  { label: 'Soft blink', value: 'natural relaxed blink with eyelids closing and opening at realistic speed, slight flutter of eyelashes, eye moisture visible as lids reopen, pupils adjusting subtly to light, calm unfocused gaze settling back into gentle eye contact', category: 'person' },
-  { label: 'Slight head tilt', value: 'curious gentle head tilt to one side, neck muscles engaging naturally, one ear dipping closer to shoulder, eyes maintaining contact with slight upward angle, expression of genuine interest and attentive listening, warm approachable body language', category: 'person' },
-  // Body language
-  { label: 'Hand gestures', value: 'natural illustrative hand gestures while speaking, fingers relaxed and slightly curved, wrist rotating fluidly, hands emphasizing key points at chest height, occasional open-palm gesture, movements timed naturally with speech rhythm, hands returning to rest between gestures', category: 'person' },
-  { label: 'Leaning in', value: 'torso shifting forward slightly with natural weight transfer, shoulders angling toward camera, elbows moving inward, chin advancing, creating intimate engaged proximity, facial expression intensifying with interest, the involuntary lean of someone genuinely captivated', category: 'person' },
-  { label: 'Relaxed shoulders', value: 'visible tension releasing from shoulders as they drop naturally, neck lengthening, jaw unclenching subtly, breathing deepening and becoming visible in chest, overall posture softening from rigid to comfortable, genuine moment of physical ease', category: 'person' },
-  { label: 'Hair touch', value: 'hand rising naturally to tuck a strand of hair behind ear or brush it from forehead, fingers moving through hair with casual practiced ease, brief self-conscious moment, a genuine fidget that communicates comfort and natural human behavior', category: 'person' },
-  { label: 'Looking down then up', value: 'eyes dropping downward as if gathering thoughts, slight lowering of chin, brief pause of internal reflection lasting 1-2 seconds, then eyes lifting back to camera with renewed focus and connection, slight smile forming on the return, a natural thoughtful beat', category: 'person' },
-  // Natural actions
-  { label: 'Deep breath', value: 'a natural deep breath — nostrils flaring slightly on inhale, chest and shoulders rising visibly, brief hold at the top, then a slow controlled exhale with shoulders settling, expression shifting to calm resolve, a grounding moment of genuine composure', category: 'person' },
-  { label: 'Subtle laugh', value: 'genuine spontaneous laugh beginning with eyes crinkling, cheeks lifting, mouth opening naturally, slight head tilt back, shoulders shaking briefly, one hand possibly rising toward face, authentic sound of amusement, the involuntary kind you can\'t fake, settling into a warm residual smile', category: 'person' },
-  { label: 'Glancing aside', value: 'eyes shifting naturally to one side as if noticing something or recalling a memory, head turning slightly to follow gaze, brief 1-second look away before returning focus to camera, natural eye saccade movement, the kind of authentic glance that breaks the fourth wall feeling', category: 'person' },
-  { label: 'Adjusting posture', value: 'subtle weight shift from one side to another, slight hip adjustment, shoulders resettling, chin lifting or tucking, the kind of natural micro-adjustment everyone makes unconsciously every few seconds, maintaining the illusion of a real living person', category: 'person' },
-  { label: 'Lip press', value: 'lips pressing together briefly in thought or mild emphasis, slight jaw clench visible in cheek muscle, a momentary expression of consideration before speaking, tongue briefly touching upper lip, the natural oral movements between sentences', category: 'person' },
-  { label: 'Eye contact shift', value: 'gaze shifting naturally between looking at camera lens and slightly off-center as if looking at a real person\'s eyes, subtle pupil movement and refocusing, the natural way people maintain eye contact by alternating between left and right eye', category: 'person' },
-  // Object & Product movements
-  { label: 'Slow rotation', value: 'object rotating smoothly through 360 degrees on invisible turntable, consistent speed, studio lighting catching different surface angles and reflections as it turns, revealing craftsmanship details and material quality from all sides', category: 'object' },
-  { label: 'Floating hover', value: 'product levitating and hovering with gentle weight, subtle organic up-and-down drift, slight rotation, soft shadow on surface below shifting with movement, dramatic studio lighting accentuating floating isolation', category: 'object' },
-  { label: 'Zoom reveal', value: 'camera slowly pushing in from medium shot to extreme close-up, progressively revealing finer surface texture, material grain, stitching detail, or precision engineering, shallow depth of field increasing as lens approaches', category: 'object' },
-  { label: 'Splash/Impact', value: 'dynamic liquid splash erupting around product, individual water droplets suspended in mid-air catching light, particles dispersing outward, frozen-motion energy, high-speed camera aesthetic, dramatic back-lighting through liquid', category: 'object' },
-  { label: 'Unboxing reveal', value: 'premium packaging lid lifting open smoothly, product emerging from within, tissue paper parting, dramatic lighting revealing product for the first time, anticipation building through pacing, satisfying tactile unboxing experience', category: 'object' },
-  { label: 'Light sweep', value: 'controlled studio light sweeping across product surface from left to right, dramatically revealing contours, embossing, reflective materials, creating moving highlight and shadow that maps the product shape', category: 'object' },
-  { label: 'Assembly/Parts', value: 'product components floating into position from different directions, each piece clicking satisfyingly into place, mechanical precision, the assembled whole emerging greater than its parts, engineering showcase', category: 'object' },
-  { label: 'In-use demo', value: 'natural human hand interacting with product in real-world context, demonstrating primary function with smooth practiced ease, showing scale relative to hand, authentic grip and touch, real-world lighting and environment', category: 'object' },
-  // Environment & Scene
-  { label: 'Parallax depth', value: 'subtle lateral camera drift revealing multiple depth planes, foreground elements sliding past midground and background at different rates, creating dimensional depth and visual richness in an otherwise static scene', category: 'scene' },
-  { label: 'Time-lapse', value: 'accelerated time passage with clouds streaming across sky, shadows rotating and lengthening, light color shifting from golden to blue, traffic or people flowing as blurred streaks, static elements anchoring the moving world', category: 'scene' },
-  { label: 'Gentle breeze', value: 'soft wind flowing through scene causing leaves to rustle and sway, grass bending in waves, light fabric billowing gently, hair lifting slightly, creating the feeling of a living breathing environment', category: 'scene' },
-  { label: 'Water ripple', value: 'calm water surface with concentric ripples expanding outward from a point, reflections of sky and surroundings distorting and reforming, gentle light dancing across water surface, peaceful meditative motion', category: 'scene' },
-  { label: 'Atmospheric fog', value: 'low-lying fog or mist drifting slowly through scene, creating visible depth layers, softening distant elements, volumetric light shafts penetrating through haze, mysterious and moody atmosphere building depth', category: 'scene' },
-  { label: 'Golden hour', value: 'warm golden sunlight from low sun angle, long dramatic shadows stretching across surface, warm orange-amber light wrapping around subjects, backlit edges glowing, the most flattering natural light condition', category: 'scene' },
-];
-
-// Description Presets
-const DESCRIPTION_PRESETS = [
-  // People
-  { id: 'authentic', label: '🤳 Authentic/Raw', category: 'person', prompt: 'real person filmed candidly, visible skin pores and natural texture, uneven skin tone and small imperfections that read as human, natural available light creating soft shadows under chin and nose, unretouched genuine appearance, slightly asymmetric facial features, real fabric texture on clothing with natural wrinkles, the unmistakable look of unfiltered reality' },
-  { id: 'talking', label: '🗣️ Talking Natural', category: 'person', prompt: 'person speaking naturally with realistic lip and jaw movement synced to speech rhythm, natural breath pauses every 5-8 words, subtle tongue visibility on certain consonants, eyebrows rising on emphasized words, head nodding micro-movements accompanying key points, natural blink pattern, casual relaxed shoulders, genuine conversational energy as if talking to a friend' },
-  { id: 'testimonial', label: '⭐ Testimonial', category: 'person', prompt: 'heartfelt authentic testimonial, person sharing genuine experience with visible emotional investment, slight vocal emphasis on key moments, eyes brightening when recalling positive memories, natural speech imperfections like brief pauses and word searching, believable enthusiasm that builds organically, relatable everyday appearance, the kind of real unscripted endorsement that feels trustworthy' },
-  { id: 'thinking', label: '🤔 Thinking Moment', category: 'person', prompt: 'person in genuine contemplation, eyes drifting slightly upward and to one side as if accessing memory, lips pressing together briefly, subtle jaw tension, brow furrowing with fine wrinkle lines appearing, fingers perhaps touching chin or temple, the visible internal process of gathering thoughts before speaking, a natural pregnant pause that feels unscripted' },
-  { id: 'excited', label: '😊 Genuine Excitement', category: 'person', prompt: 'authentic excitement building visibly across the face — eyes widening with pupils dilating slightly, eyebrows lifting, a smile growing from closed-lip to open showing teeth, slight forward lean of entire torso, hands possibly coming together or gesturing outward, increased blink rate, the contagious energy of someone genuinely thrilled, cheeks flushing slightly with real emotion' },
-  { id: 'calm', label: '😌 Calm & Centered', category: 'person', prompt: 'deeply calm centered presence, slow measured breathing visible in gentle chest rise and fall, relaxed jaw and softened facial muscles, half-lidded comfortable eyes with steady gentle gaze, shoulders low and settled, head balanced naturally on neck without tension, serene half-smile, the composed stillness of someone completely at ease in the moment' },
-  { id: 'confident', label: '💪 Quiet Confidence', category: 'person', prompt: 'quietly confident person with steady unwavering eye contact, chin level and centered, subtle assured close-lipped smile, grounded upright posture without rigidity, shoulders back naturally, deliberate unhurried movements, the self-possessed energy of someone who doesn\'t need to prove anything, calm strong presence that commands attention without demanding it' },
-  { id: 'lifestyle', label: '🌟 Lifestyle', category: 'person', prompt: 'aspirational lifestyle moment that feels achievable and real, person in a beautiful but believable natural environment, warm golden ambient lighting, candid movement that feels unposed, genuine comfort and belonging in the space, real fabric textures and natural materials in setting, the kind of authentic aspirational content that inspires without feeling manufactured' },
-  // Product & Object
-  { id: 'product-hero', label: '📦 Product Hero', category: 'object', prompt: 'premium product hero shot with controlled studio lighting, key light creating defined highlight edge, fill light opening shadows to reveal detail, smooth slow rotation revealing all design surfaces, visible material quality — texture grain, reflective surfaces, matte finishes, precise manufacturing details, professional commercial photography quality translated to motion' },
-  { id: 'product-context', label: '🏠 Product in Context', category: 'object', prompt: 'product placed naturally in real-world lifestyle setting, warm ambient lighting from windows or practical sources, surrounding environment telling a story about the product\'s use case, natural material textures in the setting complementing the product, shallow depth of field keeping product sharp against softly blurred environment, aspirational but believable and relatable context' },
-  { id: 'product-close', label: '🔍 Macro Close-up', category: 'object', prompt: 'extreme macro close-up revealing surface texture at near-microscopic detail, visible material grain and manufacturing precision, shallow depth of field with only a thin slice in focus, subtle rack focus pulling attention across surface features, highlighting craftsmanship and quality that isn\'t visible at normal viewing distance, premium tactile detail' },
-  { id: 'product-dynamic', label: '💥 Dynamic Product', category: 'object', prompt: 'high-energy dynamic product reveal with explosive motion, product emerging through particles or liquid splash, dramatic rim lighting creating bright edge separation, bold dramatic shadows, kinetic energy captured at peak moment, high-speed camera aesthetic freezing dynamic elements, attention-commanding visual impact, broadcast commercial quality' },
-  { id: 'food-drink', label: '🍽️ Food & Drink', category: 'object', prompt: 'mouth-watering food or drink presentation with visible steam rising and curling naturally, liquid pouring with realistic fluid dynamics and splashing, fresh ingredients glistening with moisture droplets, warm inviting key light from above creating appetizing highlights, visible texture of every ingredient surface, the kind of sensory-rich food videography that triggers genuine hunger' },
-  { id: 'tech-gadget', label: '💻 Tech/Gadget', category: 'object', prompt: 'sleek technology product with precision-engineered surfaces catching controlled studio light, subtle screen glow illuminating immediate surroundings, clean minimal dark or gradient background isolating the product, reflections in glossy surfaces revealing the studio environment, precise edge lighting defining the form factor, premium technology aesthetic communicating innovation and quality' },
-  // Scene & Environment
-  { id: 'nature-scene', label: '🌿 Nature Scene', category: 'scene', prompt: 'serene natural landscape with organic movement in foliage responding to gentle wind, soft diffused natural light filtering through atmosphere, individual leaves and grass blades moving independently, birds or insects adding background life, natural color palette without artificial saturation, the meditative quality of real undisturbed nature, cinematic wide establishing shot with depth layers' },
-  { id: 'urban-vibe', label: '🏙️ Urban/City', category: 'scene', prompt: 'atmospheric urban street scene with layered city energy, neon signage reflecting off wet pavement, pedestrians moving through frame at varied paces, vehicle headlights creating light streaks, modern architecture with glass reflections of surrounding buildings, steam rising from grates, the textured gritty beauty of a real city at golden hour or twilight' },
-  { id: 'aerial-view', label: '🛩️ Aerial/Drone', category: 'scene', prompt: 'smooth cinematic aerial drone footage with slow controlled flight path, sweeping bird\'s eye perspective revealing landscape scale and patterns, natural topography creating visual rhythm, long shadows indicating time of day, the awe-inspiring perspective shift that only altitude provides, gradual reveal of destination or feature, 4K clarity with atmospheric haze adding depth' },
-  { id: 'cozy-interior', label: '🛋️ Cozy Interior', category: 'scene', prompt: 'warm inviting interior space with layered soft lighting from practical sources — table lamps, candles, fireplace glow — creating pools of warm light, rich comfortable textures visible in fabrics and surfaces, gentle steam rising from a hot drink, subtle dust motes in light beams, the intimate tactile comfort of a lived-in space that feels like home' },
-];
-
 /**
- * JumpStartModal - Image to Video Generation (Simplified)
+ * JumpStartModal — Image to Video with multi-variation support.
+ *
+ * Flow: Upload → Styles → Settings → Results
+ *
+ * Variations = selectedVisualStyles[] × selectedVideoStyles[]
+ * Each variation gets a Cohesive Prompt Builder call then generation.
  */
 export default function JumpStartModal({
   isOpen,
@@ -460,73 +327,49 @@ export default function JumpStartModal({
   initialImage = null
 }) {
   const [activeTab, setActiveTab] = useState('upload');
-  
-  // Image upload
+
+  // ─── Image / Upload state ───────────────────────────────────────────────
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [additionalImages, setAdditionalImages] = useState([]); // For multi-image models like Veo 3.1
+  const [additionalImages, setAdditionalImages] = useState([]);
   const [endFrameImage, setEndFrameImage] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [showEndFrameUrlImport, setShowEndFrameUrlImport] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [libraryTarget, setLibraryTarget] = useState('start'); // 'start', 'end', or 'additional'
+  const [libraryTarget, setLibraryTarget] = useState('start');
   const [urlInput, setUrlInput] = useState('');
-  
-  // Web search state
   const [showWebSearch, setShowWebSearch] = useState(false);
-  const [webSearchTarget, setWebSearchTarget] = useState('start'); // 'start', 'end', or 'additional'
+  const [webSearchTarget, setWebSearchTarget] = useState('start');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
-  // Video settings
+
+  // ─── Model / output settings ────────────────────────────────────────────
   const [videoModel, setVideoModel] = useState('wavespeed-wan');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [resolution, setResolution] = useState('720p');
   const [duration, setDuration] = useState(5);
+
+  // ─── Style selections (multi-select) ────────────────────────────────────
+  const [selectedVisualStyles, setSelectedVisualStyles] = useState([]);
+  const [selectedVideoStyles, setSelectedVideoStyles] = useState([]);
+  const [videoStylesList, setVideoStylesList] = useState([]);
+
+  // ─── Settings / prompt inputs ───────────────────────────────────────────
+  const [sceneDescription, setSceneDescription] = useState('');
   const [cameraMovement, setCameraMovement] = useState('');
   const [cameraAngle, setCameraAngle] = useState('');
-  const [videoStyle, setVideoStyle] = useState('');
-  const [specialEffects, setSpecialEffects] = useState([]);
-  const [sceneDescription, setSceneDescription] = useState('');
-  const [description, setDescription] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
 
-  // Structured prompt builder state
-  const [builderStyle, setBuilderStyle] = useState('');
-  const [builderMood, setBuilderMood] = useState('');
-  const [builderLighting, setBuilderLighting] = useState('');
-  const [builderColorGrade, setBuilderColorGrade] = useState('');
-
-  // Model-specific settings
-  const [enableAudio, setEnableAudio] = useState(true);
+  // ─── Model-specific settings ────────────────────────────────────────────
+  const [enableAudio, setEnableAudio] = useState(false);
   const [drivingAudioUrl, setDrivingAudioUrl] = useState('');
   const [audioTranscript, setAudioTranscript] = useState('');
   const [cameraFixed, setCameraFixed] = useState(false);
-  const [negativePrompt, setNegativePrompt] = useState('');
   const [cfgScale, setCfgScale] = useState(0.5);
-  const [sceneIdeaFilter, setSceneIdeaFilter] = useState('all');
-  const [presetFilter, setPresetFilter] = useState('all');
 
-  // Kling R2V — character reference images
+  // ─── Kling R2V references ──────────────────────────────────────────────
   const [referenceImages, setReferenceImages] = useState([]);
   const [frontalIndex, setFrontalIndex] = useState(0);
-
-  // LTX ICLoRA controls
-  const [icLoraType, setIcLoraType] = useState('pose');
-  const [icLoraScale, setIcLoraScale] = useState(1.0);
-  
-  // Generated video
-  const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
-  const [hasAddedToEditor, setHasAddedToEditor] = useState(false);
-  
-  const fileInputRef = useRef(null);
-  const endFrameInputRef = useRef(null);
-  const referenceFileInputRef = useRef(null);
-  const pollIntervalRef = useRef(null);
-  const contentRef = useRef(null);
-
-  // Reference images library browser
   const [showRefLibrary, setShowRefLibrary] = useState(false);
   const [refLibraryItems, setRefLibraryItems] = useState([]);
   const [refLibraryFolders, setRefLibraryFolders] = useState([]);
@@ -534,45 +377,50 @@ export default function JumpStartModal({
   const [refSelectedIds, setRefSelectedIds] = useState(new Set());
   const [refLibraryLoading, setRefLibraryLoading] = useState(false);
 
-  // Helper to save media to library
-  const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
-    try {
-      console.log(`[JumpStart] Saving ${type} to library:`, url.substring(0, 50) + '...');
-      const response = await apiFetch('/api/library/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, type, title, source }),
-      });
-      const data = await response.json();
-      if (data.saved) {
-        console.log(`[JumpStart] Successfully saved ${type} to library:`, data.id);
-      } else {
-        console.warn(`[JumpStart] ${type} not saved:`, data.message || 'Unknown reason');
-      }
-    } catch (err) {
-      console.error('[JumpStart] Failed to save to library:', err);
-    }
-  };
+  // ─── LTX ICLoRA ─────────────────────────────────────────────────────────
+  const [icLoraType, setIcLoraType] = useState('pose');
+  const [icLoraScale, setIcLoraScale] = useState(1.0);
 
-  // Scroll to top when tab changes
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-    }
-  }, [activeTab]);
+  // ─── Generation / Results ───────────────────────────────────────────────
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [multiResults, setMultiResults] = useState([]);
 
-  // Get current model config
+  // ─── Refs ───────────────────────────────────────────────────────────────
+  const fileInputRef = useRef(null);
+  const endFrameInputRef = useRef(null);
+  const referenceFileInputRef = useRef(null);
+  const contentRef = useRef(null);
+  const mountedRef = useRef(true);
+  const pollTimers = useRef({});
+
+  // Derived
   const currentModel = VIDEO_MODELS.find(m => m.id === videoModel) || VIDEO_MODELS[0];
 
-  // Reset modal state when opened
+  // ─── Lifecycle ──────────────────────────────────────────────────────────
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [activeTab]);
+
+  // Load video style presets when styles tab opens
+  useEffect(() => {
+    if (activeTab === 'styles' && videoStylesList.length === 0) {
+      apiFetch('/api/styles/video')
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setVideoStylesList(data); })
+        .catch(err => console.error('[JumpStart] Failed to load video styles:', err));
+    }
+  }, [activeTab, videoStylesList.length]);
+
+  // Reset state on open
   useEffect(() => {
     if (isOpen) {
       setActiveTab('upload');
       setUploadedImage(null);
       setAdditionalImages([]);
       setEndFrameImage(null);
-      setIsLoading(false);
-      setLoadingMessage('');
       setShowUrlImport(false);
       setShowEndFrameUrlImport(false);
       setUrlInput('');
@@ -584,143 +432,149 @@ export default function JumpStartModal({
       setAspectRatio('16:9');
       setResolution('720p');
       setDuration(5);
+      setSelectedVisualStyles([]);
+      setSelectedVideoStyles([]);
+      setSceneDescription('');
       setCameraMovement('');
       setCameraAngle('');
-      setVideoStyle('');
-      setSpecialEffects([]);
-      setSceneDescription('');
-      setDescription('');
-      setEnableAudio(true);
-      setAudioTranscript('');
-      setCameraFixed(false);
       setNegativePrompt('');
+      setEnableAudio(false);
+      setAudioTranscript('');
+      setDrivingAudioUrl('');
+      setCameraFixed(false);
       setCfgScale(0.5);
-      setSceneIdeaFilter('all');
-      setPresetFilter('all');
-      setGeneratedVideoUrl(null);
-      setHasAddedToEditor(false);
+      setReferenceImages([]);
+      setFrontalIndex(0);
+      setIcLoraType('pose');
+      setIcLoraScale(1.0);
+      setMultiResults([]);
+      setIsLoading(false);
+      setLoadingMessage('');
+      // Clear poll timers
+      Object.values(pollTimers.current).forEach(clearTimeout);
+      pollTimers.current = {};
 
-      // Pre-populate from initialImage (e.g., turnaround sheet)
       if (initialImage) {
         setUploadedImage(initialImage);
-        setActiveTab('settings');
+        setActiveTab('styles');
       }
     }
   }, [isOpen, initialImage]);
 
-  // Stop polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearTimeout(pollIntervalRef.current);
-      }
-    };
-  }, []);
-
-  const handleModelChange = (newModelId) => {
-    const newModel = VIDEO_MODELS.find(m => m.id === newModelId);
-    if (!newModel) return;
-    
-    setVideoModel(newModelId);
-    
-    // Reset aspect ratio if not supported
-    if (!newModel.aspectRatios.includes(aspectRatio)) {
-      setAspectRatio(newModel.aspectRatios[0]);
-    }
-    
-    // Reset resolution if not supported
-    if (!newModel.resolutions.includes(resolution)) {
-      setResolution(newModel.resolutions[0]);
-    }
-    
-    // Reset duration if not in options
-    if (!newModel.durationOptions.includes(duration)) {
-      setDuration(newModel.durationOptions[0]);
-    }
-    
-    // Reset audio if not supported
-    if (!newModel.supportsAudio) {
-      setEnableAudio(false);
-      setAudioTranscript('');
-    } else {
-      setEnableAudio(true);
-    }
-    
-    // Reset end frame if not supported
-    if (!newModel.supportsEndFrame) {
-      setEndFrameImage(null);
-    }
-    
-    // Reset camera fixed if not supported
-    if (!newModel.supportsCameraFixed) {
-      setCameraFixed(false);
+  // ─── Helpers ────────────────────────────────────────────────────────────
+  const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {
+    try {
+      await apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type, title, source }),
+      });
+    } catch (err) {
+      console.error('[JumpStart] Failed to save to library:', err);
     }
   };
 
+  // ─── Model change ──────────────────────────────────────────────────────
+  const handleModelChange = (newModelId) => {
+    const newModel = VIDEO_MODELS.find(m => m.id === newModelId);
+    if (!newModel) return;
+    setVideoModel(newModelId);
+    if (!newModel.aspectRatios.includes(aspectRatio)) setAspectRatio(newModel.aspectRatios[0]);
+    if (!newModel.resolutions.includes(resolution)) setResolution(newModel.resolutions[0]);
+    if (!newModel.durationOptions.includes(duration)) setDuration(newModel.durationOptions[0]);
+    if (!newModel.supportsAudio) { setEnableAudio(false); setAudioTranscript(''); }
+    if (!newModel.supportsEndFrame) setEndFrameImage(null);
+    if (!newModel.supportsCameraFixed) setCameraFixed(false);
+  };
+
+  // ─── File / URL / Library / Search handlers ────────────────────────────
   const handleFileUpload = async (e, target = 'start') => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       const dataUrl = event.target.result;
       if (target === 'start') {
         setUploadedImage(dataUrl);
-        saveToLibrary(dataUrl, 'image', `JumpStart Upload - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else if (target === 'additional') {
         setAdditionalImages(prev => [...prev, dataUrl]);
-        saveToLibrary(dataUrl, 'image', `JumpStart Reference - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else if (target === 'reference') {
         setReferenceImages(prev => [...prev, dataUrl]);
-        saveToLibrary(dataUrl, 'image', `JumpStart Character Ref - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       } else {
         setEndFrameImage(dataUrl);
-        saveToLibrary(dataUrl, 'image', `JumpStart End Frame - ${new Date().toLocaleString()}`, 'jumpstart-upload');
       }
+      saveToLibrary(dataUrl, 'image', `JumpStart ${target} - ${new Date().toLocaleString()}`, 'jumpstart-upload');
     };
     reader.readAsDataURL(file);
   };
 
   const handleUrlImport = (target = 'start') => {
     if (!urlInput.trim()) return;
-    
     const url = urlInput.trim();
-    if (target === 'start') {
-      setUploadedImage(url);
-      setShowUrlImport(false);
-      // Save imported URL to library
-      saveToLibrary(url, 'image', `JumpStart Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
-    } else if (target === 'additional') {
-      setAdditionalImages(prev => [...prev, url]);
-      setShowUrlImport(false);
-      saveToLibrary(url, 'image', `JumpStart Reference Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
-    } else {
-      setEndFrameImage(url);
-      setShowEndFrameUrlImport(false);
-      saveToLibrary(url, 'image', `JumpStart End Frame Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
-    }
+    if (target === 'start') { setUploadedImage(url); setShowUrlImport(false); }
+    else if (target === 'additional') { setAdditionalImages(prev => [...prev, url]); setShowUrlImport(false); }
+    else { setEndFrameImage(url); setShowEndFrameUrlImport(false); }
+    saveToLibrary(url, 'image', `JumpStart Import - ${new Date().toLocaleString()}`, 'jumpstart-import');
     setUrlInput('');
   };
 
   const handleLibrarySelect = (item) => {
     const url = item.image_url || item.url;
-    if (libraryTarget === 'start') {
-      setUploadedImage(url);
-    } else if (libraryTarget === 'additional') {
-      setAdditionalImages(prev => [...prev, url]);
-    } else if (libraryTarget === 'reference') {
-      setReferenceImages(prev => [...prev, url]);
-    } else {
-      setEndFrameImage(url);
-    }
+    if (libraryTarget === 'start') setUploadedImage(url);
+    else if (libraryTarget === 'additional') setAdditionalImages(prev => [...prev, url]);
+    else if (libraryTarget === 'reference') setReferenceImages(prev => [...prev, url]);
+    else setEndFrameImage(url);
     setShowLibrary(false);
   };
-  
-  const removeAdditionalImage = (index) => {
-    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+
+  const removeAdditionalImage = (index) => setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+
+  // ─── Web search ─────────────────────────────────────────────────────────
+  const handleWebSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setSearchResults([]);
+    try {
+      const response = await apiFetch('/api/images/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery.trim() }),
+      });
+      const data = await response.json();
+      if (data.images?.length > 0) setSearchResults(data.images);
+    } catch (error) {
+      console.error('Web search error:', error);
+      toast.error('Failed to search images');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  // ─── Reference Images Library Browser ─────────────────────────────────
+  const handleSelectSearchResult = async (imageResult) => {
+    const url = imageResult.url;
+    try {
+      const response = await apiFetch('/api/images/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url, username }),
+      });
+      const data = await response.json();
+      const finalUrl = data.url || url;
+      if (webSearchTarget === 'start') setUploadedImage(finalUrl);
+      else if (webSearchTarget === 'additional') setAdditionalImages(prev => [...prev, finalUrl]);
+      else setEndFrameImage(finalUrl);
+      saveToLibrary(finalUrl, 'image', imageResult.title || `Web Search - ${searchQuery}`, 'jumpstart-websearch');
+    } catch {
+      if (webSearchTarget === 'start') setUploadedImage(url);
+      else if (webSearchTarget === 'additional') setAdditionalImages(prev => [...prev, url]);
+      else setEndFrameImage(url);
+    }
+    setShowWebSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // ─── Reference Library Browser (Kling R2V) ─────────────────────────────
   const loadRefLibrary = async () => {
     setRefLibraryLoading(true);
     try {
@@ -746,257 +600,255 @@ export default function JumpStartModal({
     }
   };
 
-  const openRefLibrary = () => {
-    setShowRefLibrary(true);
-    setRefSelectedIds(new Set());
-    setRefSelectedFolder(null);
-    loadRefLibrary();
+  const openRefLibrary = () => { setShowRefLibrary(true); setRefSelectedIds(new Set()); setRefSelectedFolder(null); loadRefLibrary(); };
+  const toggleRefLibraryItem = (id) => { setRefSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
+  const selectAllRefInFolder = (folder) => { const items = folder === null ? refLibraryItems : refLibraryItems.filter(i => i.title?.startsWith(`[${folder}]`)); setRefSelectedIds(new Set(items.map(i => i.id))); };
+  const importRefFromLibrary = () => { const selected = refLibraryItems.filter(i => refSelectedIds.has(i.id)); if (selected.length === 0) return; setReferenceImages(prev => [...prev, ...selected.map(i => i.url)]); setShowRefLibrary(false); setRefSelectedIds(new Set()); };
+  const filteredRefLibraryItems = refSelectedFolder === null ? refLibraryItems : refLibraryItems.filter(i => i.title?.startsWith(`[${refSelectedFolder}]`));
+
+  // ─── Build Variation Matrix ─────────────────────────────────────────────
+  const buildVariationMatrix = () => {
+    const vs = selectedVisualStyles.length > 0 ? selectedVisualStyles : [null];
+    const ms = selectedVideoStyles.length > 0 ? selectedVideoStyles : [null];
+    const matrix = [];
+    for (const visualKey of vs) {
+      for (const motionKey of ms) {
+        const visualStyle = visualKey ? findStyleByValue(visualKey) : null;
+        const motionStyle = motionKey ? videoStylesList.find(s => s.key === motionKey) : null;
+        matrix.push({
+          visualKey,
+          motionKey,
+          visualLabel: visualStyle?.label || 'Default',
+          motionLabel: motionStyle?.label || 'Default',
+          visualPrompt: visualStyle?.promptText || '',
+          motionPrompt: motionStyle?.prompt || '',
+        });
+      }
+    }
+    return matrix;
   };
 
-  const toggleRefLibraryItem = (id) => {
-    setRefSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  // ─── Cohesive Prompt Builder call ───────────────────────────────────────
+  const buildCohesivePrompt = async (visualPrompt, motionPrompt) => {
+    const body = {
+      tool: 'jumpstart',
+      description: sceneDescription || 'smooth natural motion with realistic physics',
+      style: visualPrompt || undefined,
+      videoStylePrompt: motionPrompt || undefined,
+      cameraDirection: cameraMovement || undefined,
+      cameraAngle: cameraAngle || undefined,
+      negativePrompt: negativePrompt || undefined,
+    };
+
+    const response = await apiFetch('/api/prompt/build-cohesive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!data.success || !data.prompt) throw new Error(data.error || 'Failed to build prompt');
+    return data.prompt;
+  };
+
+  // ─── Poll for a single variation ───────────────────────────────────────
+  const pollForResultAsync = (requestId, model) => {
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        if (!mountedRef.current) return reject(new Error('Unmounted'));
+        try {
+          const response = await apiFetch('/api/jumpstart/result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestId, model }),
+          });
+          const data = await response.json();
+          if (data.status === 'completed' && data.videoUrl) {
+            resolve(data.videoUrl);
+          } else if (data.status === 'failed') {
+            reject(new Error(data.error || 'Generation failed'));
+          } else {
+            pollTimers.current[requestId] = setTimeout(poll, 3000);
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+      poll();
     });
   };
 
-  const selectAllRefInFolder = (folder) => {
-    const items = folder === null ? refLibraryItems : refLibraryItems.filter(i => i.title?.startsWith(`[${folder}]`));
-    setRefSelectedIds(new Set(items.map(i => i.id)));
-  };
+  // ─── Generate all variations ────────────────────────────────────────────
+  const handleGenerate = async () => {
+    if (!uploadedImage) { toast.error('Please upload an image first'); return; }
+    if (currentModel.requiresFirstLastFrame && !endFrameImage) { toast.error('Please upload both first and last frame images'); return; }
+    if (currentModel.requiresAudioUrl && !drivingAudioUrl) { toast.error('An Audio URL is required for this model.'); return; }
 
-  const importRefFromLibrary = () => {
-    const selected = refLibraryItems.filter(i => refSelectedIds.has(i.id));
-    if (selected.length === 0) return;
-    setReferenceImages(prev => [...prev, ...selected.map(i => i.url)]);
-    setShowRefLibrary(false);
-    setRefSelectedIds(new Set());
-    toast.success(`Added ${selected.length} reference images`);
-  };
+    const matrix = buildVariationMatrix();
+    if (matrix.length === 0) { toast.error('Select at least one style'); return; }
 
-  const filteredRefLibraryItems = refSelectedFolder === null
-    ? refLibraryItems
-    : refLibraryItems.filter(i => i.title?.startsWith(`[${refSelectedFolder}]`));
-
-  // Web image search
-  const handleWebSearch = async () => {
-    if (!searchQuery.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    setIsSearching(true);
-    setSearchResults([]);
-
-    try {
-      const response = await apiFetch('/api/images/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Search failed');
-      }
-
-      if (data.images && data.images.length > 0) {
-        setSearchResults(data.images);
-      } else {
-        toast.info('No images found. Try a different search term.');
-      }
-    } catch (error) {
-      console.error('Web search error:', error);
-      toast.error(error.message || 'Failed to search images');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSelectSearchResult = async (imageResult) => {
-    const url = imageResult.url;
-    
-    // Import the image to avoid CORS issues
-    try {
-      const response = await apiFetch('/api/images/import-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: url, username }),
-      });
-      
-      const data = await response.json();
-      const finalUrl = data.url || url;
-      
-      if (webSearchTarget === 'start') {
-        setUploadedImage(finalUrl);
-      } else if (webSearchTarget === 'additional') {
-        setAdditionalImages(prev => [...prev, finalUrl]);
-      } else {
-        setEndFrameImage(finalUrl);
-      }
-      
-      // Save to library
-      saveToLibrary(finalUrl, 'image', imageResult.title || `Web Search - ${searchQuery}`, 'jumpstart-websearch');
-      
-      setShowWebSearch(false);
-      setSearchQuery('');
-      setSearchResults([]);
-      toast.success('Image imported!');
-    } catch (error) {
-      console.error('Import error:', error);
-      // Fallback to direct URL
-      if (webSearchTarget === 'start') {
-        setUploadedImage(url);
-      } else if (webSearchTarget === 'additional') {
-        setAdditionalImages(prev => [...prev, url]);
-      } else {
-        setEndFrameImage(url);
-      }
-      setShowWebSearch(false);
-      setSearchQuery('');
-      setSearchResults([]);
-    }
-  };
-
-  const stopPolling = () => {
-    if (pollIntervalRef.current) {
-      clearTimeout(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-  };
-
-  const buildPrompt = () => {
-    const parts = [];
-    
-    // Scene description first (most important)
-    if (sceneDescription.trim()) {
-      parts.push(sceneDescription.trim());
-    }
-    
-    // Video style with prompt
-    const styleConfig = VIDEO_STYLES.find(s => s.value === videoStyle);
-    if (styleConfig?.prompt) {
-      parts.push(styleConfig.prompt);
-    }
-    
-    // Description/motion preset
-    if (description.trim()) {
-      parts.push(description.trim());
-    }
-    
-    // Camera movement (skip for realistic styles to preserve authenticity)
-    const isRealisticStyle = ['iphone-selfie', 'ugc-testimonial', 'tiktok-style', 'facetime-call'].includes(videoStyle);
-    if (cameraMovement && !isRealisticStyle) {
-      parts.push(cameraMovement);
-    } else if (cameraMovement && isRealisticStyle && cameraMovement.includes('subtle')) {
-      parts.push('subtle natural movement');
-    }
-    
-    // Camera angle
-    if (cameraAngle) {
-      parts.push(`${cameraAngle} shot`);
-    }
-    
-    // Special effects
-    if (specialEffects.length > 0) {
-      parts.push(specialEffects.join(', '));
-    }
-    
-    // Structured prompt builder fields
-    if (builderStyle) parts.push(`Style: ${builderStyle}`);
-    if (builderMood) parts.push(`Mood: ${builderMood}`);
-    if (builderLighting) parts.push(`Lighting: ${builderLighting}`);
-    if (builderColorGrade) parts.push(`Color grade: ${builderColorGrade}`);
-
-    // Quality boosters for realistic styles
-    if (isRealisticStyle) {
-      parts.push('photorealistic with natural skin texture and visible pores, authentic micro-expressions and natural blink rhythm, believable weight and momentum in all movement, real-world lighting with true color temperature, natural imperfections that read as human');
-    } else {
-      // General quality booster for all non-realistic styles
-      parts.push('high production quality, smooth natural motion, consistent lighting');
-    }
-
-    // Aspect ratio hint
-    if (aspectRatio !== 'auto') {
-      const isPortrait = ['9:16', '3:4', '2:3'].includes(aspectRatio);
-      parts.push(isPortrait ? 'vertical portrait video' : 'horizontal video');
-    }
-
-    return parts.join(', ') || 'smooth natural motion with realistic physics and weight, high quality video with natural lighting and authentic detail';
-  };
-
-  const pollForResult = async (requestId, model) => {
-    try {
-      const response = await apiFetch('/api/jumpstart/result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, model }),
-      });
-
-      if (!response.ok) throw new Error('Failed to check status');
-
-      const data = await response.json();
-      
-      if (data.queuePosition) {
-        setLoadingMessage(`In queue (position ${data.queuePosition})...`);
-      }
-      
-      if (data.status === 'completed') {
-        stopPolling();
-        setIsLoading(false);
-        setGeneratedVideoUrl(data.videoUrl);
-        setActiveTab('preview');
-        setHasAddedToEditor(false);
-        toast.success('Video generated successfully!');
-        
-        // Notify parent if callback provided (parent handles library save)
-        if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart', duration);
-        }
-      } else if (data.status === 'failed') {
-        stopPolling();
-        setIsLoading(false);
-        toast.error(data.error || 'Video generation failed');
-      } else {
-        pollIntervalRef.current = setTimeout(() => {
-          pollForResult(requestId, model);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Poll error:', error);
-    }
-  };
-
-  const handleGenerateVideo = async () => {
-    if (!uploadedImage) {
-      toast.error('Please upload an image first');
-      return;
-    }
-    
-    // Validate first-last frame mode
-    if (currentModel.requiresFirstLastFrame && !endFrameImage) {
-      toast.error('Please upload both first and last frame images');
-      return;
-    }
-
+    // Initialize results grid
+    const initialResults = matrix.map(v => ({
+      visualKey: v.visualKey,
+      motionKey: v.motionKey,
+      visualLabel: v.visualLabel,
+      motionLabel: v.motionLabel,
+      status: 'prompting',
+      videoUrl: null,
+      error: null,
+      saved: false,
+    }));
+    setMultiResults(initialResults);
+    setActiveTab('results');
     setIsLoading(true);
-    const prompt = buildPrompt();
-    const modelName = currentModel.label;
-    setLoadingMessage(`${modelName} is generating your video...`);
+    setLoadingMessage(`Generating ${matrix.length} variation${matrix.length > 1 ? 's' : ''}...`);
+
+    const updateSlot = (index, updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    // Convert start image to blob once
+    let imageBlob;
+    try {
+      const imgResp = await fetch(uploadedImage);
+      imageBlob = await imgResp.blob();
+    } catch {
+      toast.error('Failed to load start image');
+      setIsLoading(false);
+      return;
+    }
+
+    const generateOne = async (variation, index) => {
+      try {
+        // Step 1: build cohesive prompt
+        const prompt = await buildCohesivePrompt(variation.visualPrompt, variation.motionPrompt);
+        if (!mountedRef.current) return;
+        updateSlot(index, { status: 'generating' });
+
+        // Step 2: send to API
+        const formData = new FormData();
+        formData.append('image', imageBlob, 'image.jpg');
+        formData.append('prompt', prompt);
+        formData.append('model', videoModel);
+        formData.append('resolution', resolution);
+        formData.append('duration', duration.toString());
+        formData.append('aspectRatio', aspectRatio);
+        formData.append('username', username);
+
+        // Audio — always explicitly false unless toggled on
+        if (currentModel.supportsAudio) {
+          formData.append('enableAudio', enableAudio.toString());
+          if (enableAudio && audioTranscript.trim()) {
+            formData.append('audioTranscript', audioTranscript.trim());
+          }
+        } else {
+          formData.append('enableAudio', 'false');
+        }
+
+        if (currentModel.supportsCameraFixed) formData.append('cameraFixed', cameraFixed.toString());
+        if (currentModel.supportsEndFrame && endFrameImage) formData.append('endImageUrl', endFrameImage);
+        if (currentModel.supportsNegativePrompt && negativePrompt.trim()) formData.append('negativePrompt', negativePrompt.trim());
+        if (currentModel.supportsCfgScale) formData.append('cfgScale', cfgScale.toString());
+        if (currentModel.requiresAudioUrl) formData.append('audioUrl', drivingAudioUrl);
+        if (currentModel.supportsMultipleImages && additionalImages.length > 0) formData.append('additionalImages', JSON.stringify(additionalImages));
+        if (currentModel.supportsReferenceImages && referenceImages.length > 0) {
+          formData.append('referenceImages', JSON.stringify(referenceImages));
+          formData.append('frontalImageUrl', referenceImages[frontalIndex] || referenceImages[0]);
+        }
+        if (currentModel.supportsICLoRA) {
+          formData.append('icLoraType', icLoraType);
+          formData.append('icLoraScale', icLoraScale.toString());
+        }
+
+        const result = await apiFetch('/api/jumpstart/generate', { method: 'POST', body: formData });
+        const data = await result.json();
+        if (!result.ok) throw new Error(data.error || 'Failed to start generation');
+
+        if (data.videoUrl) {
+          updateSlot(index, { status: 'completed', videoUrl: data.videoUrl });
+        } else if (data.requestId) {
+          updateSlot(index, { status: 'polling' });
+          const videoUrl = await pollForResultAsync(data.requestId, videoModel);
+          updateSlot(index, { status: 'completed', videoUrl });
+        } else {
+          throw new Error('No request ID returned');
+        }
+      } catch (error) {
+        updateSlot(index, { status: 'failed', error: error.message });
+      }
+    };
+
+    // Run at most 2 concurrent generations
+    const CONCURRENCY = 2;
+    for (let i = 0; i < matrix.length; i += CONCURRENCY) {
+      const batch = matrix.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(batch.map((v, idx) => generateOne(v, i + idx)));
+    }
+    if (mountedRef.current) setIsLoading(false);
+  };
+
+  // ─── Save / Download / Retry ────────────────────────────────────────────
+  const handleSaveOne = async (index) => {
+    const result = multiResults[index];
+    if (!result?.videoUrl || result.saved) return;
+    setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
+    try {
+      const label = [result.visualLabel, result.motionLabel].filter(l => l !== 'Default').join(' + ') || 'JumpStart Video';
+      const res = await apiFetch('/api/library/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.videoUrl, type: 'video', title: `JumpStart — ${label}`, source: 'jumpstart' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (onVideoGenerated) {
+        onVideoGenerated(result.videoUrl, `JumpStart - ${label}`, 'jumpstart', duration);
+      }
+    } catch (err) {
+      toast.error(`Failed to save: ${err.message}`);
+      setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
+    }
+  };
+
+  const handleSaveAll = async () => {
+    const unsaved = multiResults.map((r, i) => ({ ...r, index: i })).filter(r => r.status === 'completed' && !r.saved && r.videoUrl);
+    setMultiResults(prev => prev.map(r => r.status === 'completed' && !r.saved && r.videoUrl ? { ...r, saved: true } : r));
+    for (const item of unsaved) {
+      try {
+        const label = [item.visualLabel, item.motionLabel].filter(l => l !== 'Default').join(' + ') || 'JumpStart Video';
+        await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.videoUrl, type: 'video', title: `JumpStart — ${label}`, source: 'jumpstart' }),
+        });
+        if (onVideoGenerated) onVideoGenerated(item.videoUrl, `JumpStart - ${label}`, 'jumpstart', duration);
+      } catch (err) {
+        console.error('[JumpStart] Save failed:', err);
+      }
+    }
+  };
+
+  const handleRetryOne = async (index) => {
+    const variation = multiResults[index];
+    if (!variation) return;
+
+    setMultiResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'prompting', error: null, videoUrl: null } : r));
+
+    const matrix = buildVariationMatrix();
+    const v = matrix[index];
+    if (!v) return;
+
+    const updateSlot = (idx, updates) => {
+      if (!mountedRef.current) return;
+      setMultiResults(prev => prev.map((r, i) => i === idx ? { ...r, ...updates } : r));
+    };
 
     try {
-      // Convert image to blob if it's a data URL
+      const prompt = await buildCohesivePrompt(v.visualPrompt, v.motionPrompt);
+      updateSlot(index, { status: 'generating' });
+
       let imageBlob;
-      if (uploadedImage.startsWith('data:')) {
-        const response = await fetch(uploadedImage);
-        imageBlob = await response.blob();
-      } else {
-        // For URLs, fetch the image
-        const response = await fetch(uploadedImage);
-        imageBlob = await response.blob();
-      }
+      const imgResp = await fetch(uploadedImage);
+      imageBlob = await imgResp.blob();
 
       const formData = new FormData();
       formData.append('image', imageBlob, 'image.jpg');
@@ -1006,129 +858,93 @@ export default function JumpStartModal({
       formData.append('duration', duration.toString());
       formData.append('aspectRatio', aspectRatio);
       formData.append('username', username);
-      
-      // Model-specific settings
       if (currentModel.supportsAudio) {
         formData.append('enableAudio', enableAudio.toString());
-        if (enableAudio && audioTranscript.trim()) {
-          formData.append('audioTranscript', audioTranscript.trim());
-        }
+        if (enableAudio && audioTranscript.trim()) formData.append('audioTranscript', audioTranscript.trim());
+      } else {
+        formData.append('enableAudio', 'false');
       }
-      
-      if (currentModel.supportsCameraFixed) {
-        formData.append('cameraFixed', cameraFixed.toString());
-      }
-      
-      if (currentModel.supportsEndFrame && endFrameImage) {
-        formData.append('endImageUrl', endFrameImage);
-      }
-      
-      if (currentModel.supportsNegativePrompt && negativePrompt.trim()) {
-        formData.append('negativePrompt', negativePrompt.trim());
-      }
-      
-      if (currentModel.supportsCfgScale) {
-        formData.append('cfgScale', cfgScale.toString());
-      }
-
-      if (currentModel.requiresAudioUrl) {
-        if (!drivingAudioUrl) {
-          setIsLoading(false);
-          toast.error("An Audio URL is required for this model.");
-          return;
-        }
-        formData.append('audioUrl', drivingAudioUrl);
-      }
-      
-      // Multi-image support for Veo 3.1
-      if (currentModel.supportsMultipleImages && additionalImages.length > 0) {
-        formData.append('additionalImages', JSON.stringify(additionalImages));
-      }
-
-      // Reference images for Kling R2V
+      if (currentModel.supportsEndFrame && endFrameImage) formData.append('endImageUrl', endFrameImage);
+      if (currentModel.supportsNegativePrompt && negativePrompt.trim()) formData.append('negativePrompt', negativePrompt.trim());
+      if (currentModel.supportsCfgScale) formData.append('cfgScale', cfgScale.toString());
+      if (currentModel.supportsMultipleImages && additionalImages.length > 0) formData.append('additionalImages', JSON.stringify(additionalImages));
       if (currentModel.supportsReferenceImages && referenceImages.length > 0) {
         formData.append('referenceImages', JSON.stringify(referenceImages));
         formData.append('frontalImageUrl', referenceImages[frontalIndex] || referenceImages[0]);
       }
-
-      // ICLoRA controls for LTX
       if (currentModel.supportsICLoRA) {
         formData.append('icLoraType', icLoraType);
         formData.append('icLoraScale', icLoraScale.toString());
       }
 
-      console.log('[JumpStart] Generating with:', { model: videoModel, aspectRatio, resolution, duration, enableAudio });
-
-      const result = await apiFetch('/api/jumpstart/generate', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const result = await apiFetch('/api/jumpstart/generate', { method: 'POST', body: formData });
       const data = await result.json();
-
-      if (!result.ok) {
-        throw new Error(data.error || 'Failed to start generation');
-      }
-
+      if (!result.ok) throw new Error(data.error || 'Failed');
       if (data.videoUrl) {
-        // Immediate result
-        setIsLoading(false);
-        setGeneratedVideoUrl(data.videoUrl);
-        setActiveTab('preview');
-        setHasAddedToEditor(false);
-        toast.success('Video generated!');
-        
-        // Notify parent if callback provided (parent handles library save)
-        if (onVideoGenerated) {
-          onVideoGenerated(data.videoUrl, `JumpStart - ${videoStyle || 'Generated'}`, 'jumpstart', duration);
-        }
+        updateSlot(index, { status: 'completed', videoUrl: data.videoUrl });
       } else if (data.requestId) {
-        setLoadingMessage(`${modelName} is processing...`);
-        pollForResult(data.requestId, videoModel);
-      } else {
-        throw new Error('No request ID returned');
+        updateSlot(index, { status: 'polling' });
+        const videoUrl = await pollForResultAsync(data.requestId, videoModel);
+        updateSlot(index, { status: 'completed', videoUrl });
       }
     } catch (error) {
-      console.error('Generate error:', error);
-      stopPolling();
-      setIsLoading(false);
-      toast.error(error.message || 'Failed to generate video');
+      updateSlot(index, { status: 'failed', error: error.message });
     }
   };
 
-  const handleDownloadVideo = () => {
-    if (!generatedVideoUrl) return;
-    
+  const handleDownloadVideo = (url) => {
     const link = document.createElement('a');
     link.download = 'jumpstart-video.mp4';
-    link.href = generatedVideoUrl;
+    link.href = url;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Download started!');
-  };
-
-  const handleAddToEditor = () => {
-    if (generatedVideoUrl && onVideoGenerated && !hasAddedToEditor) {
-      onVideoGenerated(generatedVideoUrl, `JumpStart - ${videoStyle || 'Video'}`, 'jumpstart');
-      setHasAddedToEditor(true);
-      toast.success('Video added to your collection!');
-    }
   };
 
   const handleClose = () => {
-    stopPolling();
+    Object.values(pollTimers.current).forEach(clearTimeout);
+    pollTimers.current = {};
     onClose();
   };
 
+  // ─── Variation count helper ─────────────────────────────────────────────
+  const variationCount = (() => {
+    const vs = selectedVisualStyles.length || 1;
+    const ms = selectedVideoStyles.length || 1;
+    return vs * ms;
+  })();
+
+  // ─── Video style category grouping ──────────────────────────────────────
+  const videoStyleCategories = (() => {
+    const cats = {};
+    videoStylesList.forEach(s => {
+      const cat = s.category || 'other';
+      if (!cats[cat]) cats[cat] = [];
+      cats[cat].push(s);
+    });
+    return cats;
+  })();
+  const categoryLabels = {
+    realistic: 'Realistic / UGC',
+    professional: 'Professional',
+    artistic: 'Artistic',
+    faceless: 'Faceless',
+    kids: 'Kids / Animation',
+    utility: 'Utility',
+    other: 'Other',
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <>
       <SlideOverPanel
         open={isOpen}
         onOpenChange={(open) => !open && handleClose()}
-        title="JumpStart - Image to Video"
-        subtitle="Transform your image into an animated video"
+        title="JumpStart — Image to Video"
+        subtitle="Transform your image into animated video variations"
         icon={<Video className="w-5 h-5" />}
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
@@ -1137,19 +953,29 @@ export default function JumpStartModal({
               <TabsTrigger value="upload" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                 <ImageIcon className="w-3.5 h-3.5" /> Upload
               </TabsTrigger>
+              <TabsTrigger value="styles" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <Palette className="w-3.5 h-3.5" /> Styles
+                {variationCount > 1 && <span className="ml-1 text-[10px] bg-[#2C666E] text-white px-1.5 rounded-full">{variationCount}</span>}
+              </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                 <Sparkles className="w-3.5 h-3.5" /> Settings
               </TabsTrigger>
-              <TabsTrigger value="preview" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                <Play className="w-3.5 h-3.5" /> Preview
+              <TabsTrigger value="results" className="flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm" disabled={multiResults.length === 0}>
+                <Film className="w-3.5 h-3.5" /> Results
+                {multiResults.filter(r => r.status === 'completed').length > 0 && (
+                  <span className="ml-1 text-[10px] bg-green-600 text-white px-1.5 rounded-full">
+                    {multiResults.filter(r => r.status === 'completed').length}
+                  </span>
+                )}
               </TabsTrigger>
             </TabsList>
           </div>
+
           <SlideOverBody ref={contentRef} className="p-6 bg-gray-50">
-            {/* Step 1: Upload Image */}
+            {/* ═══ TAB 1: UPLOAD ════════════════════════════════════════════ */}
             <TabsContent value="upload" className="mt-0">
               <div className="max-w-4xl mx-auto space-y-6">
-                {/* Model Selector - Compact Dropdown */}
+                {/* Model Selector */}
                 <div className="bg-white rounded-lg p-4 border shadow-sm">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -1166,38 +992,24 @@ export default function JumpStartModal({
                       ))}
                     </select>
                   </div>
-                  {/* Model details summary */}
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-gray-500">{currentModel.description}</span>
                     <span className="text-gray-300">|</span>
                     <span className="text-gray-500">
-                      {currentModel.durationOptions.length === 1 
-                        ? `${currentModel.durationOptions[0]}s` 
+                      {currentModel.durationOptions.length === 1
+                        ? `${currentModel.durationOptions[0]}s`
                         : `${currentModel.durationOptions[0]}-${currentModel.durationOptions[currentModel.durationOptions.length - 1]}s`}
                     </span>
                     <span className="text-gray-300">|</span>
                     <span className="text-gray-500">{currentModel.resolutions.join(', ')}</span>
-                    {currentModel.supportsAudio && (
-                      <span className="bg-[#90DDF0]/30 text-[#07393C] px-1.5 py-0.5 rounded">🔊 Audio</span>
-                    )}
-                    {currentModel.supportsEndFrame && (
-                      <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">🎯 End Frame</span>
-                    )}
-                    {currentModel.supportsCameraFixed && (
-                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">📍 Lock Camera</span>
-                    )}
-                    {currentModel.supportsMultipleImages && (
-                      <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">📸 Multi-Image</span>
-                    )}
-                    {currentModel.supportsNegativePrompt && (
-                      <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded">🚫 Negative Prompt</span>
-                    )}
+                    {currentModel.supportsAudio && <span className="bg-[#90DDF0]/30 text-[#07393C] px-1.5 py-0.5 rounded">🔊 Audio</span>}
+                    {currentModel.supportsEndFrame && <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">🎯 End Frame</span>}
+                    {currentModel.supportsMultipleImages && <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">📸 Multi-Image</span>}
                   </div>
                   {currentModel.tip && (
                     <div className="mt-3 p-3 bg-[#90DDF0]/15 border border-[#2C666E]/20 rounded-lg">
                       <p className="text-xs text-[#07393C] leading-relaxed">
-                        <span className="font-semibold">How to use: </span>
-                        {currentModel.tip}
+                        <span className="font-semibold">How to use: </span>{currentModel.tip}
                       </p>
                     </div>
                   )}
@@ -1210,359 +1022,182 @@ export default function JumpStartModal({
                     <h3 className="font-semibold text-gray-900">
                       {currentModel.requiresFirstLastFrame ? 'Upload First Frame' : 'Upload Start Image'}
                     </h3>
-                    {currentModel.requiresFirstLastFrame && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>
-                    )}
                   </div>
-                  
                   {uploadedImage ? (
                     <div className="relative">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Uploaded" 
-                        className="w-full max-h-[300px] object-contain rounded-lg border bg-gray-100" 
-                      />
-                      <button 
-                        onClick={() => setUploadedImage(null)}
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      >
+                      <img src={uploadedImage} alt="Uploaded" className="w-full max-h-[300px] object-contain rounded-lg border bg-gray-100" />
+                      <button onClick={() => setUploadedImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors"
-                      >
+                      <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-colors">
                         <Upload className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                         <p className="text-sm text-gray-600">Click to upload or drag & drop</p>
                         <p className="text-xs text-gray-400 mt-1">PNG, JPG, WebP up to 10MB</p>
                       </div>
-                      
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => { setWebSearchTarget('start'); setShowWebSearch(true); setShowUrlImport(false); }}
-                        >
-                          <Globe className="w-4 h-4 mr-2" />
-                          Search Web
+                        <Button variant="outline" className="flex-1" onClick={() => { setWebSearchTarget('start'); setShowWebSearch(true); setShowUrlImport(false); }}>
+                          <Globe className="w-4 h-4 mr-2" /> Search Web
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => { setShowUrlImport(true); setShowWebSearch(false); }}
-                        >
-                          <Link className="w-4 h-4 mr-2" />
-                          Import URL
+                        <Button variant="outline" className="flex-1" onClick={() => { setShowUrlImport(true); setShowWebSearch(false); }}>
+                          <Link className="w-4 h-4 mr-2" /> Import URL
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => { setLibraryTarget('start'); setShowLibrary(true); }}
-                        >
-                          <FolderOpen className="w-4 h-4 mr-2" />
-                          Library
+                        <Button variant="outline" className="flex-1" onClick={() => { setLibraryTarget('start'); setShowLibrary(true); }}>
+                          <FolderOpen className="w-4 h-4 mr-2" /> Library
                         </Button>
                       </div>
-                      
+
                       {/* Web Search Panel */}
                       {showWebSearch && webSearchTarget === 'start' && (
                         <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                           <div className="flex gap-2 mb-3">
                             <div className="relative flex-1">
                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleWebSearch()}
-                                placeholder="Search for images... (e.g., 'woman selfie natural light')"
-                                className="pl-9"
-                              />
+                              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleWebSearch()} placeholder="Search for images..." className="pl-9" />
                             </div>
-                            <Button onClick={handleWebSearch} disabled={isSearching}>
-                              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-                            </Button>
-                            <Button variant="ghost" onClick={() => { setShowWebSearch(false); setSearchResults([]); setSearchQuery(''); }}>
-                              <X className="w-4 h-4" />
-                            </Button>
+                            <Button onClick={handleWebSearch} disabled={isSearching}>{isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}</Button>
+                            <Button variant="ghost" onClick={() => { setShowWebSearch(false); setSearchResults([]); setSearchQuery(''); }}><X className="w-4 h-4" /></Button>
                           </div>
-                          
-                          {isSearching && (
-                            <div className="flex items-center justify-center py-8">
-                              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                              <span className="ml-2 text-sm text-gray-600">Searching...</span>
-                            </div>
-                          )}
-                          
+                          {isSearching && <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /><span className="ml-2 text-sm text-gray-600">Searching...</span></div>}
                           {searchResults.length > 0 && (
                             <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto">
                               {searchResults.map((img, idx) => (
-                                <div 
-                                  key={idx}
-                                  onClick={() => handleSelectSearchResult(img)}
-                                  className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-500 transition-all group"
-                                >
-                                  <img 
-                                    src={img.thumbnail || img.url} 
-                                    alt={img.title || 'Search result'} 
-                                    className="w-full h-full object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="text-white text-xs font-medium">Select</span>
-                                  </div>
+                                <div key={idx} onClick={() => handleSelectSearchResult(img)} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-500 transition-all group">
+                                  <img src={img.thumbnail || img.url} alt={img.title || ''} className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><span className="text-white text-xs font-medium">Select</span></div>
                                 </div>
                               ))}
                             </div>
                           )}
-                          
-                          {!isSearching && searchResults.length === 0 && searchQuery && (
-                            <p className="text-xs text-gray-500 text-center py-4">
-                              Press Enter or click Search to find images
-                            </p>
-                          )}
                         </div>
                       )}
-                      
+
+                      {/* URL Import */}
                       {showUrlImport && (
-                        <div className="flex gap-2 mt-2">
-                          <Input
-                            value={urlInput}
-                            onChange={(e) => setUrlInput(e.target.value)}
-                            placeholder="Paste image URL..."
-                            className="flex-1"
-                          />
+                        <div className="mt-3 flex gap-2">
+                          <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUrlImport('start')} placeholder="Paste image URL..." className="flex-1" />
                           <Button onClick={() => handleUrlImport('start')}>Import</Button>
-                          <Button variant="ghost" onClick={() => setShowUrlImport(false)}>
-                            <X className="w-4 h-4" />
-                          </Button>
+                          <Button variant="ghost" onClick={() => setShowUrlImport(false)}><X className="w-4 h-4" /></Button>
                         </div>
                       )}
                     </div>
                   )}
-                  
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'start')}
-                  />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'start')} />
                 </div>
 
-                {/* End Frame / Last Frame */}
+                {/* End Frame (if model supports) */}
                 {(currentModel.supportsEndFrame || currentModel.requiresFirstLastFrame) && (
-                  <div className={`bg-white rounded-lg p-4 border shadow-sm ${currentModel.requiresFirstLastFrame ? 'border-blue-200 bg-blue-50/30' : ''}`}>
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <ImageIcon className={`w-5 h-5 ${currentModel.requiresFirstLastFrame ? 'text-blue-600' : 'text-purple-600'}`} />
-                      <h3 className="font-semibold text-gray-900">
-                        {currentModel.requiresFirstLastFrame ? 'Upload Last Frame' : 'End Frame Image'}
-                      </h3>
-                      {currentModel.requiresFirstLastFrame ? (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>
-                      ) : (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Optional - Seedance Feature</span>
-                      )}
+                      <ImageIcon className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold text-gray-900">{currentModel.requiresFirstLastFrame ? 'Last Frame' : 'End Frame'}</h3>
+                      {currentModel.requiresFirstLastFrame && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>}
+                      {!currentModel.requiresFirstLastFrame && <span className="text-xs text-gray-400">(optional)</span>}
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">
-                      {currentModel.requiresFirstLastFrame 
-                        ? 'The AI will generate a smooth video transition from the first frame to this last frame.'
-                        : 'The video will transition to this final frame. Leave empty for AI-generated ending.'}
-                    </p>
-                    
                     {endFrameImage ? (
                       <div className="relative">
-                        <img 
-                          src={endFrameImage} 
-                          alt="End Frame" 
-                          className="w-full max-h-[200px] object-contain rounded-lg border bg-gray-100" 
-                        />
-                        <button 
-                          onClick={() => setEndFrameImage(null)}
-                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        <img src={endFrameImage} alt="End Frame" className="w-full max-h-[200px] object-contain rounded-lg border bg-gray-100" />
+                        <button onClick={() => setEndFrameImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600"><X className="w-4 h-4" /></button>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => { setWebSearchTarget('end'); setShowWebSearch(true); }}
-                          >
-                            <Globe className="w-4 h-4 mr-2" />
-                            Search Web
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => endFrameInputRef.current?.click()}
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Upload
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => { setLibraryTarget('end'); setShowLibrary(true); }}
-                          >
-                            <FolderOpen className="w-4 h-4 mr-2" />
-                            Library
-                          </Button>
-                        </div>
-                        
-                        {/* Web Search Panel for End Frame */}
-                        {showWebSearch && webSearchTarget === 'end' && (
-                          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                            <div className="flex gap-2 mb-3">
-                              <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <Input
-                                  value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleWebSearch()}
-                                  placeholder="Search for end frame image..."
-                                  className="pl-9"
-                                />
-                              </div>
-                              <Button onClick={handleWebSearch} disabled={isSearching} size="sm">
-                                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => { setShowWebSearch(false); setSearchResults([]); setSearchQuery(''); }}>
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            
-                            {isSearching && (
-                              <div className="flex items-center justify-center py-4">
-                                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                              </div>
-                            )}
-                            
-                            {searchResults.length > 0 && (
-                              <div className="grid grid-cols-4 gap-2 max-h-[150px] overflow-y-auto">
-                                {searchResults.map((img, idx) => (
-                                  <div 
-                                    key={idx}
-                                    onClick={() => handleSelectSearchResult(img)}
-                                    className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-500 transition-all group"
-                                  >
-                                    <img 
-                                      src={img.thumbnail || img.url} 
-                                      alt={img.title || 'Search result'} 
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <span className="text-white text-xs font-medium">Select</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => endFrameInputRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Upload</Button>
+                        <Button variant="outline" className="flex-1" onClick={() => { setShowEndFrameUrlImport(true); }}><Link className="w-4 h-4 mr-2" /> URL</Button>
+                        <Button variant="outline" className="flex-1" onClick={() => { setLibraryTarget('end'); setShowLibrary(true); }}><FolderOpen className="w-4 h-4 mr-2" /> Library</Button>
                       </div>
                     )}
-                    
-                    <input
-                      ref={endFrameInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload(e, 'end')}
-                    />
+                    {showEndFrameUrlImport && (
+                      <div className="mt-3 flex gap-2">
+                        <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUrlImport('end')} placeholder="Paste end frame URL..." className="flex-1" />
+                        <Button onClick={() => handleUrlImport('end')}>Import</Button>
+                        <Button variant="ghost" onClick={() => setShowEndFrameUrlImport(false)}><X className="w-4 h-4" /></Button>
+                      </div>
+                    )}
+                    <input ref={endFrameInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'end')} />
                   </div>
                 )}
 
-                {/* Driving Audio URL (LTX Audio-to-Video only) */}
-                {currentModel.requiresAudioUrl && (
-                  <div className="bg-white rounded-lg p-4 border border-purple-200 shadow-sm bg-purple-50/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Volume2 className="w-5 h-5 text-purple-600" />
-                      <h3 className="font-semibold text-gray-900">Driving Audio URL</h3>
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Required</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Paste a public URL to an MP3 or WAV file. The video will be generated to match this audio.
-                    </p>
-                    <Input
-                      value={drivingAudioUrl}
-                      onChange={(e) => setDrivingAudioUrl(e.target.value)}
-                      placeholder="https://example.com/my-audio.mp3"
-                      className="bg-white"
-                    />
-                  </div>
-                )}
-
-                {/* Additional Reference Images (Veo 3.1 only) */}
-                {currentModel.supportsMultipleImages && uploadedImage && (
+                {/* Additional Images (Veo 3.1 multi-image) */}
+                {currentModel.supportsMultipleImages && (
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <ImageIcon className="w-5 h-5 text-green-600" />
                       <h3 className="font-semibold text-gray-900">Additional Reference Images</h3>
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Optional - Veo 3.1 Feature</span>
+                      <span className="text-xs text-gray-400">(optional, up to 6)</span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Add up to 4 more reference images to guide the video generation style and composition.
-                    </p>
-                    
-                    {/* Show existing additional images */}
-                    {additionalImages.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {additionalImages.map((img, index) => (
-                          <div key={index} className="relative w-20 h-20">
-                            <img 
-                              src={img} 
-                              alt={`Reference ${index + 1}`} 
-                              className="w-full h-full object-cover rounded-lg border" 
-                            />
-                            <button 
-                              onClick={() => removeAdditionalImage(index)}
-                              className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Add more buttons - only if under 4 images */}
-                    {additionalImages.length < 4 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {additionalImages.map((img, idx) => (
+                        <div key={idx} className="relative w-20 h-20">
+                          <img src={img} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover rounded-lg border" />
+                          <button onClick={() => removeAdditionalImage(idx)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    {additionalImages.length < 6 && (
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.onchange = (e) => handleFileUpload(e, 'additional');
-                            input.click();
-                          }}
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Add Reference
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => { setLibraryTarget('additional'); setShowLibrary(true); }}
-                        >
-                          <FolderOpen className="w-4 h-4 mr-2" />
-                          From Library
-                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setWebSearchTarget('additional'); setShowWebSearch(true); }}><Globe className="w-3 h-3 mr-1" /> Search</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setLibraryTarget('additional'); setShowLibrary(true); }}><FolderOpen className="w-3 h-3 mr-1" /> Library</Button>
                       </div>
                     )}
-                    
-                    <p className="text-xs text-gray-400 mt-2">
-                      {additionalImages.length}/4 reference images added
-                    </p>
+                  </div>
+                )}
+
+                {/* Kling R2V Reference Images */}
+                {currentModel.supportsReferenceImages && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="w-5 h-5 text-orange-600" />
+                      <h3 className="font-semibold text-gray-900">Character Reference Images</h3>
+                      <span className="text-xs text-gray-400">(click to set frontal)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {referenceImages.map((img, idx) => (
+                        <div key={idx} className={`relative w-20 h-20 cursor-pointer rounded-lg border-2 ${idx === frontalIndex ? 'border-[#2C666E] ring-2 ring-[#2C666E]/30' : 'border-gray-200'}`} onClick={() => setFrontalIndex(idx)}>
+                          <img src={img} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                          {idx === frontalIndex && <span className="absolute top-1 left-1 bg-[#2C666E] text-white text-[10px] font-bold px-1 rounded">F</span>}
+                          <button onClick={(e) => { e.stopPropagation(); setReferenceImages(prev => prev.filter((_, i) => i !== idx)); if (frontalIndex >= referenceImages.length - 1) setFrontalIndex(0); }} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => referenceFileInputRef.current?.click()}><Upload className="w-3 h-3 mr-1" /> Upload</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setLibraryTarget('reference'); setShowLibrary(true); }}><FolderOpen className="w-3 h-3 mr-1" /> Library</Button>
+                      <Button variant="outline" size="sm" onClick={openRefLibrary}><Search className="w-3 h-3 mr-1" /> Browse All</Button>
+                    </div>
+                    <input ref={referenceFileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { Array.from(e.target.files || []).forEach(file => { const reader = new FileReader(); reader.onload = (ev) => setReferenceImages(prev => [...prev, ev.target.result]); reader.readAsDataURL(file); }); }} />
+
+                    {/* Inline library browser */}
+                    {showRefLibrary && (
+                      <div className="mt-3 border rounded-lg p-3 bg-gray-50 max-h-60 overflow-y-auto">
+                        {refLibraryLoading ? (
+                          <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                        ) : (
+                          <>
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              <button onClick={() => setRefSelectedFolder(null)} className={`px-2 py-0.5 text-xs rounded ${refSelectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-white border'}`}>All</button>
+                              {refLibraryFolders.map(f => (
+                                <button key={f} onClick={() => setRefSelectedFolder(f)} className={`px-2 py-0.5 text-xs rounded ${refSelectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-white border'}`}>{f}</button>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-5 gap-1">
+                              {filteredRefLibraryItems.map(item => (
+                                <div key={item.id} onClick={() => toggleRefLibraryItem(item.id)} className={`relative aspect-square rounded cursor-pointer border-2 ${refSelectedIds.has(item.id) ? 'border-[#2C666E]' : 'border-transparent'}`}>
+                                  <img src={item.url} alt="" className="w-full h-full object-cover rounded" />
+                                  {refSelectedIds.has(item.id) && <CheckCircle2 className="absolute top-0.5 right-0.5 w-4 h-4 text-[#2C666E] bg-white rounded-full" />}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex gap-2 mt-2">
+                              <Button size="sm" onClick={importRefFromLibrary} disabled={refSelectedIds.size === 0}>Add {refSelectedIds.size} selected</Button>
+                              <Button size="sm" variant="outline" onClick={() => selectAllRefInFolder(refSelectedFolder)}>Select all</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setShowRefLibrary(false)}>Cancel</Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1571,368 +1206,169 @@ export default function JumpStartModal({
                   <h3 className="font-semibold text-gray-900 mb-3">Output Settings</h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Aspect Ratio</label>
-                      <select
-                        value={aspectRatio}
-                        onChange={(e) => setAspectRatio(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                      >
-                        {currentModel.aspectRatios.map(ar => (
-                          <option key={ar} value={ar}>{ASPECT_RATIO_LABELS[ar] || ar}</option>
-                        ))}
+                      <label className="text-xs text-gray-500 mb-1 block">Aspect Ratio</label>
+                      <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm">
+                        {currentModel.aspectRatios.map(ar => <option key={ar} value={ar}>{ASPECT_RATIO_LABELS[ar] || ar}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Resolution</label>
-                      <select
-                        value={resolution}
-                        onChange={(e) => setResolution(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                      >
-                        {currentModel.resolutions.map(res => (
-                          <option key={res} value={res}>{res}</option>
-                        ))}
+                      <label className="text-xs text-gray-500 mb-1 block">Resolution</label>
+                      <select value={resolution} onChange={(e) => setResolution(e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm">
+                        {currentModel.resolutions.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Duration</label>
-                      <select
-                        value={duration}
-                        onChange={(e) => setDuration(parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                      >
-                        {currentModel.durationOptions.map(d => (
-                          <option key={d} value={d}>{d} seconds</option>
-                        ))}
+                      <label className="text-xs text-gray-500 mb-1 block">Duration</label>
+                      <select value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full px-2 py-1.5 border rounded text-sm">
+                        {currentModel.durationOptions.map(d => <option key={d} value={d}>{d}s</option>)}
                       </select>
                     </div>
                   </div>
                 </div>
 
-                {/* Model Features — only shown when the selected model has toggleable features */}
-                {(currentModel.supportsAudio || currentModel.supportsCameraFixed || currentModel.supportsNegativePrompt || currentModel.supportsCfgScale) && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
-                    <h3 className="font-semibold text-gray-900">Model Features</h3>
+                {/* Audio-driven upload for LTX */}
+                {currentModel.requiresAudioUrl && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Volume2 className="w-5 h-5 text-[#2C666E]" />
+                      <h3 className="font-semibold text-gray-900">Driving Audio URL</h3>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Required</span>
+                    </div>
+                    <Input value={drivingAudioUrl} onChange={(e) => setDrivingAudioUrl(e.target.value)} placeholder="Paste audio file URL (WAV, MP3)..." />
+                  </div>
+                )}
 
-                    {/* Audio toggle */}
-                    {currentModel.supportsAudio && (
-                      <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2">
-                          {enableAudio ? <Volume2 className="w-4 h-4 text-[#2C666E]" /> : <VolumeX className="w-4 h-4 text-gray-400" />}
-                          <span className="text-sm text-gray-700">Generate Audio</span>
-                        </div>
-                        <button
-                          onClick={() => setEnableAudio(!enableAudio)}
-                          className={`relative w-11 h-6 rounded-full transition-colors ${enableAudio ? 'bg-[#2C666E]' : 'bg-gray-300'}`}
-                        >
-                          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enableAudio ? 'left-6' : 'left-1'}`} />
-                        </button>
+                {/* ICLoRA controls */}
+                {currentModel.supportsICLoRA && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <h3 className="font-semibold text-gray-900 mb-3">ICLoRA Control</h3>
+                    <div className="flex gap-2 mb-3">
+                      {['pose', 'depth', 'canny', 'detailer'].map(t => (
+                        <button key={t} onClick={() => setIcLoraType(t)} className={`px-3 py-1.5 text-xs rounded-lg border capitalize ${icLoraType === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>{t}</button>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-500">Strength</span>
+                        <span className="font-medium text-[#2C666E]">{icLoraScale.toFixed(1)}</span>
                       </div>
-                    )}
-
-                    {/* Camera Fixed toggle */}
-                    {currentModel.supportsCameraFixed && (
-                      <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2">
-                          <Lock className={`w-4 h-4 ${cameraFixed ? 'text-blue-600' : 'text-gray-400'}`} />
-                          <span className="text-sm text-gray-700">Lock Camera Position</span>
-                        </div>
-                        <button
-                          onClick={() => setCameraFixed(!cameraFixed)}
-                          className={`relative w-11 h-6 rounded-full transition-colors ${cameraFixed ? 'bg-blue-600' : 'bg-gray-300'}`}
-                        >
-                          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${cameraFixed ? 'left-6' : 'left-1'}`} />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Negative Prompt */}
-                    {currentModel.supportsNegativePrompt && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Negative Prompt (optional)</label>
-                        <input
-                          value={negativePrompt}
-                          onChange={(e) => setNegativePrompt(e.target.value)}
-                          placeholder="blurry, low quality, distorted..."
-                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                        />
-                      </div>
-                    )}
-
-                    {/* CFG Scale */}
-                    {currentModel.supportsCfgScale && (
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-medium text-gray-500">Prompt Adherence (CFG)</label>
-                          <span className="text-xs font-medium text-amber-600">{cfgScale.toFixed(2)}</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={cfgScale}
-                          onChange={(e) => setCfgScale(parseFloat(e.target.value))}
-                          className="w-full accent-amber-500"
-                        />
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                          <span>Creative</span>
-                          <span>Balanced</span>
-                          <span>Precise</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Reference Images for Kling R2V */}
-                    {currentModel.supportsReferenceImages && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-[#2C666E] block">
-                          Character Reference Images (optional but recommended)
-                        </label>
-                        <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-                          <p className="text-[11px] text-amber-800 leading-relaxed">
-                            <strong>Tip:</strong> Upload photos of your character from different angles (front, side, 3/4 view). The more angles you provide, the better the AI can keep your character looking consistent. Your <strong>start image</strong> above is used as the main frontal reference — these extra images help with other views.
-                          </p>
-                          <p className="text-[11px] text-amber-800 mt-1.5 leading-relaxed">
-                            <strong>Important:</strong> Write <code className="bg-amber-100 px-1 rounded font-mono">@Element</code> in your prompt where the character should appear, e.g. <em>"@Element dances on stage under spotlights"</em>
-                          </p>
-                        </div>
-
-                        {/* Existing reference image thumbnails */}
-                        {referenceImages.length > 0 && (
-                          <div className="flex gap-2 flex-wrap">
-                            {referenceImages.map((url, i) => (
-                              <div key={i} className="relative w-16 h-16 group">
-                                <img
-                                  src={url}
-                                  alt={`Ref ${i+1}`}
-                                  onClick={() => setFrontalIndex(i)}
-                                  title={i === frontalIndex ? 'Frontal image (used for R2V)' : 'Click to set as frontal image'}
-                                  className={`w-full h-full object-cover rounded-lg cursor-pointer transition-all ${
-                                    i === frontalIndex
-                                      ? 'border-2 border-[#2C666E] ring-2 ring-[#2C666E]/30'
-                                      : 'border border-gray-200 hover:border-gray-400'
-                                  }`}
-                                />
-                                {i === frontalIndex && (
-                                  <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#2C666E] text-white rounded-full text-[8px] flex items-center justify-center font-bold">F</span>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setReferenceImages(referenceImages.filter((_, j) => j !== i));
-                                    if (frontalIndex >= referenceImages.length - 1) setFrontalIndex(0);
-                                    else if (i < frontalIndex) setFrontalIndex(prev => prev - 1);
-                                  }}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  &times;
-                                </button>
-                              </div>
-                            ))}
-                            {referenceImages.length > 1 && (
-                              <p className="w-full text-[10px] text-gray-400 mt-0.5">Click an image to set it as the frontal reference (marked with F)</p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Upload / Library / URL buttons */}
-                        <div className="flex gap-2">
-                          <input
-                            ref={referenceFileInputRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files || []);
-                              files.forEach(file => {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  setReferenceImages(prev => [...prev, ev.target.result]);
-                                  saveToLibrary(ev.target.result, 'image', `JumpStart Character Ref - ${new Date().toLocaleString()}`, 'jumpstart-upload');
-                                };
-                                reader.readAsDataURL(file);
-                              });
-                              e.target.value = '';
-                            }}
-                            className="hidden"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs"
-                            onClick={() => referenceFileInputRef.current?.click()}
-                          >
-                            <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs"
-                            onClick={openRefLibrary}
-                          >
-                            <FolderOpen className="w-3.5 h-3.5 mr-1.5" /> Library
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs"
-                            onClick={() => { setLibraryTarget('reference'); setShowLibrary(true); }}
-                          >
-                            <Globe className="w-3.5 h-3.5 mr-1.5" /> Single Pick
-                          </Button>
-                        </div>
-
-                        {/* Inline folder library browser */}
-                        {showRefLibrary && (
-                          <div className="border border-[#2C666E]/30 rounded-lg bg-white overflow-hidden">
-                            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
-                              <span className="text-xs font-semibold text-gray-700">Select from Library</span>
-                              <div className="flex items-center gap-2">
-                                {refSelectedIds.size > 0 && (
-                                  <span className="text-[10px] bg-[#2C666E] text-white px-1.5 py-0.5 rounded-full">{refSelectedIds.size} selected</span>
-                                )}
-                                <button onClick={() => setShowRefLibrary(false)} className="text-gray-400 hover:text-gray-600">
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Folder tabs */}
-                            {refLibraryFolders.length > 0 && (
-                              <div className="flex items-center gap-1 px-3 py-1.5 border-b overflow-x-auto">
-                                <button
-                                  onClick={() => setRefSelectedFolder(null)}
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${refSelectedFolder === null ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                  All
-                                </button>
-                                {refLibraryFolders.map(f => (
-                                  <button
-                                    key={f}
-                                    onClick={() => setRefSelectedFolder(f)}
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${refSelectedFolder === f ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                  >
-                                    {f}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Image grid */}
-                            <div className="max-h-48 overflow-y-auto p-2">
-                              {refLibraryLoading ? (
-                                <div className="flex items-center justify-center py-6">
-                                  <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
-                                  <span className="ml-2 text-xs text-gray-500">Loading...</span>
-                                </div>
-                              ) : filteredRefLibraryItems.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-6">No images found</p>
-                              ) : (
-                                <>
-                                  {refSelectedFolder !== null && (
-                                    <div className="flex justify-between items-center mb-2 px-1">
-                                      <span className="text-[10px] text-gray-500">{filteredRefLibraryItems.length} images</span>
-                                      <button onClick={() => selectAllRefInFolder(refSelectedFolder)} className="text-[10px] text-[#2C666E] hover:underline font-medium">Select all</button>
-                                    </div>
-                                  )}
-                                  <div className="grid grid-cols-5 gap-1.5">
-                                    {filteredRefLibraryItems.map(item => (
-                                      <button
-                                        key={item.id}
-                                        onClick={() => toggleRefLibraryItem(item.id)}
-                                        className={`relative rounded overflow-hidden border-2 transition-all ${refSelectedIds.has(item.id) ? 'border-[#2C666E] ring-1 ring-[#2C666E]/20' : 'border-transparent hover:border-gray-300'}`}
-                                      >
-                                        <img src={item.url} alt="" className="w-full aspect-square object-cover" />
-                                        {refSelectedIds.has(item.id) && (
-                                          <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#2C666E] flex items-center justify-center">
-                                            <CheckCircle2 className="w-3 h-3 text-white" />
-                                          </div>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Import button */}
-                            <div className="flex justify-end px-3 py-2 border-t bg-gray-50">
-                              <Button size="sm" disabled={refSelectedIds.size === 0} onClick={importRefFromLibrary} className="bg-[#2C666E] hover:bg-[#07393C] text-white text-xs px-4">
-                                Import {refSelectedIds.size > 0 ? `${refSelectedIds.size} Images` : ''}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        <p className="text-[10px] text-gray-400">{referenceImages.length} reference image{referenceImages.length !== 1 ? 's' : ''} added</p>
-                      </div>
-                    )}
-
-                    {/* ICLoRA Controls for LTX */}
-                    {currentModel.supportsICLoRA && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-gray-500 block">IC-LoRA Type</label>
-                        <p className="text-[10px] text-gray-400">
-                          Controls how the reference image conditions the video
-                        </p>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {[
-                            { value: 'pose', label: 'Pose' },
-                            { value: 'depth', label: 'Depth' },
-                            { value: 'canny', label: 'Canny Edge' },
-                            { value: 'detailer', label: 'Detailer' },
-                          ].map(opt => (
-                            <button
-                              key={opt.value}
-                              onClick={() => setIcLoraType(opt.value)}
-                              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                                icLoraType === opt.value
-                                  ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-medium text-gray-500">IC-LoRA Strength</label>
-                          <span className="text-xs font-medium text-[#2C666E]">{icLoraScale.toFixed(1)}</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="1.5"
-                          step="0.1"
-                          value={icLoraScale}
-                          onChange={(e) => setIcLoraScale(parseFloat(e.target.value))}
-                          className="w-full accent-[#2C666E]"
-                        />
-                      </div>
-                    )}
+                      <input type="range" min="0.1" max="1.5" step="0.1" value={icLoraScale} onChange={(e) => setIcLoraScale(parseFloat(e.target.value))} className="w-full accent-[#2C666E]" />
+                    </div>
                   </div>
                 )}
               </div>
             </TabsContent>
 
-            {/* Step 2: Video Settings */}
+            {/* ═══ TAB 2: STYLES ════════════════════════════════════════════ */}
+            <TabsContent value="styles" className="mt-0">
+              <div className="max-w-4xl mx-auto space-y-6">
+                {/* Visual Style — multi-select via StyleGrid */}
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Palette className="w-5 h-5 text-[#2C666E]" />
+                    <h3 className="font-semibold text-gray-900">Visual Style</h3>
+                    {selectedVisualStyles.length > 0 && (
+                      <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded-full">{selectedVisualStyles.length} selected</span>
+                    )}
+                    <span className="text-xs text-gray-400 ml-auto">Multi-select for variations</span>
+                  </div>
+                  <StyleGrid
+                    value={selectedVisualStyles}
+                    onChange={setSelectedVisualStyles}
+                    multiple={true}
+                    columns="grid-cols-4"
+                    maxHeight="20rem"
+                    hideLabel={true}
+                  />
+                </div>
+
+                {/* Video / Motion Style — multi-select grid */}
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Film className="w-5 h-5 text-[#2C666E]" />
+                    <h3 className="font-semibold text-gray-900">Video / Motion Style</h3>
+                    {selectedVideoStyles.length > 0 && (
+                      <span className="text-xs bg-[#2C666E] text-white px-2 py-0.5 rounded-full">{selectedVideoStyles.length} selected</span>
+                    )}
+                    <span className="text-xs text-gray-400 ml-auto">Multi-select for variations</span>
+                  </div>
+                  {videoStylesList.length === 0 ? (
+                    <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /><span className="ml-2 text-sm text-gray-500">Loading video styles...</span></div>
+                  ) : (
+                    <div className="space-y-4 max-h-[24rem] overflow-y-auto">
+                      {Object.entries(videoStyleCategories).map(([cat, styles]) => (
+                        <div key={cat}>
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{categoryLabels[cat] || cat}</p>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {styles.map(s => {
+                              const isSelected = selectedVideoStyles.includes(s.key);
+                              return (
+                                <button
+                                  key={s.key}
+                                  onClick={() => {
+                                    setSelectedVideoStyles(prev =>
+                                      prev.includes(s.key) ? prev.filter(k => k !== s.key) : [...prev, s.key]
+                                    );
+                                  }}
+                                  className={`relative rounded-lg border-2 overflow-hidden text-left transition-all ${
+                                    isSelected ? 'border-[#2C666E] ring-1 ring-[#2C666E] scale-[1.02]' : 'border-transparent hover:border-gray-300'
+                                  }`}
+                                >
+                                  {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-20 object-cover" />}
+                                  <div className="p-1.5">
+                                    <div className="text-[11px] font-medium text-gray-900 truncate">{s.label}</div>
+                                  </div>
+                                  {isSelected && <CheckCircle2 className="absolute top-1 right-1 w-4 h-4 text-[#2C666E] bg-white rounded-full" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Variation Summary */}
+                <div className="bg-gradient-to-r from-[#2C666E]/10 to-[#90DDF0]/10 rounded-lg p-4 border border-[#2C666E]/20">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {variationCount} variation{variationCount > 1 ? 's' : ''} will be generated
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {selectedVisualStyles.length || 1} visual style{(selectedVisualStyles.length || 1) > 1 ? 's' : ''}
+                        {' × '}
+                        {selectedVideoStyles.length || 1} motion style{(selectedVideoStyles.length || 1) > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    {(selectedVisualStyles.length > 0 || selectedVideoStyles.length > 0) && (
+                      <button onClick={() => { setSelectedVisualStyles([]); setSelectedVideoStyles([]); }} className="ml-auto text-xs text-red-500 hover:text-red-700">Clear all</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ═══ TAB 3: SETTINGS ══════════════════════════════════════════ */}
             <TabsContent value="settings" className="mt-0">
               <div className="max-w-4xl mx-auto space-y-4">
-                {/* Preview uploaded image */}
+                {/* Image preview */}
                 {uploadedImage && (
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
                     <div className="flex items-center gap-4">
-                      <img src={uploadedImage} alt="Start" className="w-24 h-24 object-cover rounded-lg border" />
+                      <img src={uploadedImage} alt="Start" className="w-20 h-20 object-cover rounded-lg border" />
                       {endFrameImage && (
                         <>
                           <ArrowRight className="w-5 h-5 text-gray-400" />
-                          <img src={endFrameImage} alt="End" className="w-24 h-24 object-cover rounded-lg border" />
+                          <img src={endFrameImage} alt="End" className="w-20 h-20 object-cover rounded-lg border" />
                         </>
                       )}
                       <div className="flex-1 text-sm text-gray-600">
-                        <p><strong>Model:</strong> {currentModel.label}</p>
-                        <p><strong>Output:</strong> {ASPECT_RATIO_LABELS[aspectRatio] || aspectRatio} @ {resolution}</p>
-                        <p><strong>Duration:</strong> {duration} seconds</p>
+                        <p><strong>Model:</strong> {currentModel.shortLabel}</p>
+                        <p><strong>Output:</strong> {ASPECT_RATIO_LABELS[aspectRatio] || aspectRatio} @ {resolution}, {duration}s</p>
+                        <p><strong>Variations:</strong> {variationCount}</p>
                       </div>
                     </div>
                   </div>
@@ -1945,398 +1381,232 @@ export default function JumpStartModal({
                     <h3 className="font-semibold text-gray-900">Scene Description</h3>
                     <span className="text-xs text-[#2C666E] font-medium bg-[#2C666E]/10 px-2 py-0.5 rounded">Important!</span>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2">Describe the action, movement, and what happens in the video. Add human elements for natural feel.</p>
-                  <textarea 
-                    value={sceneDescription} 
-                    onChange={(e) => setSceneDescription(e.target.value)} 
-                    placeholder="e.g., 'A person smiles warmly and talks naturally to the camera, making gentle hand gestures, with occasional soft blinks and natural head movements...'"
-                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-24" 
+                  <p className="text-xs text-gray-600 mb-2">Describe the action, movement, and what happens in the video.</p>
+                  <textarea
+                    value={sceneDescription}
+                    onChange={(e) => setSceneDescription(e.target.value)}
+                    placeholder="e.g., 'A person smiles warmly and talks naturally to the camera, making gentle hand gestures...'"
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-24"
                   />
-                  
-                  {/* Quick Add Ideas */}
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-gray-500 font-medium">Quick Add:</p>
-                      {[
-                        { id: 'all', label: 'All' },
-                        { id: 'person', label: '🎭 Person' },
-                        { id: 'object', label: '📦 Object' },
-                        { id: 'scene', label: '🌿 Scene' },
-                      ].map(tab => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setSceneIdeaFilter(tab.id)}
-                          className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                            sceneIdeaFilter === tab.id
-                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
-                      {SCENE_IDEAS
-                        .filter(idea => sceneIdeaFilter === 'all' || idea.category === sceneIdeaFilter)
-                        .map(idea => (
-                        <button
-                          key={idea.label}
-                          onClick={() => setSceneDescription(prev => prev ? `${prev}, ${idea.value}` : idea.value)}
-                          className="px-2 py-1 text-xs rounded-full bg-white border border-[#2C666E]/30 hover:bg-[#90DDF0]/30 hover:border-[#2C666E] transition-all"
-                        >
-                          + {idea.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
                   {sceneDescription && (
-                    <button
-                      onClick={() => setSceneDescription('')}
-                      className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
-                    >
-                      ✕ Clear description
-                    </button>
+                    <button onClick={() => setSceneDescription('')} className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors">✕ Clear</button>
                   )}
-                </div>
-
-                {/* Style / Mood / Lighting / Color Grade pill selectors */}
-                <div className="bg-white rounded-lg p-4 border shadow-sm space-y-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Visual Direction</h3>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Style</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {STYLE_OPTIONS.map(s => (
-                        <button key={s} onClick={() => setBuilderStyle(builderStyle === s ? '' : s)}
-                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderStyle === s ? 'bg-[#07393C] text-white border-[#07393C]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mood</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {MOOD_OPTIONS.map(m => (
-                        <button key={m} onClick={() => setBuilderMood(builderMood === m ? '' : m)}
-                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderMood === m ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lighting</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {LIGHTING_OPTIONS.map(l => (
-                        <button key={l} onClick={() => setBuilderLighting(builderLighting === l ? '' : l)}
-                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderLighting === l ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Grade</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {COLOR_GRADE_OPTIONS.map(cg => (
-                        <button key={cg} onClick={() => setBuilderColorGrade(builderColorGrade === cg ? '' : cg)}
-                          className={`px-2.5 py-1 text-[11px] rounded-full border transition-all ${builderColorGrade === cg ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                          {cg}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Audio Transcript (only when audio is enabled) */}
-                {currentModel.supportsAudio && enableAudio && (
-                  <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Volume2 className="w-5 h-5 text-[#2C666E]" />
-                      <h3 className="font-semibold text-gray-900">Speech / Dialogue</h3>
-                      <span className="text-xs text-gray-400">(optional)</span>
-                    </div>
-                    <textarea
-                      value={audioTranscript}
-                      onChange={(e) => setAudioTranscript(e.target.value)}
-                      placeholder="e.g., 'Hi everyone! Let me show you this amazing product...'"
-                      className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Leave empty for ambient sounds based on the scene.</p>
-                  </div>
-                )}
-
-                {/* Video Style */}
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Camera className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Video Style</h3>
-                  </div>
-                  <select value={videoStyle} onChange={(e) => setVideoStyle(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
-                    {VIDEO_STYLES.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* Camera Movement & Angle */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Move className="w-5 h-5 text-[#2C666E]" />
-                      <h3 className="font-semibold text-gray-900">Camera Movement</h3>
-                    </div>
-                    <select value={cameraMovement} onChange={(e) => setCameraMovement(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
-                      {CAMERA_MOVEMENTS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Camera Movement</h3>
+                    <select value={cameraMovement} onChange={(e) => setCameraMovement(e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm">
+                      {CAMERA_MOVEMENTS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                   </div>
-                  
                   <div className="bg-white rounded-lg p-4 border shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Camera className="w-5 h-5 text-[#2C666E]" />
-                      <h3 className="font-semibold text-gray-900">Camera Angle</h3>
-                    </div>
-                    <select value={cameraAngle} onChange={(e) => setCameraAngle(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
-                      {CAMERA_ANGLES.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Camera Angle</h3>
+                    <select value={cameraAngle} onChange={(e) => setCameraAngle(e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm">
+                      {CAMERA_ANGLES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                   </div>
                 </div>
 
-                {/* Special Effects with Combos */}
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Special Effects</h3>
-                    <span className="text-xs text-gray-400">(multi-select)</span>
-                  </div>
-                  
-                  {/* Quick Combo Presets */}
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-500 mb-2">🎯 Quick Combos:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {EFFECT_COMBOS.map(combo => (
-                        <button
-                          key={combo.id}
-                          onClick={() => setSpecialEffects(combo.effects)}
-                          className={`px-2 py-1 text-xs rounded-full border transition-all ${
-                            JSON.stringify(specialEffects.sort()) === JSON.stringify(combo.effects.sort())
-                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/20'
-                          }`}
-                        >
-                          {combo.label}
-                        </button>
-                      ))}
-                      {specialEffects.length > 0 && (
-                        <button
-                          onClick={() => setSpecialEffects([])}
-                          className="px-2 py-1 text-xs rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          ✕ Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Individual Effects by Category */}
-                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-                    {['realistic', 'light', 'film', 'particles', 'nature'].map(category => (
-                      <div key={category}>
-                        <p className="text-xs font-medium text-gray-500 capitalize mb-1">
-                          {category === 'realistic' ? '🤳 Realistic' : 
-                           category === 'light' ? '💡 Light' :
-                           category === 'film' ? '🎬 Film' :
-                           category === 'particles' ? '✨ Particles' : '🌿 Nature'}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {SPECIAL_EFFECTS.filter(e => e.category === category).map(effect => (
-                            <button
-                              key={effect.value}
-                              onClick={() => {
-                                setSpecialEffects(prev => 
-                                  prev.includes(effect.value) 
-                                    ? prev.filter(e => e !== effect.value)
-                                    : [...prev, effect.value]
-                                );
-                              }}
-                              className={`px-1.5 py-0.5 text-xs rounded border transition-all ${
-                                specialEffects.includes(effect.value)
-                                  ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                                  : 'bg-white text-gray-600 border-gray-200 hover:bg-[#90DDF0]/20'
-                              }`}
-                            >
-                              {effect.label}
-                            </button>
-                          ))}
-                        </div>
+                {/* Audio toggle & transcript */}
+                {currentModel.supportsAudio && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {enableAudio ? <Volume2 className="w-5 h-5 text-[#2C666E]" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
+                        <h3 className="font-semibold text-gray-900">Audio Generation</h3>
                       </div>
-                    ))}
-                  </div>
-                  
-                  {specialEffects.length > 0 && (
-                    <div className="mt-2 text-xs text-[#07393C]">
-                      <strong>Selected ({specialEffects.length}):</strong> {specialEffects.join(', ')}
+                      <button
+                        onClick={() => setEnableAudio(!enableAudio)}
+                        className={`px-3 py-1 text-xs rounded-full border transition-all ${enableAudio ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+                      >
+                        {enableAudio ? 'On' : 'Off'}
+                      </button>
                     </div>
-                  )}
-                </div>
+                    {enableAudio && (
+                      <>
+                        <textarea
+                          value={audioTranscript}
+                          onChange={(e) => setAudioTranscript(e.target.value)}
+                          placeholder="e.g., 'Hi everyone! Let me show you this amazing product...'"
+                          className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Leave empty for ambient sounds.</p>
+                      </>
+                    )}
+                  </div>
+                )}
 
-                {/* Description & Motion Presets */}
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Video className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Description & Motion</h3>
-                    <span className="text-xs text-gray-400">(optional)</span>
-                  </div>
-                  
-                  {/* Prefilled Preset Buttons */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-xs text-gray-500 font-medium">Quick Presets:</p>
-                      {[
-                        { id: 'all', label: 'All' },
-                        { id: 'person', label: '🎭 Person' },
-                        { id: 'object', label: '📦 Product' },
-                        { id: 'scene', label: '🌿 Scene' },
-                      ].map(tab => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setPresetFilter(tab.id)}
-                          className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                            presetFilter === tab.id
-                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
+                {/* Camera Fixed toggle */}
+                {currentModel.supportsCameraFixed && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">Lock Camera Position</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {DESCRIPTION_PRESETS
-                        .filter(preset => presetFilter === 'all' || preset.category === presetFilter)
-                        .map(preset => (
-                        <button
-                          key={preset.id}
-                          onClick={() => setDescription(preset.prompt)}
-                          className={`px-2 py-1 text-xs rounded-full border transition-all ${
-                            description === preset.prompt
-                              ? 'bg-[#2C666E] text-white border-[#2C666E]'
-                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-[#90DDF0]/20'
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <textarea 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    placeholder="Add custom motion/style details... (e.g., 'real person, genuine emotion, natural lighting, unfiltered')" 
-                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white resize-none h-16" 
-                  />
-                  
-                  {description && (
-                    <button 
-                      onClick={() => setDescription('')}
-                      className="mt-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
+                    <button
+                      onClick={() => setCameraFixed(!cameraFixed)}
+                      className={`px-3 py-1 text-xs rounded-full border ${cameraFixed ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
                     >
-                      ✕ Clear description
+                      {cameraFixed ? 'Locked' : 'Free'}
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Negative Prompt */}
+                {currentModel.supportsNegativePrompt && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Negative Prompt</h3>
+                    <Input value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} placeholder="Things to avoid..." />
+                  </div>
+                )}
+
+                {/* CFG Scale */}
+                {currentModel.supportsCfgScale && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-900">Prompt Adherence</span>
+                      <span className="text-[#2C666E] font-medium">{cfgScale.toFixed(2)}</span>
+                    </div>
+                    <input type="range" min="0" max="1" step="0.05" value={cfgScale} onChange={(e) => setCfgScale(parseFloat(e.target.value))} className="w-full accent-[#2C666E]" />
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>Creative</span><span>Balanced</span><span>Precise</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
-            {/* Step 3: Preview */}
-            <TabsContent value="preview" className="mt-0">
-              {generatedVideoUrl && <div className="max-w-4xl mx-auto space-y-4">
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Play className="w-5 h-5 text-[#2C666E]" />
-                    <h3 className="font-semibold text-gray-900">Generated Video</h3>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-auto">✓ Complete</span>
+            {/* ═══ TAB 4: RESULTS ═══════════════════════════════════════════ */}
+            <TabsContent value="results" className="mt-0">
+              <div className="max-w-4xl mx-auto space-y-4">
+                {/* Progress header */}
+                {multiResults.length > 0 && (
+                  <div className="bg-white rounded-lg p-4 border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {multiResults.filter(r => r.status === 'completed').length} of {multiResults.length} completed
+                        </p>
+                        {multiResults.some(r => r.status === 'failed') && (
+                          <p className="text-xs text-red-500">{multiResults.filter(r => r.status === 'failed').length} failed</p>
+                        )}
+                      </div>
+                      {multiResults.some(r => r.status === 'completed' && !r.saved) && (
+                        <Button size="sm" onClick={handleSaveAll} className="bg-[#2C666E] hover:bg-[#07393C]">
+                          <Save className="w-3 h-3 mr-1" /> Save All
+                        </Button>
+                      )}
+                    </div>
+                    {/* Progress bar */}
+                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#2C666E] transition-all duration-500"
+                        style={{ width: `${(multiResults.filter(r => r.status === 'completed' || r.status === 'failed').length / multiResults.length) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="relative flex items-center justify-center bg-black rounded-lg overflow-hidden" style={{ maxHeight: '50vh' }}>
-                    <video 
-                      src={generatedVideoUrl} 
-                      controls 
-                      autoPlay 
-                      loop 
-                      className="max-w-full max-h-[50vh] rounded-lg"
-                    />
-                  </div>
+                )}
+
+                {/* Results grid */}
+                <div className={`grid ${multiResults.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-4`}>
+                  {multiResults.map((result, index) => (
+                    <div key={index} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                      {/* Style labels */}
+                      <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-700 truncate">
+                          {[result.visualLabel, result.motionLabel].filter(l => l !== 'Default').join(' + ') || 'Default'}
+                        </span>
+                        <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                          result.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          result.status === 'failed' ? 'bg-red-100 text-red-700' :
+                          result.status === 'generating' || result.status === 'polling' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {result.status === 'prompting' ? 'Building prompt...' :
+                           result.status === 'generating' ? 'Generating...' :
+                           result.status === 'polling' ? 'Processing...' :
+                           result.status === 'completed' ? 'Done' :
+                           result.status === 'failed' ? 'Failed' : result.status}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-3">
+                        {result.status === 'completed' && result.videoUrl ? (
+                          <video src={result.videoUrl} controls autoPlay={index === 0} loop muted className="w-full rounded-lg bg-black" style={{ maxHeight: '280px' }} />
+                        ) : result.status === 'failed' ? (
+                          <div className="flex items-center justify-center py-8 text-center">
+                            <div>
+                              <p className="text-sm text-red-600 mb-2">{result.error || 'Generation failed'}</p>
+                              <Button size="sm" variant="outline" onClick={() => handleRetryOne(index)}>
+                                <RotateCcw className="w-3 h-3 mr-1" /> Retry
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-[#2C666E]" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      {result.status === 'completed' && result.videoUrl && (
+                        <div className="px-3 pb-3 flex gap-2">
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => handleDownloadVideo(result.videoUrl)}>
+                            <Download className="w-3 h-3 mr-1" /> Download
+                          </Button>
+                          <Button
+                            size="sm"
+                            className={`flex-1 ${result.saved ? 'bg-green-600' : 'bg-[#2C666E] hover:bg-[#07393C]'}`}
+                            onClick={() => handleSaveOne(index)}
+                            disabled={result.saved}
+                          >
+                            {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><Save className="w-3 h-3 mr-1" /> Save</>}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="flex gap-3">
-                  <Button onClick={handleDownloadVideo} className="flex-1 bg-[#2C666E] hover:bg-[#07393C]">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download to Device
+
+                {/* Generate more */}
+                {!isLoading && multiResults.length > 0 && (
+                  <Button variant="outline" className="w-full" onClick={() => { setMultiResults([]); setActiveTab('styles'); }}>
+                    Generate New Variations
                   </Button>
-                  {onVideoGenerated && (
-                    <Button 
-                      onClick={handleAddToEditor} 
-                      variant="outline" 
-                      className="flex-1"
-                      disabled={hasAddedToEditor}
-                    >
-                      {hasAddedToEditor ? '✓ Added' : 'Add to Collection'}
-                    </Button>
-                  )}
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => { setActiveTab('upload'); setGeneratedVideoUrl(null); }}
-                  className="w-full"
-                >
-                  Create Another Video
-                </Button>
-              </div>}
+                )}
+              </div>
             </TabsContent>
           </SlideOverBody>
+
           <SlideOverFooter className="flex items-center justify-between">
             <div>
+              {activeTab === 'styles' && (
+                <Button variant="outline" onClick={() => setActiveTab('upload')}><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
+              )}
               {activeTab === 'settings' && (
-                <Button variant="outline" onClick={() => setActiveTab('upload')}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
+                <Button variant="outline" onClick={() => setActiveTab('styles')}><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
               )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               {activeTab === 'upload' && (
-                <Button
-                  onClick={() => setActiveTab('settings')}
-                  disabled={!uploadedImage || (currentModel.requiresFirstLastFrame && !endFrameImage)}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-                >
-                  Next: Video Settings
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                <Button onClick={() => setActiveTab('styles')} disabled={!uploadedImage || (currentModel.requiresFirstLastFrame && !endFrameImage)} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                  Next: Styles <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+              {activeTab === 'styles' && (
+                <Button onClick={() => setActiveTab('settings')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
+                  Next: Settings <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               )}
               {activeTab === 'settings' && (
-                <Button
-                  onClick={handleGenerateVideo}
-                  className="bg-[#2C666E] hover:bg-[#07393C] text-white"
-                >
+                <Button onClick={handleGenerate} disabled={isLoading} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Video
+                  Generate {variationCount > 1 ? `${variationCount} Videos` : 'Video'}
                 </Button>
               )}
             </div>

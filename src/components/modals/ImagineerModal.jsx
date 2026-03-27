@@ -233,7 +233,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   const [selectedModel, setSelectedModel] = useState("nano-banana-2");
   const [subjectDescription, setSubjectDescription] = useState("");
   const [subjectType, setSubjectType] = useState("");
-  const [artisticStyle, setArtisticStyle] = useState("");
+  const [artisticStyle, setArtisticStyle] = useState([]);
   const [colorPalette, setColorPalette] = useState("");
   const [lighting, setLighting] = useState("");
   const [cameraAngle, setCameraAngle] = useState("");
@@ -251,6 +251,8 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   const [generateLoras, setGenerateLoras] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [t2iMultiResults, setT2iMultiResults] = useState([]);
+  const [t2iExpandedImage, setT2iExpandedImage] = useState(null);
   const refFileInputRef = useRef(null);
 
   // ─── I2I State ──────────────────────────────────────────────────────
@@ -310,7 +312,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     }
   }, [isOpen]);
 
-  const handleModeChange = (newMode) => { setMode(newMode); setStep(0); };
+  const handleModeChange = (newMode) => { setMode(newMode); setStep(0); setT2iMultiResults([]); };
 
   // ═══════════════════════════════════════════════════════════════════════
   // T2I Handlers
@@ -356,8 +358,9 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
   const clearRefImage = () => { setRefImageUrl(""); setRefPreview(""); setRefDescription(""); };
 
   const buildCohesivePrompt = async (tool, extraData = {}) => {
-    const styleInfo = findStyleByValue(extraData.style || artisticStyle);
-    const styleText = styleInfo?.promptText || extraData.style || artisticStyle || '';
+    const rawStyle = extraData.style || (Array.isArray(artisticStyle) ? artisticStyle[0] : artisticStyle) || '';
+    const styleInfo = findStyleByValue(rawStyle);
+    const styleText = styleInfo?.promptText || rawStyle || '';
     const body = {
       tool,
       description: extraData.description || subjectDescription.trim(),
@@ -394,27 +397,85 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     if (cameraAngle) parts.push(`${CAMERA_ANGLE.find(a => a.value === cameraAngle)?.label} angle`);
     if (colorPalette) parts.push(`${COLOR_PALETTE.find(c => c.value === colorPalette)?.label} palette`);
     if (mood) parts.push(`${MOOD.find(m => m.value === mood)?.label} mood`);
-    if (artisticStyle) { const si = findStyleByValue(artisticStyle); parts.push(si?.promptText || `${artisticStyle} style`); }
+    if (artisticStyle.length > 0) { const si = findStyleByValue(artisticStyle[0]); parts.push(si?.promptText || `${artisticStyle[0]} style`); if (artisticStyle.length > 1) parts.push(`+ ${artisticStyle.length - 1} more styles`); }
     return parts.join(", ");
   };
 
-  const canImagine = !!(subjectType && artisticStyle && subjectDescription.trim());
+  const canImagine = !!(subjectType && artisticStyle.length > 0 && subjectDescription.trim());
 
   const handleImagine = async () => {
     if (!canImagine) { toast.error("Fill in subject, description, and style first."); return; }
+
+    const stylesToGenerate = artisticStyle.length > 0
+      ? artisticStyle.map(s => ({ key: s, label: findStyleByValue(s)?.label || s }))
+      : [{ key: '', label: 'No Style' }];
+
+    // Single style: delegate to parent (legacy behavior)
+    if (stylesToGenerate.length === 1) {
+      setGenerating(true);
+      try {
+        const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+        const cohesivePrompt = await buildCohesivePrompt('imagineer', { style: stylesToGenerate[0].key });
+        await onGenerate({
+          prompt: cohesivePrompt, style: stylesToGenerate[0].key, dimensions,
+          model: loras.length > 0 ? 'fal-flux' : selectedModel,
+          loras: loras.length > 0 ? loras : undefined,
+        });
+        onClose();
+      } catch (error) { toast.error(error.message || 'Failed to generate image'); }
+      finally { setGenerating(false); }
+      return;
+    }
+
+    // Multi-style: generate all internally
+    const initialResults = stylesToGenerate.map(s => ({
+      styleKey: s.key, styleLabel: s.label,
+      status: 'prompting', imageUrl: null, error: null, saved: false, tags: '',
+    }));
+    setT2iMultiResults(initialResults);
     setGenerating(true);
-    try {
-      const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
-      toast.info('Building cohesive prompt...');
-      const cohesivePrompt = await buildCohesivePrompt('imagineer');
-      await onGenerate({
-        prompt: cohesivePrompt, style: artisticStyle, dimensions,
-        model: loras.length > 0 ? 'fal-flux' : selectedModel,
-        loras: loras.length > 0 ? loras : undefined,
-      });
-      onClose();
-    } catch (error) { toast.error(error.message || 'Failed to generate image'); }
-    finally { setGenerating(false); }
+
+    const updateSlot = (index, updates) => {
+      if (!mountedRef.current) return;
+      setT2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    const generateOne = async (styleKey, index) => {
+      try {
+        const cohesivePrompt = await buildCohesivePrompt('imagineer', { style: styleKey });
+        if (!mountedRef.current) return;
+        updateSlot(index, { status: 'generating' });
+
+        const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+        const res = await apiFetch('/api/imagineer/generate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: cohesivePrompt, style: styleKey, dimensions,
+            model: loras.length > 0 ? 'fal-flux' : selectedModel,
+            loras: loras.length > 0 ? loras : undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+        if (data.imageUrl) {
+          updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
+        } else if (data.requestId) {
+          updateSlot(index, { status: 'polling' });
+          const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel));
+          updateSlot(index, { status: 'completed', imageUrl: url });
+        }
+      } catch (error) {
+        updateSlot(index, { status: 'failed', error: error.message });
+      }
+    };
+
+    const CONCURRENCY = 2;
+    for (let i = 0; i < stylesToGenerate.length; i += CONCURRENCY) {
+      const batch = stylesToGenerate.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(batch.map((s, idx) => generateOne(s.key, i + idx)));
+    }
+    if (mountedRef.current) setGenerating(false);
   };
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -531,7 +592,11 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       }
     };
 
-    await Promise.allSettled(stylesToGenerate.map((s, i) => generateOne(s.key, i)));
+    const CONCURRENCY = 2;
+    for (let i = 0; i < stylesToGenerate.length; i += CONCURRENCY) {
+      const batch = stylesToGenerate.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(batch.map((s, idx) => generateOne(s.key, i + idx)));
+    }
     if (mountedRef.current) setI2iEditing(false);
   };
 
@@ -718,6 +783,105 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     }
   };
 
+  // ─── T2I Multi-result save/retry handlers ────────────────────────────
+
+  const autoTagT2iImage = async (imageId, result) => {
+    const tagNames = [];
+    if (result.styleLabel && result.styleLabel !== 'No Style') tagNames.push(result.styleLabel);
+    const manualTags = (result.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+    tagNames.push(...manualTags);
+    if (tagNames.length === 0) return;
+    try {
+      await apiFetch('/api/library/tags/auto-tag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId, tagNames }),
+      });
+    } catch {}
+  };
+
+  const handleT2iSaveOne = async (index) => {
+    const result = t2iMultiResults[index];
+    if (!result || result.saved || !result.imageUrl) return;
+    setT2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: true } : r));
+    try {
+      const res = await apiFetch('/api/library/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.imageUrl, type: 'image', title: `[Imagineer] ${result.styleLabel}`, source: 'imagineer-t2i' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+      await autoTagT2iImage(data.id, result);
+    } catch (err) {
+      console.error('[Imagineer T2I] Save failed:', err);
+      toast.error(`Failed to save: ${err.message || 'Unknown error'}`);
+      setT2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, saved: false } : r));
+    }
+  };
+
+  const handleT2iSaveAll = async () => {
+    const unsaved = t2iMultiResults
+      .map((r, i) => ({ ...r, index: i }))
+      .filter(r => r.status === 'completed' && !r.saved && r.imageUrl);
+    setT2iMultiResults(prev => prev.map(r =>
+      r.status === 'completed' && !r.saved && r.imageUrl ? { ...r, saved: true } : r
+    ));
+    for (const item of unsaved) {
+      try {
+        const res = await apiFetch('/api/library/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.imageUrl, type: 'image', title: `[Imagineer] ${item.styleLabel}`, source: 'imagineer-t2i' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.id) throw new Error(data.error || data.message || 'Save failed');
+        await autoTagT2iImage(data.id, item);
+      } catch (err) {
+        console.error('[Imagineer T2I] Save failed:', err);
+        setT2iMultiResults(prev => prev.map((r, i) => i === item.index ? { ...r, saved: false } : r));
+      }
+    }
+  };
+
+  const handleT2iRetry = async (index) => {
+    const result = t2iMultiResults[index];
+    if (!result) return;
+
+    const updateSlot = (updates) => {
+      if (!mountedRef.current) return;
+      setT2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, ...updates } : r));
+    };
+
+    updateSlot({ status: 'prompting', error: null, imageUrl: null });
+
+    try {
+      const cohesivePrompt = await buildCohesivePrompt('imagineer', { style: result.styleKey });
+      if (!mountedRef.current) return;
+      updateSlot({ status: 'generating' });
+
+      const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+      const res = await apiFetch('/api/imagineer/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: cohesivePrompt, style: result.styleKey, dimensions,
+          model: loras.length > 0 ? 'fal-flux' : selectedModel,
+          loras: loras.length > 0 ? loras : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+      if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
+      else if (data.requestId) {
+        updateSlot({ status: 'polling' });
+        const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel));
+        updateSlot({ status: 'completed', imageUrl: url });
+      }
+    } catch (error) {
+      updateSlot({ status: 'failed', error: error.message });
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════════
   // Render
   // ═══════════════════════════════════════════════════════════════════════
@@ -752,8 +916,109 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         {/* TEXT TO IMAGE                                                 */}
         {/* ══════════════════════════════════════════════════════════════ */}
 
+        {/* T2I Multi-Results Grid */}
+        {mode === "t2i" && t2iMultiResults.length > 0 && (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-700">
+                {(() => {
+                  const completed = t2iMultiResults.filter(r => r.status === 'completed').length;
+                  const total = t2iMultiResults.length;
+                  return completed === total
+                    ? <span className="text-green-600">All {total} images complete</span>
+                    : <span>Generating... {completed}/{total} complete</span>;
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setT2iMultiResults([]); setGenerating(false); }}>
+                  <ChevronLeft className="w-3 h-3 mr-1" /> Back to Editor
+                </Button>
+                {t2iMultiResults.some(r => r.status === 'completed' && !r.saved) && (
+                  <Button size="sm" className="bg-[#2C666E] hover:bg-[#07393C] text-white" onClick={handleT2iSaveAll}>
+                    <FolderOpen className="w-3 h-3 mr-1" /> Save All
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {t2iMultiResults.map((result, index) => (
+                <div key={result.styleKey || index} className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="text-xs font-medium text-slate-600">{result.styleLabel}</span>
+                  </div>
+                  <div className="aspect-square relative">
+                    {['prompting', 'generating', 'polling'].includes(result.status) && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <span className="text-xs capitalize">{result.status}...</span>
+                      </div>
+                    )}
+                    {result.status === 'completed' && result.imageUrl && (
+                      <img src={result.imageUrl} alt={result.styleLabel}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setT2iExpandedImage(result)} />
+                    )}
+                    {result.status === 'failed' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-500 p-4">
+                        <AlertCircle className="w-6 h-6 mb-2" />
+                        <span className="text-xs text-center mb-2">{result.error || 'Failed'}</span>
+                        <Button size="sm" variant="outline" onClick={() => handleT2iRetry(index)}>Retry</Button>
+                      </div>
+                    )}
+                  </div>
+                  {result.status === 'completed' && (
+                    <div className="p-2 border-t border-slate-100 space-y-1.5">
+                      <input type="text" placeholder="Tags (comma-separated)"
+                        value={result.tags || ''} disabled={result.saved}
+                        onChange={(e) => setT2iMultiResults(prev => prev.map((r, i) => i === index ? { ...r, tags: e.target.value } : r))}
+                        className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded focus:border-[#2C666E] focus:outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" className="flex-1 text-xs h-7"
+                          disabled={result.saved}
+                          onClick={() => handleT2iSaveOne(index)}>
+                          {result.saved ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Saved</> : <><FolderOpen className="w-3 h-3 mr-1" /> Save</>}
+                        </Button>
+                        <Button size="sm" className="flex-1 text-xs h-7 bg-[#2C666E] hover:bg-[#07393C] text-white"
+                          onClick={() => {
+                            if (onGenerate) onGenerate({ editedImageUrl: result.imageUrl });
+                            onClose();
+                          }}>
+                          Use
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* T2I Lightbox overlay */}
+        {t2iExpandedImage && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8"
+            onClick={() => setT2iExpandedImage(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setT2iExpandedImage(null)}
+            tabIndex={-1} ref={el => el && el.focus()}>
+            <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setT2iExpandedImage(null)}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="bg-white rounded-lg overflow-hidden shadow-2xl">
+                <div className="px-4 py-2 bg-slate-50 border-b">
+                  <span className="text-sm font-medium text-slate-700">{t2iExpandedImage.styleLabel}</span>
+                </div>
+                <img src={t2iExpandedImage.imageUrl} alt={t2iExpandedImage.styleLabel}
+                  className="max-w-[85vw] max-h-[80vh] object-contain" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* T2I Step 0: Subject */}
-        {mode === "t2i" && step === 0 && (
+        {mode === "t2i" && step === 0 && t2iMultiResults.length === 0 && (
           <div className="p-5 space-y-4 max-w-2xl">
             {/* Model */}
             <div className="space-y-2">
@@ -829,15 +1094,15 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         )}
 
         {/* T2I Step 1: Style */}
-        {mode === "t2i" && step === 1 && (
+        {mode === "t2i" && step === 1 && t2iMultiResults.length === 0 && (
           <div className="p-5">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Choose an Artistic Style</h3>
-            <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="none" columns="grid-cols-4" />
+            <StyleGrid value={artisticStyle} onChange={setArtisticStyle} maxHeight="none" columns="grid-cols-4" multiple />
           </div>
         )}
 
         {/* T2I Step 2: Enhance */}
-        {mode === "t2i" && step === 2 && (
+        {mode === "t2i" && step === 2 && t2iMultiResults.length === 0 && (
           <div className="p-5 space-y-5 max-w-2xl">
             {/* Atmosphere — pill-based selectors */}
             <div className="space-y-3">
@@ -922,7 +1187,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         )}
 
         {/* T2I Step 3: Output */}
-        {mode === "t2i" && step === 3 && (
+        {mode === "t2i" && step === 3 && t2iMultiResults.length === 0 && (
           <div className="p-5 space-y-5 max-w-2xl">
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -944,7 +1209,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-slate-400">Model:</span> <span className="font-medium">{T2I_MODELS.find(m => m.value === selectedModel)?.label}</span></div>
-                <div><span className="text-slate-400">Style:</span> <span className="font-medium">{artisticStyle || 'None'}</span></div>
+                <div><span className="text-slate-400">Style{artisticStyle.length > 1 ? 's' : ''}:</span> <span className="font-medium">{artisticStyle.length > 0 ? `${artisticStyle.length} selected` : 'None'}</span></div>
                 <div><span className="text-slate-400">Subject:</span> <span className="font-medium">{SUBJECT_TYPE.find(s => s.value === subjectType)?.label || 'None'}</span></div>
                 <div><span className="text-slate-400">Dimensions:</span> <span className="font-medium">{DIMENSIONS.find(d => d.value === dimensions)?.label}</span></div>
                 {selectedProps.length > 0 && <div className="col-span-2"><span className="text-slate-400">Props:</span> <span className="font-medium">{selectedProps.length} selected</span></div>}
@@ -1289,15 +1554,16 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       </div>
 
       {/* ═══════════ Footer ═══════════ */}
-      {!(mode === "i2i" && (i2iMultiResults.length > 0 || i2iResultUrl)) && (
+      {!(mode === "i2i" && (i2iMultiResults.length > 0 || i2iResultUrl)) && !(mode === "t2i" && t2iMultiResults.length > 0) && (
       <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
         {/* Status text */}
         <div className="text-xs text-slate-500">
           {mode === "t2i" && step === 0 && !subjectType && <span>Select a subject type to begin</span>}
           {mode === "t2i" && step === 0 && subjectType && !subjectDescription.trim() && <span>Add a description</span>}
           {mode === "t2i" && step === 0 && subjectType && subjectDescription.trim() && <span className="text-green-600 font-medium">Subject ready</span>}
-          {mode === "t2i" && step === 1 && !artisticStyle && <span>Choose an artistic style</span>}
-          {mode === "t2i" && step === 1 && artisticStyle && <span className="text-green-600 font-medium">Style selected</span>}
+          {mode === "t2i" && step === 1 && artisticStyle.length === 0 && <span>Choose artistic style(s)</span>}
+          {mode === "t2i" && step === 1 && artisticStyle.length === 1 && <span className="text-green-600 font-medium">1 style selected</span>}
+          {mode === "t2i" && step === 1 && artisticStyle.length > 1 && <span className="text-green-600 font-medium">{artisticStyle.length} styles selected — bulk create</span>}
           {mode === "t2i" && step === 2 && <span className="text-slate-400">All enhancements are optional</span>}
           {mode === "t2i" && step === 3 && canImagine && <span className="text-green-600 font-medium">Ready to generate</span>}
           {mode === "t2i" && step === 3 && !canImagine && <span className="text-amber-600">Go back and fill in subject type, description, and style</span>}
@@ -1327,17 +1593,19 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
             <Button onClick={() => setStep(s => s + 1)}
               disabled={
                 (step === 0 && (!subjectType || !subjectDescription.trim())) ||
-                (step === 1 && !artisticStyle)
+                (step === 1 && artisticStyle.length === 0)
               }
               className="bg-[#2C666E] hover:bg-[#07393C] text-white">
               Next <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           )}
-          {mode === "t2i" && step === 3 && (
+          {mode === "t2i" && step === 3 && t2iMultiResults.length === 0 && (
             <Button onClick={handleImagine} disabled={generating || !canImagine}
               className="bg-[#2C666E] hover:bg-[#07393C] text-white">
               {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Building Prompt...</>
-                : <><Sparkles className="w-4 h-4 mr-2" /> Imagine</>}
+                : artisticStyle.length > 1
+                  ? <><Sparkles className="w-4 h-4 mr-2" /> Imagine {artisticStyle.length} Styles</>
+                  : <><Sparkles className="w-4 h-4 mr-2" /> Imagine</>}
             </Button>
           )}
 

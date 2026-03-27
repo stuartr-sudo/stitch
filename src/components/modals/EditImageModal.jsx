@@ -346,7 +346,12 @@ export default function EditImageModal({
       }
     };
 
-    await Promise.allSettled(stylesToGenerate.map((s, i) => generateOne(s.key, i)));
+    // Run at most 2 concurrent generations to avoid 502s from stacked API calls
+    const CONCURRENCY = 2;
+    for (let i = 0; i < stylesToGenerate.length; i += CONCURRENCY) {
+      const batch = stylesToGenerate.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(batch.map((s, idx) => generateOne(s.key, i + idx)));
+    }
     if (mountedRef.current) setIsLoading(false);
   };
 
