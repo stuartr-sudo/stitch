@@ -25,15 +25,15 @@ export const POSE_SETS = [
       {
         label: 'Front & Right Side',
         cells: [
-          { prompt: 'front view, full body, standing neutral A-pose with arms slightly away from body, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Front' },
-          { prompt: 'right side profile view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Right' },
+          { prompt: 'front view facing the camera directly, 0-degree rotation, full body, standing neutral A-pose with arms slightly away from body, completely symmetrical, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Front' },
+          { prompt: 'exact 90-degree right side profile view, character facing left so we see only the right side of their body, nose pointing left, one ear visible, strict side silhouette, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Right' },
         ],
       },
       {
         label: 'Back & Left Side',
         cells: [
-          { prompt: 'back view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Back' },
-          { prompt: 'left side profile view, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Left' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Back' },
+          { prompt: 'exact 90-degree left side profile view, character facing right so we see only the left side of their body, nose pointing right, one ear visible, strict side silhouette, full body, standing neutral pose, orthographic flat angle, centered in frame, full character visible head to toe', shortLabel: 'Left' },
         ],
       },
     ],
@@ -47,14 +47,14 @@ export const POSE_SETS = [
       {
         label: 'Dynamic Front Views',
         cells: [
-          { prompt: 'three-quarter front view, dynamic action stance, weight shifted forward, full body, centered in frame', shortLabel: '3/4 Action' },
-          { prompt: 'side profile, running mid-stride or combat pose, full body, centered in frame', shortLabel: 'Side Action' },
+          { prompt: 'three-quarter front view at 45-degree angle, dynamic action stance, weight shifted forward, full body, centered in frame', shortLabel: '3/4 Action' },
+          { prompt: 'exact 90-degree side profile, running mid-stride or combat pose, strict side silhouette, full body, centered in frame', shortLabel: 'Side Action' },
         ],
       },
       {
         label: 'Dynamic Rear & Special',
         cells: [
-          { prompt: 'three-quarter back view, action stance with arms raised, full body, centered in frame', shortLabel: '3/4 Back Action' },
+          { prompt: 'three-quarter back view at 135-degree angle, action stance with arms raised, showing mostly the back, full body, centered in frame', shortLabel: '3/4 Back Action' },
           { prompt: 'dramatic low angle hero landing pose, full body, centered in frame', shortLabel: 'Hero Pose' },
         ],
       },
@@ -69,16 +69,16 @@ export const POSE_SETS = [
       {
         label: 'Turnaround (Neutral Standing)',
         cells: [
-          { prompt: 'front view', shortLabel: 'Front' },
-          { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
-          { prompt: 'side profile view', shortLabel: 'Side' },
-          { prompt: 'back view', shortLabel: 'Back' },
+          { prompt: 'front view facing camera directly, 0-degree rotation, symmetrical', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, slightly turned showing front and one side', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, strict side silhouette, nose pointing left, one ear visible', shortLabel: 'Side' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only', shortLabel: 'Back' },
         ],
       },
       {
         label: 'Expressions & Alternative Back',
         cells: [
-          { prompt: 'three-quarter back view', shortLabel: '3/4 Back' },
+          { prompt: 'three-quarter back view at 135-degree angle, mostly showing back with slight side visible', shortLabel: '3/4 Back' },
           { prompt: 'neutral expression close-up', shortLabel: 'Neutral' },
           { prompt: 'determined expression', shortLabel: 'Determined' },
           { prompt: 'joyful laughing expression', shortLabel: 'Joyful' },
@@ -131,10 +131,10 @@ export const POSE_SETS = [
       {
         label: 'Turnaround (Neutral Standing)',
         cells: [
-          { prompt: 'front view', shortLabel: 'Front' },
-          { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
-          { prompt: 'side profile view', shortLabel: 'Side' },
-          { prompt: 'back view', shortLabel: 'Back' },
+          { prompt: 'front view facing camera directly, 0-degree rotation, symmetrical', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, slightly turned showing front and one side', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, strict side silhouette, nose pointing left, one ear visible', shortLabel: 'Side' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only', shortLabel: 'Back' },
         ],
       },
       {
@@ -193,10 +193,10 @@ export const POSE_SETS = [
       {
         label: 'Turnaround (Neutral Standing)',
         cells: [
-          { prompt: 'front view', shortLabel: 'Front' },
-          { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
-          { prompt: 'side profile view', shortLabel: 'Side' },
-          { prompt: 'back view', shortLabel: 'Back' },
+          { prompt: 'front view facing camera directly, 0-degree rotation, symmetrical', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, slightly turned showing front and one side', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, strict side silhouette, nose pointing left, one ear visible', shortLabel: 'Side' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only', shortLabel: 'Back' },
         ],
       },
       {
@@ -255,10 +255,10 @@ export const POSE_SETS = [
       {
         label: 'Turnaround (Neutral Standing)',
         cells: [
-          { prompt: 'front view', shortLabel: 'Front' },
-          { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
-          { prompt: 'side profile view', shortLabel: 'Side' },
-          { prompt: 'back view', shortLabel: 'Back' },
+          { prompt: 'front view facing camera directly, 0-degree rotation, symmetrical', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, slightly turned showing front and one side', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, strict side silhouette, nose pointing left, one ear visible', shortLabel: 'Side' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only', shortLabel: 'Back' },
         ],
       },
       {
@@ -317,10 +317,10 @@ export const POSE_SETS = [
       {
         label: 'Turnaround (Neutral Standing)',
         cells: [
-          { prompt: 'front view', shortLabel: 'Front' },
-          { prompt: 'three-quarter front view', shortLabel: '3/4 Front' },
-          { prompt: 'side profile view', shortLabel: 'Side' },
-          { prompt: 'back view', shortLabel: 'Back' },
+          { prompt: 'front view facing camera directly, 0-degree rotation, symmetrical', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, slightly turned showing front and one side', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, strict side silhouette, nose pointing left, one ear visible', shortLabel: 'Side' },
+          { prompt: 'rear back view facing away from camera, 180-degree rotation, showing back of head and body only', shortLabel: 'Back' },
         ],
       },
       {
