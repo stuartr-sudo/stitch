@@ -34,13 +34,13 @@ const ANGLE_SLOTS = [
 ];
 
 const MODELS_3D = [
-  { id: 'meshy', label: 'Meshy v5', provider: 'fal', price: '$0.40', description: 'Textured, high-detail mesh from 1-4 images', minImages: 1, maxImages: 4 },
   { id: 'wavespeed-hunyuan3d', label: 'Hunyuan3D v2', provider: 'wavespeed', price: '~$0.30', description: 'Multi-view reconstruction (front + back + left required)', minImages: 3, requiredSlots: ['front_image_url', 'back_image_url', 'left_image_url'] },
 ];
 
 export default function ThreeDViewerModal({ isOpen, onClose }) {
   const [images, setImages] = useState({});
-  const [selectedModel, setSelectedModel] = useState('meshy');
+  const [selectedModel, setSelectedModel] = useState('wavespeed-hunyuan3d');
+  const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [glbUrl, setGlbUrl] = useState(null);
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -249,7 +249,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
       const response = await apiFetch('/api/viewer3d/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...images, model: selectedModel }),
+        body: JSON.stringify({ ...images, model: selectedModel, prompt: prompt.trim() || undefined }),
       });
 
       const data = await response.json();
@@ -320,6 +320,7 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
     setGlbUrl(null);
     setThumbnailUrl(null);
     setImages({});
+    setPrompt('');
     setGenerationStatus('');
     setGlbError(null);
     setCameraInfo('');
@@ -446,10 +447,23 @@ export default function ThreeDViewerModal({ isOpen, onClose }) {
                       </div>
                     </div>
 
+                    {/* Prompt / material description */}
+                    <div className="mt-6 w-full max-w-3xl">
+                      <Label className="text-slate-700 text-sm font-medium mb-1 block">Description (optional)</Label>
+                      <p className="text-slate-400 text-xs mb-2">Describe materials, surfaces, and textures to guide reconstruction</p>
+                      <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder="e.g. Brushed steel helmet with matte finish, no painted textures, metallic surface with subtle scratches"
+                        rows={2}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none resize-none"
+                      />
+                    </div>
+
                     {/* Model selector */}
                     <div className="mt-6 w-full max-w-3xl">
                       <Label className="text-slate-700 text-sm font-medium mb-2 block">3D Model</Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {MODELS_3D.map(m => (
                           <button
                             key={m.id}
