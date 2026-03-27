@@ -1524,10 +1524,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                       {name}
                     </button>
                   ))}
-                  {selectedStyles.length > 1 && [...new Set(sheets.map(s => s.styleText))].map(styleText => (
-                    <button key={`s-${styleText}`} onClick={() => toggleFilter(filterStyle, setFilterStyle, sheets.find(s => s.styleText === styleText)?.style)}
-                      className={`px-2.5 py-1 rounded-full text-xs ${filterStyle.has(sheets.find(s => s.styleText === styleText)?.style) ? 'bg-purple-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
-                      {styleText}
+                  {selectedStyles.length > 1 && [...new Set(sheets.map(s => s.style))].map(styleKey => (
+                    <button key={`s-${styleKey}`} onClick={() => toggleFilter(filterStyle, setFilterStyle, styleKey)}
+                      className={`px-2.5 py-1 rounded-full text-xs max-w-[180px] truncate ${filterStyle.has(styleKey) ? 'bg-purple-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+                      {getStyleLabel(styleKey)}
                     </button>
                   ))}
                   {selectedPoseSets.length > 1 && [...new Set(sheets.map(s => s.poseSetName))].filter(Boolean).map(psName => (
@@ -1544,10 +1544,18 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                 </div>
               )}
 
-              {/* Grouped sections by character */}
+              {/* Grouped sections by character → pose set */}
               {Object.entries(groupedByCharacter).map(([charName, charSheets]) => {
                 const complete = charSheets.filter(s => s.imageUrl).length;
                 const total = charSheets.length;
+                // Sub-group by pose set
+                const byPoseSet = {};
+                for (const s of charSheets) {
+                  const psKey = s.poseSetName || 'Standard 24';
+                  if (!byPoseSet[psKey]) byPoseSet[psKey] = [];
+                  byPoseSet[psKey].push(s);
+                }
+                const hasManyPoseSets = Object.keys(byPoseSet).length > 1;
                 return (
                   <div key={charName} className="mb-6">
                     {Object.keys(groupedByCharacter).length > 1 && (
@@ -1555,28 +1563,37 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                         {charName} ({complete}/{total} complete)
                       </h3>
                     )}
+                    {Object.entries(byPoseSet).map(([psName, psSheets]) => (
+                    <div key={psName} className={hasManyPoseSets ? 'mb-4' : ''}>
+                      {hasManyPoseSets && (
+                        <h4 className="text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">{psName}</h4>
+                      )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {charSheets.map(sheet => (
+                      {psSheets.map(sheet => (
                         <div key={sheet.id}
                           onClick={() => !sheet.generating && sheet.imageUrl && setActiveSheetId(sheet.id)}
                           className={`relative rounded-lg overflow-hidden border cursor-pointer transition-all ${
                             activeSheetId === sheet.id ? 'border-teal-500 ring-1 ring-teal-500' : 'border-zinc-700 hover:border-zinc-500'
                           }`}>
-                          {sheet.generating ? (
-                            <div className="aspect-[2/3] flex items-center justify-center bg-zinc-800">
-                              <Loader2 className="animate-spin w-6 h-6 text-teal-400" />
-                            </div>
-                          ) : sheet.error ? (
-                            <div className="aspect-[2/3] flex flex-col items-center justify-center bg-zinc-800 p-2 text-center">
-                              <p className="text-xs text-red-400 mb-2 line-clamp-3">{sheet.error}</p>
-                              <button onClick={(e) => { e.stopPropagation(); retrySheet(sheet.id); }}
-                                className="text-xs text-teal-400 hover:underline">Retry</button>
-                            </div>
-                          ) : (
-                            <img src={sheet.imageUrl} alt="" className="w-full aspect-[2/3] object-cover" />
-                          )}
+                          {(() => {
+                            const grid = getGridForSheet(sheet.poseSet);
+                            const aspect = grid.cols === grid.rows ? 'aspect-square' : 'aspect-[2/3]';
+                            if (sheet.generating) return (
+                              <div className={`${aspect} flex items-center justify-center bg-zinc-800`}>
+                                <Loader2 className="animate-spin w-6 h-6 text-teal-400" />
+                              </div>
+                            );
+                            if (sheet.error) return (
+                              <div className={`${aspect} flex flex-col items-center justify-center bg-zinc-800 p-2 text-center`}>
+                                <p className="text-xs text-red-400 mb-2 line-clamp-3">{sheet.error}</p>
+                                <button onClick={(e) => { e.stopPropagation(); retrySheet(sheet.id); }}
+                                  className="text-xs text-teal-400 hover:underline">Retry</button>
+                              </div>
+                            );
+                            return <img src={sheet.imageUrl} alt="" className={`w-full ${aspect} object-cover`} />;
+                          })()}
                           <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
-                            <p className="text-[10px] text-zinc-300 truncate">{sheet.styleText}</p>
+                            <p className="text-[10px] text-zinc-300 truncate">{getStyleLabel(sheet.style)}</p>
                             {sheet.poseSetName && sheet.poseSetName !== 'Standard 24' && (
                               <p className="text-[10px] text-zinc-500 truncate">{sheet.poseSetName}</p>
                             )}
@@ -1584,6 +1601,8 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                         </div>
                       ))}
                     </div>
+                    </div>
+                    ))}
                   </div>
                 );
               })}
