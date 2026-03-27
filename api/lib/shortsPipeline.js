@@ -476,9 +476,11 @@ export async function runShortsPipeline(opts) {
           // Kling O3/V3
           const model = VIDEO_MODELS?.[videoModel];
           endpoint = model?.endpoint || 'fal-ai/kling-video/o3/pro/image-to-video';
+          const isKlingV3 = videoModel === 'fal_kling_v3';
           body = {
             prompt,
-            image_url: firstImg,
+            // Kling V3 uses start_image_url, Kling O3 uses image_url
+            ...(isKlingV3 ? { start_image_url: firstImg } : { image_url: firstImg }),
             end_image_url: lastImg,
             aspect_ratio: aspectRatio || '9:16',
             duration: klingDuration(block.clipDuration),
@@ -640,8 +642,10 @@ export async function runShortsPipeline(opts) {
     let assembledVideoUrl;
     await updateJob({ current_step: 'assembling_video', completed_steps: 8 });
 
-    const clipDurations = alignedBlocks.map(b => b.clipDuration);
-    const validClipUrls = clips.filter(c => c.url).map(c => c.url);
+    // Filter clipDurations in sync with validClipUrls so timing stays aligned
+    const validClipData = clips.map((c, i) => c.url ? { url: c.url, duration: alignedBlocks[i].clipDuration } : null).filter(Boolean);
+    const validClipUrls = validClipData.map(c => c.url);
+    const clipDurations = validClipData.map(c => c.duration);
     console.log(`[shortsPipeline] Step 8: Assembling video (${validClipUrls.length} clips + voiceover${musicUrl ? ` + music vol=${effectiveMusicVolume}` : ''})`);
 
     assembledVideoUrl = await assembleShort(validClipUrls, voiceoverUrl, musicUrl, keys.falKey, supabase, clipDurations, effectiveMusicVolume, ttsDuration);

@@ -325,8 +325,11 @@ export default function ShortsDraftPage() {
                     <p className="text-xs font-medium text-slate-600">
                       KF {i} {i === 0 ? '(opening)' : i === keyframes.length - 1 ? '(closing)' : `(scene ${i}→${i + 1})`}
                     </p>
+                    {kf.imagePrompt && (
+                      <p className="text-xs text-slate-500 line-clamp-3">{kf.imagePrompt}</p>
+                    )}
                     {kf.motionHint && (
-                      <p className="text-xs text-slate-400 line-clamp-2">{kf.motionHint}</p>
+                      <p className="text-xs text-slate-400 italic line-clamp-2">{kf.motionHint}</p>
                     )}
                   </div>
                 </div>
@@ -356,8 +359,23 @@ export default function ShortsDraftPage() {
                       {i + 1}
                     </div>
 
-                    {/* Thumbnail */}
-                    {scene.image_url && (
+                    {/* Thumbnail — V3 shows first+last frame pair, legacy shows single image */}
+                    {isV3 && (scene.first_frame_url || scene.last_frame_url) ? (
+                      <div className="flex-shrink-0 flex gap-1">
+                        {scene.first_frame_url && (
+                          <div className="w-16 h-28 rounded-lg overflow-hidden bg-slate-100 relative">
+                            <img src={scene.first_frame_url} alt={`Scene ${i + 1} first`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0.5 left-0.5 text-[9px] bg-black/60 text-white px-1 rounded">1st</span>
+                          </div>
+                        )}
+                        {scene.last_frame_url && (
+                          <div className="w-16 h-28 rounded-lg overflow-hidden bg-slate-100 relative">
+                            <img src={scene.last_frame_url} alt={`Scene ${i + 1} last`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0.5 left-0.5 text-[9px] bg-black/60 text-white px-1 rounded">last</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : scene.image_url ? (
                       <div className="flex-shrink-0 w-20 h-36 rounded-lg overflow-hidden bg-slate-100">
                         <img
                           src={scene.image_url}
@@ -365,7 +383,7 @@ export default function ShortsDraftPage() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 space-y-2">
@@ -406,6 +424,11 @@ export default function ShortsDraftPage() {
                         {scene.clip_duration && (
                           <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
                             {scene.clip_duration}s
+                          </span>
+                        )}
+                        {isV3 && scene.start_time != null && scene.end_time != null && (
+                          <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">
+                            {scene.start_time.toFixed(1)}s – {scene.end_time.toFixed(1)}s
                           </span>
                         )}
                         {scene.visual_style && (
