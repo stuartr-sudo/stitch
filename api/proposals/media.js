@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       .from('proposal_media')
       .select('*')
       .eq('proposal_slug', slug)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('[Proposal Media] GET error:', error);
