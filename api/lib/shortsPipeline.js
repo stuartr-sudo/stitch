@@ -319,54 +319,98 @@ export async function runShortsPipeline(opts) {
         ).catch(err => { console.warn('[shortsPipeline] Music failed:', err.message); return null; })
       : Promise.resolve(null);
 
-    // Phase A: Keyframe images (batched concurrency 3)
-    console.log(`[shortsPipeline] Phase A: Generating ${keyframes.length} keyframe images (batched)`);
-    const BATCH_SIZE = 3;
+    // Phase A: Keyframe images — I2I chain with parallel Scene 1
+    //
+    // Scene 1: FIRST and LAST images generated IN PARALLEL (both T2I, independent)
+    // Scene 2: FIRST = Scene 1 LAST (reuse). LAST = I2I from Scene 1 LAST.
+    // Scene 3: FIRST = Scene 2 LAST (reuse). LAST = I2I from Scene 2 LAST.
+    // ...sequential I2I chain from Scene 2 onward.
+    //
+    // keyframeImageUrls[i] = scene i+1 first frame = scene i last frame (for i>0)
+    // keyframeImageUrls[0] = scene 1 first, keyframeImageUrls[1] = scene 1 last / scene 2 first
+    console.log(`[shortsPipeline] Phase A: Generating ${keyframes.length} keyframe images (parallel scene 1 + I2I chain)`);
     const keyframeImageUrls = new Array(keyframes.length).fill(null);
 
-    for (let batchStart = 0; batchStart < keyframes.length; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE, keyframes.length);
-      const batchPromises = [];
+    // I2I helper — uses nano-banana-2/edit (synchronous, accepts image_urls + prompt)
+    const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
+    async function generateI2I(referenceImageUrl, prompt, ar) {
+      const res = await fetch('https://fal.run/fal-ai/nano-banana-2/edit', {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_urls: [referenceImageUrl],
+          prompt,
+          aspect_ratio: i2iAspectMap[ar] || '9:16',
+          resolution: '1080p',
+          num_images: 1,
+        }),
+      });
+      if (!res.ok) throw new Error(`I2I generation failed: ${await res.text()}`);
+      const data = await res.json();
+      const imgUrl = data.images?.[0]?.url;
+      if (!imgUrl) throw new Error('No image URL from I2I result');
+      return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
+    }
 
-      for (let k = batchStart; k < batchEnd; k++) {
-        const kf = keyframes[k];
+    // T2I helper for generating a keyframe from text prompt
+    async function generateT2I(kfIndex) {
+      const { imagePrompt: prompt } = composePrompts({
+        sceneDirection: { imagePrompt: keyframes[kfIndex].imagePrompt, motionPrompt: keyframes[kfIndex].motionHint },
+        visualStyle, visualStylePrompt,
+        frameworkDefaults: framework?.sceneDefaults,
+        aspectRatio, loraConfigs,
+        isFirstScene: kfIndex === 0, frameChain: false,
+      });
+      return withRetry(
+        () => generateImageV2(resolvedImageModel || 'fal_flux', prompt, aspectRatio, keys, supabase, {
+          loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+        }),
+        { maxAttempts: 2, baseDelayMs: 2000 }
+      );
+    }
 
-        if (k === 0 && starting_image) {
-          batchPromises.push(Promise.resolve(starting_image));
-          continue;
-        }
+    // ── Scene 1: First + Last in PARALLEL ──
+    const scene1FirstPromise = starting_image
+      ? Promise.resolve(starting_image)
+      : generateT2I(0).catch(err => { console.error(`[shortsPipeline] KF0 T2I failed: ${err.message}`); return null; });
 
-        const { imagePrompt: composedPrompt } = composePrompts({
-          sceneDirection: { imagePrompt: kf.imagePrompt, motionPrompt: kf.motionHint },
-          visualStyle,
-          visualStylePrompt,
-          frameworkDefaults: framework?.sceneDefaults,
-          aspectRatio,
-          loraConfigs,
-          isFirstScene: k === 0,
-          frameChain: false,
+    const scene1LastPromise = keyframes.length > 1
+      ? generateT2I(1).catch(err => { console.error(`[shortsPipeline] KF1 T2I failed: ${err.message}`); return null; })
+      : Promise.resolve(null);
+
+    const [scene1First, scene1Last] = await Promise.all([scene1FirstPromise, scene1LastPromise]);
+    keyframeImageUrls[0] = scene1First;
+    if (keyframes.length > 1) keyframeImageUrls[1] = scene1Last;
+    console.log(`[shortsPipeline] Scene 1 parallel: first=${scene1First ? 'OK' : 'FAILED'}, last=${scene1Last ? 'OK' : 'FAILED'}`);
+
+    // ── Scenes 2..N: Sequential I2I chain from previous scene's last image ──
+    // keyframeImageUrls[k] already has scene k's first frame (= previous scene's last).
+    // We generate keyframeImageUrls[k+1] = scene k's last frame via I2I from keyframeImageUrls[k].
+    for (let k = 2; k < keyframes.length; k++) {
+      const prevLastImage = keyframeImageUrls[k - 1]; // previous scene's last = this scene's first
+      if (!prevLastImage) {
+        console.error(`[shortsPipeline] Keyframe ${k}: chain broken, falling back to T2I`);
+        keyframeImageUrls[k] = await generateT2I(k).catch(err => {
+          console.error(`[shortsPipeline] KF${k} T2I fallback failed: ${err.message}`);
+          return null;
         });
-
-        batchPromises.push(
-          withRetry(
-            () => generateImageV2(resolvedImageModel || 'fal_flux', composedPrompt, aspectRatio, keys, supabase, {
-              loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
-            }),
-            { maxAttempts: 2, baseDelayMs: 2000 }
-          ).catch(err => {
-            console.error(`[shortsPipeline] Keyframe ${k} image failed: ${err.message}`);
-            return null;
-          })
-        );
+      } else {
+        const { imagePrompt: i2iPrompt } = composePrompts({
+          sceneDirection: { imagePrompt: keyframes[k].imagePrompt, motionPrompt: keyframes[k].motionHint },
+          visualStyle, visualStylePrompt,
+          frameworkDefaults: framework?.sceneDefaults,
+          aspectRatio, loraConfigs,
+          isFirstScene: false, frameChain: true,
+        });
+        keyframeImageUrls[k] = await withRetry(
+          () => generateI2I(prevLastImage, i2iPrompt, aspectRatio),
+          { maxAttempts: 2, baseDelayMs: 2000 }
+        ).catch(err => {
+          console.error(`[shortsPipeline] KF${k} I2I failed: ${err.message}`);
+          return null;
+        });
       }
-
-      const batchResults = await Promise.allSettled(batchPromises);
-      for (let j = 0; j < batchResults.length; j++) {
-        const idx = batchStart + j;
-        keyframeImageUrls[idx] = batchResults[j].status === 'fulfilled' ? batchResults[j].value : null;
-      }
-
-      console.log(`[shortsPipeline] Keyframe images batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${batchResults.filter(r => r.status === 'fulfilled' && r.value).length}/${batchResults.length} succeeded`);
+      console.log(`[shortsPipeline] Keyframe ${k}/${keyframes.length - 1}: ${keyframeImageUrls[k] ? 'OK' : 'FAILED'}`);
     }
 
     characterRef = keyframeImageUrls[0];
