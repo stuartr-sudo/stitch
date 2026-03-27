@@ -35,9 +35,10 @@ export default async function handler(req, res) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { data } = await supabase
         .from('proposal_media')
-        .select('id, media_type, media_url, thumbnail_url, caption, sort_order')
+        .select('id, media_type, media_url, thumbnail_url, caption, sort_order, created_at')
         .eq('proposal_slug', slug)
-        .order('sort_order', { ascending: true });
+        .order('created_at', { ascending: true })
+        .range(0, 9999);
 
       if (data) {
         videos = data.filter(item => item.media_type === 'video');

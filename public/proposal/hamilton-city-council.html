@@ -847,7 +847,16 @@
           addVideoBtn.className = 'add-media-btn';
           addVideoBtn.textContent = '+ Add Videos';
           addVideoBtn.onclick = function() { openLibrary('video'); };
-          sampleWork.querySelector('.container').insertBefore(addVideoBtn, sampleWork.querySelector('.grid-3') || sampleWork.querySelector('.text-muted'));
+          var pasteVideoBtn = document.createElement('button');
+          pasteVideoBtn.className = 'add-media-btn';
+          pasteVideoBtn.textContent = 'Paste Video URL';
+          pasteVideoBtn.style.cssText = 'margin-left:8px;background:transparent;color:#2C666E;border:1.5px dashed #2C666E;';
+          pasteVideoBtn.onclick = function() { openPasteUrl('video', sampleWork.querySelector('.container'), sampleWork.querySelector('.grid-3') || sampleWork.querySelector('.text-muted')); };
+          var btnWrap = document.createElement('div');
+          btnWrap.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;';
+          btnWrap.appendChild(addVideoBtn);
+          btnWrap.appendChild(pasteVideoBtn);
+          sampleWork.querySelector('.container').insertBefore(btnWrap, sampleWork.querySelector('.grid-3') || sampleWork.querySelector('.text-muted'));
         }
 
         var imagesSection = document.querySelector('[data-section="images"]');
@@ -858,8 +867,9 @@
             imagesSection = document.createElement('section');
             imagesSection.className = 'section animate-on-scroll visible';
             imagesSection.setAttribute('data-section', 'images');
-            imagesSection.innerHTML = '<div class="container"><h2>Images</h2><p class="subtitle">Visual concepts and stills from our pipeline</p><button class="add-media-btn" style="display:inline-block">+ Add Images</button><div class="grid-3"></div></div>';
+            imagesSection.innerHTML = '<div class="container"><h2>Images</h2><p class="subtitle">Visual concepts and stills from our pipeline</p><div style="display:flex;gap:8px;margin-bottom:16px;"><button class="add-media-btn" style="display:inline-block">+ Add Images</button><button class="add-media-btn paste-img-btn" style="display:inline-block;background:transparent;color:#2C666E;border:1.5px dashed #2C666E;">Paste Image URL</button></div><div class="grid-3"></div></div>';
             imagesSection.querySelector('.add-media-btn').onclick = function() { openLibrary('image'); };
+            imagesSection.querySelector('.paste-img-btn').onclick = function() { openPasteUrl('image', imagesSection.querySelector('.container'), imagesSection.querySelector('.grid-3')); };
             sampleWork.parentNode.insertBefore(imagesSection, ref);
           }
         } else if (!imagesSection.querySelector('.add-media-btn')) {
@@ -867,7 +877,16 @@
           addImgBtn.className = 'add-media-btn';
           addImgBtn.textContent = '+ Add Images';
           addImgBtn.onclick = function() { openLibrary('image'); };
-          imagesSection.querySelector('.container').insertBefore(addImgBtn, imagesSection.querySelector('.grid-3'));
+          var pasteImgBtn = document.createElement('button');
+          pasteImgBtn.className = 'add-media-btn';
+          pasteImgBtn.textContent = 'Paste Image URL';
+          pasteImgBtn.style.cssText = 'margin-left:8px;background:transparent;color:#2C666E;border:1.5px dashed #2C666E;';
+          pasteImgBtn.onclick = function() { openPasteUrl('image', imagesSection.querySelector('.container'), imagesSection.querySelector('.grid-3')); };
+          var imgBtnWrap = document.createElement('div');
+          imgBtnWrap.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;';
+          imgBtnWrap.appendChild(addImgBtn);
+          imgBtnWrap.appendChild(pasteImgBtn);
+          imagesSection.querySelector('.container').insertBefore(imgBtnWrap, imagesSection.querySelector('.grid-3'));
         }
 
         // Add remove buttons to existing cards
@@ -885,6 +904,51 @@
             card.appendChild(rmBtn);
           }
         });
+      }
+
+      function openPasteUrl(mediaType, container, insertBefore) {
+        // Remove any existing paste form
+        var existing = container.querySelector('.paste-url-form');
+        if (existing) { existing.remove(); return; }
+        var form = document.createElement('div');
+        form.className = 'paste-url-form';
+        form.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;';
+        form.innerHTML = '<input type="text" placeholder="Paste ' + mediaType + ' URL (e.g. from FAL.ai)..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;" />'
+          + '<button style="padding:8px 16px;background:#2C666E;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">Import</button>'
+          + '<button style="padding:8px 12px;background:transparent;color:#64748b;border:none;cursor:pointer;font-size:14px;">Cancel</button>';
+        container.insertBefore(form, insertBefore);
+        var input = form.querySelector('input');
+        var importBtn = form.querySelectorAll('button')[0];
+        var cancelBtn = form.querySelectorAll('button')[1];
+        input.focus();
+        cancelBtn.onclick = function() { form.remove(); };
+        importBtn.onclick = function() {
+          var url = input.value.trim();
+          if (!url) return;
+          importBtn.textContent = 'Importing...';
+          importBtn.disabled = true;
+          // First save to library (re-uploads to Supabase for permanent URL)
+          fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+            body: JSON.stringify({ url: url, type: mediaType, title: 'Imported from URL', source: 'proposal' })
+          }).then(function(r) { return r.json(); }).then(function(saveData) {
+            var permanentUrl = (saveData && saveData.url) || url;
+            return fetch('/api/proposals/' + slug + '/media', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+              body: JSON.stringify({ media_type: mediaType, media_url: permanentUrl, caption: 'Imported from URL' })
+            });
+          }).then(function() {
+            window.location.reload();
+          }).catch(function(err) {
+            alert('Import failed: ' + err.message);
+            importBtn.textContent = 'Import';
+            importBtn.disabled = false;
+          });
+        };
+        // Allow Enter key to submit
+        input.addEventListener('keydown', function(e) { if (e.key === 'Enter') importBtn.click(); });
       }
 
       function removeMedia(id, card) {
