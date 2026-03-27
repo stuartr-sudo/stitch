@@ -298,7 +298,7 @@ export default function ShortsDraftPage() {
             <MetaBadge icon={Music} label="Music" value="Included" />
           )}
           {isV3 && meta.generation_mode && (
-            <MetaBadge icon={Film} label="Mode" value={meta.generation_mode === 'first-last-frame' ? 'First+Last Frame' : 'I2V'} />
+            <MetaBadge icon={Film} label="Mode" value={meta.generation_mode === 'v3_flf' ? 'V3 First+Last Frame' : meta.generation_mode === 'v2_extract' ? 'V2 Extract Last Frame' : meta.generation_mode} />
           )}
           {isV3 && meta.framework && (
             <MetaBadge icon={Hash} label="Framework" value={meta.framework} />

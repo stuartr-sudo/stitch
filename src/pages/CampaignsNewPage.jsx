@@ -1136,6 +1136,11 @@ export default function CampaignsNewPage() {
                         <span className="text-[10px] text-slate-400">{m.price}</span>
                       </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">{m.strength}</div>
+                      {contentType === 'shorts' && (
+                        <div className={`text-[9px] font-medium mt-1 px-1.5 py-0.5 rounded-full inline-block ${m.flf ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {m.flf ? 'V3 Parallel' : 'V2 Sequential'}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
