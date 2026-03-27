@@ -2,7 +2,7 @@
 // Allocates model-valid per-scene durations that sum to a target total.
 
 // Valid durations per video model (in seconds)
-const MODEL_DURATIONS = {
+export const MODEL_DURATIONS = {
   // Discrete — only these exact values
   fal_veo3:        { type: 'discrete', values: [4, 6, 8] },
   fal_veo2:        { type: 'discrete', values: [4, 6, 8] },
@@ -54,52 +54,49 @@ function solveDiscrete(targetTotal, durationRanges, validValues) {
   let bestScore = Infinity;
   let bestDiff = Infinity;
 
-  // Try exact target first, then expand tolerance: ±2, ±4, ±6
-  for (const tolerance of [0, 2, 4, 6]) {
-    const targets = tolerance === 0
-      ? [targetTotal]
-      : [targetTotal - tolerance, targetTotal + tolerance];
+  // Check if target is even reachable with this scene count
+  const maxVal = Math.max(...validValues);
+  const minVal = Math.min(...validValues);
+  const maxPossible = sceneCount * maxVal;
+  const minPossible = sceneCount * minVal;
 
-    for (const t of targets) {
-      if (t <= 0) continue;
-      enumerate(validValues, sceneCount, t, (combo) => {
-        const score = combo.reduce((sum, d, i) => sum + Math.abs(d - midpoints[i]), 0);
-        const diff = Math.abs(t - targetTotal);
-        if (diff < bestDiff || (diff === bestDiff && score < bestScore)) {
-          bestCombo = [...combo];
-          bestScore = score;
-          bestDiff = diff;
-        }
-      });
-    }
-    if (bestCombo) return bestCombo;
-  }
-
-  // Fallback: adjust scene count ±1 (non-recursive, single attempt)
-  for (const delta of [-1, 1]) {
-    const adjusted = sceneCount + delta;
-    if (adjusted < 2 || adjusted > 12) continue;
-    const adjustedRanges = delta > 0
-      ? [...durationRanges, durationRanges[durationRanges.length - 1]]
-      : durationRanges.slice(0, -1);
-    const adjustedMidpoints = adjustedRanges.map(([min, max]) => (min + max) / 2);
+  // If target is achievable with this scene count, try exact + tolerances
+  if (targetTotal >= minPossible && targetTotal <= maxPossible) {
     for (const tolerance of [0, 2, 4, 6]) {
-      const targets = tolerance === 0 ? [targetTotal] : [targetTotal - tolerance, targetTotal + tolerance];
+      const targets = tolerance === 0
+        ? [targetTotal]
+        : [targetTotal - tolerance, targetTotal + tolerance];
+
       for (const t of targets) {
-        if (t <= 0) continue;
-        let found = null;
-        enumerate(validValues, adjusted, t, (combo) => {
-          if (found) return;
-          const score = combo.reduce((sum, d, i) => sum + Math.abs(d - adjustedMidpoints[i]), 0);
-          found = [...combo];
+        if (t <= 0 || t < minPossible || t > maxPossible) continue;
+        enumerate(validValues, sceneCount, t, (combo) => {
+          const score = combo.reduce((sum, d, i) => sum + Math.abs(d - midpoints[i]), 0);
+          const diff = Math.abs(t - targetTotal);
+          if (diff < bestDiff || (diff === bestDiff && score < bestScore)) {
+            bestCombo = [...combo];
+            bestScore = score;
+            bestDiff = diff;
+          }
         });
-        if (found) return found;
       }
+      if (bestCombo) return bestCombo;
     }
   }
 
-  // Ultimate fallback: equal distribution using smallest valid value
-  return durationRanges.map(() => validValues[0]);
+  // Target can't be hit with original scene count — use max values and let
+  // the assembler handle the duration gap (video clips loop/extend to fill audio)
+  if (targetTotal > maxPossible) {
+    console.warn(`[durationSolver] Target ${targetTotal}s exceeds max ${maxPossible}s for ${sceneCount} scenes with values [${validValues}]. Using max durations.`);
+    return durationRanges.map(() => maxVal);
+  }
+
+  // Target below minimum — use min values
+  if (targetTotal < minPossible) {
+    return durationRanges.map(() => minVal);
+  }
+
+  // Ultimate fallback: use max valid value (NOT min — short clips waste the video)
+  return durationRanges.map(() => maxVal);
 }
 
 /**
