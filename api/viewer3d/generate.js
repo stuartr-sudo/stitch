@@ -39,16 +39,94 @@ async function ensureHostedUrl(url) {
   return url;
 }
 
+async function upscaleImage(imageUrl, FAL_KEY) {
+  try {
+    console.log(`[3DViewer] Upscaling: ${imageUrl.substring(0, 80)}...`);
+    const submitRes = await fetch('https://fal.run/fal-ai/seedvr/upscale/image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${FAL_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        upscale_mode: 'factor',
+        upscale_factor: 2,
+        output_format: 'jpg',
+      }),
+    });
+
+    if (!submitRes.ok) {
+      const data = await submitRes.json().catch(() => null);
+      if (data?.request_id) {
+        const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
+        const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
+          const status = await statusRes.json();
+          if (status.status === 'COMPLETED') {
+            const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
+            const result = await resultRes.json();
+            if (result.image?.url) {
+              console.log(`[3DViewer] Upscaled (queued): ${result.image.url.substring(0, 80)}`);
+              return result.image.url;
+            }
+          }
+          if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
+        }
+      }
+      console.warn(`[3DViewer] Upscale failed, using original. Status: ${submitRes.status}`);
+      return imageUrl;
+    }
+
+    const data = await submitRes.json();
+
+    if (data.image?.url) {
+      console.log(`[3DViewer] Upscaled (sync): ${data.image.url.substring(0, 80)}`);
+      return data.image.url;
+    }
+
+    if (data.request_id) {
+      const statusUrl = data.status_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}/status`;
+      const responseUrl = data.response_url || `https://queue.fal.run/fal-ai/seedvr/upscale/image/requests/${data.request_id}`;
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
+        const status = await statusRes.json();
+        if (status.status === 'COMPLETED') {
+          const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${FAL_KEY}` } });
+          const result = await resultRes.json();
+          if (result.image?.url) {
+            console.log(`[3DViewer] Upscaled (queued): ${result.image.url.substring(0, 80)}`);
+            return result.image.url;
+          }
+        }
+        if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
+      }
+    }
+
+    console.warn('[3DViewer] Upscale returned no image, using original');
+    return imageUrl;
+  } catch (err) {
+    console.error('[3DViewer] Upscale error:', err);
+    return imageUrl;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { wavespeedKey: WAVESPEED_KEY } = await getUserKeys(req.user.id, req.user.email);
+  const { falKey: FAL_KEY, wavespeedKey: WAVESPEED_KEY } = await getUserKeys(req.user.id, req.user.email);
 
   try {
     if (!WAVESPEED_KEY) {
       return res.status(400).json({ error: 'Wavespeed API key not configured.' });
+    }
+    if (!FAL_KEY) {
+      return res.status(400).json({ error: 'FAL API key required for image upscaling.' });
     }
 
     const frontUrl = await ensureHostedUrl(req.body.front_image_url);
@@ -59,10 +137,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Hunyuan3D requires front, back, and left images.' });
     }
 
+    // Upscale all images in parallel (turnaround cells are ~400x400)
+    console.log('[3DViewer] Upscaling 3 images before Wavespeed submission...');
+    const [upFront, upBack, upLeft] = await Promise.all([
+      upscaleImage(frontUrl, FAL_KEY),
+      upscaleImage(backUrl, FAL_KEY),
+      upscaleImage(leftUrl, FAL_KEY),
+    ]);
+
     const body = {
-      front_image_url: frontUrl,
-      back_image_url: backUrl,
-      left_image_url: leftUrl,
+      front_image_url: upFront,
+      back_image_url: upBack,
+      left_image_url: upLeft,
       num_inference_steps: 50,
       guidance_scale: 7.5,
       octree_resolution: 256,
