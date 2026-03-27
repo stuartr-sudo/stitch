@@ -125,11 +125,35 @@ export default async function handler(req, res) {
     console.log('[JumpStart] Model:', model);
     console.log('[JumpStart] Settings:', { aspectRatio, resolution, duration, enableAudio, cameraFixed });
 
-    // Read and prepare image
-    const imageBuffer = fs.readFileSync(imageFile.filepath);
+    // Read and prepare image — resize if over 9MB to prevent provider 422 errors
+    let imageBuffer = fs.readFileSync(imageFile.filepath);
     let mimeType = imageFile.mimetype || 'image/png';
     if (mimeType === 'text/html' && imageFile.originalFilename?.endsWith('.jpg')) {
       mimeType = 'image/jpeg';
+    }
+
+    const MAX_BYTES = 9 * 1024 * 1024; // 9MB (providers reject at 10MB)
+    const MIN_DIMENSION = 1280; // Minimum longest-side for quality video generation
+
+    const metadata = await sharp(imageBuffer).metadata();
+    const longestSide = Math.max(metadata.width || 0, metadata.height || 0);
+
+    if (imageBuffer.length > MAX_BYTES) {
+      console.log(`[JumpStart] Image ${imageBuffer.length} bytes / ${metadata.width}×${metadata.height} exceeds limit, downscaling...`);
+      imageBuffer = await sharp(imageBuffer)
+        .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      mimeType = 'image/jpeg';
+      console.log(`[JumpStart] Downscaled to ${imageBuffer.length} bytes`);
+    } else if (longestSide > 0 && longestSide < MIN_DIMENSION) {
+      console.log(`[JumpStart] Image ${metadata.width}×${metadata.height} too small, upscaling to ${MIN_DIMENSION}px...`);
+      imageBuffer = await sharp(imageBuffer)
+        .resize(MIN_DIMENSION, MIN_DIMENSION, { fit: 'inside', withoutEnlargement: false })
+        .png()
+        .toBuffer();
+      mimeType = 'image/png';
+      console.log(`[JumpStart] Upscaled to ${imageBuffer.length} bytes`);
     }
 
     // Get image URL (Supabase upload or base64)

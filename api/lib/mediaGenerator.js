@@ -1,5 +1,83 @@
+import sharp from 'sharp';
 import { IMAGE_MODELS, VIDEO_MODELS, veoDuration } from './modelRegistry.js';
 import { pollFalQueue, pollWavespeedRequest, uploadUrlToSupabase } from './pipelineHelpers.js';
+
+// FAL/Wavespeed reject files > 10MB (10485760 bytes). Use 9MB threshold for safety margin.
+const MAX_IMAGE_BYTES = 9 * 1024 * 1024;
+// Images under 1MB are likely too small for quality video generation
+const MIN_IMAGE_BYTES = 1 * 1024 * 1024;
+// Minimum longest-side dimension for video model input
+const MIN_DIMENSION = 1280;
+
+/**
+ * Standardize image dimensions for video generation.
+ * - Too large (>9MB): downscale to 1920px max, JPEG 85%
+ * - Too small (<1MB or longest side <1280px): upscale to 1280px min
+ * Called automatically before ALL video generation.
+ */
+async function standardizeImageForVideo(imageUrl, supabase) {
+  try {
+    const headRes = await fetch(imageUrl, { method: 'HEAD' });
+    const size = parseInt(headRes.headers.get('content-length') || '0', 10);
+
+    const needsDownscale = size > MAX_IMAGE_BYTES;
+    const mightNeedUpscale = size > 0 && size < MIN_IMAGE_BYTES;
+
+    // If file size is in the acceptable range, check dimensions to be sure
+    if (!needsDownscale && !mightNeedUpscale) return imageUrl;
+    if (size === 0) return imageUrl; // can't determine size, pass through
+
+    // Download image to inspect and potentially resize
+    const imgRes = await fetch(imageUrl);
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+    const metadata = await sharp(buffer).metadata();
+    const longestSide = Math.max(metadata.width || 0, metadata.height || 0);
+
+    if (needsDownscale) {
+      console.log(`[mediaGenerator] Image ${size} bytes / ${metadata.width}×${metadata.height} exceeds limit, downscaling...`);
+      const resized = await sharp(buffer)
+        .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      console.log(`[mediaGenerator] Downscaled: ${size} → ${resized.length} bytes`);
+      return await uploadResized(resized, supabase, imageUrl);
+    }
+
+    if (longestSide < MIN_DIMENSION) {
+      console.log(`[mediaGenerator] Image ${metadata.width}×${metadata.height} (${size} bytes) too small, upscaling to ${MIN_DIMENSION}px...`);
+      const resized = await sharp(buffer)
+        .resize(MIN_DIMENSION, MIN_DIMENSION, { fit: 'inside', withoutEnlargement: false })
+        .png()
+        .toBuffer();
+      console.log(`[mediaGenerator] Upscaled: ${metadata.width}×${metadata.height} → ${MIN_DIMENSION}px, ${resized.length} bytes`);
+      return await uploadResized(resized, supabase, imageUrl, 'image/png', 'png');
+    }
+
+    // File was small but dimensions are fine — pass through
+    return imageUrl;
+  } catch (err) {
+    console.error('[mediaGenerator] Image standardize error:', err.message);
+    return imageUrl; // fallback to original
+  }
+}
+
+async function uploadResized(buffer, supabase, fallbackUrl, contentType = 'image/jpeg', ext = 'jpg') {
+  if (!supabase) return fallbackUrl;
+
+  const filename = `temp/resized-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('media')
+    .upload(filename, buffer, { contentType, upsert: true });
+
+  if (uploadErr) {
+    console.error('[mediaGenerator] Resized upload failed:', uploadErr.message);
+    return fallbackUrl;
+  }
+
+  const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filename);
+  console.log(`[mediaGenerator] Standardized image uploaded: ${publicUrl}`);
+  return publicUrl;
+}
 
 export class MediaGenerationError extends Error {
   constructor(model, type, detail) {
@@ -79,7 +157,10 @@ export async function animateImageV2(modelKey, imageUrl, motionPrompt, aspectRat
   const provider = PROVIDER_CONFIG[model.provider];
   if (!provider) throw new MediaGenerationError(modelKey, 'video', `Unknown provider: ${model.provider}`);
 
-  const body = model.buildBody(imageUrl, motionPrompt, durationSeconds, aspectRatio, opts);
+  // Ensure image is under provider size limit before sending
+  const safeImageUrl = await standardizeImageForVideo(imageUrl, supabase);
+
+  const body = model.buildBody(safeImageUrl, motionPrompt, durationSeconds, aspectRatio, opts);
 
   const res = await fetch(`${provider.baseUrl}/${model.endpoint}`, {
     method: 'POST',
@@ -108,11 +189,13 @@ export async function animateImageV2(modelKey, imageUrl, motionPrompt, aspectRat
  * Three providers with different body shapes.
  */
 export async function animateImageR2V(r2vEndpoint, referenceImageUrl, prompt, aspectRatio, duration, keys, supabase) {
+  // Ensure reference image is under provider size limit before sending
+  const safeRefUrl = await standardizeImageForVideo(referenceImageUrl, supabase);
   let body;
 
   if (r2vEndpoint.includes('veo3')) {
     body = {
-      image_url: referenceImageUrl,
+      image_url: safeRefUrl,
       prompt,
       duration: veoDuration(duration),
       aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9',
@@ -120,7 +203,7 @@ export async function animateImageR2V(r2vEndpoint, referenceImageUrl, prompt, as
     };
   } else if (r2vEndpoint.includes('grok-imagine')) {
     body = {
-      reference_image_urls: [referenceImageUrl],
+      reference_image_urls: [safeRefUrl],
       prompt,
       duration: Math.max(1, Math.min(10, Math.round(duration))),
       aspect_ratio: aspectRatio,
@@ -130,8 +213,8 @@ export async function animateImageR2V(r2vEndpoint, referenceImageUrl, prompt, as
     body = {
       prompt: `@Element1 ${prompt}`,
       elements: [{
-        frontal_image_url: referenceImageUrl,
-        reference_image_urls: [referenceImageUrl],
+        frontal_image_url: safeRefUrl,
+        reference_image_urls: [safeRefUrl],
       }],
       duration: String(Math.max(3, Math.min(15, Math.round(duration)))),
       aspect_ratio: aspectRatio,
