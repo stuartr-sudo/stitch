@@ -340,7 +340,7 @@ export async function runShortsPipeline(opts) {
           image_urls: [referenceImageUrl],
           prompt,
           aspect_ratio: i2iAspectMap[ar] || '9:16',
-          resolution: '1080p',
+          resolution: '1K',
           num_images: 1,
         }),
       });
