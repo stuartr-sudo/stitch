@@ -1461,17 +1461,8 @@ export default function CampaignsNewPage() {
                         }} className="w-full text-sm text-slate-700 italic bg-transparent border-0 resize-none focus:ring-0 p-0" rows={2} placeholder="Narration text..." />
                         {expandedScene === i && (
                           <div className="mt-3 space-y-2 pt-3 border-t border-slate-100">
-                            <div>
-                              <label className="text-[10px] text-slate-400 uppercase font-medium">Visual Prompt</label>
-                              <textarea value={scene.visual_prompt || ''} onChange={e => {
-                                const updated = [...scriptScenes]; updated[i] = { ...updated[i], visual_prompt: e.target.value }; setScriptScenes(updated);
-                              }} className="w-full text-xs text-slate-600 border rounded-lg px-2 py-1.5 mt-1 resize-none" rows={2} />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-slate-400 uppercase font-medium">Motion Prompt</label>
-                              <textarea value={scene.motion_prompt || ''} onChange={e => {
-                                const updated = [...scriptScenes]; updated[i] = { ...updated[i], motion_prompt: e.target.value }; setScriptScenes(updated);
-                              }} className="w-full text-xs text-slate-600 border rounded-lg px-2 py-1.5 mt-1 resize-none" rows={1} />
+                            <div className="flex items-start gap-2">
+                              <span className="text-[10px] text-slate-400 italic">Visual and motion prompts are generated automatically during pipeline execution based on your style choices.</span>
                             </div>
                             <button onClick={() => { const updated = scriptScenes.filter((_, j) => j !== i); setScriptScenes(updated); setExpandedScene(null); }}
                               className="text-[10px] text-red-500 hover:underline">Remove scene</button>
@@ -1479,24 +1470,6 @@ export default function CampaignsNewPage() {
                         )}
                       </div>
                     ))}
-                    {/* Pill helpers for individual scene editing */}
-                    {expandedScene !== null && (
-                      <div className="border border-dashed border-slate-200 rounded-xl p-3">
-                        <label className="text-xs font-medium text-slate-500 block mb-2">Add to scene {expandedScene + 1} visual prompt</label>
-                        <div className="flex flex-wrap gap-1">
-                          {getScenePills(niche, selectedFramework, visualStyle, videoLengthPreset).flatMap(cat => cat.pills).slice(0, 20).map(pill => (
-                            <button key={pill} onClick={() => {
-                              const updated = [...scriptScenes];
-                              const s = updated[expandedScene];
-                              updated[expandedScene] = { ...s, visual_prompt: ((s.visual_prompt || '') + ', ' + pill).replace(/^, /, '') };
-                              setScriptScenes(updated);
-                            }} className="text-[10px] px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
-                              {pill}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
