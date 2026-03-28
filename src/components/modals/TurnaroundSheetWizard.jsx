@@ -485,7 +485,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   // ─── Polling for queued sheets ────────────────────────────────────────────
 
-  const startPolling = useCallback((sheetId, reqId, model) => {
+  const startPolling = useCallback((sheetId, reqId, model, statusUrl, responseUrl) => {
     if (pollingIntervalsRef.current[sheetId]) return;
     let polling = false;
     const interval = setInterval(async () => {
@@ -495,7 +495,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         const res = await apiFetch('/api/imagineer/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId: reqId, model }),
+          body: JSON.stringify({ requestId: reqId, model, statusUrl, responseUrl }),
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -599,7 +599,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
           ? { ...s, requestId: data.requestId, pollModel: data.model || selectedModel }
           : s
         ));
-        startPolling(sheet.id, data.requestId, data.model || selectedModel);
+        startPolling(sheet.id, data.requestId, data.model || selectedModel, data.statusUrl, data.responseUrl);
       } else throw new Error('Unexpected response');
     } catch (error) {
       console.error(`[Turnaround] Error for ${sheet.character.name}/${sheet.style}:`, error);
