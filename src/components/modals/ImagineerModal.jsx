@@ -462,7 +462,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           updateSlot(index, { status: 'completed', imageUrl: data.imageUrl });
         } else if (data.requestId) {
           updateSlot(index, { status: 'polling' });
-          const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel));
+          const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel), data.statusUrl, data.responseUrl);
           updateSlot(index, { status: 'completed', imageUrl: url });
         }
       } catch (error) {
@@ -583,7 +583,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           if (data.imageUrl) { updateSlot(index, { status: 'completed', imageUrl: data.imageUrl }); }
           else if (data.requestId) {
             updateSlot(index, { status: 'polling' });
-            const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel);
+            const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel, data.statusUrl, data.responseUrl);
             updateSlot(index, { status: 'completed', imageUrl: url });
           }
         }
@@ -618,11 +618,11 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     }
   };
 
-  const pollImagineerResult = async (requestId, model) => {
+  const pollImagineerResult = async (requestId, model, statusUrl, responseUrl) => {
     for (let i = 0; i < 120; i++) {
       await new Promise(r => setTimeout(r, 3000));
       try {
-        const res = await apiFetch('/api/imagineer/result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, model }) });
+        const res = await apiFetch('/api/imagineer/result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, model, statusUrl, responseUrl }) });
         const data = await res.json();
         if (data.imageUrl) { setI2iResultUrl(data.imageUrl); toast.success('Image edited!'); saveToLibrary(data.imageUrl); return; }
         if (data.status === 'failed' || data.error) throw new Error(data.error || 'Edit failed');
@@ -645,13 +645,13 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     throw new Error('Polling timeout');
   };
 
-  const pollImagineerResultAsync = async (requestId, model) => {
+  const pollImagineerResultAsync = async (requestId, model, statusUrl, responseUrl) => {
     for (let i = 0; i < 120; i++) {
       if (!mountedRef.current) throw new Error('Unmounted');
       await new Promise(r => setTimeout(r, 3000));
       const res = await apiFetch('/api/imagineer/result', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, model }),
+        body: JSON.stringify({ requestId, model, statusUrl, responseUrl }),
       });
       const data = await res.json();
       if (data.imageUrl) return data.imageUrl;
@@ -774,7 +774,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
         else if (data.requestId) {
           updateSlot({ status: 'polling' });
-          const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel);
+          const url = await pollImagineerResultAsync(data.requestId, data.model || i2iModel, data.statusUrl, data.responseUrl);
           updateSlot({ status: 'completed', imageUrl: url });
         }
       }
@@ -874,7 +874,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       if (data.imageUrl) { updateSlot({ status: 'completed', imageUrl: data.imageUrl }); }
       else if (data.requestId) {
         updateSlot({ status: 'polling' });
-        const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel));
+        const url = await pollImagineerResultAsync(data.requestId, data.model || (loras.length > 0 ? 'fal-flux' : selectedModel), data.statusUrl, data.responseUrl);
         updateSlot({ status: 'completed', imageUrl: url });
       }
     } catch (error) {

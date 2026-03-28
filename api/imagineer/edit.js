@@ -135,6 +135,8 @@ export default async function handler(req, res) {
         model: pollModel,
         status: 'processing',
         pollEndpoint: '/api/imagineer/result',
+        statusUrl: data.status_url || null,
+        responseUrl: data.response_url || null,
       });
     }
 
