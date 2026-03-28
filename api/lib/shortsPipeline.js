@@ -18,7 +18,7 @@
 // New V3 imports
 import { generateNarrative } from './narrativeGenerator.js';
 import { directScenes } from './sceneDirector.js';
-import { composePrompts, composeVideoPrompt } from './visualPromptComposer.js';
+import { composePrompts, composeIndependentPrompt, composeVideoPrompt } from './visualPromptComposer.js';
 import { getWordTimestamps } from './getWordTimestamps.js';
 import { alignBlocks } from './blockAligner.js';
 import { validateAssemblyTiming } from './assemblyValidator.js';
@@ -297,7 +297,7 @@ export async function runShortsPipeline(opts) {
     }
     const sceneCount = alignedBlocks.length;
     console.log(`[shortsPipeline] Step 5: Generating ${sceneCount + 1} keyframe prompts for ${sceneCount} scenes`);
-    const { keyframes } = await directScenes({
+    const { keyframes, mode: directionMode } = await directScenes({
       narrative: narrativeResult,
       alignedBlocks,
       framework,
@@ -308,6 +308,8 @@ export async function runShortsPipeline(opts) {
       keys,
       brandUsername: brand_username,
     });
+    const useI2IChain = directionMode === 'continuous';
+    console.log(`[shortsPipeline] Direction mode: ${directionMode}, I2I chain: ${useI2IChain}`);
 
     // ── Step 6: Generate Assets (3 parallel phases) ─────────────────────────────
     currentStep = 'generating_assets';
@@ -336,7 +338,7 @@ export async function runShortsPipeline(opts) {
     const clips = [];
 
     if (useFirstLastFrame) {
-    // ═══ V3 PATH: I2I keyframe chain → parallel FLF video ═══
+    // ═══ V3 PATH: keyframe generation → parallel FLF video ═══
 
     // I2I helper — uses nano-banana-2/edit (synchronous, accepts image_urls + prompt)
     const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
@@ -358,6 +360,9 @@ export async function runShortsPipeline(opts) {
       if (!imgUrl) throw new Error('No image URL from I2I result');
       return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
     }
+
+    if (useI2IChain) {
+    // ═══ CONTINUOUS: Sequential I2I keyframe chain ═══
 
     // Step 1: Scene 1 FIRST frame (T2I or starting_image)
     if (starting_image) {
@@ -420,6 +425,67 @@ export async function runShortsPipeline(opts) {
 
     characterRef = keyframeImageUrls[0];
 
+    } else {
+    // ═══ INDEPENDENT: T2I per scene — no I2I chain ═══
+    console.log(`[shortsPipeline] Phase A (independent): Generating ${sceneCount} first + last frames via T2I in parallel`);
+
+    // Generate all first-frame images in parallel
+    const firstFramePromises = alignedBlocks.map((block, i) => {
+      const { imagePrompt, negativePrompt } = composeIndependentPrompt({
+        sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionHint: keyframes[i].motionHint },
+        visualStyle, visualStylePrompt,
+        frameworkDefaults: framework?.sceneDefaults,
+        aspectRatio, loraConfigs,
+      });
+
+      return withRetry(
+        () => generateImageV2(resolvedImageModel || 'fal_flux', imagePrompt, aspectRatio, keys, supabase, {
+          loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+        }),
+        { maxAttempts: 2, baseDelayMs: 2000 }
+      ).catch(err => {
+        console.error(`[shortsPipeline] Independent scene ${i + 1} first frame failed: ${err.message}`);
+        return null;
+      });
+    });
+
+    const firstResults = await Promise.allSettled(firstFramePromises);
+    for (let i = 0; i < alignedBlocks.length; i++) {
+      keyframeImageUrls[i] = firstResults[i].status === 'fulfilled' ? firstResults[i].value : null;
+    }
+
+    // Generate all last-frame images in parallel (independent T2I, NOT I2I from first)
+    const lastFramePromises = alignedBlocks.map((block, i) => {
+      if (!keyframeImageUrls[i]) return Promise.resolve(null);
+
+      const nextKfPrompt = keyframes[i + 1]?.imagePrompt || keyframes[i].imagePrompt;
+      const { imagePrompt: lastPrompt } = composeIndependentPrompt({
+        sceneDirection: { imagePrompt: nextKfPrompt, motionHint: '' },
+        visualStyle, visualStylePrompt,
+        frameworkDefaults: framework?.sceneDefaults,
+        aspectRatio, loraConfigs,
+      });
+
+      return withRetry(
+        () => generateImageV2(resolvedImageModel || 'fal_flux', lastPrompt, aspectRatio, keys, supabase, {
+          loras: (loraConfigs || []).filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 })),
+        }),
+        { maxAttempts: 2, baseDelayMs: 2000 }
+      ).catch(err => {
+        console.error(`[shortsPipeline] Independent scene ${i + 1} last frame failed: ${err.message}`);
+        return null;
+      });
+    });
+
+    const lastResults = await Promise.allSettled(lastFramePromises);
+    for (let i = 0; i < alignedBlocks.length; i++) {
+      keyframeImageUrls[i + 1] = lastResults[i].status === 'fulfilled' ? lastResults[i].value : null;
+    }
+
+    characterRef = keyframeImageUrls[0];
+    console.log(`[shortsPipeline] Independent frames: ${keyframeImageUrls.filter(Boolean).length}/${keyframeCount} generated`);
+    } // end useI2IChain
+
     await updateJob({
       step_results: {
         keyframe_images: keyframeImageUrls.map((url, i) => ({ index: i, url, prompt: keyframes[i].imagePrompt })),
@@ -453,7 +519,7 @@ export async function runShortsPipeline(opts) {
           frameChain: false,
         });
 
-        const prompt = composedMotion || motionPrompt;
+        const prompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt, { isFLF: true });
 
         let endpoint, body;
         if (isVeo) {

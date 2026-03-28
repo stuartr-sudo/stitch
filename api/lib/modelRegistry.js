@@ -63,8 +63,9 @@ export const IMAGE_MODELS = {
     label: 'SeedDream v4.5',
     endpoint: 'fal-ai/bytedance/seedream/v4.5/text-to-image',
     sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9' },
-    buildBody: (prompt, size) => ({
+    buildBody: (prompt, size, opts) => ({
       prompt, image_size: size, num_images: 1, enable_safety_checker: true,
+      ...(opts.negativePrompt && { negative_prompt: opts.negativePrompt }),
     }),
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
@@ -86,7 +87,7 @@ export const IMAGE_MODELS = {
     label: 'Kling Image v3',
     endpoint: 'fal-ai/kling-image/v3/text-to-image',
     buildBody: (prompt, _size, opts) => ({
-      prompt, aspect_ratio: opts.originalAspectRatio || '9:16', negative_prompt: DEFAULT_NEGATIVE_PROMPT,
+      prompt, aspect_ratio: opts.originalAspectRatio || '9:16', negative_prompt: opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
     }),
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
@@ -107,8 +108,8 @@ export const IMAGE_MODELS = {
     label: 'Ideogram v2',
     endpoint: 'fal-ai/ideogram/v2',
     sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9' },
-    buildBody: (prompt, size) => ({
-      prompt, image_size: size, num_images: 1, negative_prompt: DEFAULT_NEGATIVE_PROMPT,
+    buildBody: (prompt, size, opts) => ({
+      prompt, image_size: size, num_images: 1, negative_prompt: opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
     }),
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },

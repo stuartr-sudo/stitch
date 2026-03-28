@@ -1,37 +1,54 @@
 /**
- * Visual Prompt Composer — deterministic prompt assembly.
+ * Visual Prompt Composer V2 — Coherent prompt assembly.
  *
  * Takes a scene direction (from sceneDirector.js) and visual style config,
- * and produces the final image generation prompt and video motion prompt.
+ * and produces a SINGLE COHERENT image generation prompt.
  *
- * No LLM calls — this is pure string composition with rules.
+ * KEY CHANGE FROM V1:
+ * - V1 joined fragments with periods: "Subject. Lighting. Style. Format." → garbage
+ * - V2 produces a flowing description with clauses, commas, and natural language
+ *
+ * No LLM calls — pure deterministic composition with intelligent merging.
  */
 
 import { getVisualStyleSuffix } from './visualStyles.js';
 import { getVideoStylePrompt } from './videoStylePresets.js';
 
 /**
+ * Check if a prompt already contains a concept (fuzzy match).
+ */
+function promptContains(prompt, concept) {
+  const lower = prompt.toLowerCase();
+  const terms = concept.toLowerCase().split(/\s+/);
+  if (terms.length === 1) return lower.includes(terms[0]);
+  return terms.some(t => t.length > 4 && lower.includes(t));
+}
+
+/**
+ * Merge a clause into a prompt naturally (comma-separated, not period-separated).
+ */
+function mergeClause(base, clause) {
+  if (!clause || promptContains(base, clause)) return base;
+  const trimmed = base.replace(/\.\s*$/, '');
+  return `${trimmed}, ${clause}`;
+}
+
+/**
  * Compose the final image generation prompt for a keyframe.
  *
- * Works with the keyframe schema from sceneDirector.js:
- *   { imagePrompt: string, motionHint: string }
- *
- * Enriches the scene director's imagePrompt with:
- * - LoRA trigger words
- * - Framework scene defaults (lighting, color palette, camera)
- * - Visual style suffix
- * - Format/quality tokens
+ * Produces a SINGLE FLOWING DESCRIPTION suitable for image generation models.
  *
  * @param {object} params
- * @param {object} params.sceneDirection - Keyframe from sceneDirector: { imagePrompt, motionHint }
- * @param {string} [params.visualStyle] - Visual style key (e.g., 'cinematic_photo')
- * @param {string} [params.visualStylePrompt] - Custom visual style prompt text (overrides key lookup)
- * @param {object} [params.frameworkDefaults] - framework.sceneDefaults: { lightingDefault, colorPaletteDefault, cameraDefault }
+ * @param {object} params.sceneDirection - { imagePrompt, motionHint, continuity_anchors }
+ * @param {string} [params.visualStyle] - Visual style key
+ * @param {string} [params.visualStylePrompt] - Custom visual style text
+ * @param {object} [params.frameworkDefaults] - { lightingDefault, colorPaletteDefault, cameraDefault }
  * @param {string} [params.aspectRatio] - '9:16' | '16:9' | '1:1'
- * @param {Array} [params.loraConfigs] - LoRA trigger words to prepend
- * @param {boolean} [params.isFirstScene] - Unused in keyframe mode (kept for API compat)
- * @param {boolean} [params.frameChain] - Unused in keyframe mode (kept for API compat)
- * @returns {{ imagePrompt: string, motionPrompt: string }}
+ * @param {Array} [params.loraConfigs] - LoRA configs with trigger words
+ * @param {boolean} [params.isFirstScene]
+ * @param {boolean} [params.frameChain] - Whether this is in a continuity chain
+ * @param {string} [params.visualAnalysis] - Visual analysis of the previous frame
+ * @returns {{ imagePrompt: string, motionPrompt: string, negativePrompt: string }}
  */
 export function composePrompts({
   sceneDirection,
@@ -42,64 +59,113 @@ export function composePrompts({
   loraConfigs = [],
   isFirstScene = false,
   frameChain = false,
+  visualAnalysis = null,
 }) {
-  const parts = [];
+  let imagePrompt = sceneDirection.imagePrompt || '';
 
-  // 1. LoRA trigger words first
-  const triggerWords = loraConfigs
-    .map(c => c.triggerWord)
-    .filter(Boolean);
+  // 1. LoRA trigger words — prepend naturally
+  const triggerWords = loraConfigs.map(c => c.triggerWord).filter(Boolean);
   if (triggerWords.length > 0) {
-    parts.push(triggerWords.join(', '));
+    imagePrompt = `${triggerWords.join(', ')}, ${imagePrompt}`;
   }
 
-  // 2. Core image prompt from scene director (keyframe imagePrompt)
-  // The scene director already produces hyper-specific prompts with subject, pose,
-  // setting, lighting, camera angle — we ADD framework defaults only if the
-  // director's prompt doesn't already cover them.
-  if (sceneDirection.imagePrompt) {
-    parts.push(sceneDirection.imagePrompt);
+  // 2. Framework defaults — ONLY add if the director's prompt is missing them
+  if (frameworkDefaults) {
+    if (frameworkDefaults.lightingDefault && !promptContains(imagePrompt, 'light') && !promptContains(imagePrompt, 'illuminat')) {
+      imagePrompt = mergeClause(imagePrompt, frameworkDefaults.lightingDefault);
+    }
+    if (frameworkDefaults.colorPaletteDefault && !promptContains(imagePrompt, 'palette') && !promptContains(imagePrompt, 'color') && !promptContains(imagePrompt, 'tones')) {
+      imagePrompt = mergeClause(imagePrompt, frameworkDefaults.colorPaletteDefault);
+    }
+    if (frameworkDefaults.cameraDefault && !promptContains(imagePrompt, 'mm') && !promptContains(imagePrompt, 'lens') && !promptContains(imagePrompt, 'focal')) {
+      imagePrompt = mergeClause(imagePrompt, frameworkDefaults.cameraDefault);
+    }
   }
 
-  // 3. Framework defaults — append only if not already present in imagePrompt
-  const prompt = (sceneDirection.imagePrompt || '').toLowerCase();
-  if (frameworkDefaults?.lightingDefault && !prompt.includes('light')) {
-    parts.push(frameworkDefaults.lightingDefault);
-  }
-  if (frameworkDefaults?.colorPaletteDefault && !prompt.includes('palette') && !prompt.includes('color')) {
-    parts.push(frameworkDefaults.colorPaletteDefault);
-  }
-  // Camera default NOT added — the scene director's imagePrompt includes camera angle
-
-  // 4. Visual style suffix (from the 14 visual styles in visualStyles.js)
-  const styleSuffix = visualStylePrompt
-    ? `, ${visualStylePrompt}`
-    : getVisualStyleSuffix(visualStyle);
+  // 3. Visual style — append as a style modifier clause
+  const styleSuffix = visualStylePrompt || getVisualStyleSuffix(visualStyle);
   if (styleSuffix) {
-    parts.push(styleSuffix.replace(/^,\s*/, '')); // Remove leading comma+space
+    const cleanSuffix = styleSuffix.replace(/^[,.\s]+/, '').replace(/[,.\s]+$/, '');
+    if (cleanSuffix && !promptContains(imagePrompt, cleanSuffix.split(',')[0])) {
+      imagePrompt = mergeClause(imagePrompt, cleanSuffix);
+    }
   }
 
-  // 5. Format and quality tokens
-  const formatStr = `Vertical ${aspectRatio} format, cinematic composition, no text or words in image`;
-  parts.push(formatStr);
+  // 4. Visual continuity from previous frame analysis
+  if (visualAnalysis && frameChain) {
+    const shortAnalysis = visualAnalysis.slice(0, 150).replace(/\.\s*$/, '');
+    imagePrompt = `Continuing from: ${shortAnalysis}. ${imagePrompt}`;
+  }
 
-  const imagePrompt = parts.filter(Boolean).join('. ');
+  // 5. Continuity anchors (for chain mode)
+  if (sceneDirection.continuity_anchors && frameChain) {
+    const anchors = sceneDirection.continuity_anchors;
+    if (anchors && !promptContains(imagePrompt, anchors.split(',')[0])) {
+      imagePrompt = mergeClause(imagePrompt, `maintaining: ${anchors}`);
+    }
+  }
 
-  // Motion prompt: keyframe's motionHint (what happens between this keyframe and the next)
-  // Used as the video generation prompt for first-last-frame or I2V
+  // 6. Format constraint — add once at the end
+  const orientationMap = {
+    '9:16': 'vertical portrait',
+    '16:9': 'horizontal landscape',
+    '1:1': 'square',
+    '4:3': 'standard',
+    '3:4': 'portrait',
+  };
+  const orientation = orientationMap[aspectRatio] || 'vertical portrait';
+  imagePrompt = `${imagePrompt.replace(/[.\s]+$/, '')}. ${orientation} composition, no text or words in image`;
+
+  // 7. Negative prompt
+  const negativePrompt = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped, words, letters, typography, UI elements, logos, signatures';
+
   const motionPrompt = sceneDirection.motionHint || '';
 
-  return { imagePrompt, motionPrompt };
+  return { imagePrompt, motionPrompt, negativePrompt };
 }
 
 /**
- * Compose the full prompt string for video generation (I2V).
- * Combines the image context with motion direction.
- *
- * @param {string} imagePrompt - From composePrompts().imagePrompt
- * @param {string} motionPrompt - From composePrompts().motionPrompt
- * @returns {string} Combined prompt for animateImageV2
+ * Compose prompts for INDEPENDENT (non-continuous) scenes.
  */
-export function composeVideoPrompt(imagePrompt, motionPrompt) {
-  return [imagePrompt, motionPrompt].filter(Boolean).join('. ');
+export function composeIndependentPrompt({
+  sceneDirection,
+  visualStyle,
+  visualStylePrompt,
+  frameworkDefaults,
+  aspectRatio = '9:16',
+  loraConfigs = [],
+}) {
+  return composePrompts({
+    sceneDirection,
+    visualStyle,
+    visualStylePrompt,
+    frameworkDefaults,
+    aspectRatio,
+    loraConfigs,
+    isFirstScene: false,
+    frameChain: false,
+    visualAnalysis: null,
+  });
+}
+
+/**
+ * Compose the full prompt for video generation (I2V or FLF).
+ *
+ * @param {string} imageContext - Brief description of what's in the frame
+ * @param {string} motionPrompt - What should happen during the clip
+ * @param {object} [options]
+ * @param {boolean} [options.isFLF] - Is this for a first-last-frame model?
+ * @returns {string}
+ */
+export function composeVideoPrompt(imageContext, motionPrompt, options = {}) {
+  if (!motionPrompt) return imageContext || 'Smooth cinematic movement';
+
+  if (options.isFLF) {
+    // FLF: motion prompt is primary, both images already provided
+    return motionPrompt;
+  }
+
+  // I2V: combine scene description with motion
+  if (!imageContext) return motionPrompt;
+  return `${motionPrompt}. Scene context: ${imageContext.slice(0, 200)}`;
 }
