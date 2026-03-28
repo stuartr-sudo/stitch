@@ -67,7 +67,7 @@ const MotionTransferModal = ({ isOpen, onClose, onMotionGenerated }) => {
 
       if (result.predictionId) {
         toast.info('Motion transfer is being processed, please wait...');
-        const motionVideoUrl = await pollForMotionResult(result.predictionId);
+        const motionVideoUrl = await pollForMotionResult(result.predictionId, result.statusUrl, result.responseUrl);
         if (motionVideoUrl) {
           onMotionGenerated({
             url: motionVideoUrl,
@@ -91,11 +91,14 @@ const MotionTransferModal = ({ isOpen, onClose, onMotionGenerated }) => {
     }
   };
 
-  const pollForMotionResult = async (predictionId, maxAttempts = 60) => {
+  const pollForMotionResult = async (predictionId, statusUrl, responseUrl, maxAttempts = 60) => {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, 3000));
       try {
-        const res = await apiFetch(`/api/motion-transfer/result?predictionId=${predictionId}`);
+        const params = new URLSearchParams({ predictionId });
+        if (statusUrl) params.set('statusUrl', statusUrl);
+        if (responseUrl) params.set('responseUrl', responseUrl);
+        const res = await apiFetch(`/api/motion-transfer/result?${params}`);
         const result = await res.json();
         if (result.status === 'completed' && result.outputUrl) return result.outputUrl;
         if (result.status === 'failed' || result.error) {

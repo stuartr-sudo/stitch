@@ -123,6 +123,16 @@ app.post('/api/animate/result', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// ── Motion Transfer ──────────────────────────────────────────────────────
+app.post('/api/motion-transfer/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('motion-transfer/generate.js');
+  handler(req, res);
+});
+app.get('/api/motion-transfer/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('motion-transfer/result.js');
+  handler(req, res);
+});
+
 // Imagineer routes (with auth)
 app.post('/api/imagineer/generate', authenticateToken, async (req, res) => {
   try {
