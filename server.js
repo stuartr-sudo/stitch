@@ -297,6 +297,11 @@ app.post('/api/library/update-thumbnail', authenticateToken, async (req, res) =>
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/library/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/upload.js');
+  handler(req, res);
+});
+
 // Tag management — specific paths BEFORE the catch-all /api/library/tags
 app.use('/api/library/tags/auto-tag', authenticateToken, async (req, res) => {
   try { return (await loadApiRoute('library/tags-auto.js'))(req, res); }
