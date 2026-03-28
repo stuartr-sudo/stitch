@@ -289,6 +289,12 @@ export async function runShortsPipeline(opts) {
     currentStep = 'directing_scenes';
     await updateJob({ current_step: 'directing_scenes', completed_steps: 4 });
 
+    // TEST MODE: cap scenes for cheap test runs (remove after verification)
+    const TEST_MAX_SCENES = parseInt(process.env.TEST_MAX_SCENES || '0', 10);
+    if (TEST_MAX_SCENES > 0 && alignedBlocks.length > TEST_MAX_SCENES) {
+      console.log(`[shortsPipeline] TEST MODE: capping ${alignedBlocks.length} scenes to ${TEST_MAX_SCENES}`);
+      alignedBlocks.length = TEST_MAX_SCENES;
+    }
     const sceneCount = alignedBlocks.length;
     console.log(`[shortsPipeline] Step 5: Generating ${sceneCount + 1} keyframe prompts for ${sceneCount} scenes`);
     const { keyframes } = await directScenes({
@@ -326,6 +332,8 @@ export async function runShortsPipeline(opts) {
     console.log(`[shortsPipeline] Generation mode: ${generationMode} (model=${videoModel})`);
 
     const keyframeImageUrls = new Array(sceneCount + 1).fill(null);
+    const sceneAssets = [];
+    const clips = [];
 
     if (useFirstLastFrame) {
     // ═══ V3 PATH: I2I keyframe chain → parallel FLF video ═══
@@ -419,9 +427,6 @@ export async function runShortsPipeline(opts) {
     });
 
     // Phase B: FLF video clips — all fire in parallel
-    const sceneAssets = [];
-    const clips = [];
-
       console.log(`[shortsPipeline] Phase B (V3): Firing ${sceneCount} first-last-frame videos IN PARALLEL (model=${videoModel})`);
       const isVeo = (videoModel || 'fal_veo3') === 'fal_veo3';
       const veoClampDuration = (dur) => dur <= 4 ? '4s' : dur <= 6 ? '6s' : '8s';
@@ -490,8 +495,8 @@ export async function runShortsPipeline(opts) {
             const errText = await submitRes.text();
             throw new Error(`FLF submit failed (scene ${i + 1}, ${videoModel}): ${errText}`);
           }
-          const { request_id } = await submitRes.json();
-          const result = await pollFalQueue(request_id, endpoint, keys.falKey);
+          const queueData = await submitRes.json();
+          const result = await pollFalQueue(queueData.request_id, endpoint, keys.falKey);
           const videoUrl = result?.video?.url;
           if (!videoUrl) throw new Error(`No video URL in FLF result for scene ${i + 1}`);
           return uploadUrlToSupabase(videoUrl, supabase, 'pipeline/scenes');

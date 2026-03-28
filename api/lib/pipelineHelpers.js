@@ -54,9 +54,11 @@ export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, d
 }
 
 export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 120, delayMs = 2000) {
-  // Use response_url if a full URL is passed, otherwise construct from full model path.
-  // IMPORTANT: use the complete model path — truncating breaks multi-segment endpoints
-  // like fal-ai/ffmpeg-api/compose, fal-ai/ffmpeg-api/extract-frame, etc.
+  // FAL queue polling URL construction:
+  // - If a full URL (response_url from FAL) is passed, use it directly — FAL's response_url
+  //   is always the correct polling endpoint, even when it "truncates" sub-paths
+  //   (e.g. fal-ai/ffmpeg-api/compose → fal-ai/ffmpeg-api/requests/{id})
+  // - If only a request_id is passed, construct from the model path
   const pollUrl = requestIdOrUrl.startsWith('http')
     ? requestIdOrUrl
     : `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
@@ -73,13 +75,16 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     });
 
     if (!res.ok) {
-      if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
+      if (i === 0) { const body = await res.text(); console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} body=${body.slice(0, 200)} url=${pollUrl}`); }
+      else if (i % 10 === 0) console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} for ${pollUrl.slice(0, 80)}...`);
+      if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${requestIdOrUrl.slice?.(0, 60) || model}]`);
       await sleep(delayMs);
       continue;
     }
 
     const data = await res.json();
     const status = data.status;
+    if (i === 0 || i % 10 === 0) console.log(`[pollFalQueue] Poll ${i}: status=${status || 'none'} queue_pos=${data.queue_position ?? 'n/a'} keys=${Object.keys(data).slice(0, 5).join(',')}`);
 
     if (status === 'COMPLETED') return data.output;
     // response_url returns the result directly when done (no status field).
@@ -355,7 +360,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
 
   const tracks = [
     { id: 'video', type: 'video', keyframes: videoKeyframes },
-    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0 }] },
+    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0, duration: totalDurationMs }] },
   ];
 
   if (musicUrl) {
@@ -374,7 +379,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   if (!res.ok) throw new Error(`FAL ffmpeg short assembly failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
   const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg short assembly');
 
@@ -460,33 +465,34 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
 
   try {
-    // --- Beatoven (duration-aware, higher quality) ---
+    // --- ElevenLabs Music (duration-aware via music_length_ms) ---
     if (model === 'beatoven') {
-      const res = await fetch(`${FAL_BASE}/beatoven/music-generation`, {
+      const musicLengthMs = Math.max(3000, Math.min(600000, Math.round(clampedDuration * 1000)));
+      console.log(`[generateMusic] ElevenLabs Music: ${musicLengthMs}ms, prompt: ${moodPrompt.slice(0, 80)}...`);
+      const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/music`, {
         method: 'POST',
         headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: moodPrompt.slice(0, 300),
-          negative_prompt: 'vocals, singing, speech, noise, distortion',
-          duration: clampedDuration,
-          refinement: 100,
-          creativity: 16,
+          music_length_ms: musicLengthMs,
+          force_instrumental: true,
+          output_format: 'mp3_44100_128',
         }),
       });
       if (!res.ok) {
-        console.warn('[pipelineHelpers] Beatoven music gen failed, falling back to Lyria 2:', await res.text());
+        console.warn('[pipelineHelpers] ElevenLabs Music gen failed, falling back to Lyria 2:', await res.text());
         return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'fal_lyria2');
       }
       const queueData = await res.json();
       if (!queueData.request_id) return null;
       const output = await pollFalQueue(
-        'beatoven/music-generation',
         queueData.request_id,
+        'fal-ai/elevenlabs/music',
         keys.falKey,
         180,
         4000
       );
-      const audioUrl = output?.audio?.url || output?.audio_file?.url;
+      const audioUrl = output?.audio?.url;
       if (!audioUrl) return null;
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
@@ -670,7 +676,7 @@ export async function concatVideos(videoUrls, audioUrl, falKey, supabase) {
   if (!res.ok) throw new Error(`FAL ffmpeg concat failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
   const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!videoUrl) throw new Error('No video URL from FFmpeg concat');
 
