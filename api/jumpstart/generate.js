@@ -510,7 +510,6 @@ async function handleGrokR2V(req, res, params) {
     duration: Math.min(Math.max(duration, 1), 10),
     aspect_ratio: aspectRatio === 'auto' ? '16:9' : aspectRatio,
     resolution: resolution || '720p',
-    generate_audio: enableAudio === true,
   };
 
   console.log('[JumpStart/GrokR2V] Request:', {
@@ -769,7 +768,7 @@ async function handleVeo3Fast(req, res, params) {
     prompt: prompt,
     image_url: imageUrl,
     aspect_ratio: veoAspect,
-    duration: `${duration}s`, // Veo Fast uses string format: "4s", "6s", "8s"
+    duration: duration <= 4 ? '4s' : duration <= 6 ? '6s' : '8s', // Veo 3.1: ONLY '4s', '6s', '8s'
     resolution: resolution,
     generate_audio: enableAudio === true,
     auto_fix: true,
@@ -855,7 +854,7 @@ async function handleVeo3FirstLast(req, res, params) {
     first_frame_url: firstFrameUrl,
     last_frame_url: lastFrameUrl,
     aspect_ratio: veoAspect,
-    duration: `${duration}s`, // "4s", "6s", "8s"
+    duration: duration <= 4 ? '4s' : duration <= 6 ? '6s' : '8s', // Veo 3.1 FLF: ONLY '4s', '6s', '8s'
     resolution: resolution,
     generate_audio: enableAudio === true,
     auto_fix: true,

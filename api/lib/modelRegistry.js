@@ -2,7 +2,7 @@
  * Model Registry — declarative configs for all image and video generation models.
  * Each entry fully describes how to call and parse one model.
  *
- * Verified against FAL.ai and Wavespeed API docs on 2026-03-23.
+ * Verified against FAL.ai API schemas on 2026-03-29.
  */
 
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
@@ -13,6 +13,15 @@ export function veoDuration(seconds) {
   const n = Number(seconds) || 5;
   if (n <= 4) return '4s';
   if (n <= 6) return '6s';
+  return '8s';
+}
+
+function veo2Duration(seconds) {
+  // Veo 2 accepts ONLY '5s', '6s', '7s', '8s' — NO '4s'
+  const n = Number(seconds) || 5;
+  if (n <= 5) return '5s';
+  if (n <= 6) return '6s';
+  if (n <= 7) return '7s';
   return '8s';
 }
 
@@ -107,9 +116,8 @@ export const IMAGE_MODELS = {
     provider: 'fal',
     label: 'Ideogram v2',
     endpoint: 'fal-ai/ideogram/v2',
-    sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9' },
-    buildBody: (prompt, size, opts) => ({
-      prompt, image_size: size, num_images: 1, negative_prompt: opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
+    buildBody: (prompt, _size, opts) => ({
+      prompt, aspect_ratio: opts.originalAspectRatio || '9:16', num_images: 1, negative_prompt: opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
     }),
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
@@ -118,9 +126,8 @@ export const IMAGE_MODELS = {
     provider: 'fal',
     label: 'Nano Banana 2',
     endpoint: 'fal-ai/nano-banana-2',
-    sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9' },
-    buildBody: (prompt, size) => ({
-      prompt, image_size: size, num_images: 1,
+    buildBody: (prompt, _size, opts) => ({
+      prompt, aspect_ratio: opts.originalAspectRatio || '9:16', num_images: 1,
     }),
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
@@ -178,14 +185,13 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // FIX: Veo 2 accepts '5s'-'8s' (no '4s'), no aspect_ratio for i2v
+  // Veo 2 accepts '5s'-'8s' ONLY — NO '4s'. No generate_audio param.
   fal_veo2: {
     provider: 'fal',
     label: 'Veo 2 (Google)',
     endpoint: 'fal-ai/veo2/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
-      image_url: imageUrl, prompt, duration: veoDuration(duration),
-      generate_audio: opts.generate_audio === true,
+      image_url: imageUrl, prompt, duration: veo2Duration(duration),
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
@@ -206,55 +212,52 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
   },
-  // FIX: Wan 2.5 uses string number "5"/"10", no aspect_ratio for i2v
+  // Wan 2.5: duration "5"/"10", no generate_audio, has resolution/negative_prompt
   fal_wan25: {
     provider: 'fal',
     label: 'Wan 2.5 Preview',
     endpoint: 'fal-ai/wan-25-preview/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: wanDuration(duration),
-      generate_audio: opts.generate_audio === true,
+      resolution: '720p',
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // FIX: Wan Pro has NO duration or aspect_ratio params for i2v
+  // Wan Pro: NO duration, NO aspect_ratio, NO generate_audio
   fal_wan_pro: {
     provider: 'fal',
     label: 'Wan Pro',
     endpoint: 'fal-ai/wan-pro/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt,
-      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // FIX: PixVerse uses string number "5"/"8" for duration
+  // PixVerse: duration "5"/"8", NO generate_audio, has negative_prompt/style/camera_movement
   fal_pixverse: {
     provider: 'fal',
     label: 'PixVerse v4.5',
     endpoint: 'fal-ai/pixverse/v4.5/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: pixverseDuration(duration),
-      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // Hailuo/MiniMax — no duration, no aspect_ratio
+  // Hailuo/MiniMax — no duration, no aspect_ratio, NO generate_audio, has prompt_optimizer
   fal_hailuo: {
     provider: 'fal',
     label: 'Hailuo (MiniMax)',
     endpoint: 'fal-ai/minimax/video-01/image-to-video',
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt,
-      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // Grok Imagine I2V — duration 1-10s, generate_audio defaults true so must be explicit
+  // Grok Imagine I2V — duration 1-15 (int), NO generate_audio, has resolution/aspect_ratio
   fal_grok_video: {
     provider: 'fal',
     label: 'Grok Imagine I2V',
@@ -262,8 +265,8 @@ export const VIDEO_MODELS = {
     r2vEndpoint: 'xai/grok-imagine-video/reference-to-video',
     buildBody: (imageUrl, prompt, duration, _aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt,
-      duration: Math.max(1, Math.min(10, Number(duration) || 5)),
-      generate_audio: opts.generate_audio === true,
+      duration: Math.max(1, Math.min(15, Number(duration) || 6)),
+      resolution: '720p',
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
