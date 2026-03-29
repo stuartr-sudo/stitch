@@ -83,7 +83,7 @@ const NarrativeBeatSchema = z.object({
   characterEmotion: z.string().describe('The character\'s emotional state and expression'),
   emotionalTone: z.string().describe('The emotional tone the VIEWER should feel'),
   pacingNote: z.string().describe('Pacing instruction: slow/building/fast/pause/climactic'),
-  dialogue: z.string().optional().describe('What is said in this scene (narration or character speech). Empty if no dialogue.'),
+  dialogue: z.string().nullable().describe('What is said in this scene (narration or character speech). Null if no dialogue.'),
   durationSeconds: z.number().describe('Scene duration in seconds'),
   transitionNote: z.string().describe('How this scene connects to the next one visually and narratively'),
 });

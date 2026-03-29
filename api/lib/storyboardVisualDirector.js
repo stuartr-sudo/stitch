@@ -27,7 +27,7 @@ const VisualSceneSchema = z.object({
   sceneNumber: z.number(),
   visualPrompt: z.string().describe('Complete video generation prompt — model-ready'),
   motionPrompt: z.string().describe('Camera movement and action description'),
-  negativeHints: z.string().optional().describe('Scene-specific things to avoid (appended to standard negative prompt)'),
+  negativeHints: z.string().nullable().describe('Scene-specific things to avoid (appended to standard negative prompt)'),
   previewImagePrompt: z.string().describe('Shorter prompt (50-80 words) optimized for generating a static preview image of this scene'),
   cameraAngle: z.string(),
   durationSeconds: z.number(),
