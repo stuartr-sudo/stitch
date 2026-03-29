@@ -183,8 +183,9 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Veo 2 (Google)',
     endpoint: 'fal-ai/veo2/image-to-video',
-    buildBody: (imageUrl, prompt, duration) => ({
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: veoDuration(duration),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
@@ -210,8 +211,9 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Wan 2.5 Preview',
     endpoint: 'fal-ai/wan-25-preview/image-to-video',
-    buildBody: (imageUrl, prompt, duration) => ({
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: wanDuration(duration),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
@@ -221,8 +223,9 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Wan Pro',
     endpoint: 'fal-ai/wan-pro/image-to-video',
-    buildBody: (imageUrl, prompt) => ({
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt,
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
@@ -232,19 +235,21 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'PixVerse v4.5',
     endpoint: 'fal-ai/pixverse/v4.5/image-to-video',
-    buildBody: (imageUrl, prompt, duration) => ({
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: pixverseDuration(duration),
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
-  // Hailuo/MiniMax — no duration, no aspect_ratio (correct as-is)
+  // Hailuo/MiniMax — no duration, no aspect_ratio
   fal_hailuo: {
     provider: 'fal',
     label: 'Hailuo (MiniMax)',
     endpoint: 'fal-ai/minimax/video-01/image-to-video',
-    buildBody: (imageUrl, prompt) => ({
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt,
+      generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },

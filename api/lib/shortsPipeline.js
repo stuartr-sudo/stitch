@@ -568,7 +568,7 @@ export async function runShortsPipeline(opts) {
           return uploadUrlToSupabase(videoUrl, supabase, 'pipeline/scenes');
         }, { maxAttempts: 2, baseDelayMs: 5000 }).catch(err => {
           console.error(`[shortsPipeline] Scene ${i + 1} first-last-frame failed: ${err.message}`);
-          return null;
+          return { error: err.message };
         });
       });
 
@@ -576,7 +576,9 @@ export async function runShortsPipeline(opts) {
 
       for (let i = 0; i < alignedBlocks.length; i++) {
         const block = alignedBlocks[i];
-        const clipUrl = videoResults[i].status === 'fulfilled' ? videoResults[i].value : null;
+        const raw = videoResults[i].status === 'fulfilled' ? videoResults[i].value : null;
+        const clipUrl = (raw && typeof raw === 'string') ? raw : null;
+        const sceneError = raw?.error || (videoResults[i].status === 'rejected' ? videoResults[i].reason?.message : null);
 
         clips.push({
           url: clipUrl,
@@ -594,6 +596,7 @@ export async function runShortsPipeline(opts) {
           clip_duration: block.clipDuration,
           start_time: block.startTime, end_time: block.endTime,
           narration: block.narration, framework_label: block.frameworkLabel,
+          ...(sceneError && { error: sceneError }),
         });
       }
 
@@ -638,6 +641,7 @@ export async function runShortsPipeline(opts) {
 
         let clipUrl = null;
         let lastFrameUrl = null;
+        let sceneError = null;
         const sceneFirstFrame = currentImage;
 
         if (!currentImage) {
@@ -688,6 +692,7 @@ export async function runShortsPipeline(opts) {
             }
           } catch (sceneErr) {
             console.error(`[shortsPipeline] V2 Scene ${i + 1} failed: ${sceneErr.message}`);
+            sceneError = sceneErr.message;
           }
         }
 
@@ -707,6 +712,7 @@ export async function runShortsPipeline(opts) {
           clip_duration: block.clipDuration,
           start_time: block.startTime, end_time: block.endTime,
           narration: block.narration, framework_label: block.frameworkLabel,
+          ...(sceneError && { error: sceneError }),
         });
 
         // Chain: next scene's image = this scene's last frame
