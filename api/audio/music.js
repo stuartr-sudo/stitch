@@ -2,13 +2,21 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 import { createClient } from '@supabase/supabase-js';
 
 const pollForQueueResult = async (requestIdOrUrl, model, falKey, maxRetries = 120, retryDelay = 2000) => {
-  const pollUrl = requestIdOrUrl.startsWith?.('http')
-    ? requestIdOrUrl
-    : `https://queue.fal.run/${model}/requests/${requestIdOrUrl}`;
+  // FAL queue API: poll /status, then fetch bare /requests/{id} for result
+  let statusUrl, resultUrl;
+  if (requestIdOrUrl.startsWith?.('http')) {
+    const base = requestIdOrUrl.replace(/\/status\/?$/, '');
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  } else {
+    const base = `https://queue.fal.run/${model}/requests/${requestIdOrUrl}`;
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  }
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const statusResponse = await fetch(pollUrl, {
+      const statusResponse = await fetch(statusUrl, {
         method: 'GET',
         headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
       });
@@ -17,9 +25,18 @@ const pollForQueueResult = async (requestIdOrUrl, model, falKey, maxRetries = 12
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         continue;
       }
-      const result = await statusResponse.json();
-      const audioUrl = result.output?.audio?.url || result.audio?.url;
-      if (audioUrl) return audioUrl;
+      const data = await statusResponse.json();
+      if (data.status === 'COMPLETED') {
+        const resultRes = await fetch(resultUrl, {
+          headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+        });
+        if (!resultRes.ok) throw new Error(`FAL result fetch failed: ${resultRes.status}`);
+        const result = await resultRes.json();
+        const audioUrl = result.audio?.url;
+        if (audioUrl) return audioUrl;
+        throw new Error('No audio URL in FAL result');
+      }
+      if (data.status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
       if (i < maxRetries - 1) await new Promise(resolve => setTimeout(resolve, retryDelay));
     } catch (error) {
       lastError = error;
