@@ -10,11 +10,12 @@ export default async function handler(req, res) {
     }
 
     const {
-      scenes,           // [{ videoUrl, durationSeconds }] — ordered scene clips
+      scenes,           // [{ videoUrl, durationSeconds, audioUrl? }] — ordered scene clips
       musicUrl,         // Optional background music URL
       musicVolume,      // 0-1, default 0.15
       captionConfig,    // Optional caption config object or preset string
       storyboardName,   // For naming the output file
+      voiceoverScenes,  // Optional [{ audioUrl, durationSeconds }] — per-scene voiceover
     } = req.body;
 
     if (!scenes?.length) {
@@ -48,6 +49,33 @@ export default async function handler(req, res) {
         keyframes: videoKeyframes,
       },
     ];
+
+    // Optional voiceover track — per-scene audio clips at correct timestamps
+    if (voiceoverScenes?.length > 0 || scenes.some(s => s.audioUrl)) {
+      let voTimestamp = 0;
+      const voKeyframes = [];
+      for (const scene of scenes) {
+        const audioUrl = scene.audioUrl || voiceoverScenes?.find(v =>
+          Math.abs((v.durationSeconds || 0) - (scene.durationSeconds || 0)) < 0.5
+        )?.audioUrl;
+        if (audioUrl) {
+          voKeyframes.push({
+            url: audioUrl,
+            timestamp: voTimestamp,
+            duration: (scene.durationSeconds || 5) * 1000,
+          });
+        }
+        voTimestamp += (scene.durationSeconds || 5) * 1000;
+      }
+      if (voKeyframes.length > 0) {
+        tracks.push({
+          id: 'voiceover',
+          type: 'audio',
+          keyframes: voKeyframes,
+          volume: 1.0,
+        });
+      }
+    }
 
     // Optional music track
     if (musicUrl) {

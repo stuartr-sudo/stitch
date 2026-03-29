@@ -49,19 +49,32 @@ import { SCENE_MODELS } from '../storyboard/SceneModelSelector';
 import CharactersKling from '../storyboard/CharactersKling';
 import CharactersVeo from '../storyboard/CharactersVeo';
 import GenerateScene from '../storyboard/GenerateScene';
+import StoryboardPreview from '../storyboard/StoryboardPreview';
+import AudioFinishingStep from '../storyboard/AudioFinishingStep';
 
 // ── Constants ──
 
 const MOODS = ['Joyful/Happy', 'Dramatic', 'Peaceful/Calm', 'Mysterious', 'Energetic', 'Tense/Suspenseful', 'Playful', 'Inspirational'];
 
+const NARRATIVE_STYLES = [
+  { key: 'educational', label: 'Educational', description: 'Teach a concept step by step' },
+  { key: 'entertaining', label: 'Story', description: 'Classic narrative arc with hook and climax' },
+  { key: 'dramatic', label: 'Dramatic', description: 'High-stakes tension and turning points' },
+  { key: 'documentary', label: 'Documentary', description: 'Explore a subject from multiple angles' },
+  { key: 'advertisement', label: 'Ad / Promo', description: 'Problem → solution → call to action' },
+  { key: 'tutorial', label: 'Tutorial', description: 'Step-by-step how-to guide' },
+  { key: 'safety', label: 'Safety / PSA', description: 'Everyday danger → safe behavior → positive outcome' },
+];
+
+const TARGET_AUDIENCES = ['Children (3-8)', 'Kids (8-12)', 'Teens (13-17)', 'Young Adults', 'Adults', 'Professionals', 'General'];
+
 const WIZARD_STEPS = [
-  { key: 'story', label: 'Story & Mood' },
-  { key: 'style', label: 'Visual Style' },
-  { key: 'video-style', label: 'Video Style' },
+  { key: 'story', label: 'Project & Story' },
+  { key: 'style', label: 'Look & Feel' },
   { key: 'model', label: 'Model' },
-  { key: 'inputs', label: 'Creative Inputs' },
-  { key: 'script', label: 'Generate Script' },
-  { key: 'review', label: 'Review Scenes' },
+  { key: 'inputs', label: 'Characters & Scene' },
+  { key: 'script', label: 'Script & Storyboard' },
+  { key: 'audio', label: 'Audio & Finishing' },
   { key: 'generate', label: 'Generate' },
 ];
 
@@ -146,6 +159,23 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const [storyboardName, setStoryboardName] = useState('');
   const [resolution, setResolution] = useState('720p');
   const [enableAudioDefault, setEnableAudioDefault] = useState(false);
+
+  // Story inputs (new fields)
+  const [narrativeStyle, setNarrativeStyle] = useState('entertaining');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [clientBrief, setClientBrief] = useState('');
+  const [hasDialogue, setHasDialogue] = useState(false);
+
+  // Audio & Finishing (Step 6)
+  const [ttsModel, setTtsModel] = useState('elevenlabs-v3');
+  const [voice, setVoice] = useState('Rachel');
+  const [ttsSpeed, setTtsSpeed] = useState(1.0);
+  const [lipsyncModel, setLipsyncModel] = useState('kling-lipsync');
+  const [contentType, setContentType] = useState('cartoon');
+  const [musicMood, setMusicMood] = useState('');
+  const [musicVolume, setMusicVolume] = useState(0.15);
+  const [musicUrl, setMusicUrl] = useState(null);
+  const [captionStyle, setCaptionStyle] = useState('none');
 
   // Global model (replaces per-scene model)
   const [globalModel, setGlobalModel] = useState('veo3');
@@ -285,6 +315,19 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       setGenerationCancelled(false);
       cancelRef.current = false;
       setVeoReferenceImages([]);
+      setNarrativeStyle('entertaining');
+      setTargetAudience('');
+      setClientBrief('');
+      setHasDialogue(false);
+      setTtsModel('elevenlabs-v3');
+      setVoice('Rachel');
+      setTtsSpeed(1.0);
+      setLipsyncModel('kling-lipsync');
+      setContentType('cartoon');
+      setMusicMood('');
+      setMusicVolume(0.15);
+      setMusicUrl(null);
+      setCaptionStyle('none');
       setUpscaledElementsCache(null);
       setActivePresetId(null);
       setActivePresetName('');
@@ -304,7 +347,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
 
   // Fetch video styles when that step becomes active
   useEffect(() => {
-    if (step === 'video-style' && videoStylesList.length === 0) {
+    if (step === 'style' && videoStylesList.length === 0) {
       apiFetch('/api/styles/video').then(r => r.json()).then(setVideoStylesList).catch(() => {});
     }
   }, [step]);
@@ -698,17 +741,25 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     try {
       const body = {
         storyboardName,
-        description: storyboardName,
+        description: storyOverview || storyboardName,
         desiredLength,
         defaultDuration,
         overallMood,
         aspectRatio,
+        // Stage 1 inputs
+        narrativeStyle,
+        targetAudience,
+        clientBrief,
+        hasDialogue,
+        // Visual + motion style
         style,
         visualStylePrompt: style ? getPromptText(style) : undefined,
         builderStyle, builderLighting, builderColorGrade,
         videoStylePrompt: videoStyle ? videoStylesList.find(v => v.key === videoStyle)?.prompt : undefined,
+        // Model + constraints
         globalModel,
         modelDurationConstraints: getModelDurationConstraints(globalModel),
+        // Characters & scene
         hasStartFrame: !!startFrameUrl,
         startFrameDescription,
         elements: needsCharacters && elements?.length
@@ -735,9 +786,6 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         videoUrl: null,
         lastFrameUrl: null,
       })));
-      // Auto-proceed to Review Scenes after script generation
-      markStepCompleted('script');
-      setTimeout(() => setStep('review'), 300);
     } catch (err) {
       console.error('[Storyboard] Script generation failed:', err);
       setScriptError(err.message);
@@ -817,45 +865,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     const elementsWithRefs = elements.filter(el => el.refs.length > 0);
     const isR2V = (sceneModel === 'kling-r2v-pro' || sceneModel === 'kling-r2v-standard') && elementsWithRefs.length > 0;
 
-    // Build cohesive prompt via LLM instead of concatenation
-    const styleText = getPromptText(style);
-    const selectedVideoStylePreset = videoStylesList.find(s => s.key === videoStyle);
-
-    let prompt;
-    try {
-      const cohesiveRes = await apiFetch('/api/prompt/build-cohesive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tool: 'storyboard',
-          description: scene.visualPrompt,
-          style: styleText || builderStyle || undefined,
-          cameraDirection: scene.motionPrompt || undefined,
-          mood: overallMood || undefined,
-          lighting: builderLighting || undefined,
-          colorGrade: builderColorGrade || undefined,
-          videoStylePrompt: selectedVideoStylePreset?.prompt || undefined,
-          negativePrompt: 'blur, blurry, out of focus, distorted, deformed, disfigured, low quality, low resolution, pixelated, text, words, watermark, logo, letterbox, black bars',
-        }),
-      });
-      const cohesiveData = await cohesiveRes.json();
-      if (cohesiveData.success && cohesiveData.prompt) {
-        prompt = cohesiveData.prompt;
-        console.log('[Storyboard] Cohesive prompt built:', prompt.substring(0, 120) + '...');
-      } else {
-        console.warn('[Storyboard] Cohesive prompt failed, falling back to concatenation:', cohesiveData.error);
-        prompt = scene.visualPrompt;
-        if (scene.motionPrompt) prompt += `. Camera: ${scene.motionPrompt}`;
-        if (styleText) prompt += `. Style: ${styleText}`;
-        if (overallMood) prompt += `. Mood: ${overallMood}`;
-      }
-    } catch (err) {
-      console.warn('[Storyboard] Cohesive prompt error, falling back:', err.message);
-      prompt = scene.visualPrompt;
-      if (scene.motionPrompt) prompt += `. Camera: ${scene.motionPrompt}`;
-      if (styleText) prompt += `. Style: ${styleText}`;
-      if (overallMood) prompt += `. Mood: ${overallMood}`;
-    }
+    // Stage 2 (Visual Director) already produced model-ready prompts.
+    // No per-scene LLM call needed — this saves 6 GPT calls per storyboard.
+    const prompt = scene.visualPrompt;
+    console.log(`[Storyboard] Using Stage 2 prompt (${prompt.split(/\s+/).length} words): ${prompt.substring(0, 120)}...`);
 
     const formData = new FormData();
     formData.append('prompt', prompt);
@@ -903,7 +916,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       }
     }
 
-    formData.append('negativePrompt', 'blur, blurry, out of focus, distorted, deformed, disfigured, low quality, low resolution, pixelated, blocky, flat shading, flat lighting, overexposed, underexposed, text, words, watermark, logo, letterbox, black bars, ugly, amateur, draft quality, rough edges, jagged lines, artifacts, noise, grain');
+    formData.append('negativePrompt', scene.negativePrompt || 'blur, blurry, out of focus, distorted, deformed, low quality, watermark, text, logo');
 
     const res = await apiFetch('/api/jumpstart/generate', {
       method: 'POST',
@@ -1010,6 +1023,60 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     cancelRef.current = false;
     setGenerationCancelled(false);
 
+    // ── PRE-GENERATION: Voiceover + Music ──
+
+    // A. Generate voiceover (if any scenes have dialogue)
+    const scenesWithDialogue = scenes.filter(s => s.dialogue?.trim());
+    if (scenesWithDialogue.length > 0 && !scenes.some(s => s.audioUrl)) {
+      try {
+        const voRes = await apiFetch('/api/storyboard/generate-voiceover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'batch',
+            scenes: scenes.map(s => ({ sceneNumber: s.sceneNumber, dialogue: s.dialogue })),
+            model: ttsModel,
+            voice,
+            speed: ttsSpeed,
+            modelDurationConstraints: getModelDurationConstraints(globalModel),
+          }),
+        });
+        const voData = await voRes.json();
+        if (voData.success) {
+          const updatedScenes = scenes.map(s => {
+            const audio = voData.results.find(r => r.sceneNumber === s.sceneNumber);
+            const adjusted = voData.adjustedScenes?.find(a => a.sceneNumber === s.sceneNumber);
+            return {
+              ...s,
+              audioUrl: audio?.audioUrl || s.audioUrl,
+              ttsDuration: audio?.durationSeconds || s.ttsDuration,
+              durationSeconds: adjusted?.durationSeconds || s.durationSeconds,
+            };
+          });
+          setScenes(updatedScenes);
+        }
+      } catch (err) {
+        console.warn('[Storyboard] Voiceover generation failed (non-fatal):', err.message);
+      }
+    }
+
+    // B. Generate music in parallel (non-blocking)
+    let musicPromise = null;
+    if (musicMood?.trim() && !musicUrl) {
+      musicPromise = apiFetch('/api/audio/music', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moodPrompt: musicMood,
+          durationSeconds: scenes.reduce((sum, s) => sum + (s.durationSeconds || 5), 0),
+        }),
+      }).then(r => r.json()).catch(err => {
+        console.warn('[Storyboard] Music generation failed:', err.message);
+        return null;
+      });
+    }
+
+    // ── VIDEO GENERATION (existing sequential loop) ──
     for (let i = 0; i < scenes.length; i++) {
       if (cancelRef.current) {
         toast('Generation cancelled');
@@ -1070,6 +1137,56 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       }
     }
 
+    // ── POST-GENERATION: Lipsync ──
+    if (lipsyncModel && lipsyncModel !== 'none') {
+      const lipsyncEligible = scenes.filter(s => s.status === 'done' && s.videoUrl && s.audioUrl);
+      if (lipsyncEligible.length > 0) {
+        try {
+          const lsRes = await apiFetch('/api/storyboard/apply-lipsync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: 'batch',
+              scenes: lipsyncEligible.map(s => ({
+                sceneNumber: s.sceneNumber,
+                videoUrl: s.videoUrl,
+                audioUrl: s.audioUrl,
+                startFrameUrl: s.startFrameUrl,
+              })),
+              model: lipsyncModel,
+              contentType,
+            }),
+          });
+          const lsData = await lsRes.json();
+          if (lsData.success) {
+            for (const result of lsData.results) {
+              if (result.lipsyncVideoUrl) {
+                const scene = scenes.find(s => s.sceneNumber === result.sceneNumber);
+                if (scene) {
+                  updateScene(scene.id, {
+                    videoUrl: result.lipsyncVideoUrl,
+                    originalVideoUrl: result.originalVideoUrl,
+                    hasLipsync: true,
+                  });
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Storyboard] Lipsync failed (non-fatal):', err.message);
+          toast.warning('Lipsync failed — videos will be assembled without lip sync');
+        }
+      }
+    }
+
+    // ── Wait for music if still generating ──
+    if (musicPromise) {
+      const musicData = await musicPromise;
+      if (musicData?.audioUrl) {
+        setMusicUrl(musicData.audioUrl);
+      }
+    }
+
     setGenerating(false);
   };
 
@@ -1117,11 +1234,25 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     try {
       const completedScenes = scenes
         .filter(s => s.status === 'done' && s.videoUrl)
-        .map(s => ({ videoUrl: s.videoUrl, durationSeconds: s.durationSeconds || defaultDuration }));
+        .map(s => ({
+          videoUrl: s.videoUrl,
+          durationSeconds: s.durationSeconds || defaultDuration,
+          audioUrl: s.audioUrl || null,
+        }));
       const res = await apiFetch('/api/storyboard/assemble', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenes: completedScenes, storyboardName }),
+        body: JSON.stringify({
+          scenes: completedScenes,
+          musicUrl: musicUrl || null,
+          musicVolume: musicVolume || 0.15,
+          captionConfig: captionStyle !== 'none' ? captionStyle : null,
+          storyboardName,
+          voiceoverScenes: completedScenes.filter(s => s.audioUrl).map(s => ({
+            audioUrl: s.audioUrl,
+            durationSeconds: s.durationSeconds,
+          })),
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Assembly failed');
@@ -1189,11 +1320,6 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     markStepCompleted(step);
     const nextStep = WIZARD_STEPS[currentStepIndex + 1];
     setStep(nextStep.key);
-    // Auto-trigger script generation when entering the script step
-    if (nextStep.key === 'script' && scenes.length === 0) {
-      // Delay so state updates first
-      setTimeout(() => handleGenerateScript(), 100);
-    }
   };
 
   const handleBack = () => {
@@ -1217,11 +1343,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     switch (step) {
       case 'story': return !storyboardName?.trim();
       case 'style': return !style;
-      case 'video-style': return false;
       case 'model': return !globalModel;
       case 'inputs': return false;
       case 'script': return scenes.length === 0 || generatingScript;
-      case 'review': return scenes.length === 0;
+      case 'audio': return false;
       case 'generate': return generating || completedScenesCount === 0;
       default: return false;
     }
@@ -1349,6 +1474,82 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                 className="text-sm"
               />
             </div>
+
+            {/* Story Overview */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Story Overview</label>
+              <textarea
+                value={storyOverview}
+                onChange={(e) => setStoryOverview(e.target.value)}
+                placeholder="Describe the story, scenario, or concept for your video..."
+                rows={3}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] resize-y"
+              />
+            </div>
+
+            {/* Narrative Style */}
+            <div>
+              <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Narrative Style</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {NARRATIVE_STYLES.map(ns => (
+                  <button
+                    key={ns.key}
+                    type="button"
+                    onClick={() => setNarrativeStyle(ns.key)}
+                    className={`px-3 py-2 rounded-lg text-left border transition-all ${
+                      narrativeStyle === ns.key
+                        ? 'border-[#2C666E] bg-[#2C666E]/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-800 block">{ns.label}</span>
+                    <span className="text-[10px] text-gray-500">{ns.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Target Audience */}
+            <div>
+              <label className="text-sm text-gray-500 uppercase tracking-wide mb-1.5 block font-medium">Target Audience</label>
+              <div className="flex flex-wrap gap-1.5">
+                {TARGET_AUDIENCES.map(ta => (
+                  <button
+                    key={ta}
+                    type="button"
+                    onClick={() => setTargetAudience(targetAudience === ta ? '' : ta)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      targetAudience === ta ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {ta}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Client Brief */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Client Brief (optional)</label>
+              <textarea
+                value={clientBrief}
+                onChange={(e) => setClientBrief(e.target.value)}
+                placeholder="Paste any specific instructions from the client..."
+                rows={2}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] resize-y"
+              />
+            </div>
+
+            {/* Dialogue toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasDialogue}
+                onChange={(e) => setHasDialogue(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#2C666E] focus:ring-[#2C666E]"
+              />
+              <span className="text-sm text-gray-700">Include dialogue / narration per scene</span>
+            </label>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Desired Length</label>
@@ -1491,38 +1692,36 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* ── Step 3: Video Style ── */}
-        {step === 'video-style' && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">Choose the motion and cinematography style for your video scenes.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {videoStylesList.map(s => (
-                <button key={s.key} onClick={() => { const newVal = videoStyle === s.key ? '' : s.key; setVideoStyle(newVal); if (newVal) setTimeout(() => handleNext(), 150); }}
-                  className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
-                  {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" loading="lazy" />}
-                  <div className="p-2">
-                    <div className="text-xs font-medium text-slate-700">{s.label}</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
-                  </div>
-                </button>
-              ))}
-              {videoStylesList.length === 0 && (
-                <div className="col-span-3 py-8 text-center text-sm text-gray-400">Loading video styles...</div>
+            {/* Video / Motion Style */}
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500">Motion & cinematography style</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {videoStylesList.map(s => (
+                  <button key={s.key} onClick={() => { setVideoStyle(videoStyle === s.key ? '' : s.key); }}
+                    className={`rounded-xl border overflow-hidden text-left transition-all ${videoStyle === s.key ? 'border-[#2C666E] ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300'}`}>
+                    {s.thumb && <img src={s.thumb} alt={s.label} className="w-full h-24 object-cover" loading="lazy" />}
+                    <div className="p-2">
+                      <div className="text-xs font-medium text-slate-700">{s.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{s.description}</div>
+                    </div>
+                  </button>
+                ))}
+                {videoStylesList.length === 0 && (
+                  <div className="col-span-3 py-8 text-center text-sm text-gray-400">Loading video styles...</div>
+                )}
+              </div>
+              {videoStyle && (
+                <p className="text-xs text-[#2C666E] font-medium">
+                  Selected: {videoStylesList.find(s => s.key === videoStyle)?.label}
+                  <button onClick={() => setVideoStyle('')} className="ml-2 text-gray-400 hover:text-gray-600 underline">Clear</button>
+                </p>
               )}
             </div>
-            {videoStyle && (
-              <p className="text-xs text-[#2C666E] font-medium">
-                Selected: {videoStylesList.find(s => s.key === videoStyle)?.label}
-                <button onClick={() => setVideoStyle('')} className="ml-2 text-gray-400 hover:text-gray-600 underline">Clear</button>
-              </p>
-            )}
           </div>
         )}
 
-        {/* ── Step 4: Model ── */}
+        {/* ── Step 3: Model ── */}
         {step === 'model' && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500">Choose the video generation model for all scenes.</p>
@@ -1613,114 +1812,98 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           />
         )}
 
-        {/* ── Step 6: Generate Script ── */}
+        {/* ── Step 5: Script & Storyboard ── */}
         {step === 'script' && (
           <div className="space-y-6">
-            <div className="text-center py-8">
-              {generatingScript && (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-10 h-10 animate-spin text-[#2C666E]" />
-                  <p className="text-sm text-gray-600">Generating scene script...</p>
-                  <p className="text-xs text-gray-400">AI is crafting {Math.round(desiredLength / defaultDuration)} scenes for your {desiredLength}s storyboard</p>
-                </div>
-              )}
+            {generatingScript && (
+              <div className="text-center py-8">
+                <Loader2 className="w-10 h-10 animate-spin text-[#2C666E] mx-auto" />
+                <p className="text-sm text-gray-600 mt-3">Generating scene script (2-stage)...</p>
+              </div>
+            )}
 
-              {!generatingScript && scenes.length === 0 && !scriptError && (
-                <div className="flex flex-col items-center gap-4">
-                  <Sparkles className="w-10 h-10 text-[#2C666E]" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Ready to Generate</h3>
-                    <p className="text-sm text-gray-500">
-                      AI will create a detailed scene-by-scene script based on your creative inputs.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleGenerateScript}
-                    className="bg-[#2C666E] hover:bg-[#1e4d54] text-white px-6"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" /> Generate Scene Script
-                  </Button>
+            {!generatingScript && scenes.length === 0 && !scriptError && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <Sparkles className="w-10 h-10 text-[#2C666E]" />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Ready to Generate</h3>
+                  <p className="text-sm text-gray-500">AI will create narrative beats, then produce model-ready visual prompts.</p>
                 </div>
-              )}
+                <Button onClick={handleGenerateScript} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white px-6">
+                  <Sparkles className="w-4 h-4 mr-2" /> Generate Script & Storyboard
+                </Button>
+              </div>
+            )}
 
-              {scriptError && (
-                <div className="flex flex-col items-center gap-4">
-                  <AlertCircle className="w-10 h-10 text-red-500" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Script Generation Failed</h3>
-                    <p className="text-sm text-red-600">{scriptError}</p>
-                  </div>
-                  <Button
-                    onClick={handleGenerateScript}
-                    variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" /> Try Again
-                  </Button>
-                </div>
-              )}
+            {scriptError && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <AlertCircle className="w-10 h-10 text-red-500" />
+                <p className="text-sm text-red-600">{scriptError}</p>
+                <Button onClick={handleGenerateScript} variant="outline" className="border-red-200 text-red-600">
+                  <RotateCcw className="w-4 h-4 mr-2" /> Try Again
+                </Button>
+              </div>
+            )}
 
-              {!generatingScript && scenes.length > 0 && (
-                <div className="flex flex-col items-center gap-3">
-                  <CheckCircle2 className="w-10 h-10 text-green-500" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Script Generated</h3>
-                    <p className="text-sm text-gray-500">
-                      {scenes.length} scenes created ({scenes.reduce((sum, s) => sum + (s.durationSeconds || defaultDuration), 0)}s total)
-                    </p>
-                  </div>
+            {!generatingScript && scenes.length > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500">{scenes.length} scenes generated</p>
                   <button
-                    onClick={() => {
-                      setScenes([]);
-                      handleGenerateScript();
-                    }}
-                    className="text-sm text-gray-400 hover:text-gray-600 underline"
+                    onClick={() => { setScenes([]); handleGenerateScript(); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 underline"
                   >
-                    Regenerate all scenes
+                    Regenerate all
                   </button>
                 </div>
-              )}
-            </div>
+                <StoryboardPreview
+                  scenes={scenes}
+                  storyboardName={storyboardName}
+                  logline={storyboardTitle}
+                  narrativeStyle={narrativeStyle}
+                  overallMood={overallMood}
+                  brandName={selectedBrand?.brand_name || ''}
+                  aspectRatio={aspectRatio}
+                  desiredLength={desiredLength}
+                  startFrameUrl={startFrameUrl}
+                  onUpdateScene={(id, updates) => {
+                    setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+                  }}
+                  onExportPdf={(pdfUrl) => {}}
+                />
+              </>
+            )}
           </div>
         )}
 
-        {/* ── Step 7: Review Scenes ── */}
-        {step === 'review' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">
-                Review and edit each scene before generating. Click to expand.
-              </p>
-              <button
-                onClick={() => {
-                  setScenes([]);
-                  setStep('script');
-                  setTimeout(() => handleGenerateScript(), 100);
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 underline"
-              >
-                Regenerate all
-              </button>
-            </div>
-            {scenes.map((scene, i) => (
-              <ReviewScene
-                key={scene.id}
-                scene={scene}
-                index={i}
-                onChange={(idx, updated) => {
-                  setScenes(prev => prev.map((s, si) => si === idx ? { ...s, ...updated } : s));
-                }}
-                onRegenerate={(idx) => {
-                  // Single scene regenerate from the review step — re-run script gen for that scene
-                  toast.info(`Scene ${idx + 1} will be re-generated during the Generate step`);
-                  setScenes(prev => prev.map((s, si) => si === idx ? { ...s, status: 'pending', videoUrl: null } : s));
-                }}
-              />
-            ))}
-          </div>
+        {/* ── Step 6: Audio & Finishing ── */}
+        {step === 'audio' && (
+          <AudioFinishingStep
+            scenes={scenes}
+            onUpdateScene={(id, updates) => setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))}
+            onUpdateAllScenes={setScenes}
+            ttsModel={ttsModel}
+            onTtsModelChange={setTtsModel}
+            voice={voice}
+            onVoiceChange={setVoice}
+            speed={ttsSpeed}
+            onSpeedChange={setTtsSpeed}
+            lipsyncModel={lipsyncModel}
+            onLipsyncModelChange={setLipsyncModel}
+            contentType={contentType}
+            onContentTypeChange={setContentType}
+            musicMood={musicMood}
+            onMusicMoodChange={setMusicMood}
+            musicVolume={musicVolume}
+            onMusicVolumeChange={setMusicVolume}
+            musicUrl={musicUrl}
+            captionStyle={captionStyle}
+            onCaptionStyleChange={setCaptionStyle}
+            modelDurationConstraints={getModelDurationConstraints(globalModel)}
+          />
         )}
 
-        {/* ── Step 8: Generate ── */}
+        {/* ── Step 7: Generate ── */}
         {step === 'generate' && (
           <div className="space-y-3">
             <div className="flex justify-between items-center mb-2">

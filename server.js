@@ -484,6 +484,14 @@ app.delete('/api/storyboard/presets', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Storyboard document system
+app.post('/api/storyboard/generate-previews', authenticateToken, (await import('./api/storyboard/generate-previews.js')).default);
+app.post('/api/storyboard/export-pdf', authenticateToken, (await import('./api/storyboard/export-pdf.js')).default);
+
+// Voiceover & Lipsync
+app.all('/api/storyboard/generate-voiceover', authenticateToken, (await import('./api/storyboard/generate-voiceover.js')).default);
+app.all('/api/storyboard/apply-lipsync', authenticateToken, (await import('./api/storyboard/apply-lipsync.js')).default);
+
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
 app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);
