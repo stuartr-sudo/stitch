@@ -492,6 +492,33 @@ app.post('/api/storyboard/export-pdf', authenticateToken, (await import('./api/s
 app.all('/api/storyboard/generate-voiceover', authenticateToken, (await import('./api/storyboard/generate-voiceover.js')).default);
 app.all('/api/storyboard/apply-lipsync', authenticateToken, (await import('./api/storyboard/apply-lipsync.js')).default);
 
+// Storyboard Tool — Script + Preview generation (must be before catch-all)
+app.post('/api/storyboard/projects/:id/generate-script', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/generate-previews', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/generate-previews';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+// Storyboard Tool — CRUD + frame management (catch-all)
+app.all('/api/storyboard/projects*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+// Public storyboard review (no auth)
+app.get('/api/storyboard/review/:token', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
 app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
 app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
 app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);

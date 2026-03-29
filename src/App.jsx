@@ -18,6 +18,7 @@ import ShortsDraftPage from './pages/ShortsDraftPage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
+import StoryboardsPage from './pages/StoryboardsPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -162,6 +163,23 @@ function App() {
             element={
               <ProtectedRoute>
                 <LinkedInPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/storyboards/:id"
+            element={
+              <ProtectedRoute>
+                <StoryboardsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/storyboards"
+            element={
+              <ProtectedRoute>
+                <StoryboardsPage />
               </ProtectedRoute>
             }
           />
