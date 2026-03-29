@@ -562,7 +562,7 @@ export async function runShortsPipeline(opts) {
             throw new Error(`FLF submit failed (scene ${i + 1}, ${videoModel}): ${errText}`);
           }
           const queueData = await submitRes.json();
-          const result = await pollFalQueue(queueData.request_id, endpoint, keys.falKey);
+          const result = await pollFalQueue(queueData.response_url || queueData.status_url || queueData.request_id, endpoint, keys.falKey);
           const videoUrl = result?.video?.url;
           if (!videoUrl) throw new Error(`No video URL in FLF result for scene ${i + 1}`);
           return uploadUrlToSupabase(videoUrl, supabase, 'pipeline/scenes');
