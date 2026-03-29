@@ -54,20 +54,38 @@ export async function pollWavespeedRequest(requestId, apiKey, maxRetries = 60, d
 }
 
 export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 120, delayMs = 2000) {
-  // FAL queue polling URL construction:
-  // - If a full URL (response_url from FAL) is passed, use it directly — FAL's response_url
-  //   is always the correct polling endpoint, even when it "truncates" sub-paths
-  //   (e.g. fal-ai/ffmpeg-api/compose → fal-ai/ffmpeg-api/requests/{id})
-  // - If only a request_id is passed, construct from the model path
-  const pollUrl = requestIdOrUrl.startsWith('http')
-    ? requestIdOrUrl
-    : `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
+  // FAL queue API (verified via curl against live API 2026-03-29):
+  //   Status:  GET {base}/{model}/requests/{id}/status   → { status, queue_position, ... }
+  //   Result:  GET {base}/{model}/requests/{id}           → model output (images, video, etc.)
+  //   NOTE:    /requests/{id}/response returns 405 — do NOT use it despite docs saying otherwise.
+  //
+  // FAL queue submission returns:
+  //   response_url = .../requests/{id}          (use for fetching result)
+  //   status_url   = .../requests/{id}/status   (use for polling status)
+  //
+  // Strategy: poll /status until COMPLETED, then GET the bare /requests/{id} for result.
+
+  let statusUrl, resultUrl;
+  if (requestIdOrUrl.startsWith('http')) {
+    // Full URL passed — could be response_url or status_url.
+    // Normalize: strip /status suffix if present to get the base request URL.
+    const base = requestIdOrUrl.replace(/\/status\/?$/, '');
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  } else {
+    // Just a request_id — construct from model path
+    const base = `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  }
+
+  console.log(`[pollFalQueue] Polling: status=${statusUrl.slice(0, 100)}`);
 
   // Absolute timeout: derived from poll params, min 5 min, max 10 min
   const computedMs = Math.min(maxRetries * delayMs, 600_000);
   const deadline = Date.now() + Math.max(computedMs, 300_000);
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(pollUrl, {
+    const res = await fetch(statusUrl, {
       headers: {
         'Authorization': `Key ${falKey}`,
         'Content-Type': 'application/json',
@@ -75,8 +93,8 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     });
 
     if (!res.ok) {
-      if (i === 0) { const body = await res.text(); console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} body=${body.slice(0, 200)} url=${pollUrl}`); }
-      else if (i % 10 === 0) console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} for ${pollUrl.slice(0, 80)}...`);
+      if (i === 0) { const body = await res.text(); console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} body=${body.slice(0, 200)} url=${statusUrl}`); }
+      else if (i % 10 === 0) console.warn(`[pollFalQueue] Poll ${i}: HTTP ${res.status} for ${statusUrl.slice(0, 80)}...`);
       if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${requestIdOrUrl.slice?.(0, 60) || model}]`);
       await sleep(delayMs);
       continue;
@@ -84,15 +102,16 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
 
     const data = await res.json();
     const status = data.status;
-    if (i === 0 || i % 10 === 0) console.log(`[pollFalQueue] Poll ${i}: status=${status || 'none'} queue_pos=${data.queue_position ?? 'n/a'} keys=${Object.keys(data).slice(0, 5).join(',')}`);
+    if (i === 0 || i % 10 === 0) console.log(`[pollFalQueue] Poll ${i}: status=${status || 'none'} queue_pos=${data.queue_position ?? 'n/a'}`);
 
-    if (status === 'COMPLETED') return data.output;
-    // response_url returns the result directly when done (no status field).
-    // Detect completion by checking for any known FAL result key.
-    if (!status && !data.queue_position && (
-      data.images || data.audio || data.video || data.output ||
-      data.image_url || data.video_url || data.output_url
-    )) return data;
+    if (status === 'COMPLETED') {
+      // Fetch the actual result from the bare request URL
+      const resultRes = await fetch(resultUrl, {
+        headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+      });
+      if (!resultRes.ok) throw new Error(`FAL result fetch failed: HTTP ${resultRes.status}`);
+      return resultRes.json();
+    }
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
     if (Date.now() > deadline) throw new Error(`FAL poll timeout after 5 minutes [${model}]`);
