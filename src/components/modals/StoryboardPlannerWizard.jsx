@@ -133,7 +133,7 @@ function PillSelector({ options, value, onChange, label }) {
 
 // ── Main Wizard Component ──
 
-export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesComplete, initialImage = null }) {
+export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesComplete, initialImage = null, initialStoryboardData = null }) {
   // Step state
   const [step, setStep] = useState('story');
   const [completedSteps, setCompletedSteps] = useState([]);
@@ -344,6 +344,71 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       analyzeStartFrame(initialImage);
     }
   }, [isOpen, initialImage]);
+
+  // Pre-populate from Storyboard Tool data (bridge)
+  useEffect(() => {
+    if (!isOpen || !initialStoryboardData) return;
+    const { storyboard: sb, frames } = initialStoryboardData;
+    if (!sb || !frames?.length) return;
+
+    // Populate wizard settings from storyboard
+    setStoryboardName(sb.name || '');
+    setStoryOverview(sb.description || '');
+    setOverallMood(sb.overall_mood || '');
+    setNarrativeStyle(sb.narrative_style || 'entertaining');
+    setTargetAudience(sb.target_audience || '');
+    setClientBrief(sb.client_brief || '');
+    setDesiredLength(sb.desired_length || 60);
+    setAspectRatio(sb.aspect_ratio || '16:9');
+    setResolution(sb.resolution || '720p');
+    setGlobalModel(sb.global_model || 'veo3');
+    setEnableAudioDefault(sb.enable_audio || false);
+    if (sb.visual_style) setStyle(sb.visual_style);
+    if (sb.builder_style) setBuilderStyle(sb.builder_style);
+    if (sb.builder_lighting) setBuilderLighting(sb.builder_lighting);
+    if (sb.builder_color_grade) setBuilderColorGrade(sb.builder_color_grade);
+    if (sb.motion_style) setVideoStyle(sb.motion_style);
+    if (sb.scene_direction) setSceneDirection(sb.scene_direction);
+    if (sb.start_frame_url) setStartFrameUrl(sb.start_frame_url);
+    if (sb.start_frame_description) setStartFrameDescription(sb.start_frame_description);
+    if (sb.elements?.length) setElements(sb.elements);
+    if (sb.veo_reference_images?.length) setVeoReferenceImages(sb.veo_reference_images);
+    if (sb.brand_data) setSelectedBrand(sb.brand_data);
+
+    // Audio settings
+    if (sb.tts_model) setTtsModel(sb.tts_model);
+    if (sb.voice) setVoice(sb.voice);
+    if (sb.tts_speed) setTtsSpeed(sb.tts_speed);
+    if (sb.lipsync_model) setLipsyncModel(sb.lipsync_model);
+    if (sb.content_type) setContentType(sb.content_type);
+    if (sb.music_mood) setMusicMood(sb.music_mood);
+    if (sb.music_volume !== undefined) setMusicVolume(sb.music_volume);
+    if (sb.music_url) setMusicUrl(sb.music_url);
+    if (sb.caption_style) setCaptionStyle(sb.caption_style);
+
+    // Map frames → wizard scenes
+    setStoryboardTitle(sb.name || '');
+    setScenes(frames.map((f, i) => ({
+      id: `scene-${Date.now()}-${i}`,
+      sceneNumber: f.frame_number || i + 1,
+      visualPrompt: f.visual_prompt || '',
+      motionPrompt: f.motion_prompt || '',
+      durationSeconds: f.duration_seconds || sb.frame_interval || 4,
+      cameraAngle: f.camera_angle || 'medium',
+      narrativeNote: f.narrative_note || '',
+      dialogue: f.dialogue || '',
+      imageUrl: f.preview_image_url || null,
+      status: 'pending',
+      videoUrl: null,
+      lastFrameUrl: null,
+    })));
+
+    // Skip to the script/review step — all creative choices are already made
+    setCompletedSteps(['story', 'style', 'model', 'inputs']);
+    setStep('script');
+
+    console.log(`[Storyboard Bridge] Pre-populated wizard from storyboard "${sb.name}" — ${frames.length} scenes`);
+  }, [isOpen, initialStoryboardData]);
 
   // Fetch video styles when that step becomes active
   useEffect(() => {

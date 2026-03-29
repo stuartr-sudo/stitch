@@ -19,6 +19,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Sparkles, Loader2, FileDown, Play, Lock, Unlock, Edit2, Check, X,
   ChevronDown, ChevronRight, Clock, Camera, MessageSquare, Film, Eye,
@@ -265,6 +266,7 @@ function FrameCard({ frame, onUpdate, onRegeneratePreview, isGeneratingPreview }
 // ── Main Editor Page ──
 
 export default function StoryboardEditor({ storyboardId, onBack }) {
+  const navigate = useNavigate();
   const [storyboard, setStoryboard] = useState(null);
   const [frames, setFrames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -579,14 +581,13 @@ export default function StoryboardEditor({ storyboardId, onBack }) {
             </Button>
             <Button
               onClick={() => {
-                // Mark as approved and navigate to production
+                // Mark as approved and navigate to studio with storyboard data
                 apiFetch(`/api/storyboard/projects/${storyboardId}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'approved' }),
                 }).then(() => {
-                  toast.success('Storyboard approved — ready for video production');
-                  setStoryboard(prev => ({ ...prev, status: 'approved' }));
+                  navigate(`/studio?fromStoryboard=${storyboardId}`);
                 });
               }}
               className="bg-[#2C666E] hover:bg-[#1e4d54] text-white" size="lg"

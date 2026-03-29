@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -72,8 +72,10 @@ import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
 export default function VideoAdvertCreator() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const [activeModal, setActiveModal] = useState(null);
+  const [storyboardBridgeData, setStoryboardBridgeData] = useState(null);
   const [createdVideos, setCreatedVideos] = useState([]);
   const [createdImages, setCreatedImages] = useState([]);
   const [showApiKeys, setShowApiKeys] = useState(false);
@@ -104,6 +106,32 @@ export default function VideoAdvertCreator() {
 
   // Keep ref in sync with state
   useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
+
+  // Bridge: detect ?fromStoryboard=<id> and open wizard pre-populated
+  useEffect(() => {
+    const storyboardId = searchParams.get('fromStoryboard');
+    if (!storyboardId) return;
+
+    // Clear the param so it doesn't re-trigger
+    searchParams.delete('fromStoryboard');
+    setSearchParams(searchParams, { replace: true });
+
+    // Fetch storyboard + frames, then open the wizard
+    apiFetch(`/api/storyboard/projects/${storyboardId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.storyboard && data.frames?.length) {
+          setStoryboardBridgeData({ storyboard: data.storyboard, frames: data.frames });
+          setActiveModal('storyboard');
+          console.log(`[Storyboard Bridge] Loaded "${data.storyboard.name}" — ${data.frames.length} frames → opening wizard`);
+        } else {
+          toast.error('Failed to load storyboard data');
+        }
+      })
+      .catch(err => {
+        toast.error('Error loading storyboard: ' + err.message);
+      });
+  }, [searchParams]);
 
   // Listen for open-tool events from child modals (e.g., Imagineer Edit result actions)
   useEffect(() => {
@@ -699,6 +727,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => navigate('/storyboards')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Storyboard Tool</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Frame-level planning</p>
+                  </div>
+
+                  <div
                     onClick={() => setActiveModal('library')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -1128,8 +1167,9 @@ export default function VideoAdvertCreator() {
 
       <StoryboardPlannerModal
         isOpen={activeModal === 'storyboard'}
-        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        onClose={() => { setActiveModal(null); setPendingImage(null); setStoryboardBridgeData(null); }}
         initialImage={pendingImage}
+        initialStoryboardData={storyboardBridgeData}
         onScenesComplete={async (completedScenes) => {
           for (const scene of completedScenes) {
             const actualDuration = scene.durationSeconds || 5;
