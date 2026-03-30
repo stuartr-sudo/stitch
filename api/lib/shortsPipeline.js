@@ -371,7 +371,7 @@ export async function runShortsPipeline(opts) {
     } else {
       const { imagePrompt: prompt0 } = composePrompts({
         sceneDirection: { imagePrompt: keyframes[0].imagePrompt, motionPrompt: keyframes[0].motionHint },
-        visualStyle, visualStylePrompt,
+        visualStyle, visualStylePrompt, videoStyle,
         frameworkDefaults: framework?.sceneDefaults,
         aspectRatio, loraConfigs,
         isFirstScene: true, frameChain: false,
@@ -396,7 +396,7 @@ export async function runShortsPipeline(opts) {
         console.error(`[shortsPipeline] KF[${k}]: chain broken (no KF[${k - 1}]), falling back to T2I`);
         const { imagePrompt: fallbackPrompt } = composePrompts({
           sceneDirection: { imagePrompt: keyframes[k].imagePrompt, motionPrompt: keyframes[k].motionHint },
-          visualStyle, visualStylePrompt,
+          visualStyle, visualStylePrompt, videoStyle,
           frameworkDefaults: framework?.sceneDefaults,
           aspectRatio, loraConfigs,
           isFirstScene: false, frameChain: false,
@@ -410,7 +410,7 @@ export async function runShortsPipeline(opts) {
       } else {
         const { imagePrompt: i2iPrompt } = composePrompts({
           sceneDirection: { imagePrompt: keyframes[k].imagePrompt, motionPrompt: keyframes[k].motionHint },
-          visualStyle, visualStylePrompt,
+          visualStyle, visualStylePrompt, videoStyle,
           frameworkDefaults: framework?.sceneDefaults,
           aspectRatio, loraConfigs,
           isFirstScene: false, frameChain: true,
@@ -433,7 +433,7 @@ export async function runShortsPipeline(opts) {
     const firstFramePromises = alignedBlocks.map((block, i) => {
       const { imagePrompt, negativePrompt } = composeIndependentPrompt({
         sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionHint: keyframes[i].motionHint },
-        visualStyle, visualStylePrompt,
+        visualStyle, visualStylePrompt, videoStyle,
         frameworkDefaults: framework?.sceneDefaults,
         aspectRatio, loraConfigs,
       });
@@ -461,7 +461,7 @@ export async function runShortsPipeline(opts) {
       const nextKfPrompt = keyframes[i + 1]?.imagePrompt || keyframes[i].imagePrompt;
       const { imagePrompt: lastPrompt } = composeIndependentPrompt({
         sceneDirection: { imagePrompt: nextKfPrompt, motionHint: '' },
-        visualStyle, visualStylePrompt,
+        visualStyle, visualStylePrompt, videoStyle,
         frameworkDefaults: framework?.sceneDefaults,
         aspectRatio, loraConfigs,
       });
@@ -512,6 +512,7 @@ export async function runShortsPipeline(opts) {
           sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt },
           visualStyle,
           visualStylePrompt,
+          videoStyle,
           frameworkDefaults: framework?.sceneDefaults,
           aspectRatio,
           loraConfigs,
@@ -519,7 +520,7 @@ export async function runShortsPipeline(opts) {
           frameChain: false,
         });
 
-        const prompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt, { isFLF: true });
+        const prompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt, { videoStyle, isFLF: true });
 
         let endpoint, body;
         if (isVeo) {
@@ -617,7 +618,7 @@ export async function runShortsPipeline(opts) {
       } else {
         const { imagePrompt: prompt0 } = composePrompts({
           sceneDirection: { imagePrompt: keyframes[0].imagePrompt, motionPrompt: keyframes[0].motionHint },
-          visualStyle, visualStylePrompt,
+          visualStyle, visualStylePrompt, videoStyle,
           frameworkDefaults: framework?.sceneDefaults,
           aspectRatio, loraConfigs,
           isFirstScene: true, frameChain: false,
@@ -648,7 +649,7 @@ export async function runShortsPipeline(opts) {
           console.error(`[shortsPipeline] V2 Scene ${i + 1}: no image, attempting T2I fallback`);
           const { imagePrompt: fallbackPrompt } = composePrompts({
             sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt: keyframes[i].motionHint },
-            visualStyle, visualStylePrompt,
+            visualStyle, visualStylePrompt, videoStyle,
             frameworkDefaults: framework?.sceneDefaults,
             aspectRatio, loraConfigs,
             isFirstScene: i === 0, frameChain: false,
@@ -666,13 +667,13 @@ export async function runShortsPipeline(opts) {
             const motionPrompt = keyframes[i].motionHint || 'Smooth cinematic movement';
             const { motionPrompt: composedMotion } = composePrompts({
               sceneDirection: { imagePrompt: keyframes[i].imagePrompt, motionPrompt },
-              visualStyle, visualStylePrompt,
+              visualStyle, visualStylePrompt, videoStyle,
               frameworkDefaults: framework?.sceneDefaults,
               aspectRatio, loraConfigs,
               isFirstScene: i === 0, frameChain: i > 0,
             });
 
-            const fullPrompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt);
+            const fullPrompt = composeVideoPrompt(keyframes[i].imagePrompt, composedMotion || motionPrompt, { videoStyle });
 
             currentModel = videoModel;
             clipUrl = await withRetry(
