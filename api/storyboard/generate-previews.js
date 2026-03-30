@@ -47,6 +47,7 @@ export default async function handler(req, res) {
       imageModel = 'fal_flux',
       startFrameUrl = null,
       startFrameDescription = null,
+      characterReferenceUrls = [],
     } = req.body;
 
     if (!scenes?.length) {
@@ -58,15 +59,16 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // I2I helper — uses nano-banana-2/edit with reference image for style consistency
+    // I2I helper — uses nano-banana-2/edit with reference images for style/character consistency
+    // Supports multiple image_urls: starting image + character references
     const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
-    async function generateI2I(referenceImageUrl, prompt, ar) {
+    async function generateI2I(referenceImageUrls, prompt, ar) {
       const res = await fetch('https://fal.run/fal-ai/nano-banana-2/edit', {
         method: 'POST',
         headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_urls: [referenceImageUrl],
-          prompt: `Recreate this exact art style, character design, and color palette. ${prompt}`,
+          image_urls: referenceImageUrls,
+          prompt: `Composite the character(s) into the scene, matching the exact art style, character design, and color palette of the reference image(s). ${prompt}`,
           aspect_ratio: i2iAspectMap[ar] || '16:9',
           resolution: '1K',
           num_images: 1,
@@ -79,8 +81,13 @@ export default async function handler(req, res) {
       return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
     }
 
-    const useI2I = !!startFrameUrl && !!keys.falKey;
-    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio}, I2I: ${useI2I})`);
+    // Build reference image list: starting image first, then character references
+    const referenceImages = [
+      ...(startFrameUrl ? [startFrameUrl] : []),
+      ...(characterReferenceUrls || []),
+    ].filter(Boolean);
+    const useI2I = referenceImages.length > 0 && !!keys.falKey;
+    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio}, I2I: ${useI2I}, refs: ${referenceImages.length})`);
 
     // Generate all preview images in parallel (they're independent)
     const previewPromises = scenes.map(async (scene, i) => {
@@ -110,10 +117,10 @@ export default async function handler(req, res) {
         let imageUrl;
 
         if (useI2I) {
-          // I2I: pass starting image as visual reference so the model matches
-          // the art style, character design, and color palette
-          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via I2I (nano-banana-2/edit)...`);
-          imageUrl = await generateI2I(startFrameUrl, basePrompt, aspectRatio);
+          // I2I: pass reference images (starting image + character refs) so the
+          // model can see and match art style, character design, and color palette
+          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via I2I (nano-banana-2/edit) with ${referenceImages.length} reference(s)...`);
+          imageUrl = await generateI2I(referenceImages, basePrompt, aspectRatio);
         } else {
           // Fallback: T2I with text description of style
           const prompt = startFrameDescription && basePrompt

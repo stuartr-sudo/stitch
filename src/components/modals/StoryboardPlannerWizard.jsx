@@ -926,6 +926,11 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           imageModel: 'fal_flux',
           startFrameUrl,
           startFrameDescription,
+          // Character reference images for I2I consistency
+          characterReferenceUrls: [
+            ...(veoReferenceImages || []),
+            ...elements.filter(el => el.refs.length > 0).flatMap(el => el.refs),
+          ].filter(Boolean),
         }),
       });
       const data = await res.json();
