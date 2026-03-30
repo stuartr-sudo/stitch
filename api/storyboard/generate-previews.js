@@ -46,6 +46,7 @@ export default async function handler(req, res) {
       aspectRatio = '16:9',
       imageModel = 'fal_flux',
       startFrameUrl = null,
+      startFrameDescription = null,
     } = req.body;
 
     if (!scenes?.length) {
@@ -72,7 +73,11 @@ export default async function handler(req, res) {
         };
       }
 
-      const prompt = scene.previewImagePrompt || scene.visualPrompt || '';
+      const basePrompt = scene.previewImagePrompt || scene.visualPrompt || '';
+      // Prepend start frame style context so all scenes match the same art style
+      const prompt = startFrameDescription && basePrompt
+        ? `Maintain exact same art style, rendering style, and color palette as: ${startFrameDescription.substring(0, 200)}. Scene: ${basePrompt}`
+        : basePrompt;
       if (!prompt) {
         console.warn(`[StoryboardPreviews] Scene ${i + 1}: no preview prompt, skipping`);
         return {

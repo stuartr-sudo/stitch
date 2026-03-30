@@ -853,7 +853,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       });
       const data = await res.json();
       if (!data.success || !data.scenes) throw new Error(data.error || 'Failed to generate scenes');
-      setStoryboardTitle(data.title || storyboardName);
+      setStoryboardTitle(data.logline || data.title || storyboardName);
       const mappedScenes = data.scenes.map((s, i) => ({
         ...s,
         id: `scene-${Date.now()}-${i}`,
@@ -925,6 +925,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           aspectRatio,
           imageModel: 'fal_flux',
           startFrameUrl,
+          startFrameDescription,
         }),
       });
       const data = await res.json();
@@ -1991,6 +1992,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                   aspectRatio={aspectRatio}
                   desiredLength={desiredLength}
                   startFrameUrl={startFrameUrl}
+                  startFrameDescription={startFrameDescription}
                   onUpdateScene={(id, updates) => {
                     setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
                   }}

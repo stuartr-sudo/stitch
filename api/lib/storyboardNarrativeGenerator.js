@@ -89,9 +89,9 @@ const NarrativeBeatSchema = z.object({
 });
 
 const NarrativeArcSchema = z.object({
-  title: z.string().max(100),
+  title: z.string().min(5).max(100).describe('A descriptive title for this storyboard (5-10 words)'),
   narrativeStyle: z.string().describe('The narrative arc style used'),
-  logline: z.string().max(200).describe('One-sentence summary of the entire story'),
+  logline: z.string().min(20).max(200).describe('One complete sentence summarizing the entire story arc (20-200 chars)'),
   beats: z.array(NarrativeBeatSchema),
   overallEmotionalArc: z.string().describe('How the emotional tone progresses across the full sequence'),
 });

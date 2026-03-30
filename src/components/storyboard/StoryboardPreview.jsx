@@ -293,6 +293,7 @@ export default function StoryboardPreview({
   aspectRatio = '16:9',
   desiredLength = 60,
   startFrameUrl = null,
+  startFrameDescription = null,
   onUpdateScene,
   onExportPdf,
 }) {
@@ -319,6 +320,7 @@ export default function StoryboardPreview({
           aspectRatio,
           imageModel: 'fal_flux',
           startFrameUrl,
+          startFrameDescription,
         }),
       });
 
