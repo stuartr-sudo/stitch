@@ -27,7 +27,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
-import { generateImage } from '../lib/pipelineHelpers.js';
+import { generateImage, uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
 
 export default async function handler(req, res) {
@@ -58,7 +58,29 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio})`);
+    // I2I helper — uses nano-banana-2/edit with reference image for style consistency
+    const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
+    async function generateI2I(referenceImageUrl, prompt, ar) {
+      const res = await fetch('https://fal.run/fal-ai/nano-banana-2/edit', {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_urls: [referenceImageUrl],
+          prompt: `Recreate this exact art style, character design, and color palette. ${prompt}`,
+          aspect_ratio: i2iAspectMap[ar] || '16:9',
+          resolution: '1K',
+          num_images: 1,
+        }),
+      });
+      if (!res.ok) throw new Error(`I2I generation failed: ${await res.text()}`);
+      const data = await res.json();
+      const imgUrl = data.images?.[0]?.url;
+      if (!imgUrl) throw new Error('No image URL from I2I result');
+      return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
+    }
+
+    const useI2I = !!startFrameUrl && !!keys.falKey;
+    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio}, I2I: ${useI2I})`);
 
     // Generate all preview images in parallel (they're independent)
     const previewPromises = scenes.map(async (scene, i) => {
@@ -74,11 +96,7 @@ export default async function handler(req, res) {
       }
 
       const basePrompt = scene.previewImagePrompt || scene.visualPrompt || '';
-      // Prepend start frame style context so all scenes match the same art style
-      const prompt = startFrameDescription && basePrompt
-        ? `Maintain exact same art style, rendering style, and color palette as: ${startFrameDescription.substring(0, 200)}. Scene: ${basePrompt}`
-        : basePrompt;
-      if (!prompt) {
+      if (!basePrompt) {
         console.warn(`[StoryboardPreviews] Scene ${i + 1}: no preview prompt, skipping`);
         return {
           sceneNumber: scene.sceneNumber || i + 1,
@@ -89,28 +107,41 @@ export default async function handler(req, res) {
       }
 
       try {
-        console.log(`[StoryboardPreviews] Scene ${i + 1}: generating preview...`);
-        const imageUrl = await generateImage(
-          prompt,
-          aspectRatio,
-          keys,
-          supabase,
-          imageModel
-        );
+        let imageUrl;
+
+        if (useI2I) {
+          // I2I: pass starting image as visual reference so the model matches
+          // the art style, character design, and color palette
+          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via I2I (nano-banana-2/edit)...`);
+          imageUrl = await generateI2I(startFrameUrl, basePrompt, aspectRatio);
+        } else {
+          // Fallback: T2I with text description of style
+          const prompt = startFrameDescription && basePrompt
+            ? `Maintain exact same art style, rendering style, and color palette as: ${startFrameDescription.substring(0, 200)}. Scene: ${basePrompt}`
+            : basePrompt;
+          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via T2I...`);
+          imageUrl = await generateImage(
+            prompt,
+            aspectRatio,
+            keys,
+            supabase,
+            imageModel
+          );
+        }
 
         console.log(`[StoryboardPreviews] Scene ${i + 1}: done — ${imageUrl.substring(0, 80)}`);
         return {
           sceneNumber: scene.sceneNumber || i + 1,
           imageUrl,
-          prompt,
-          source: 'generated',
+          prompt: basePrompt,
+          source: useI2I ? 'i2i' : 'generated',
         };
       } catch (err) {
         console.error(`[StoryboardPreviews] Scene ${i + 1} failed:`, err.message);
         return {
           sceneNumber: scene.sceneNumber || i + 1,
           imageUrl: null,
-          prompt,
+          prompt: basePrompt,
           error: err.message,
         };
       }
