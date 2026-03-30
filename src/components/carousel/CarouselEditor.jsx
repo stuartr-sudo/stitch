@@ -1,0 +1,390 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
+  Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { apiFetch } from '@/lib/api';
+import { toast } from 'sonner';
+import SlidePreview from './SlidePreview';
+import SlideEditor from './SlideEditor';
+
+const STATUS_COLORS = {
+  draft: 'bg-gray-100 text-gray-600',
+  generating: 'bg-purple-100 text-purple-700',
+  ready: 'bg-green-100 text-green-700',
+  published: 'bg-blue-100 text-blue-700',
+  failed: 'bg-red-100 text-red-700',
+};
+
+export default function CarouselEditor({ carouselId }) {
+  const navigate = useNavigate();
+  const [carousel, setCarousel] = useState(null);
+  const [slides, setSlides] = useState([]);
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [topic, setTopic] = useState('');
+  const [bulletPoints, setBulletPoints] = useState('');
+  const [pollTimer, setPollTimer] = useState(null);
+
+  const activeSlide = slides[activeSlideIdx] || null;
+
+  // ── Load carousel ──
+  const loadCarousel = useCallback(async () => {
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}`);
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      setCarousel(data.carousel);
+      setSlides(data.carousel.carousel_slides || []);
+    } catch (err) {
+      toast.error('Failed to load carousel');
+    } finally {
+      setLoading(false);
+    }
+  }, [carouselId]);
+
+  useEffect(() => {
+    loadCarousel();
+  }, [loadCarousel]);
+
+  // ── Poll for image generation progress ──
+  useEffect(() => {
+    if (carousel?.status === 'generating') {
+      const timer = setInterval(async () => {
+        try {
+          const res = await apiFetch(`/api/carousel/${carouselId}`);
+          const data = await res.json();
+          if (!data.error) {
+            setCarousel(data.carousel);
+            setSlides(data.carousel.carousel_slides || []);
+            if (data.carousel.status !== 'generating') {
+              clearInterval(timer);
+            }
+          }
+        } catch {}
+      }, 5000);
+      setPollTimer(timer);
+      return () => clearInterval(timer);
+    }
+  }, [carousel?.status, carouselId]);
+
+  // ── Generate content from URL/topic ──
+  async function handleGenerateContent() {
+    setGenerating(true);
+    try {
+      const body = {};
+      if (!carousel.source_url) {
+        if (!topic.trim()) {
+          toast.error('Enter a topic or set a source URL');
+          return;
+        }
+        body.topic = topic.trim();
+        if (bulletPoints.trim()) body.bullet_points = bulletPoints.trim();
+      }
+
+      const res = await apiFetch(`/api/carousel/${carouselId}/generate-content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      setSlides(data.slides || []);
+      setActiveSlideIdx(0);
+      if (data.caption_text) {
+        setCarousel(prev => ({ ...prev, caption_text: data.caption_text, slide_count: data.slides?.length }));
+      }
+    } catch (err) {
+      toast.error('Content generation failed');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // ── Generate images for all slides ──
+  async function handleGenerateImages() {
+    setGeneratingImages(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/generate-images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_model: 'nano-banana-2' }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      // Start polling
+      setCarousel(prev => ({ ...prev, status: 'generating' }));
+    } catch (err) {
+      toast.error('Image generation failed');
+    } finally {
+      setGeneratingImages(false);
+    }
+  }
+
+  // ── Regenerate single slide ──
+  async function handleRegenerateSlide(slideId) {
+    const slideIdx = slides.findIndex(s => s.id === slideId);
+    if (slideIdx === -1) return;
+
+    setSlides(prev => prev.map(s => s.id === slideId ? { ...s, generation_status: 'generating' } : s));
+
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_model: 'nano-banana-2' }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        setSlides(prev => prev.map(s => s.id === slideId ? { ...s, generation_status: 'failed' } : s));
+        return;
+      }
+      setSlides(prev => prev.map(s => s.id === slideId ? data.slide : s));
+    } catch (err) {
+      toast.error('Regeneration failed');
+    }
+  }
+
+  // ── Update slide text ──
+  async function handleUpdateSlide(slideId, updates) {
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      setSlides(prev => prev.map(s => s.id === slideId ? data.slide : s));
+    } catch (err) {
+      toast.error('Failed to update slide');
+    }
+  }
+
+  // ── Publish ──
+  async function handlePublish() {
+    setPublishing(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/publish`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      setCarousel(prev => ({ ...prev, status: 'published', published_platform_id: data.platformPostId }));
+    } catch (err) {
+      toast.error('Publishing failed');
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  // ── Update caption ──
+  async function handleUpdateCaption(captionText) {
+    try {
+      await apiFetch(`/api/carousel/${carouselId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption_text: captionText }),
+      });
+      setCarousel(prev => ({ ...prev, caption_text: captionText }));
+    } catch {}
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (!carousel) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-gray-500">Carousel not found</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/carousels')}>
+          Back to Carousels
+        </Button>
+      </div>
+    );
+  }
+
+  const hasSlides = slides.length > 0;
+  const hasImages = slides.some(s => s.composed_image_url);
+  const allDone = slides.every(s => s.generation_status === 'done');
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top bar */}
+      <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/carousels')} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="font-semibold text-gray-900">{carousel.title}</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-gray-400">{carousel.platform} - {carousel.aspect_ratio}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${STATUS_COLORS[carousel.status]}`}>
+                {carousel.status}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!hasSlides && (
+            <Button onClick={handleGenerateContent} disabled={generating}>
+              {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
+              Generate Content
+            </Button>
+          )}
+          {hasSlides && !allDone && (
+            <Button onClick={handleGenerateImages} disabled={generatingImages || carousel.status === 'generating'}>
+              {generatingImages || carousel.status === 'generating'
+                ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                : <ImageIcon className="w-4 h-4 mr-2" />}
+              Generate Images
+            </Button>
+          )}
+          {hasImages && allDone && carousel.status !== 'published' && (
+            <Button onClick={handlePublish} disabled={publishing}>
+              {publishing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Publish to {carousel.platform}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* No slides — show topic input if no source URL */}
+      {!hasSlides && !carousel.source_url && (
+        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">What is your carousel about?</h3>
+          <Input
+            placeholder="e.g. 5 Tips for Better Sleep"
+            value={topic}
+            onChange={e => setTopic(e.target.value)}
+            className="mb-3"
+          />
+          <textarea
+            placeholder="Key points (optional, one per line)"
+            value={bulletPoints}
+            onChange={e => setBulletPoints(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[100px] mb-3"
+          />
+          <Button onClick={handleGenerateContent} disabled={generating} className="w-full">
+            {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
+            Generate Slides
+          </Button>
+        </div>
+      )}
+
+      {/* No slides — but has source URL */}
+      {!hasSlides && carousel.source_url && (
+        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border text-center">
+          <p className="text-sm text-gray-500 mb-2">Source: {carousel.source_url}</p>
+          <Button onClick={handleGenerateContent} disabled={generating}>
+            {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
+            Generate Slides from Article
+          </Button>
+        </div>
+      )}
+
+      {/* Main editor area */}
+      {hasSlides && (
+        <div className="flex h-[calc(100vh-65px)]">
+          {/* Left: slide filmstrip */}
+          <div className="w-48 border-r bg-white overflow-y-auto py-3 px-2 space-y-2 flex-shrink-0">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.id}
+                onClick={() => setActiveSlideIdx(i)}
+                className={`w-full rounded-lg overflow-hidden border-2 transition-colors ${
+                  i === activeSlideIdx ? 'border-blue-500' : 'border-transparent hover:border-gray-200'
+                }`}
+              >
+                <div className="relative">
+                  <SlidePreview slide={slide} aspectRatio={carousel.aspect_ratio} size="thumb" />
+                  <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    {i + 1}
+                  </span>
+                  {slide.generation_status === 'generating' && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-500 px-1.5 py-1 truncate">{slide.slide_type}</p>
+              </button>
+            ))}
+          </div>
+
+          {/* Center: active slide preview */}
+          <div className="flex-1 flex items-center justify-center p-8 bg-gray-100 min-w-0">
+            <div className="w-full max-w-md">
+              {activeSlide && (
+                <>
+                  <SlidePreview slide={activeSlide} aspectRatio={carousel.aspect_ratio} size="large" />
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => setActiveSlideIdx(Math.max(0, activeSlideIdx - 1))}
+                      disabled={activeSlideIdx === 0}
+                      className="p-2 rounded-lg hover:bg-white disabled:opacity-30"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <span className="text-sm text-gray-500">
+                      {activeSlideIdx + 1} / {slides.length}
+                    </span>
+                    <button
+                      onClick={() => setActiveSlideIdx(Math.min(slides.length - 1, activeSlideIdx + 1))}
+                      disabled={activeSlideIdx === slides.length - 1}
+                      className="p-2 rounded-lg hover:bg-white disabled:opacity-30"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: slide editor */}
+          <div className="w-80 border-l bg-white overflow-y-auto flex-shrink-0">
+            {activeSlide && (
+              <SlideEditor
+                slide={activeSlide}
+                onUpdate={(updates) => handleUpdateSlide(activeSlide.id, updates)}
+                onRegenerate={() => handleRegenerateSlide(activeSlide.id)}
+                captionText={carousel.caption_text}
+                onUpdateCaption={handleUpdateCaption}
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
