@@ -135,8 +135,8 @@ const WIZARD_STEPS = [
   { key: 'video_style', label: 'Motion Style' },
   { key: 'video_model', label: 'Video Model' },
   { key: 'voice', label: 'Voice & Music' },
-  { key: 'pills', label: 'Scene Direction' },
   { key: 'topics', label: 'Topic & Research' },
+  { key: 'pills', label: 'Scene Direction' },
   { key: 'script', label: 'Script' },
   { key: 'captions', label: 'Captions' },
   { key: 'preview', label: 'Preview Image' },
@@ -1731,6 +1731,22 @@ export default function CampaignsNewPage() {
                     <img src={previewImageUrl} alt="Scene 1" className="max-h-40 rounded-lg" />
                   </div>
                 )}
+                {(() => {
+                  const scenes = scriptScenes.length || 1;
+                  const imgCost = (IMAGE_MODELS.find(m => m.value === imageModel)?.cost || 0.02) * scenes;
+                  const vidCost = (VIDEO_MODELS.find(m => m.value === videoModel)?.costPerClip || 0.50) * scenes;
+                  const overhead = 0.14; // TTS + music + captions + script generation
+                  const total = imgCost + vidCost + overhead;
+                  return (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="text-[10px] text-amber-600 uppercase font-medium">Estimated Cost</div>
+                      <div className="text-lg text-amber-800 font-bold">${total.toFixed(2)} <span className="text-xs font-normal text-amber-600">approx.</span></div>
+                      <div className="text-[10px] text-amber-500 mt-1">
+                        {scenes} images (${imgCost.toFixed(2)}) + {scenes} video clips (${vidCost.toFixed(2)}) + voiceover, music, captions (${overhead.toFixed(2)})
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
