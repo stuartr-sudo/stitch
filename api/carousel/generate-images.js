@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'carousel id is required' });
 
-  const { image_model = 'nano-banana-2', style_prompt = '' } = req.body || {};
+  const { image_model = 'fal_nano_banana', style_prompt = '' } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 

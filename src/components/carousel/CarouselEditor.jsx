@@ -9,6 +9,17 @@ import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import SlidePreview from './SlidePreview';
 import SlideEditor from './SlideEditor';
+import { STYLE_CATEGORIES } from '@/lib/stylePresets';
+
+// Look up promptText for a style_preset value
+function getStylePrompt(presetValue) {
+  if (!presetValue) return '';
+  for (const cat of STYLE_CATEGORIES) {
+    const style = cat.styles.find(s => s.value === presetValue);
+    if (style?.promptText) return style.promptText;
+  }
+  return '';
+}
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-600',
@@ -135,10 +146,11 @@ export default function CarouselEditor({ carouselId }) {
   async function handleGenerateImages() {
     setGeneratingImages(true);
     try {
+      const stylePrompt = getStylePrompt(carousel.style_preset);
       const res = await apiFetch(`/api/carousel/${carouselId}/generate-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_model: 'nano-banana-2' }),
+        body: JSON.stringify({ image_model: 'fal_nano_banana', style_prompt: stylePrompt }),
       });
       const data = await res.json();
       if (data.error) {
@@ -165,7 +177,7 @@ export default function CarouselEditor({ carouselId }) {
       const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}/regenerate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_model: 'nano-banana-2' }),
+        body: JSON.stringify({ image_model: 'fal_nano_banana', style_prompt: getStylePrompt(carousel.style_preset) }),
       });
       const data = await res.json();
       if (data.error) {

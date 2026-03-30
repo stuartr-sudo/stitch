@@ -103,29 +103,36 @@ export default async function handler(req, res) {
 
   const platformInfo = PLATFORM_GUIDANCE[carousel.platform] || PLATFORM_GUIDANCE.instagram;
 
-  const systemPrompt = `You are a carousel content strategist. Create a slide-by-slide carousel plan.
+  const systemPrompt = `You are an expert carousel content strategist. Create a cohesive, narrative-driven carousel that reads like one flowing story across slides — NOT a random collection of disconnected facts.
 
 OUTPUT FORMAT: JSON matching the schema exactly.
 
+CRITICAL — NARRATIVE COHESION:
+- The carousel must tell ONE story with a clear beginning, middle, and end
+- Each slide must logically lead into the next — transitions should feel natural
+- Pick ONE angle or thesis from the research and build every slide around it
+- Do NOT try to cram everything from the research into the carousel
+- The reader should feel compelled to swipe to the next slide
+
 CAROUSEL STRUCTURE:
-- Slide 1 MUST be type "hook" — a bold, attention-grabbing statement (3-8 words max)
+- Slide 1 MUST be type "hook" — a bold, curiosity-driven statement (3-8 words max)
 - Middle slides (3-7): mix of "content", "stat", "quote", and "image_focus" types
 - Last slide MUST be type "cta" — a clear call to action
 - Total: ${platformInfo.maxSlides > 10 ? '5-12' : '5-8'} slides
 
 SLIDE TYPE GUIDELINES:
-- hook: Short, punchy headline only (no body_text). This stops the scroll.
+- hook: Short, punchy headline only (body_text = ""). This stops the scroll.
 - content: headline (key point, max 8 words) + body_text (1-2 sentences expanding on it)
-- stat: stat_value (the number, e.g. "73%", "$2.4M", "10x") + stat_label (what the stat means) + headline (optional context)
-- quote: headline contains the quote text (a memorable line from the source)
+- stat: stat_value (the number, e.g. "73%", "$2.4M", "10x") + stat_label (what the stat means) + headline (context)
+- quote: headline contains the quote text (a memorable line)
 - image_focus: headline is a short caption; the AI image is the star
 - cta: cta_text (the call to action) + headline (supporting context)
 
 IMAGE PROMPTS:
-- Each slide needs an image_prompt describing a relevant, professional background image
+- Each slide needs an image_prompt for a cohesive background image
+- ALL image prompts must share a consistent visual world (same color palette, mood, style)
 - Keep prompts visual and concrete (objects, scenes, lighting)
 - Don't describe text or overlays — only the background image content
-- Each prompt should feel cohesive with the carousel's visual theme
 
 CAPTION:
 - Generate a caption_text for the social media post (150-300 words for LinkedIn, 50-150 for others)
