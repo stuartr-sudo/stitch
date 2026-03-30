@@ -28,6 +28,7 @@
   padding: 0;
   box-sizing: border-box;
   line-height: 1.5;
+  font-size: 16px;
 }
 
 .stitch-homepage *, .stitch-homepage *::before, .stitch-homepage *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,32 +39,28 @@
 /* ─── NAV ─── */
 .stitch-homepage .hp-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 72px; background: rgba(255,255,255,0.8); backdrop-filter: blur(40px) saturate(1.2); border-bottom: 1px solid rgba(0,0,0,0.06); }
 .stitch-homepage .nav-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gutter); height: 100%; display: flex; align-items: center; justify-content: space-between; }
-.stitch-homepage .nav-logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+.stitch-homepage .nav-logo { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
 .stitch-homepage .nav-logo span { font-weight: 300; color: var(--gray-200); }
 .stitch-homepage .nav-links { display: flex; gap: 28px; align-items: center; }
-.stitch-homepage .nav-links a { font-size: 0.82rem; font-weight: 400; color: var(--gray-200); transition: color 0.3s; }
+.stitch-homepage .nav-links a { font-size: 0.95rem; font-weight: 400; color: var(--gray-200); transition: color 0.3s; }
 .stitch-homepage .nav-links a:hover { color: var(--white); }
-.stitch-homepage .nav-cta { color: var(--black) !important; background: var(--white); padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 0.82rem !important; transition: background 0.2s, box-shadow 0.3s; }
+.stitch-homepage .nav-cta { color: var(--black) !important; background: var(--white); padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 0.95rem !important; transition: background 0.2s, box-shadow 0.3s; }
 .stitch-homepage .nav-cta:hover { background: var(--neon); box-shadow: 0 0 30px var(--neon-dim); color: var(--black) !important; }
 
 /* ─── HERO ─── */
 .stitch-homepage .hero { padding-top: 160px; padding-bottom: 120px; }
-.stitch-homepage .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
-.stitch-homepage .hero-tag { font-size: 0.72rem; font-weight: 600; color: var(--neon); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 28px; animation: hp-fadeIn 0.7s ease both; }
+.stitch-homepage .hero-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 64px; align-items: center; }
+.stitch-homepage .hero-tag { font-size: 0.82rem; font-weight: 600; color: var(--neon); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 28px; animation: hp-fadeIn 0.7s ease both; }
 .stitch-homepage .hero h1 { font-size: clamp(3rem, 5.5vw, 5.2rem); font-weight: 800; line-height: 0.95; letter-spacing: -0.04em; animation: hp-fadeIn 0.7s ease 0.1s both; }
 .stitch-homepage .hero h1 .thin { font-weight: 200; color: var(--gray-200); }
-.stitch-homepage .hero-desc { font-size: 1.05rem; font-weight: 400; color: var(--gray-100); line-height: 1.7; margin-top: 32px; animation: hp-fadeIn 0.7s ease 0.2s both; }
+.stitch-homepage .hero-desc { font-size: 1.15rem; font-weight: 400; color: var(--gray-100); line-height: 1.7; margin-top: 32px; animation: hp-fadeIn 0.7s ease 0.2s both; }
 .stitch-homepage .hero-actions { display: flex; gap: 14px; margin-top: 44px; animation: hp-fadeIn 0.7s ease 0.3s both; }
-.stitch-homepage .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 32px; border-radius: 6px; font-family: var(--font); font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.25s ease; }
+.stitch-homepage .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 32px; border-radius: 6px; font-family: var(--font); font-size: 1rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.25s ease; }
 .stitch-homepage .btn-white { background: var(--white); color: var(--black); }
 .stitch-homepage .btn-white:hover { background: var(--neon); box-shadow: 0 0 40px var(--neon-dim); }
 .stitch-homepage .btn-outline { background: transparent; color: var(--white); border: 1px solid rgba(0,0,0,0.15); }
 .stitch-homepage .btn-outline:hover { border-color: var(--neon); color: var(--neon); }
 .stitch-homepage .hero-video { width: 100%; aspect-ratio: 16/9; background: var(--placeholder); border: 1px solid rgba(0,0,0,0.07); border-radius: 12px; position: relative; overflow: hidden; animation: hp-fadeIn 0.7s ease 0.3s both; }
-.stitch-homepage .play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; border: 2px solid rgba(0,0,0,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: border-color 0.3s, background 0.3s, transform 0.3s; cursor: pointer; z-index: 2; background: none; }
-.stitch-homepage .play-btn:hover { border-color: var(--neon); background: rgba(0,184,212,0.08); transform: translate(-50%, -50%) scale(1.08); }
-.stitch-homepage .play-btn::after { content: ''; width: 0; height: 0; border-left: 20px solid var(--white); border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px; }
-.stitch-homepage .video-label { position: absolute; bottom: 20px; left: 24px; font-size: 0.68rem; font-weight: 500; color: var(--gray-400); letter-spacing: 0.12em; text-transform: uppercase; z-index: 2; }
 @keyframes hp-fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ─── DIVIDER & SECTION ─── */
@@ -71,10 +68,10 @@
 .stitch-homepage .divider-line { height: 1px; background: rgba(0,0,0,0.06); }
 .stitch-homepage section { padding-top: 100px; padding-bottom: 100px; }
 .stitch-homepage .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 56px; gap: 40px; }
-.stitch-homepage .section-num { font-size: 0.68rem; font-weight: 500; color: var(--gray-400); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
-.stitch-homepage .section-title { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.stitch-homepage .section-num { font-size: 0.78rem; font-weight: 500; color: var(--gray-400); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+.stitch-homepage .section-title { font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
 .stitch-homepage .section-title .thin { font-weight: 200; color: var(--gray-200); }
-.stitch-homepage .section-desc { font-size: 0.92rem; color: var(--gray-100); max-width: 360px; line-height: 1.65; font-weight: 400; text-align: right; flex-shrink: 0; }
+.stitch-homepage .section-desc { font-size: 1.05rem; color: var(--gray-100); max-width: 380px; line-height: 1.65; font-weight: 400; text-align: right; flex-shrink: 0; }
 
 /* ─── AUDIENCE ─── */
 .stitch-homepage .audience-section { background: var(--gray-900); }
@@ -82,25 +79,25 @@
 .stitch-homepage .audience-card { padding: 32px 28px; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; background: var(--black); transition: border-color 0.3s, transform 0.3s; cursor: default; }
 .stitch-homepage .audience-card:hover { border-color: var(--neon); transform: translateY(-4px); }
 .stitch-homepage .audience-icon { width: 48px; height: 48px; border-radius: 10px; background: var(--gray-900); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--neon); }
-.stitch-homepage .audience-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
-.stitch-homepage .audience-card p { font-size: 0.82rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
+.stitch-homepage .audience-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.stitch-homepage .audience-card p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
 
 /* ─── HOW WE WORK ─── */
 .stitch-homepage .process-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; overflow: hidden; margin-bottom: 64px; }
 .stitch-homepage .process-step { padding: 40px 28px; border-right: 1px solid rgba(0,0,0,0.06); position: relative; transition: background 0.3s; }
 .stitch-homepage .process-step:last-child { border-right: none; }
 .stitch-homepage .process-step:hover { background: var(--gray-900); }
-.stitch-homepage .process-num { font-size: 2.2rem; font-weight: 800; color: var(--placeholder); margin-bottom: 20px; line-height: 1; }
+.stitch-homepage .process-num { font-size: 2.4rem; font-weight: 800; color: var(--placeholder); margin-bottom: 20px; line-height: 1; }
 .stitch-homepage .process-step:hover .process-num { color: var(--neon); }
-.stitch-homepage .process-step h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
-.stitch-homepage .process-step p { font-size: 0.82rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
+.stitch-homepage .process-step h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
+.stitch-homepage .process-step p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
 
 /* Differentiators row */
 .stitch-homepage .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .stitch-homepage .diff-card { padding: 32px 28px; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; background: var(--gray-900); }
-.stitch-homepage .diff-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.stitch-homepage .diff-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
 .stitch-homepage .diff-card h3 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon); flex-shrink: 0; }
-.stitch-homepage .diff-card p { font-size: 0.85rem; color: var(--gray-200); line-height: 1.6; font-weight: 300; }
+.stitch-homepage .diff-card p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.6; font-weight: 300; }
 
 /* ─── CLIENT PORTAL ─── */
 .stitch-homepage .portal-section { background: var(--gray-900); }
@@ -108,58 +105,58 @@
 .stitch-homepage .portal-features { display: flex; flex-direction: column; gap: 24px; }
 .stitch-homepage .portal-feature { padding: 24px; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; background: var(--black); transition: border-color 0.3s; cursor: default; }
 .stitch-homepage .portal-feature:hover { border-color: rgba(0,0,0,0.12); }
-.stitch-homepage .portal-feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
-.stitch-homepage .portal-feature p { font-size: 0.85rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
+.stitch-homepage .portal-feature h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+.stitch-homepage .portal-feature p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.55; font-weight: 300; }
 .stitch-homepage .portal-visual { background: var(--black); border: 1px solid rgba(0,0,0,0.07); border-radius: 12px; overflow: hidden; }
 .stitch-homepage .portal-screen { width: 100%; aspect-ratio: 4/3; background: var(--placeholder); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .stitch-homepage .portal-screen img { width: 100%; height: 100%; object-fit: cover; }
-.stitch-homepage .portal-screen span { font-size: 0.65rem; font-weight: 500; color: var(--gray-600); letter-spacing: 0.14em; text-transform: uppercase; }
+.stitch-homepage .portal-screen span { font-size: 0.75rem; font-weight: 500; color: var(--gray-600); letter-spacing: 0.14em; text-transform: uppercase; }
 .stitch-homepage .portal-bar { height: 48px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; padding: 0 20px; gap: 12px; }
 .stitch-homepage .portal-dot { width: 10px; height: 10px; border-radius: 50%; }
 .stitch-homepage .portal-dot.green { background: #34c759; }
 .stitch-homepage .portal-dot.amber { background: #ff9500; }
 .stitch-homepage .portal-dot.gray { background: var(--placeholder); }
-.stitch-homepage .portal-status { font-size: 0.68rem; color: var(--gray-400); font-weight: 500; margin-left: auto; letter-spacing: 0.06em; text-transform: uppercase; }
+.stitch-homepage .portal-status { font-size: 0.78rem; color: var(--gray-400); font-weight: 500; margin-left: auto; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* ─── INTEGRATIONS MARQUEE ─── */
 .stitch-homepage .integrations-row { margin-top: 48px; }
-.stitch-homepage .integrations-label { font-size: 0.72rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; max-width: var(--max-w); margin-left: auto; margin-right: auto; padding: 0 var(--gutter); }
+.stitch-homepage .integrations-label { font-size: 0.82rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; max-width: var(--max-w); margin-left: auto; margin-right: auto; padding: 0 var(--gutter); }
 .stitch-homepage .marquee-wrap { width: 100%; overflow: hidden; padding: 24px 0 0; mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%); }
 .stitch-homepage .marquee-track { display: flex; gap: 20px; animation: hp-marquee 35s linear infinite; width: max-content; }
 .stitch-homepage .marquee-item { display: flex; align-items: center; gap: 12px; padding: 16px 28px; background: var(--black); border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; flex-shrink: 0; color: var(--gray-200); }
 .stitch-homepage .marquee-item svg { flex-shrink: 0; opacity: 0.5; width: 24px; height: 24px; }
-.stitch-homepage .marquee-item span { font-size: 0.95rem; font-weight: 500; white-space: nowrap; }
+.stitch-homepage .marquee-item span { font-size: 1.05rem; font-weight: 500; white-space: nowrap; }
 @keyframes hp-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
 /* ─── STYLE × MOTION ─── */
 .stitch-homepage .styles-bg { background: var(--gray-900); }
-.stitch-homepage .combo-section-intro { font-size: 0.95rem; color: var(--gray-200); line-height: 1.65; max-width: 600px; margin-bottom: 48px; }
+.stitch-homepage .combo-section-intro { font-size: 1.05rem; color: var(--gray-200); line-height: 1.65; max-width: 640px; margin-bottom: 48px; }
 .stitch-homepage .combo-section-intro strong { color: var(--white); font-weight: 600; }
-.stitch-homepage .axis-label { font-size: 0.72rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.stitch-homepage .axis-label { font-size: 0.82rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .stitch-homepage .axis-label::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.06); }
 .stitch-homepage .selector-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-.stitch-homepage .selector-pill { padding: 10px 22px; border: 1px solid rgba(0,0,0,0.1); border-radius: 100px; font-family: var(--font); font-size: 0.82rem; font-weight: 500; cursor: pointer; background: var(--black); color: var(--gray-200); transition: all 0.25s ease; }
+.stitch-homepage .selector-pill { padding: 10px 22px; border: 1px solid rgba(0,0,0,0.1); border-radius: 100px; font-family: var(--font); font-size: 0.95rem; font-weight: 500; cursor: pointer; background: var(--black); color: var(--gray-200); transition: all 0.25s ease; }
 .stitch-homepage .selector-pill:hover { border-color: rgba(0,0,0,0.2); color: var(--white); }
 .stitch-homepage .selector-pill.active { border-color: var(--neon); background: var(--neon-light); color: var(--neon); font-weight: 600; }
-.stitch-homepage .selector-more { font-size: 0.8rem; color: var(--gray-400); font-style: italic; margin-top: 12px; margin-bottom: 0; }
+.stitch-homepage .selector-more { font-size: 0.9rem; color: var(--gray-400); font-style: italic; margin-top: 12px; margin-bottom: 0; }
 .stitch-homepage .combo-connector { display: flex; align-items: center; gap: 20px; padding: 48px 0; }
 .stitch-homepage .combo-connector::before, .stitch-homepage .combo-connector::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.08); }
 .stitch-homepage .combo-x { width: 44px; height: 44px; border: 1.5px solid rgba(0,0,0,0.12); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--neon); flex-shrink: 0; background: var(--black); }
 .stitch-homepage .combo-result-area { margin-top: 48px; }
-.stitch-homepage .combo-result-label { font-size: 0.72rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.stitch-homepage .combo-result-label { font-size: 0.82rem; font-weight: 600; color: var(--neon); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .stitch-homepage .combo-result-label::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.06); }
 .stitch-homepage .combo-result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .stitch-homepage .combo-result-card { border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; background: var(--black); transition: border-color 0.3s, transform 0.3s; }
 .stitch-homepage .combo-result-card:hover { border-color: rgba(0,0,0,0.12); transform: translateY(-4px); }
 .stitch-homepage .combo-result-card .thumb { width: 100%; aspect-ratio: 1/1; background: var(--placeholder); position: relative; overflow: hidden; }
 .stitch-homepage .combo-result-card .info { padding: 18px 20px 20px; }
-.stitch-homepage .combo-result-card .info h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
-.stitch-homepage .combo-result-card .info p { font-size: 0.78rem; color: var(--gray-200); font-weight: 300; }
+.stitch-homepage .combo-result-card .info h4 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.stitch-homepage .combo-result-card .info p { font-size: 0.88rem; color: var(--gray-200); font-weight: 300; }
 .stitch-homepage .combo-current { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.stitch-homepage .combo-current .pill { padding: 6px 16px; background: var(--gray-900); border: 1px solid rgba(0,0,0,0.06); border-radius: 100px; font-size: 0.78rem; font-weight: 600; color: var(--white); }
-.stitch-homepage .combo-current .x { font-size: 0.9rem; color: var(--neon); font-weight: 300; }
-.stitch-homepage .combo-current .eq { font-size: 0.9rem; color: var(--gray-400); }
-.stitch-homepage .combo-current .result-text { font-size: 0.82rem; color: var(--gray-200); font-style: italic; }
+.stitch-homepage .combo-current .pill { padding: 6px 16px; background: var(--gray-900); border: 1px solid rgba(0,0,0,0.06); border-radius: 100px; font-size: 0.88rem; font-weight: 600; color: var(--white); }
+.stitch-homepage .combo-current .x { font-size: 1rem; color: var(--neon); font-weight: 300; }
+.stitch-homepage .combo-current .eq { font-size: 1rem; color: var(--gray-400); }
+.stitch-homepage .combo-current .result-text { font-size: 0.95rem; color: var(--gray-200); font-style: italic; }
 
 /* ─── SHOWCASE ─── */
 .stitch-homepage .showcase-bg { background: var(--gray-900); }
@@ -169,59 +166,51 @@
 .stitch-homepage .showcase-item.wide { grid-column: span 2; }
 .stitch-homepage .showcase-thumb { width: 100%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .stitch-homepage .showcase-item.wide .showcase-thumb { aspect-ratio: 2/1; }
-.stitch-homepage .showcase-thumb span { font-size: 0.65rem; font-weight: 500; color: var(--gray-600); letter-spacing: 0.14em; text-transform: uppercase; position: relative; z-index: 3; }
+.stitch-homepage .showcase-thumb span { font-size: 0.75rem; font-weight: 500; color: var(--gray-600); letter-spacing: 0.14em; text-transform: uppercase; position: relative; z-index: 3; }
 .stitch-homepage .showcase-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(255,255,255,0.95) 0%, transparent 50%); z-index: 2; opacity: 0; transition: opacity 0.3s; }
 .stitch-homepage .showcase-item:hover .showcase-overlay { opacity: 1; }
 .stitch-homepage .showcase-meta { position: absolute; bottom: 20px; left: 20px; z-index: 3; opacity: 0; transform: translateY(8px); transition: all 0.3s ease; }
 .stitch-homepage .showcase-item:hover .showcase-meta { opacity: 1; transform: translateY(0); }
-.stitch-homepage .showcase-meta span { font-size: 0.62rem; font-weight: 600; color: var(--neon); letter-spacing: 0.1em; text-transform: uppercase; }
-.stitch-homepage .showcase-meta h3 { font-size: 1rem; font-weight: 600; margin-top: 4px; }
+.stitch-homepage .showcase-meta span { font-size: 0.72rem; font-weight: 600; color: var(--neon); letter-spacing: 0.1em; text-transform: uppercase; }
+.stitch-homepage .showcase-meta h3 { font-size: 1.1rem; font-weight: 600; margin-top: 4px; }
 
 /* ─── SHORTS ─── */
 .stitch-homepage .shorts-bg { background: var(--gray-900); }
 .stitch-homepage .shorts-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
 .stitch-homepage .shorts-phones { display: flex; gap: 16px; justify-content: center; align-items: flex-end; }
 .stitch-homepage .shorts-phones-img { width: 100%; max-width: 420px; height: auto; border-radius: 16px; object-fit: contain; }
-.stitch-homepage .phone { background: var(--placeholder); border: 1px solid rgba(0,0,0,0.07); border-radius: 24px; overflow: hidden; transition: transform 0.4s ease; }
-.stitch-homepage .phone:hover { transform: translateY(-8px); }
-.stitch-homepage .phone-sm { width: 120px; height: 213px; }
-.stitch-homepage .phone-md { width: 150px; height: 267px; border-color: rgba(0,0,0,0.1); }
-.stitch-homepage .phone-notch { width: 48px; height: 16px; background: var(--black); border-radius: 0 0 10px 10px; margin: 0 auto; }
-.stitch-homepage .phone-body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(100% - 16px); }
-.stitch-homepage .phone-body span { font-size: 0.55rem; font-weight: 600; color: var(--gray-400); letter-spacing: 0.12em; text-transform: uppercase; }
-.stitch-homepage .phone-md .phone-body span { color: var(--neon); }
 .stitch-homepage .shorts-content { display: flex; flex-direction: column; gap: 24px; }
 .stitch-homepage .short-feature { padding: 24px; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; transition: border-color 0.3s, background 0.3s; cursor: pointer; }
 .stitch-homepage .short-feature:hover { border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.01); }
-.stitch-homepage .short-feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
-.stitch-homepage .short-feature p { font-size: 0.85rem; color: var(--gray-100); line-height: 1.55; font-weight: 300; }
+.stitch-homepage .short-feature h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+.stitch-homepage .short-feature p { font-size: 0.95rem; color: var(--gray-100); line-height: 1.55; font-weight: 300; }
 .stitch-homepage .feature-tags { display: flex; gap: 8px; margin-top: 12px; }
-.stitch-homepage .feature-tags span { font-size: 0.65rem; font-weight: 500; padding: 4px 12px; border-radius: 4px; background: rgba(0,0,0,0.04); color: var(--gray-200); }
+.stitch-homepage .feature-tags span { font-size: 0.75rem; font-weight: 500; padding: 4px 12px; border-radius: 4px; background: rgba(0,0,0,0.04); color: var(--gray-200); }
 
 /* ─── START PROJECT ─── */
 .stitch-homepage .project-section { background: var(--gray-900); }
 .stitch-homepage .project-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
-.stitch-homepage .project-info h3 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; }
-.stitch-homepage .project-info > p { font-size: 0.95rem; color: var(--gray-200); line-height: 1.65; margin-bottom: 40px; }
+.stitch-homepage .project-info h3 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; }
+.stitch-homepage .project-info > p { font-size: 1.05rem; color: var(--gray-200); line-height: 1.65; margin-bottom: 40px; }
 .stitch-homepage .project-promises { display: flex; flex-direction: column; gap: 16px; }
 .stitch-homepage .promise { display: flex; gap: 14px; align-items: flex-start; }
 .stitch-homepage .promise-check { width: 22px; height: 22px; border-radius: 50%; background: var(--neon-light); border: 1px solid var(--neon); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; color: var(--neon); font-size: 0.7rem; font-weight: 700; }
-.stitch-homepage .promise p { font-size: 0.88rem; color: var(--gray-100); line-height: 1.5; }
+.stitch-homepage .promise p { font-size: 0.98rem; color: var(--gray-100); line-height: 1.5; }
 .stitch-homepage .promise strong { color: var(--white); font-weight: 600; }
 
 /* Scope form */
 .stitch-homepage .scope-form { background: var(--black); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 36px; }
-.stitch-homepage .scope-form h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
-.stitch-homepage .scope-form > p { font-size: 0.82rem; color: var(--gray-400); margin-bottom: 28px; }
+.stitch-homepage .scope-form h4 { font-size: 1.2rem; font-weight: 600; margin-bottom: 6px; }
+.stitch-homepage .scope-form > p { font-size: 0.95rem; color: var(--gray-400); margin-bottom: 28px; }
 .stitch-homepage .form-group { margin-bottom: 20px; }
-.stitch-homepage .form-label { font-size: 0.75rem; font-weight: 600; color: var(--gray-200); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.stitch-homepage .form-label { font-size: 0.82rem; font-weight: 600; color: var(--gray-200); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; display: block; }
 .stitch-homepage .form-input, .stitch-homepage .form-select, .stitch-homepage .form-textarea {
   width: 100%;
   padding: 12px 16px;
   border: 1px solid rgba(0,0,0,0.1);
   border-radius: 8px;
   font-family: var(--font);
-  font-size: 0.88rem;
+  font-size: 0.98rem;
   color: var(--white);
   background: var(--gray-900);
   transition: border-color 0.3s;
@@ -231,12 +220,15 @@
 .stitch-homepage .form-textarea { min-height: 80px; resize: vertical; }
 .stitch-homepage .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .stitch-homepage .form-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.stitch-homepage .form-chip { padding: 8px 18px; border: 1px solid rgba(0,0,0,0.1); border-radius: 100px; font-family: var(--font); font-size: 0.82rem; font-weight: 500; cursor: pointer; background: var(--black); color: var(--gray-200); transition: all 0.2s; }
+.stitch-homepage .form-chip { padding: 8px 18px; border: 1px solid rgba(0,0,0,0.1); border-radius: 100px; font-family: var(--font); font-size: 0.95rem; font-weight: 500; cursor: pointer; background: var(--black); color: var(--gray-200); transition: all 0.2s; }
 .stitch-homepage .form-chip:hover { border-color: rgba(0,0,0,0.2); }
 .stitch-homepage .form-chip.active { border-color: var(--neon); background: var(--neon-light); color: var(--neon); font-weight: 600; }
-.stitch-homepage .form-note { font-size: 0.72rem; color: var(--gray-400); margin-top: 6px; font-style: italic; }
+.stitch-homepage .form-note { font-size: 0.82rem; color: var(--gray-400); margin-top: 6px; font-style: italic; }
 .stitch-homepage .form-submit { margin-top: 28px; width: 100%; }
 .stitch-homepage .form-submit .btn { width: 100%; justify-content: center; }
+.stitch-homepage .form-status { margin-top: 12px; font-size: 0.9rem; font-weight: 500; }
+.stitch-homepage .form-status.success { color: #34c759; }
+.stitch-homepage .form-status.error { color: #ff3b30; }
 
 /* ─── STYLE SCROLL ─── */
 .stitch-homepage .style-scroll-section { padding: 48px 0; overflow: hidden; }
@@ -245,24 +237,24 @@
 .stitch-homepage .style-scroll-item { width: 280px; height: 280px; flex-shrink: 0; position: relative; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.06); transition: transform 0.3s, border-color 0.3s; }
 .stitch-homepage .style-scroll-item:hover { transform: scale(1.04); border-color: var(--neon); }
 .stitch-homepage .style-scroll-item img { width: 100%; height: 100%; object-fit: cover; }
-.stitch-homepage .style-scroll-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px; font-size: 0.72rem; font-weight: 600; color: var(--white); letter-spacing: 0.08em; text-transform: uppercase; background: linear-gradient(to top, rgba(255,255,255,0.85) 0%, transparent 100%); text-align: center; }
+.stitch-homepage .style-scroll-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px; font-size: 0.82rem; font-weight: 600; color: var(--white); letter-spacing: 0.08em; text-transform: uppercase; background: linear-gradient(to top, rgba(255,255,255,0.85) 0%, transparent 100%); text-align: center; }
 @keyframes hp-styleScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
 /* ─── FOOTER ─── */
 .stitch-homepage .hp-footer { border-top: 1px solid rgba(0,0,0,0.06); }
 .stitch-homepage .footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 36px var(--gutter); display: flex; justify-content: space-between; align-items: center; }
-.stitch-homepage .footer-logo { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+.stitch-homepage .footer-logo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
 .stitch-homepage .footer-logo span { font-weight: 300; color: var(--gray-200); }
 .stitch-homepage .footer-links { display: flex; gap: 24px; }
-.stitch-homepage .footer-links a { font-size: 0.75rem; color: var(--gray-200); font-weight: 400; transition: color 0.3s; }
+.stitch-homepage .footer-links a { font-size: 0.85rem; color: var(--gray-200); font-weight: 400; transition: color 0.3s; }
 .stitch-homepage .footer-links a:hover { color: var(--white); }
-.stitch-homepage .footer-copy { font-size: 0.72rem; color: var(--gray-400); font-weight: 300; }
+.stitch-homepage .footer-copy { font-size: 0.82rem; color: var(--gray-400); font-weight: 300; }
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 1024px) {
   .stitch-homepage { --gutter: 32px; }
   .stitch-homepage .hero-grid { grid-template-columns: 1fr; gap: 48px; }
-  .stitch-homepage .hero-video { max-width: 480px; }
+  .stitch-homepage .hero-video { max-width: 100%; }
   .stitch-homepage .audience-grid { grid-template-columns: repeat(2, 1fr); }
   .stitch-homepage .process-grid { grid-template-columns: repeat(2, 1fr); }
   .stitch-homepage .process-step:nth-child(2) { border-right: none; }

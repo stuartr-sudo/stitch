@@ -55,6 +55,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Contact form (no auth - public homepage form)
+app.post('/api/contact/submit', async (req, res) => {
+  const handler = await loadApiRoute('contact/submit.js');
+  if (handler) handler(req, res);
+});
+
 // Dynamic API route loading
 const loadApiRoute = async (routePath) => {
   try {

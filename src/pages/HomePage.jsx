@@ -32,7 +32,7 @@ const comboData = {
     impact: { desc: 'High-energy anime action with explosive editing and speed lines', examples: [{ t: 'Fight Scene', s: 'Dynamic combat sequence' }, { t: 'Hype Trailer', s: 'Rapid-fire anime cuts' }, { t: 'Reveal', s: 'Dramatic impact frame' }] },
     character: { desc: 'Expressive anime characters with dynamic acting and emotion', examples: [{ t: 'Character Intro', s: 'Hero reveal sequence' }, { t: 'Dialogue Scene', s: 'Expressive anime acting' }, { t: 'Reaction', s: 'Over-the-top anime reaction' }] },
     geometric: { desc: 'Clean geometric anime compositions with precise cel animation', examples: [{ t: 'Mecha', s: 'Geometric robot transformation' }, { t: 'UI Overlay', s: 'Anime HUD elements' }, { t: 'Sci-fi', s: 'Futuristic anime interfaces' }] },
-    particle: { desc: 'Sparkling anime particle effects — cherry blossoms, energy, aura', examples: [{ t: 'Magic Scene', s: 'Glowing energy particles' }, { t: 'Sakura', s: 'Cherry blossom cascade' }, { t: 'Aura', s: 'Character power aura' }] },
+    particle: { desc: 'Sparkling anime particle effects - cherry blossoms, energy, aura', examples: [{ t: 'Magic Scene', s: 'Glowing energy particles' }, { t: 'Sakura', s: 'Cherry blossom cascade' }, { t: 'Aura', s: 'Character power aura' }] },
   },
   watercolour: {
     kinetic: { desc: 'Painted letterforms bleeding and flowing across textured paper', examples: [{ t: 'Title Card', s: 'Watercolour text reveals' }, { t: 'Quote', s: 'Painted words blooming' }, { t: 'Credits', s: 'Ink-wash typography' }] },
@@ -84,6 +84,9 @@ export default function HomePage() {
   const [activeStyle, setActiveStyle] = useState('cinematic');
   const [activeMotion, setActiveMotion] = useState('kinetic');
   const [activeProjectTypes, setActiveProjectTypes] = useState([]);
+  const [formData, setFormData] = useState({ timeline: '', budget: '', description: '', name: '', email: '', company: '' });
+  const [formStatus, setFormStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const combo = comboData[activeStyle]?.[activeMotion];
   const grads = styleGradients[activeStyle];
@@ -92,6 +95,33 @@ export default function HomePage() {
     setActiveProjectTypes(prev =>
       prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
     );
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.email) {
+      setFormStatus({ type: 'error', msg: 'Please enter your name and email.' });
+      return;
+    }
+    setSubmitting(true);
+    setFormStatus(null);
+    try {
+      const res = await fetch('/api/contact/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, projectTypes: activeProjectTypes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFormStatus({ type: 'success', msg: 'Application submitted. We will be in touch within 24 hours.' });
+        setFormData({ timeline: '', budget: '', description: '', name: '', email: '', company: '' });
+        setActiveProjectTypes([]);
+      } else {
+        setFormStatus({ type: 'error', msg: data.error || 'Something went wrong. Please try again.' });
+      }
+    } catch {
+      setFormStatus({ type: 'error', msg: 'Network error. Please try again.' });
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -116,16 +146,16 @@ export default function HomePage() {
         <div className="container">
           <div className="hero-grid">
             <div>
-              <div className="hero-tag">Video &amp; Animation Production — New Zealand</div>
+              <div className="hero-tag">Video &amp; Animation Production - New Zealand</div>
               <h1>The new era<br/><span className="thin">of video</span><br/>production.</h1>
-              <p className="hero-desc">We&apos;re a New Zealand-based production studio — not a platform. Studio-quality video and animation, delivered on time at a fixed price. Unlimited creative styles, seamless integration with your existing tools, and a production process built for the modern world.</p>
+              <p className="hero-desc">We&apos;re a New Zealand-based production studio - not a platform. Studio-quality video and animation, delivered on time at a fixed price. Unlimited creative styles, seamless integration with your existing tools, and a production process built for the modern world.</p>
               <div className="hero-actions">
                 <a href="#project" className="btn btn-white">Apply to Work With Us</a>
                 <a href="#showcase" className="btn btn-outline">View Our Work</a>
               </div>
             </div>
             <div className="hero-video">
-              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel-wide.webp" alt="Stitch Studios showreel — multiple visual styles" />
+              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel-wide.webp" alt="Stitch Studios showreel - multiple visual styles" />
             </div>
           </div>
         </div>
@@ -177,14 +207,14 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">01 — Who We Serve</div>
+              <div className="section-num">01 - Who We Serve</div>
               <h2 className="section-title">Built for teams<br/><span className="thin">who move fast.</span></h2>
             </div>
             <p className="section-desc">Whether you need one hero video or a month of content, we deliver production-grade output on timelines that actually work.</p>
           </div>
           <div className="audience-grid">
             {[
-              { icon: <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6 8 6v11M9 21v-6h6v6"/></svg>, title: 'Government & Public Sector', desc: 'Road safety campaigns, public awareness videos, and civic communication — delivered on time, on brief, on budget.' },
+              { icon: <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6 8 6v11M9 21v-6h6v6"/></svg>, title: 'Government & Public Sector', desc: 'Road safety campaigns, public awareness videos, and civic communication - delivered on time, on brief, on budget.' },
               { icon: <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9m-9 9a9 9 0 0 1 9-9"/></svg>, title: 'Marketers & Brand Teams', desc: 'Product launches, brand films, social campaigns, and ad creative. Weeks of production compressed into days.' },
               { icon: <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0v7m-9-12v7l9 5 9-5v-7"/></svg>, title: 'Educators & Training', desc: 'Explainer videos, course content, and educational series that hold attention. From primary school to corporate L&D.' },
               { icon: <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/></svg>, title: 'Authors & Publishers', desc: 'Book trailers, animated adaptations, and promotional video that brings stories to life in ways print never could.' },
@@ -210,21 +240,21 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">02 — How We Work</div>
+              <div className="section-num">02 - How We Work</div>
               <h2 className="section-title">Fixed price. On time.<br/><span className="thin">No surprises.</span></h2>
             </div>
             <p className="section-desc">We&apos;re a production service, not a subscription. You tell us what you need, we quote it, and we deliver it. Simple.</p>
           </div>
           <div className="process-grid">
             <div className="process-step"><div className="process-num">01</div><h3>Scope &amp; Quote</h3><p>Tell us about your project. We define the deliverables, set clear KPIs, and give you a fixed price. No hourly billing, no retainers, no hidden fees.</p></div>
-            <div className="process-step"><div className="process-num">02</div><h3>Storyboard &amp; Plan</h3><p>We build a full storyboard — scene by scene, shot by shot. You approve the creative direction before a single frame is rendered.</p></div>
-            <div className="process-step"><div className="process-num">03</div><h3>Review &amp; Iterate</h3><p>Use our interactive client portal to review work in real time, leave feedback frame-by-frame, and adjust scope — all in one place.</p></div>
+            <div className="process-step"><div className="process-num">02</div><h3>Storyboard &amp; Plan</h3><p>We build a full storyboard - scene by scene, shot by shot. You approve the creative direction before a single frame is rendered.</p></div>
+            <div className="process-step"><div className="process-num">03</div><h3>Review &amp; Iterate</h3><p>Use our interactive client portal to review work in real time, leave feedback frame-by-frame, and adjust scope - all in one place.</p></div>
             <div className="process-step"><div className="process-num">04</div><h3>Deliver &amp; Integrate</h3><p>Final assets delivered in every format you need, ready to publish. We integrate directly with your CMS and ad platforms.</p></div>
           </div>
           <div className="diff-grid">
             <div className="diff-card"><h3><span className="dot"></span> Fixed Pricing</h3><p>We quote a price and stick to it. No monthly retainers, no scope creep billing, no surprises on the invoice. You know what you&apos;re paying before we start.</p></div>
             <div className="diff-card"><h3><span className="dot"></span> Guaranteed Timelines</h3><p>We commit to a delivery date and we hit it. Our production process is built for speed without compromising quality. Days, not months.</p></div>
-            <div className="diff-card"><h3><span className="dot"></span> Platform Integration</h3><p>We deliver assets ready for your existing stack. Direct integration with your CMS, social schedulers, and advertising platforms — no manual upload chain.</p></div>
+            <div className="diff-card"><h3><span className="dot"></span> Platform Integration</h3><p>We deliver assets ready for your existing stack. Direct integration with your CMS, social schedulers, and advertising platforms - no manual upload chain.</p></div>
           </div>
           <div className="integrations-row">
             <div className="integrations-label">We integrate with all major CMS and ad platforms</div>
@@ -246,17 +276,17 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">03 — Client Portal</div>
+              <div className="section-num">03 - Client Portal</div>
               <h2 className="section-title">Your project.<br/><span className="thin">Your control.</span></h2>
             </div>
-            <p className="section-desc">Every client gets access to our real-time project portal. Review, feedback, and approvals — all in one place.</p>
+            <p className="section-desc">Every client gets access to our real-time project portal. Review, feedback, and approvals - all in one place.</p>
           </div>
           <div className="portal-layout">
             <div className="portal-features">
-              <div className="portal-feature"><h3>Real-Time Review</h3><p>Watch your project take shape in real time. Preview renders, review scenes, and see progress as it happens — not just when we send an update email.</p></div>
-              <div className="portal-feature"><h3>Frame-by-Frame Feedback</h3><p>Leave comments directly on specific frames, scenes, or transitions. No more back-and-forth emails describing timestamps — just click and comment.</p></div>
+              <div className="portal-feature"><h3>Real-Time Review</h3><p>Watch your project take shape in real time. Preview renders, review scenes, and see progress as it happens - not just when we send an update email.</p></div>
+              <div className="portal-feature"><h3>Frame-by-Frame Feedback</h3><p>Leave comments directly on specific frames, scenes, or transitions. No more back-and-forth emails describing timestamps - just click and comment.</p></div>
               <div className="portal-feature"><h3>Scope Management</h3><p>Need to add a scene? Change direction? Update the scope directly in the portal with full pricing transparency. Every change is quoted before it&apos;s committed.</p></div>
-              <div className="portal-feature"><h3>Delivery Tracking</h3><p>Track milestones, review KPIs, manage approvals, and download final assets — all from one dashboard. No chasing, no wondering where things stand.</p></div>
+              <div className="portal-feature"><h3>Delivery Tracking</h3><p>Track milestones, review KPIs, manage approvals, and download final assets - all from one dashboard. No chasing, no wondering where things stand.</p></div>
             </div>
             <div className="portal-visual">
               <div className="portal-screen"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/portal-dashboard.webp" alt="Client Portal Dashboard" /></div>
@@ -266,7 +296,7 @@ export default function HomePage() {
                 <div className="portal-dot amber"></div>
                 <div className="portal-dot gray"></div>
                 <div className="portal-dot gray"></div>
-                <span className="portal-status">Scene 3 of 5 — In Review</span>
+                <span className="portal-status">Scene 3 of 5 - In Review</span>
               </div>
             </div>
           </div>
@@ -280,15 +310,15 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">04 — Style × Motion</div>
+              <div className="section-num">04 - Style × Motion</div>
               <h2 className="section-title">Infinite combinations.<br/><span className="thin">One studio.</span></h2>
             </div>
             <p className="section-desc">Pick a visual style. Pick a motion type. The combination creates something entirely unique to your project.</p>
           </div>
 
-          <p className="combo-section-intro">Every video we produce starts with two creative axes: a <strong>visual style</strong> and a <strong>motion type</strong>. Combine them and you get an almost unlimited range of creative output — from claymation with kinetic typography to 1970s retro with liquid transitions. These are just some of the options.</p>
+          <p className="combo-section-intro">Every video we produce starts with two creative axes: a <strong>visual style</strong> and a <strong>motion type</strong>. Combine them and you get an almost unlimited range of creative output - from claymation with kinetic typography to 1970s retro with liquid transitions. These are just some of the options.</p>
 
-          <div className="axis-label">Visual Style — select one</div>
+          <div className="axis-label">Visual Style - select one</div>
           <div className="selector-row">
             {Object.keys(styleNames).map(key => (
               <button key={key} className={`selector-pill ${activeStyle === key ? 'active' : ''}`} onClick={() => setActiveStyle(key)}>{styleNames[key]}</button>
@@ -302,7 +332,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="axis-label">Motion Type — select one</div>
+          <div className="axis-label">Motion Type - select one</div>
           <div className="selector-row">
             {Object.keys(motionNames).map(key => (
               <button key={key} className={`selector-pill ${activeMotion === key ? 'active' : ''}`} onClick={() => setActiveMotion(key)}>{motionNames[key]}</button>
@@ -340,7 +370,7 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">05 — Showcase</div>
+              <div className="section-num">05 - Showcase</div>
               <h2 className="section-title">See what&apos;s<br/><span className="thin">possible.</span></h2>
             </div>
             <p className="section-desc">Every project is a unique combination of style and motion. Click to explore.</p>
@@ -373,17 +403,17 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">06 — Shorts &amp; Social</div>
+              <div className="section-num">06 - Shorts &amp; Social</div>
               <h2 className="section-title">Built for the feed.<br/><span className="thin">Made to stop scrolls.</span></h2>
             </div>
             <p className="section-desc">Vertical-first video production optimised for TikTok, Reels, YouTube Shorts, and LinkedIn.</p>
           </div>
           <div className="shorts-layout">
             <div className="shorts-phones">
-              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/phones-shorts.webp" alt="Shorts on mobile devices — TikTok, Reels, YouTube Shorts" className="shorts-phones-img" />
+              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/phones-shorts.webp" alt="Shorts on mobile devices - TikTok, Reels, YouTube Shorts" className="shorts-phones-img" />
             </div>
             <div className="shorts-content">
-              <div className="short-feature"><h3>Narrative Shorts</h3><p>Turn a topic or script into a complete short-form video with voiceover, visuals, captions, and music — delivered in days, not weeks.</p><div className="feature-tags"><span>Auto-captions</span><span>Voiceover</span><span>Music</span></div></div>
+              <div className="short-feature"><h3>Narrative Shorts</h3><p>Turn a topic or script into a complete short-form video with voiceover, visuals, captions, and music - delivered in days, not weeks.</p><div className="feature-tags"><span>Auto-captions</span><span>Voiceover</span><span>Music</span></div></div>
               <div className="short-feature"><h3>Batch Production</h3><p>Commission a week&apos;s content in one brief. Consistent branding, varied hooks, and platform-optimised formatting across all channels.</p><div className="feature-tags"><span>Multi-platform</span><span>Brand-safe</span></div></div>
               <div className="short-feature"><h3>Hook-First Editing</h3><p>Every clip is structured around the first 3 seconds. Dynamic openings, pattern interrupts, and scroll-stopping visuals.</p><div className="feature-tags"><span>Retention-tuned</span><span>A/B hooks</span></div></div>
             </div>
@@ -398,7 +428,7 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">07 — Apply to Work With Us</div>
+              <div className="section-num">07 - Apply to Work With Us</div>
               <h2 className="section-title">We take on a limited<br/><span className="thin">number of projects.</span></h2>
             </div>
             <p className="section-desc">Tell us about your project. If it&apos;s a good fit, we&apos;ll come back with a fixed quote and timeline within 24 hours.</p>
@@ -406,12 +436,12 @@ export default function HomePage() {
           <div className="project-layout">
             <div className="project-info">
               <h3>How pricing works</h3>
-              <p>Every project gets a fixed quote based on scope — not time spent. You&apos;ll know the full cost upfront, with a clear payment schedule tied to milestones.</p>
+              <p>Every project gets a fixed quote based on scope - not time spent. You&apos;ll know the full cost upfront, with a clear payment schedule tied to milestones.</p>
               <div className="project-promises">
                 {[
                   { bold: 'Fixed price, no retainers.', text: 'We quote the project, you approve it, we deliver it. No monthly billing, no hourly rates, no surprises.' },
                   { bold: 'Milestone-based payments.', text: "Pay a deposit to kick off, then release payments as we hit agreed milestones. You're never paying for work you haven't seen." },
-                  { bold: 'Clear KPIs and deliverables.', text: 'Every project has defined success metrics, deliverable formats, and a guaranteed timeline — all agreed before we start.' },
+                  { bold: 'Clear KPIs and deliverables.', text: 'Every project has defined success metrics, deliverable formats, and a guaranteed timeline - all agreed before we start.' },
                   { bold: 'Scope changes? No problem.', text: "Need to add scenes, change direction, or expand the project? We'll re-quote transparently through the client portal. You always approve before we proceed." },
                   { bold: 'Delivery to your platforms.', text: 'Final assets delivered in every format you need, integrated directly with your CMS, ad platforms, or social channels.' },
                 ].map((p, i) => (
@@ -424,7 +454,7 @@ export default function HomePage() {
             </div>
             <div className="scope-form">
               <h4>Apply for a project</h4>
-              <p>Tell us about your vision — we&apos;ll let you know if it&apos;s a fit.</p>
+              <p>Tell us about your vision - we&apos;ll let you know if it&apos;s a fit.</p>
               <div className="form-group">
                 <label className="form-label">What type of project?</label>
                 <div className="form-chips">
@@ -436,24 +466,25 @@ export default function HomePage() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Timeline</label>
-                  <select className="form-select"><option value="">Select timeline</option><option>Within 1 week</option><option>1 – 2 weeks</option><option>2 – 4 weeks</option><option>1 – 2 months</option><option>Flexible</option></select>
+                  <select className="form-select" value={formData.timeline} onChange={e => setFormData(d => ({ ...d, timeline: e.target.value }))}><option value="">Select timeline</option><option>Within 1 week</option><option>1 - 2 weeks</option><option>2 - 4 weeks</option><option>1 - 2 months</option><option>Flexible</option></select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Budget range</label>
-                  <select className="form-select"><option value="">Select budget</option><option>Under $2,500</option><option>$2,500 – $5,000</option><option>$5,000 – $15,000</option><option>$15,000 – $50,000</option><option>$50,000+</option><option>Not sure yet</option></select>
+                  <select className="form-select" value={formData.budget} onChange={e => setFormData(d => ({ ...d, budget: e.target.value }))}><option value="">Select budget</option><option>Under $2,500</option><option>$2,500 - $5,000</option><option>$5,000 - $15,000</option><option>$15,000 - $50,000</option><option>$50,000+</option><option>Not sure yet</option></select>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Tell us about your project</label>
-                <textarea className="form-textarea" placeholder="What's the concept? Who's the audience? Any references or inspiration?"></textarea>
+                <textarea className="form-textarea" placeholder="What's the concept? Who's the audience? Any references or inspiration?" value={formData.description} onChange={e => setFormData(d => ({ ...d, description: e.target.value }))}></textarea>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Your name</label><input className="form-input" type="text" placeholder="Full name"/></div>
-                <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="you@company.com"/></div>
+                <div className="form-group"><label className="form-label">Your name</label><input className="form-input" type="text" placeholder="Full name" value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))}/></div>
+                <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="you@company.com" value={formData.email} onChange={e => setFormData(d => ({ ...d, email: e.target.value }))}/></div>
               </div>
-              <div className="form-group"><label className="form-label">Company / Organisation</label><input className="form-input" type="text" placeholder="Company name (optional)"/></div>
+              <div className="form-group"><label className="form-label">Company / Organisation</label><input className="form-input" type="text" placeholder="Company name (optional)" value={formData.company} onChange={e => setFormData(d => ({ ...d, company: e.target.value }))}/></div>
               <p className="form-note">We review every application and respond within 24 hours. If your project is a good fit, you&apos;ll receive a detailed scope, fixed quote, and timeline.</p>
-              <div className="form-submit"><button className="btn btn-white">Submit Application</button></div>
+              <div className="form-submit"><button className="btn btn-white" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Application'}</button></div>
+              {formStatus && <p className={`form-status ${formStatus.type}`}>{formStatus.msg}</p>}
             </div>
           </div>
         </div>
