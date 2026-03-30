@@ -5,7 +5,6 @@ import {
   Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import SlidePreview from './SlidePreview';
@@ -28,7 +27,6 @@ export default function CarouselEditor({ carouselId }) {
   const [generating, setGenerating] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [topic, setTopic] = useState('');
   const [bulletPoints, setBulletPoints] = useState('');
   const [pollTimer, setPollTimer] = useState(null);
 
@@ -83,11 +81,8 @@ export default function CarouselEditor({ carouselId }) {
     try {
       const body = {};
       if (!carousel.source_url) {
-        if (!topic.trim()) {
-          toast.error('Enter a topic or set a source URL');
-          return;
-        }
-        body.topic = topic.trim();
+        // Use the carousel title as the topic (set during creation)
+        body.topic = carousel.title || 'Untitled';
         if (bulletPoints.trim()) body.bullet_points = bulletPoints.trim();
       }
 
@@ -278,36 +273,30 @@ export default function CarouselEditor({ carouselId }) {
         </div>
       </div>
 
-      {/* No slides — show topic input if no source URL */}
-      {!hasSlides && !carousel.source_url && (
-        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">What is your carousel about?</h3>
-          <Input
-            placeholder="e.g. 5 Tips for Better Sleep"
-            value={topic}
-            onChange={e => setTopic(e.target.value)}
-            className="mb-3"
-          />
-          <textarea
-            placeholder="Key points (optional, one per line)"
-            value={bulletPoints}
-            onChange={e => setBulletPoints(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[100px] mb-3"
-          />
+      {/* No slides — ready to generate */}
+      {!hasSlides && (
+        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border text-center">
+          {carousel.source_url ? (
+            <p className="text-sm text-gray-500 mb-1">Source: {carousel.source_url}</p>
+          ) : (
+            <p className="text-sm text-gray-500 mb-1">Topic: {carousel.title}</p>
+          )}
+          <p className="text-xs text-gray-400 mb-4">
+            {carousel.source_url
+              ? 'We\'ll scrape the article and generate carousel slides from its content.'
+              : 'We\'ll use AI to research and generate carousel slides on this topic.'}
+          </p>
+          {!carousel.source_url && (
+            <textarea
+              placeholder="Optional: add key points you want covered, one per line"
+              value={bulletPoints}
+              onChange={e => setBulletPoints(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[80px] mb-4 text-left"
+            />
+          )}
           <Button onClick={handleGenerateContent} disabled={generating} className="w-full">
             {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
-            Generate Slides
-          </Button>
-        </div>
-      )}
-
-      {/* No slides — but has source URL */}
-      {!hasSlides && carousel.source_url && (
-        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border text-center">
-          <p className="text-sm text-gray-500 mb-2">Source: {carousel.source_url}</p>
-          <Button onClick={handleGenerateContent} disabled={generating}>
-            {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
-            Generate Slides from Article
+            {carousel.source_url ? 'Generate Slides from Article' : 'Generate Slides'}
           </Button>
         </div>
       )}
