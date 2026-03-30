@@ -161,12 +161,11 @@ export default function CarouselList() {
         </div>
       )}
 
-      {showCreate && (
-        <CarouselCreateModal
-          onClose={() => setShowCreate(false)}
-          onCreated={handleCreated}
-        />
-      )}
+      <CarouselCreateModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={handleCreated}
+      />
     </div>
   );
 }

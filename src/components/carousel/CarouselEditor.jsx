@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
-  Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight,
+  Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
@@ -241,7 +241,10 @@ export default function CarouselEditor({ carouselId }) {
           <div>
             <h1 className="font-semibold text-gray-900">{carousel.title}</h1>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-gray-400">{carousel.platform} - {carousel.aspect_ratio}</span>
+              <span className="text-xs text-gray-400">
+                {carousel.carousel_type === 'video' && <Film className="w-3 h-3 inline mr-1" />}
+                {carousel.platform} - {carousel.aspect_ratio}{carousel.carousel_type === 'video' ? ' - Video' : ''}
+              </span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${STATUS_COLORS[carousel.status]}`}>
                 {carousel.status}
               </span>
@@ -284,7 +287,7 @@ export default function CarouselEditor({ carouselId }) {
           <p className="text-xs text-gray-400 mb-4">
             {carousel.source_url
               ? 'We\'ll scrape the article and generate carousel slides from its content.'
-              : 'We\'ll use AI to research and generate carousel slides on this topic.'}
+              : (<><Search className="w-3 h-3 inline mr-1" />{"We'll search the web for real sources, then generate carousel slides from the research."}</>)}
           </p>
           {!carousel.source_url && (
             <textarea

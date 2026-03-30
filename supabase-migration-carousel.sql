@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS carousels (
                        CHECK (aspect_ratio IN ('1080x1080', '1080x1350', '1080x1920')),
   color_template       integer DEFAULT 0,
   style_preset         text,
+  carousel_type        text DEFAULT 'static'
+                       CHECK (carousel_type IN ('static', 'video')),
   caption_text         text,
   status               text DEFAULT 'draft'
                        CHECK (status IN ('draft', 'generating', 'ready', 'published', 'failed')),

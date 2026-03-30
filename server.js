@@ -548,6 +548,7 @@ app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./
 // ─── Carousel routes ───────────────────────────────────────────────────────
 app.post('/api/carousel', authenticateToken, (await import('./api/carousel/create.js')).default);
 app.get('/api/carousel', authenticateToken, (await import('./api/carousel/list.js')).default);
+app.post('/api/carousel/research', authenticateToken, (await import('./api/carousel/research.js')).default);
 app.get('/api/carousel/:id', authenticateToken, (await import('./api/carousel/get.js')).default);
 app.put('/api/carousel/:id', authenticateToken, (await import('./api/carousel/update.js')).default);
 app.delete('/api/carousel/:id', authenticateToken, (await import('./api/carousel/delete.js')).default);

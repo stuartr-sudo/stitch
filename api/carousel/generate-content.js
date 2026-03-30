@@ -136,9 +136,67 @@ TEXT DENSITY: ${platformInfo.textDensity}
 
 ${ANTI_SLOP}`;
 
+  // If topic mode (no URL content), do web research first
+  if (!content && topic) {
+    try {
+      const searchApiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
+      if (searchApiKey) {
+        console.log(`[carousel/generate-content] Researching topic: "${topic}"`);
+        const [newsRes, organicRes] = await Promise.allSettled([
+          fetch(`https://www.searchapi.io/api/v1/search?${new URLSearchParams({
+            engine: 'google_news', q: topic, api_key: searchApiKey, num: 5
+          })}`).then(r => r.json()),
+          fetch(`https://www.searchapi.io/api/v1/search?${new URLSearchParams({
+            engine: 'google', q: topic, api_key: searchApiKey, num: 5
+          })}`).then(r => r.json()),
+        ]);
+
+        const researchArticles = [];
+        if (newsRes.status === 'fulfilled' && newsRes.value.news_results) {
+          for (const item of newsRes.value.news_results.slice(0, 3)) {
+            researchArticles.push({ title: item.title, snippet: item.snippet || item.description || '', url: item.link || item.url });
+          }
+        }
+        if (organicRes.status === 'fulfilled' && organicRes.value.organic_results) {
+          for (const item of organicRes.value.organic_results.slice(0, 3)) {
+            if (!researchArticles.some(a => a.url === item.link)) {
+              researchArticles.push({ title: item.title, snippet: item.snippet || '', url: item.link });
+            }
+          }
+        }
+
+        // Try to scrape top 3 for deeper content
+        if (researchArticles.length > 0) {
+          const scrapeResults = await Promise.allSettled(
+            researchArticles.slice(0, 3).map(async (art) => {
+              try {
+                const exaKey = await resolveExaKey(req.user.id);
+                const scraped = await fetchUrlContent(art.url, exaKey);
+                return scraped ? scraped.slice(0, 2000) : '';
+              } catch { return ''; }
+            })
+          );
+
+          const researchBrief = researchArticles.map((art, i) => {
+            const scraped = scrapeResults[i]?.status === 'fulfilled' ? scrapeResults[i].value : '';
+            return `--- ${art.title} ---\n${art.snippet}\n${scraped}`;
+          }).join('\n\n');
+
+          content = `RESEARCH ON "${topic}":\n\n${researchBrief}`;
+          console.log(`[carousel/generate-content] Research gathered ${researchArticles.length} sources, ${content.length} chars`);
+        }
+
+        logCost({ username: req.user.email, category: 'searchapi', operation: 'carousel_research' }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('[carousel/generate-content] Research failed, falling back to topic-only:', err.message);
+    }
+  }
+
   let userMessage;
   if (content) {
-    userMessage = `Create a carousel from this article:\n\n${content.slice(0, 6000)}`;
+    userMessage = `Create a carousel from this content:\n\n${content.slice(0, 8000)}`;
+    if (topic) userMessage += `\n\nTopic focus: ${topic}`;
   } else if (topic) {
     userMessage = `Create a carousel about: ${topic}${bullet_points ? `\n\nKey points:\n${bullet_points}` : ''}`;
   } else {
