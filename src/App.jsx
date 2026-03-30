@@ -18,6 +18,7 @@ import ShortsDraftPage from './pages/ShortsDraftPage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
+import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
 import { Loader2 } from 'lucide-react';
 
@@ -163,6 +164,23 @@ function App() {
             element={
               <ProtectedRoute>
                 <LinkedInPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/carousels/:id"
+            element={
+              <ProtectedRoute>
+                <CarouselPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/carousels"
+            element={
+              <ProtectedRoute>
+                <CarouselPage />
               </ProtectedRoute>
             }
           />

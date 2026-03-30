@@ -5,65 +5,41 @@ const comboData = {
   cinematic: {
     kinetic: { desc: 'Photorealistic scenes with bold typographic motion overlays', examples: [{ t: 'Brand Opener', s: 'Title sequence with cinematic depth' }, { t: 'Product Launch', s: 'Dynamic text reveals over live footage' }, { t: 'Social Advert', s: 'Short-form with scroll-stopping text' }] },
     liquid: { desc: 'Seamless organic transitions through photorealistic environments', examples: [{ t: 'Brand Film', s: 'Flowing scene transitions' }, { t: 'Walkthrough', s: 'Liquid morphing between spaces' }, { t: 'Mood Piece', s: 'Atmospheric slow-flow editorial' }] },
-    impact: { desc: 'Hard-hitting cuts between dramatic cinematic moments', examples: [{ t: 'Trailer', s: 'Fast-paced action trailer' }, { t: 'Hype Reel', s: 'Punchy brand highlight reel' }, { t: 'Event Promo', s: 'High-energy countdown reveal' }] },
-    character: { desc: 'Lifelike character performances in cinematic settings', examples: [{ t: 'Narrative Short', s: 'Character-driven mini film' }, { t: 'Testimonial', s: 'Expressive character narration' }, { t: 'Mascot Intro', s: 'Character reveal sequence' }] },
-    geometric: { desc: 'Precise mathematical transitions through real-world footage', examples: [{ t: 'Tech Reveal', s: 'Clean geometric product intro' }, { t: 'Architecture', s: 'Structured spatial transitions' }, { t: 'Corporate', s: 'Precision brand storytelling' }] },
     particle: { desc: 'Atmospheric particle effects layered over cinematic footage', examples: [{ t: 'Fantasy', s: 'Ethereal dust and light' }, { t: 'Luxury', s: 'Sparkling product ambience' }, { t: 'Night Scene', s: 'Bokeh and floating particles' }] },
   },
   claymation: {
     kinetic: { desc: 'Stop-motion titles with sculpted, tactile letterforms', examples: [{ t: 'Title Card', s: 'Clay letters assembling themselves' }, { t: 'Infographic', s: 'Sculpted data visualisation' }, { t: 'Logo Sting', s: 'Brand mark built from clay' }] },
     liquid: { desc: 'Clay morphing smoothly between sculpted forms', examples: [{ t: 'Transformation', s: 'One character melts into another' }, { t: 'Story Arc', s: 'Flowing clay narrative' }, { t: 'Abstract', s: 'Organic sculpted transitions' }] },
-    impact: { desc: 'Punchy stop-motion with snappy clay deformations', examples: [{ t: 'Comedy Short', s: 'Slapstick clay animation' }, { t: 'Ad Spot', s: 'Attention-grabbing clay bumper' }, { t: 'Reaction', s: 'Expressive clay reactions' }] },
-    character: { desc: 'Expressive clay characters with handmade charm', examples: [{ t: 'Mascot Series', s: 'Recurring clay character' }, { t: 'Kids Content', s: 'Friendly sculpted characters' }, { t: 'Safety Video', s: 'Educational clay cast' }] },
-    geometric: { desc: 'Precise clay shapes assembling into structured compositions', examples: [{ t: 'Build Sequence', s: 'Geometric clay construction' }, { t: 'Explainer', s: 'Clay shapes forming diagrams' }, { t: 'Architecture', s: 'Miniature clay buildings' }] },
     particle: { desc: 'Clay crumbles and particles floating through tactile scenes', examples: [{ t: 'Destruction', s: 'Clay world crumbling apart' }, { t: 'Creation', s: 'Particles coalescing into form' }, { t: 'Weather', s: 'Clay rain and snow effects' }] },
-  },
-  retro: {
-    kinetic: { desc: 'Vintage typography with groovy 70s motion and film grain', examples: [{ t: 'Title Sequence', s: 'Retro rolling credits' }, { t: 'Lyric Video', s: '70s psychedelic text' }, { t: 'Event Promo', s: 'Funky vintage invite' }] },
-    liquid: { desc: 'Psychedelic lava-lamp transitions with warm analog tones', examples: [{ t: 'Music Visual', s: 'Flowing retro dreamscape' }, { t: 'Brand Film', s: 'Vintage warmth transitions' }, { t: 'Intro', s: 'Lava-lamp style opener' }] },
-    impact: { desc: 'Snappy 70s-style cuts with film scratches and pop edits', examples: [{ t: 'Montage', s: 'Fast-cut vintage highlight reel' }, { t: 'Ad Creative', s: 'Retro TV commercial style' }, { t: 'Recap', s: 'Vintage newsreel pacing' }] },
-    character: { desc: 'Characters styled in 70s fashion with period-accurate motion', examples: [{ t: 'Period Drama', s: '70s character vignettes' }, { t: 'Comedy', s: 'Disco-era character sketch' }, { t: 'Documentary', s: 'Retro talking heads' }] },
-    geometric: { desc: 'Op-art inspired geometric patterns with vintage colour palettes', examples: [{ t: 'Wallpaper Loop', s: 'Retro geometric patterns' }, { t: 'Transition Pack', s: 'Vintage geometric wipes' }, { t: 'Background', s: '70s pattern animations' }] },
-    particle: { desc: 'Film grain, dust motes, and analog noise floating through scenes', examples: [{ t: 'Atmosphere', s: 'Dusty vintage ambience' }, { t: 'Nostalgia', s: 'Film burn and grain overlay' }, { t: 'Memory', s: 'Fading retro particles' }] },
   },
   anime: {
     kinetic: { desc: 'Bold anime title cards with dramatic Japanese typography motion', examples: [{ t: 'Opening Credits', s: 'Anime-style title sequence' }, { t: 'Attack Name', s: 'Dramatic ability reveal' }, { t: 'Episode Title', s: 'Stylised chapter card' }] },
     liquid: { desc: 'Fluid anime transitions with cel-shaded morphing effects', examples: [{ t: 'Transformation', s: 'Character power-up sequence' }, { t: 'Dream Sequence', s: 'Flowing anime transition' }, { t: 'Water Scene', s: 'Fluid cel-shaded water' }] },
-    impact: { desc: 'High-energy anime action with explosive editing and speed lines', examples: [{ t: 'Fight Scene', s: 'Dynamic combat sequence' }, { t: 'Hype Trailer', s: 'Rapid-fire anime cuts' }, { t: 'Reveal', s: 'Dramatic impact frame' }] },
-    character: { desc: 'Expressive anime characters with dynamic acting and emotion', examples: [{ t: 'Character Intro', s: 'Hero reveal sequence' }, { t: 'Dialogue Scene', s: 'Expressive anime acting' }, { t: 'Reaction', s: 'Over-the-top anime reaction' }] },
-    geometric: { desc: 'Clean geometric anime compositions with precise cel animation', examples: [{ t: 'Mecha', s: 'Geometric robot transformation' }, { t: 'UI Overlay', s: 'Anime HUD elements' }, { t: 'Sci-fi', s: 'Futuristic anime interfaces' }] },
     particle: { desc: 'Sparkling anime particle effects - cherry blossoms, energy, aura', examples: [{ t: 'Magic Scene', s: 'Glowing energy particles' }, { t: 'Sakura', s: 'Cherry blossom cascade' }, { t: 'Aura', s: 'Character power aura' }] },
-  },
-  watercolour: {
-    kinetic: { desc: 'Painted letterforms bleeding and flowing across textured paper', examples: [{ t: 'Title Card', s: 'Watercolour text reveals' }, { t: 'Quote', s: 'Painted words blooming' }, { t: 'Credits', s: 'Ink-wash typography' }] },
-    liquid: { desc: 'Pigments flowing and blending into new scenes like wet paint', examples: [{ t: 'Landscape', s: 'Flowing painted vistas' }, { t: 'Transition', s: 'Watercolour scene dissolves' }, { t: 'Abstract', s: 'Pure pigment flow' }] },
-    impact: { desc: 'Sharp ink splashes punctuating soft watercolour compositions', examples: [{ t: 'Drama', s: 'Ink splash dramatic reveal' }, { t: 'Action', s: 'Watercolour impact frames' }, { t: 'Highlight', s: 'Bold paint splatter cuts' }] },
-    character: { desc: 'Softly painted characters with organic, hand-crafted movement', examples: [{ t: 'Storybook', s: 'Illustrated character tale' }, { t: "Children's", s: 'Gentle painted characters' }, { t: 'Portrait', s: 'Animated watercolour portrait' }] },
-    geometric: { desc: 'Precise geometric compositions rendered in soft painted textures', examples: [{ t: 'Infographic', s: 'Painted data shapes' }, { t: 'Architecture', s: 'Geometric watercolour buildings' }, { t: 'Pattern', s: 'Tessellated paint patterns' }] },
-    particle: { desc: 'Paint droplets, pigment dust, and colour particles drifting through scenes', examples: [{ t: 'Atmosphere', s: 'Floating paint particles' }, { t: 'Rain', s: 'Watercolour rain drops' }, { t: 'Magic', s: 'Pigment dust sparkle' }] },
-  },
-  noir: {
-    kinetic: { desc: 'High-contrast black and white typography with dramatic shadow play', examples: [{ t: 'Crime Opener', s: 'Noir title sequence' }, { t: 'Mystery', s: 'Shadowed text reveals' }, { t: 'Credits', s: 'Venetian blind typography' }] },
-    liquid: { desc: 'Shadowy transitions flowing like smoke through monochrome scenes', examples: [{ t: 'Thriller', s: 'Smoky noir transitions' }, { t: 'Mystery', s: 'Shadow dissolves' }, { t: 'Mood', s: 'Ink-dark fluid transitions' }] },
-    impact: { desc: 'Hard-boiled jump cuts with stark contrast and dramatic tension', examples: [{ t: 'Detective', s: 'Sharp noir editing' }, { t: 'Suspense', s: 'Staccato B&W cuts' }, { t: 'Reveal', s: 'Dramatic light-dark reveal' }] },
-    character: { desc: 'Moody character performances in deep shadow with minimal light', examples: [{ t: 'Monologue', s: 'Single-light character piece' }, { t: 'Interrogation', s: 'Dramatic noir dialogue' }, { t: 'Silhouette', s: 'Shadow character acting' }] },
-    geometric: { desc: 'Angular compositions with precise shadow geometry and stark lines', examples: [{ t: 'Architecture', s: 'Geometric shadow play' }, { t: 'Abstract', s: 'Angular noir compositions' }, { t: 'Product', s: 'Geometric light-dark reveal' }] },
-    particle: { desc: 'Dust motes, cigarette smoke, and rain particles in noir atmosphere', examples: [{ t: 'Atmosphere', s: 'Noir rain and smoke' }, { t: 'Scene Set', s: 'Dusty detective office' }, { t: 'Night', s: 'Rain-slicked street particles' }] },
   },
 };
 
 const SB = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage';
-const styleImages = {
-  cinematic: [`${SB}/showcase-cinematic.webp`, `${SB}/scroll-01-cinematic-product.webp`, `${SB}/scroll-18-cinematic-coastal.webp`],
-  claymation: [`${SB}/showcase-claymation.webp`, `${SB}/scroll-02-claymation-foodtruck.webp`, `${SB}/scroll-19-claymation-underwater.webp`],
-  retro: [`${SB}/showcase-retro.webp`, `${SB}/scroll-06-retro-disco.webp`, `${SB}/scroll-10-synthwave.webp`],
-  anime: [`${SB}/showcase-anime.webp`, `${SB}/scroll-03-anime-cyberpunk.webp`, `${SB}/scroll-20-anime-mecha.webp`],
-  watercolour: [`${SB}/showcase-watercolour.webp`, `${SB}/scroll-04-watercolour-venice.webp`, `${SB}/scroll-16-oilpainting-flowers.webp`],
-  noir: [`${SB}/showcase-noir.webp`, `${SB}/scroll-05-noir-detective.webp`, `${SB}/scroll-12-charcoal-musician.webp`],
+const comboImages = {
+  cinematic: {
+    kinetic: [`${SB}/combo-cinematic-kinetic-1.webp`, `${SB}/combo-cinematic-kinetic-2.webp`, `${SB}/combo-cinematic-kinetic-3.webp`],
+    liquid: [`${SB}/combo-cinematic-liquid-1.webp`, `${SB}/combo-cinematic-liquid-2.webp`, `${SB}/combo-cinematic-liquid-3.webp`],
+    particle: [`${SB}/combo-cinematic-particle-1.webp`, `${SB}/combo-cinematic-particle-2.webp`, `${SB}/combo-cinematic-particle-3.webp`],
+  },
+  claymation: {
+    kinetic: [`${SB}/combo-claymation-kinetic-1.webp`, `${SB}/combo-claymation-kinetic-2.webp`, `${SB}/combo-claymation-kinetic-3.webp`],
+    liquid: [`${SB}/combo-claymation-liquid-1.webp`, `${SB}/combo-claymation-liquid-2.webp`, `${SB}/combo-claymation-liquid-3.webp`],
+    particle: [`${SB}/combo-claymation-particle-1.webp`, `${SB}/combo-claymation-particle-2.webp`, `${SB}/combo-claymation-particle-3.webp`],
+  },
+  anime: {
+    kinetic: [`${SB}/combo-anime-kinetic-1.webp`, `${SB}/combo-anime-kinetic-2.webp`, `${SB}/combo-anime-kinetic-3.webp`],
+    liquid: [`${SB}/combo-anime-liquid-1.webp`, `${SB}/combo-anime-liquid-2.webp`, `${SB}/combo-anime-liquid-3.webp`],
+    particle: [`${SB}/combo-anime-particle-1.webp`, `${SB}/combo-anime-particle-2.webp`, `${SB}/combo-anime-particle-3.webp`],
+  },
 };
 
-const styleNames = { cinematic: 'Cinematic', claymation: 'Claymation', retro: '1970s Retro', anime: 'Anime', watercolour: 'Watercolour', noir: 'Noir' };
-const motionNames = { kinetic: 'Kinetic Type', liquid: 'Liquid Flow', impact: 'Impact Cut', character: 'Character Motion', geometric: 'Geometric', particle: 'Particle FX' };
+const styleNames = { cinematic: 'Cinematic', claymation: 'Claymation', anime: 'Anime' };
+const motionNames = { kinetic: 'Kinetic Type', liquid: 'Liquid Flow', particle: 'Particle FX' };
 
 const marqueeItems = [
   { name: 'WordPress', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 9.7l-1-3.3-3.5 1L15 4.5 12 6 9 4.5 7 7.4l-3.5-1-1 3.3L0 11l2.5 1.3 1 3.3 3.5-1L9 17.5l3-1.5 3 1.5 2-2.9 3.5 1 1-3.3L24 11l-2.5-1.3z"/></svg> },
@@ -90,7 +66,7 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const combo = comboData[activeStyle]?.[activeMotion];
-  const imgs = styleImages[activeStyle];
+  const imgs = comboImages[activeStyle]?.[activeMotion];
 
   const toggleProjectType = (val) => {
     setActiveProjectTypes(prev =>
@@ -325,7 +301,7 @@ export default function HomePage() {
               <button key={key} className={`selector-pill ${activeStyle === key ? 'active' : ''}`} onClick={() => setActiveStyle(key)}>{styleNames[key]}</button>
             ))}
           </div>
-          <p className="selector-more">Plus: 3D/CGI, Pixel Art, Woodblock Print, Charcoal, Neon Synthwave, Isometric, Paper Cut, Stained Glass, and anything you can imagine.</p>
+          <p className="selector-more">Plus: Watercolour, Noir, 1970s Retro, 3D/CGI, Pixel Art, Woodblock Print, Charcoal, Neon Synthwave, Isometric, Paper Cut, Stained Glass, and anything you can imagine.</p>
 
           <div className="combo-connector">
             <div className="combo-x">
@@ -339,7 +315,7 @@ export default function HomePage() {
               <button key={key} className={`selector-pill ${activeMotion === key ? 'active' : ''}`} onClick={() => setActiveMotion(key)}>{motionNames[key]}</button>
             ))}
           </div>
-          <p className="selector-more">Plus: Parallax Drift, Elastic Bounce, Glitch, Morph, Whip Pan, Zoom Pulse, and more.</p>
+          <p className="selector-more">Plus: Impact Cut, Character Motion, Geometric, Parallax Drift, Elastic Bounce, Glitch, Morph, Whip Pan, Zoom Pulse, and more.</p>
 
           {combo && (
             <div className="combo-result-area">

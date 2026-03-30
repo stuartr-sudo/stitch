@@ -545,6 +545,19 @@ app.patch('/api/linkedin/posts/:id', authenticateToken, (await import('./api/lin
 app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);
 app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./api/linkedin/publish.js')).default);
 
+// ─── Carousel routes ───────────────────────────────────────────────────────
+app.post('/api/carousel', authenticateToken, (await import('./api/carousel/create.js')).default);
+app.get('/api/carousel', authenticateToken, (await import('./api/carousel/list.js')).default);
+app.get('/api/carousel/:id', authenticateToken, (await import('./api/carousel/get.js')).default);
+app.put('/api/carousel/:id', authenticateToken, (await import('./api/carousel/update.js')).default);
+app.delete('/api/carousel/:id', authenticateToken, (await import('./api/carousel/delete.js')).default);
+app.post('/api/carousel/:id/generate-content', authenticateToken, (await import('./api/carousel/generate-content.js')).default);
+app.post('/api/carousel/:id/generate-images', authenticateToken, (await import('./api/carousel/generate-images.js')).default);
+app.put('/api/carousel/:id/slides/:slideId', authenticateToken, (await import('./api/carousel/update-slide.js')).default);
+app.post('/api/carousel/:id/slides/:slideId/regenerate', authenticateToken, (await import('./api/carousel/regenerate-slide.js')).default);
+app.post('/api/carousel/:id/reorder', authenticateToken, (await import('./api/carousel/reorder.js')).default);
+app.post('/api/carousel/:id/publish', authenticateToken, (await import('./api/carousel/publish.js')).default);
+
 // Style/voice list routes (with auth)
 app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
 app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
