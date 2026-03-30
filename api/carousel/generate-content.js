@@ -32,7 +32,7 @@ const SynthesisSchema = {
       description: '5-7 specific facts, stats, or quotes extracted from the research. Each must include where it came from.',
     },
     narrative_arc: { type: 'string', description: 'The story in 2-3 sentences: what tension opens it, what insight resolves it, what action closes it' },
-    visual_world: { type: 'string', description: 'A consistent visual direction for ALL slide backgrounds (color mood, setting type, lighting style). 1-2 sentences.' },
+    visual_world: { type: 'string', description: 'A consistent SCENE SETTING for all slide backgrounds — describe the physical environment, not the artistic style. E.g. "kitchen countertop with herbs and cutting boards, warm morning window light, shallow depth of field". 1-2 sentences.' },
     cta_direction: { type: 'string', description: 'What should the reader do after reading? Be specific.' },
   },
   required: ['thesis', 'angle', 'hook_options', 'key_facts', 'narrative_arc', 'visual_world', 'cta_direction'],
@@ -45,7 +45,7 @@ const SlideItemSchema = {
     slide_type: { type: 'string', enum: ['hook', 'content', 'stat', 'quote', 'cta', 'image_focus'] },
     headline: { type: 'string' },
     body_text: { type: 'string' },
-    stat_value: { type: 'string' },
+    stat_value: { type: 'string', description: 'SHORT number only — max 6 characters. Examples: "73%", "$2.4M", "10x", "20". NEVER a phrase or sentence.' },
     stat_label: { type: 'string' },
     cta_text: { type: 'string' },
     image_prompt: { type: 'string' },
@@ -85,14 +85,15 @@ const ANTI_SLOP = `HARD RULES — violating any means the output is rejected:
 - Every single line must contain a SPECIFIC claim, name, number, or concrete detail
 - If you can't be specific, cut the slide entirely — fewer good slides beats more mediocre ones`;
 
-const IMAGE_PROMPT_RULES = `IMAGE PROMPT RULES:
-- Every image prompt MUST start with the visual_world prefix from the synthesis (this is how we get consistency)
-- After the prefix, describe ONLY the specific scene for this slide
-- Describe concrete visual elements: objects, materials, lighting direction, camera angle
-- NEVER describe text, overlays, UI elements, or typography in image prompts
-- NEVER use abstract concepts as image prompts ("innovation", "growth", "success")
-- Instead: "close-up of hands assembling circuit board, warm workshop lighting, shallow depth of field"
-- Keep prompts under 80 words`;
+const IMAGE_PROMPT_RULES = `IMAGE PROMPT RULES — CRITICAL:
+- Image prompts describe the SCENE ONLY — objects, setting, composition, camera angle
+- NEVER include artistic style, medium, or aesthetic directions (e.g. "watercolor", "photorealistic", "illustration", "warm tones", "cinematic") — the visual style is applied separately and you will BREAK consistency if you add style words
+- NEVER describe text, overlays, UI elements, or typography
+- NEVER use abstract concepts ("innovation", "growth", "success") — only physical, filmable things
+- All prompts should describe the SAME physical environment from different angles/compositions for visual consistency
+- Good: "kitchen countertop with small hydroponic planter, seedlings visible through clear water reservoir, morning light from window, cutting board and herbs nearby"
+- Bad: "warm watercolor illustration of a cozy kitchen with plants, soft golden lighting" (this adds style words — NEVER do this)
+- Keep prompts 20-50 words, concrete and specific`;
 
 // ─── Stage 1: Research Synthesis ──────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ Rules:
 - Pick ONE thesis. Not three. Not a survey of the topic. ONE argument.
 - Extract SPECIFIC facts with real numbers, names, dates, places. If the research doesn't contain specifics, say so — don't invent them.
 - The hook_options should be provocative, curiosity-driven, and SHORT (3-8 words). They should make someone stop scrolling.
-- The visual_world must be a concrete, filmable description — not "modern and clean" but "dimly lit industrial workspace, warm tungsten lighting, close-up macro shots of hands and tools, dark teal and amber palette"
+- The visual_world must describe a concrete PHYSICAL ENVIRONMENT — not an artistic style. Not "warm watercolor illustration" but "kitchen countertop next to a window, herb pots, cutting boards, morning sunlight". The artistic style is controlled separately. Describe only the setting, objects, and lighting.
 - The narrative_arc should have genuine tension: what's the problem/surprise/contradiction that makes this worth reading?
 
 Platform: ${platform} (${platformInfo.ratioNote})
@@ -171,8 +172,8 @@ CAROUSEL STRUCTURE:
 - Slide 1: type "hook" — use one of the hook options above. Headline ONLY, no body_text. 3-8 words MAX.
 - Slides 2-N: mix of "content", "stat", "quote", "image_focus" — tell the story slide by slide
   - "content": headline (key point, max 8 words) + body_text (1-2 sentences with a SPECIFIC fact or claim)
-  - "stat": stat_value (the number: "73%", "$2.4M", "10x") + stat_label (what it means, max 12 words) + headline (context, max 6 words)
-  - "quote": headline contains a memorable, quotable line (can be paraphrased from research)
+  - "stat": stat_value (SHORT number ONLY, max 6 chars: "73%", "$2.4M", "10x", "20d") + stat_label (what it means, max 12 words) + headline (context, max 6 words). NEVER put a phrase in stat_value.
+  - "quote": headline contains a specific, memorable insight from the research (NOT a generic platitude like "patience pays off"). Must be tied to a concrete fact or finding.
   - "image_focus": headline is a short 3-5 word caption; the image does the talking
 - Final slide: type "cta" — cta_text is the action, headline is supporting context
 
@@ -183,10 +184,10 @@ SLIDE FLOW:
 - BAD: random fact, random fact, random fact (no connective tissue)
 
 IMAGE PROMPTS:
-- EVERY image_prompt must START with this visual world prefix: "${synthesis.visual_world}"
-- After the prefix, add the specific scene for THIS slide
-- Describe: objects, materials, textures, lighting direction, camera angle, depth of field
-- NEVER describe text, UI elements, or abstract concepts
+- All image prompts must describe scenes within this environment: "${synthesis.visual_world}"
+- Each slide should show a DIFFERENT angle, composition, or detail of the same environment
+- Describe only physical objects, camera angle, and composition — NO style words (no "watercolor", "cinematic", "illustration", "photorealistic")
+- The artistic style is applied automatically — adding style words will break visual consistency
 
 PLATFORM: ${platform}
 - Text density: ${platformInfo.textDensity}

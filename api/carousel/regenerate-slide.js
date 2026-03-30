@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const { id, slideId } = req.params;
   if (!id || !slideId) return res.status(400).json({ error: 'carousel id and slideId are required' });
 
-  const { image_model = 'fal_nano_banana', style_prompt = '' } = req.body || {};
+  const { image_model = 'fal_nano_banana' } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       .update({ generation_status: 'generating' })
       .eq('id', slideId);
 
-    const fullPrompt = [slide.image_prompt, style_prompt].filter(Boolean).join('. ');
+    const fullPrompt = slide.image_prompt || 'abstract background, soft lighting';
 
     const bgUrl = await generateImageV2(image_model, fullPrompt, ratio, keys, supabase);
 

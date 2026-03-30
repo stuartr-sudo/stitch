@@ -21,6 +21,18 @@ function parseAspectRatio(ar) {
   return { w, h, ratio: ratioMap[ar] || '1:1' };
 }
 
+/**
+ * Build the final image generation prompt.
+ * Style goes FIRST so the model treats it as the primary directive.
+ * The slide's image_prompt describes the scene content only.
+ */
+function buildImagePrompt(slideImagePrompt, stylePrompt) {
+  // Style first, scene second — this is critical for consistency
+  const parts = [stylePrompt, slideImagePrompt].filter(Boolean);
+  if (parts.length === 0) return 'abstract background';
+  return parts.join('. ');
+}
+
 export default async function handler(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'carousel id is required' });
@@ -85,11 +97,11 @@ export default async function handler(req, res) {
             .update({ generation_status: 'generating' })
             .eq('id', slide.id);
 
-          // Build the prompt: slide's image_prompt + user-selected style
-          const fullPrompt = [slide.image_prompt, style_prompt].filter(Boolean).join('. ');
+          // Build prompt: STYLE FIRST, then scene description
+          const fullPrompt = buildImagePrompt(slide.image_prompt, style_prompt);
 
           // Generate background image
-          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: generating image with ${image_model}...`);
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: prompt="${fullPrompt.slice(0, 120)}..."`);
           const bgUrl = await generateImageV2(
             image_model,
             fullPrompt,
