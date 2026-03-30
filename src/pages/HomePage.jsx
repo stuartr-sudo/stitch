@@ -116,9 +116,9 @@ export default function HomePage() {
         <div className="container">
           <div className="hero-grid">
             <div>
-              <div className="hero-tag">Video &amp; Animation Production Service</div>
+              <div className="hero-tag">Video &amp; Animation Production — New Zealand</div>
               <h1>The new era<br/><span className="thin">of video</span><br/>production.</h1>
-              <p className="hero-desc">We&apos;re not a platform — we&apos;re your production team. Studio-quality video and animation, delivered on time at a fixed price. Unlimited creative styles, seamless integration with your existing tools, and a production process built for the modern world.</p>
+              <p className="hero-desc">We&apos;re a New Zealand-based production studio — not a platform. Studio-quality video and animation, delivered on time at a fixed price. Unlimited creative styles, seamless integration with your existing tools, and a production process built for the modern world.</p>
               <div className="hero-actions">
                 <a href="#project" className="btn btn-white">Apply to Work With Us</a>
                 <a href="#showcase" className="btn btn-outline">View Our Work</a>
@@ -126,8 +126,6 @@ export default function HomePage() {
             </div>
             <div className="hero-video">
               <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel-wide.webp" alt="Stitch Studios showreel — multiple visual styles" />
-              <button className="play-btn" aria-label="Play showreel"></button>
-              <span className="video-label">Showreel 2026</span>
             </div>
           </div>
         </div>
@@ -138,9 +136,9 @@ export default function HomePage() {
       {/* STYLE SCROLL */}
       <section className="style-scroll-section">
         <div className="style-scroll-track">
-          {[...Array(2)].map((_, dup) => (
-            <div className="style-scroll-row" key={dup} aria-hidden={dup === 1}>
-              {[
+          <div className="style-scroll-row">
+            {[...Array(2)].flatMap((_, dup) =>
+              [
                 { src: 'scroll-01-cinematic-product.webp', label: 'Cinematic' },
                 { src: 'scroll-02-claymation-foodtruck.webp', label: 'Claymation' },
                 { src: 'scroll-03-anime-cyberpunk.webp', label: 'Anime' },
@@ -162,13 +160,13 @@ export default function HomePage() {
                 { src: 'scroll-19-claymation-underwater.webp', label: 'Claymation' },
                 { src: 'scroll-20-anime-mecha.webp', label: 'Anime' },
               ].map((img, i) => (
-                <div className="style-scroll-item" key={i}>
+                <div className="style-scroll-item" key={`${dup}-${i}`}>
                   <img src={`https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/${img.src}`} alt={img.label} loading="lazy" />
                   <span className="style-scroll-label">{img.label}</span>
                 </div>
-              ))}
-            </div>
-          ))}
+              ))
+            )}
+          </div>
         </div>
       </section>
 
@@ -466,7 +464,7 @@ export default function HomePage() {
         <div className="footer-inner">
           <div className="footer-logo">STITCH <span>STUDIOS</span></div>
           <div className="footer-links"><a href="#">Twitter</a><a href="#">LinkedIn</a><a href="#">Contact</a></div>
-          <div className="footer-copy">&copy; 2026 Stitch Studios. All rights reserved.</div>
+          <div className="footer-copy">&copy; 2026 Stitch Studios. Made in New Zealand.</div>
         </div>
       </div>
     </div>
