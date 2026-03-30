@@ -99,7 +99,23 @@ function getRegistryKey(modelId) {
  */
 async function generateFrameVideo(frame, config, prevLastFrame, keys, supabase) {
   const strategy = getModelStrategy(config.model);
-  const startImage = prevLastFrame || config.startFrameUrl || frame.start_frame_url;
+  let startImage = prevLastFrame || config.startFrameUrl || frame.start_frame_url || frame.preview_image_url;
+
+  // If no start image exists, generate one via T2I from the visual prompt
+  if (!startImage && frame.visual_prompt) {
+    console.log(`[Producer] Frame ${frame.frame_number}: No start image — generating via T2I`);
+    try {
+      startImage = await generateImageV2(
+        config.imageModel || 'fal_nano_banana',
+        frame.visual_prompt,
+        config.aspectRatio || '16:9',
+        keys, supabase
+      );
+      console.log(`[Producer] Frame ${frame.frame_number}: T2I start image generated`);
+    } catch (err) {
+      console.warn(`[Producer] Frame ${frame.frame_number}: T2I failed:`, err.message);
+    }
+  }
 
   if (!startImage && strategy !== 'r2v-flat' && strategy !== 'r2v-grok') {
     throw new Error(`Frame ${frame.frame_number}: No start image available`);
@@ -239,7 +255,7 @@ async function generateVeoR2V(startImage, prompt, duration, aspectRatio, config,
     prompt: cleanPrompt,
     image_urls: refImages.slice(0, 5),
     aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9',
-    duration: '8s',
+    duration: veoDuration(duration),
     resolution: config.resolution || '720p',
     generate_audio: false,
     auto_fix: true, safety_tolerance: '6',
