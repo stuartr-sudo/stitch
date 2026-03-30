@@ -52,13 +52,14 @@ const comboData = {
   },
 };
 
-const styleGradients = {
-  cinematic: ['linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', 'linear-gradient(135deg, #2d1b4e 0%, #1a1a2e 100%)', 'linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%)'],
-  claymation: ['linear-gradient(135deg, #d4a574 0%, #c17f59 50%, #a0522d 100%)', 'linear-gradient(135deg, #b8860b 0%, #cd853f 100%)', 'linear-gradient(135deg, #8b7355 0%, #d2b48c 100%)'],
-  retro: ['linear-gradient(135deg, #cc5500 0%, #e67e22 50%, #f39c12 100%)', 'linear-gradient(135deg, #a0522d 0%, #cd853f 100%)', 'linear-gradient(135deg, #8b4513 0%, #d4a574 100%)'],
-  anime: ['linear-gradient(135deg, #ff6b9d 0%, #c44569 50%, #6c5ce7 100%)', 'linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%)', 'linear-gradient(135deg, #e84393 0%, #fd79a8 100%)'],
-  watercolour: ['linear-gradient(135deg, #a8d8ea 0%, #aa96da 50%, #fcbad3 100%)', 'linear-gradient(135deg, #a8e6cf 0%, #dcedc1 100%)', 'linear-gradient(135deg, #ffd3b6 0%, #ffaaa5 100%)'],
-  noir: ['linear-gradient(135deg, #0d0d0d 0%, #2a2a2a 50%, #1a1a1a 100%)', 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)', 'linear-gradient(135deg, #0d0d0d 0%, #262626 100%)'],
+const SB = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage';
+const styleImages = {
+  cinematic: [`${SB}/showcase-cinematic.webp`, `${SB}/scroll-01-cinematic-product.webp`, `${SB}/scroll-18-cinematic-coastal.webp`],
+  claymation: [`${SB}/showcase-claymation.webp`, `${SB}/scroll-02-claymation-foodtruck.webp`, `${SB}/scroll-19-claymation-underwater.webp`],
+  retro: [`${SB}/showcase-retro.webp`, `${SB}/scroll-06-retro-disco.webp`, `${SB}/scroll-10-synthwave.webp`],
+  anime: [`${SB}/showcase-anime.webp`, `${SB}/scroll-03-anime-cyberpunk.webp`, `${SB}/scroll-20-anime-mecha.webp`],
+  watercolour: [`${SB}/showcase-watercolour.webp`, `${SB}/scroll-04-watercolour-venice.webp`, `${SB}/scroll-16-oilpainting-flowers.webp`],
+  noir: [`${SB}/showcase-noir.webp`, `${SB}/scroll-05-noir-detective.webp`, `${SB}/scroll-12-charcoal-musician.webp`],
 };
 
 const styleNames = { cinematic: 'Cinematic', claymation: 'Claymation', retro: '1970s Retro', anime: 'Anime', watercolour: 'Watercolour', noir: 'Noir' };
@@ -89,7 +90,7 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const combo = comboData[activeStyle]?.[activeMotion];
-  const grads = styleGradients[activeStyle];
+  const imgs = styleImages[activeStyle];
 
   const toggleProjectType = (val) => {
     setActiveProjectTypes(prev =>
@@ -353,7 +354,7 @@ export default function HomePage() {
               <div className="combo-result-grid">
                 {combo.examples.map((ex, i) => (
                   <div className="combo-result-card" key={i}>
-                    <div className="thumb" style={{ background: grads[i] || grads[0] }}></div>
+                    <div className="thumb"><img src={imgs[i] || imgs[0]} alt={`${styleNames[activeStyle]} ${motionNames[activeMotion]} - ${ex.t}`} /></div>
                     <div className="info"><h4>{ex.t}</h4><p>{ex.s}</p></div>
                   </div>
                 ))}
