@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
-  Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film, Search,
+  Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
@@ -27,8 +27,8 @@ export default function CarouselEditor({ carouselId }) {
   const [generating, setGenerating] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [bulletPoints, setBulletPoints] = useState('');
   const [pollTimer, setPollTimer] = useState(null);
+  const [contentPollTimer, setContentPollTimer] = useState(null);
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -74,6 +74,29 @@ export default function CarouselEditor({ carouselId }) {
       return () => clearInterval(timer);
     }
   }, [carousel?.status, carouselId]);
+
+  // ── Poll for content generation (slides appearing) ──
+  useEffect(() => {
+    if (carousel && slides.length === 0 && !generating) {
+      const timer = setInterval(async () => {
+        try {
+          const res = await apiFetch(`/api/carousel/${carouselId}`);
+          const data = await res.json();
+          if (!data.error && data.carousel) {
+            const newSlides = data.carousel.carousel_slides || [];
+            if (newSlides.length > 0) {
+              setCarousel(data.carousel);
+              setSlides(newSlides);
+              setActiveSlideIdx(0);
+              clearInterval(timer);
+            }
+          }
+        } catch {}
+      }, 3000);
+      setContentPollTimer(timer);
+      return () => clearInterval(timer);
+    }
+  }, [carousel, slides.length, generating, carouselId]);
 
   // ── Generate content from URL/topic ──
   async function handleGenerateContent() {
@@ -253,12 +276,6 @@ export default function CarouselEditor({ carouselId }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {!hasSlides && (
-            <Button onClick={handleGenerateContent} disabled={generating}>
-              {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
-              Generate Content
-            </Button>
-          )}
           {hasSlides && !allDone && (
             <Button onClick={handleGenerateImages} disabled={generatingImages || carousel.status === 'generating'}>
               {generatingImages || carousel.status === 'generating'
@@ -276,31 +293,19 @@ export default function CarouselEditor({ carouselId }) {
         </div>
       </div>
 
-      {/* No slides — ready to generate */}
+      {/* No slides — content is being generated */}
       {!hasSlides && (
-        <div className="max-w-xl mx-auto mt-12 p-6 bg-white rounded-xl border text-center">
-          {carousel.source_url ? (
-            <p className="text-sm text-gray-500 mb-1">Source: {carousel.source_url}</p>
-          ) : (
-            <p className="text-sm text-gray-500 mb-1">Topic: {carousel.title}</p>
-          )}
-          <p className="text-xs text-gray-400 mb-4">
+        <div className="max-w-md mx-auto mt-24 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mx-auto mb-4" />
+          <h3 className="text-base font-medium text-gray-700 mb-1">
+            {carousel.source_url ? 'Scraping article and generating slides...' : 'Researching topic and generating slides...'}
+          </h3>
+          <p className="text-sm text-gray-400">
             {carousel.source_url
-              ? 'We\'ll scrape the article and generate carousel slides from its content.'
-              : (<><Search className="w-3 h-3 inline mr-1" />{"We'll search the web for real sources, then generate carousel slides from the research."}</>)}
+              ? carousel.source_url
+              : `Topic: ${carousel.title}`}
           </p>
-          {!carousel.source_url && (
-            <textarea
-              placeholder="Optional: add key points you want covered, one per line"
-              value={bulletPoints}
-              onChange={e => setBulletPoints(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[80px] mb-4 text-left"
-            />
-          )}
-          <Button onClick={handleGenerateContent} disabled={generating} className="w-full">
-            {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
-            {carousel.source_url ? 'Generate Slides from Article' : 'Generate Slides'}
-          </Button>
+          <p className="text-xs text-gray-300 mt-4">This usually takes 10-30 seconds</p>
         </div>
       )}
 

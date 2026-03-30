@@ -234,7 +234,7 @@ ${ANTI_SLOP}`;
                     cta_text: { type: 'string' },
                     image_prompt: { type: 'string' },
                   },
-                  required: ['slide_type', 'headline', 'image_prompt'],
+                  required: ['slide_type', 'headline', 'body_text', 'stat_value', 'stat_label', 'cta_text', 'image_prompt'],
                   additionalProperties: false,
                 },
               },

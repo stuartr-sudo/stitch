@@ -83,6 +83,20 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         toast.error(data.error);
         return;
       }
+
+      // Immediately kick off content generation so the editor doesn't ask again
+      const carouselId = data.carousel.id;
+      const genBody = {};
+      if (sourceType === 'topic') {
+        genBody.topic = topic.trim();
+      }
+      // Fire and forget — the editor will poll for results
+      apiFetch(`/api/carousel/${carouselId}/generate-content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(genBody),
+      }).catch(() => {});
+
       onCreated(data.carousel);
     } catch (err) {
       toast.error('Failed to create carousel');
