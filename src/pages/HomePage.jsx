@@ -125,6 +125,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="hero-video">
+              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel.webp" alt="Stitch Studios showreel — multiple visual styles" />
               <button className="play-btn" aria-label="Play showreel"></button>
               <span className="video-label">Showreel 2026</span>
             </div>
@@ -309,15 +310,17 @@ export default function HomePage() {
           </div>
           <div className="showcase-grid">
             {[
-              { wide: true, label: 'Cinematic × Liquid Flow', title: 'Urban Brand Film' },
-              { wide: false, label: 'Claymation × Character Motion', title: 'Mascot Series' },
-              { wide: false, label: '1970s Retro × Kinetic Type', title: 'Vintage Opener' },
-              { wide: false, label: 'Watercolour × Particle FX', title: 'Painted Landscape' },
-              { wide: false, label: 'Noir × Geometric', title: 'Product Reveal' },
-              { wide: true, label: 'Anime × Impact Cut', title: 'Action Sequence' },
+              { wide: true, label: 'Cinematic × Kinetic Type', title: 'Urban Brand Film', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-cinematic.webp' },
+              { wide: false, label: 'Claymation × Character Motion', title: 'Mascot Series', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-claymation.webp' },
+              { wide: false, label: '1970s Retro × Kinetic Type', title: 'Vintage Opener', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-retro.webp' },
+              { wide: false, label: 'Watercolour × Particle FX', title: 'Painted Landscape', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-watercolour.webp' },
+              { wide: false, label: 'Noir × Geometric', title: 'Product Reveal', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-noir.webp' },
+              { wide: true, label: 'Anime × Impact Cut', title: 'Action Sequence', img: 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/showcase-anime.webp' },
             ].map((item, i) => (
               <div className={`showcase-item ${item.wide ? 'wide' : ''}`} key={i}>
-                <div className="showcase-thumb"><span>Image &middot; Video</span></div>
+                <div className="showcase-thumb">
+                  <img src={item.img} alt={item.title} />
+                </div>
                 <div className="showcase-overlay"></div>
                 <div className="showcase-meta"><span>{item.label}</span><h3>{item.title}</h3></div>
               </div>
