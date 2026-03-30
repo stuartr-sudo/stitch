@@ -125,11 +125,50 @@ export default function HomePage() {
               </div>
             </div>
             <div className="hero-video">
-              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel.webp" alt="Stitch Studios showreel — multiple visual styles" />
+              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/hero-showreel-wide.webp" alt="Stitch Studios showreel — multiple visual styles" />
               <button className="play-btn" aria-label="Play showreel"></button>
               <span className="video-label">Showreel 2026</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <div className="divider"><div className="divider-line"></div></div>
+
+      {/* STYLE SCROLL */}
+      <section className="style-scroll-section">
+        <div className="style-scroll-track">
+          {[...Array(2)].map((_, dup) => (
+            <div className="style-scroll-row" key={dup} aria-hidden={dup === 1}>
+              {[
+                { src: 'scroll-01-cinematic-product.webp', label: 'Cinematic' },
+                { src: 'scroll-02-claymation-foodtruck.webp', label: 'Claymation' },
+                { src: 'scroll-03-anime-cyberpunk.webp', label: 'Anime' },
+                { src: 'scroll-04-watercolour-venice.webp', label: 'Watercolour' },
+                { src: 'scroll-05-noir-detective.webp', label: 'Noir' },
+                { src: 'scroll-06-retro-disco.webp', label: 'Retro' },
+                { src: 'scroll-07-3dcgi-car.webp', label: '3D CGI' },
+                { src: 'scroll-08-pixelart-castle.webp', label: 'Pixel Art' },
+                { src: 'scroll-09-papercut-forest.webp', label: 'Paper Cut' },
+                { src: 'scroll-10-synthwave.webp', label: 'Synthwave' },
+                { src: 'scroll-11-isometric-city.webp', label: 'Isometric' },
+                { src: 'scroll-12-charcoal-musician.webp', label: 'Charcoal' },
+                { src: 'scroll-13-stainedglass-phoenix.webp', label: 'Stained Glass' },
+                { src: 'scroll-14-woodblock-wave.webp', label: 'Woodblock' },
+                { src: 'scroll-15-comic-superhero.webp', label: 'Comic' },
+                { src: 'scroll-16-oilpainting-flowers.webp', label: 'Oil Painting' },
+                { src: 'scroll-17-lowpoly-deer.webp', label: 'Low-Poly' },
+                { src: 'scroll-18-cinematic-coastal.webp', label: 'Cinematic' },
+                { src: 'scroll-19-claymation-underwater.webp', label: 'Claymation' },
+                { src: 'scroll-20-anime-mecha.webp', label: 'Anime' },
+              ].map((img, i) => (
+                <div className="style-scroll-item" key={i}>
+                  <img src={`https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/${img.src}`} alt={img.label} loading="lazy" />
+                  <span className="style-scroll-label">{img.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 
@@ -222,7 +261,7 @@ export default function HomePage() {
               <div className="portal-feature"><h3>Delivery Tracking</h3><p>Track milestones, review KPIs, manage approvals, and download final assets — all from one dashboard. No chasing, no wondering where things stand.</p></div>
             </div>
             <div className="portal-visual">
-              <div className="portal-screen"><span>Client Portal Preview</span></div>
+              <div className="portal-screen"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/portal-dashboard.webp" alt="Client Portal Dashboard" /></div>
               <div className="portal-bar">
                 <div className="portal-dot green"></div>
                 <div className="portal-dot green"></div>
@@ -343,9 +382,7 @@ export default function HomePage() {
           </div>
           <div className="shorts-layout">
             <div className="shorts-phones">
-              <div className="phone phone-sm"><div className="phone-notch"></div><div className="phone-body"><span>TikTok</span></div></div>
-              <div className="phone phone-md"><div className="phone-notch"></div><div className="phone-body"><span>Reels</span></div></div>
-              <div className="phone phone-sm"><div className="phone-notch"></div><div className="phone-body"><span>YT Shorts</span></div></div>
+              <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage/phones-shorts.webp" alt="Shorts on mobile devices — TikTok, Reels, YouTube Shorts" className="shorts-phones-img" />
             </div>
             <div className="shorts-content">
               <div className="short-feature"><h3>Narrative Shorts</h3><p>Turn a topic or script into a complete short-form video with voiceover, visuals, captions, and music — delivered in days, not weeks.</p><div className="feature-tags"><span>Auto-captions</span><span>Voiceover</span><span>Music</span></div></div>
