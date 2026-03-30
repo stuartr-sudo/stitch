@@ -149,7 +149,7 @@ export default function CarouselList() {
                     </div>
                     <button
                       onClick={(e) => handleDelete(e, c.id)}
-                      className="p-1.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       {deleting === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>

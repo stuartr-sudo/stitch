@@ -276,6 +276,19 @@ export default function CarouselEditor({ carouselId }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (!confirm('Delete this carousel?')) return;
+              try {
+                await apiFetch(`/api/carousel/${carouselId}`, { method: 'DELETE' });
+                navigate('/carousels');
+              } catch { toast.error('Failed to delete'); }
+            }}
+            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+            title="Delete carousel"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
           {hasSlides && !allDone && (
             <Button onClick={handleGenerateImages} disabled={generatingImages || carousel.status === 'generating'}>
               {generatingImages || carousel.status === 'generating'
