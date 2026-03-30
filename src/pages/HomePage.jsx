@@ -17,6 +17,21 @@ const comboData = {
     liquid: { desc: 'Fluid anime transitions with cel-shaded morphing effects', examples: [{ t: 'Transformation', s: 'Character power-up sequence' }, { t: 'Dream Sequence', s: 'Flowing anime transition' }, { t: 'Water Scene', s: 'Fluid cel-shaded water' }] },
     particle: { desc: 'Sparkling anime particle effects - cherry blossoms, energy, aura', examples: [{ t: 'Magic Scene', s: 'Glowing energy particles' }, { t: 'Sakura', s: 'Cherry blossom cascade' }, { t: 'Aura', s: 'Character power aura' }] },
   },
+  watercolour: {
+    kinetic: { desc: 'Painted letterforms bleeding and flowing across textured paper', examples: [{ t: 'Title Card', s: 'Watercolour text reveals' }, { t: 'Quote', s: 'Painted words blooming' }, { t: 'Credits', s: 'Ink-wash typography' }] },
+    liquid: { desc: 'Pigments flowing and blending into new scenes like wet paint', examples: [{ t: 'Landscape', s: 'Flowing painted vistas' }, { t: 'Transition', s: 'Watercolour scene dissolves' }, { t: 'Abstract', s: 'Pure pigment flow' }] },
+    particle: { desc: 'Paint droplets, pigment dust, and colour particles drifting through scenes', examples: [{ t: 'Atmosphere', s: 'Floating paint particles' }, { t: 'Rain', s: 'Watercolour rain drops' }, { t: 'Magic', s: 'Pigment dust sparkle' }] },
+  },
+  noir: {
+    kinetic: { desc: 'High-contrast black and white typography with dramatic shadow play', examples: [{ t: 'Crime Opener', s: 'Noir title sequence' }, { t: 'Mystery', s: 'Shadowed text reveals' }, { t: 'Credits', s: 'Venetian blind typography' }] },
+    liquid: { desc: 'Shadowy transitions flowing like smoke through monochrome scenes', examples: [{ t: 'Thriller', s: 'Smoky noir transitions' }, { t: 'Mystery', s: 'Shadow dissolves' }, { t: 'Mood', s: 'Ink-dark fluid transitions' }] },
+    particle: { desc: 'Dust motes, cigarette smoke, and rain particles in noir atmosphere', examples: [{ t: 'Atmosphere', s: 'Noir rain and smoke' }, { t: 'Scene Set', s: 'Dusty detective office' }, { t: 'Night', s: 'Rain-slicked street particles' }] },
+  },
+  retro: {
+    kinetic: { desc: 'Vintage typography with groovy 70s motion and film grain', examples: [{ t: 'Title Sequence', s: 'Retro rolling credits' }, { t: 'Lyric Video', s: '70s psychedelic text' }, { t: 'Event Promo', s: 'Funky vintage invite' }] },
+    liquid: { desc: 'Psychedelic lava-lamp transitions with warm analog tones', examples: [{ t: 'Music Visual', s: 'Flowing retro dreamscape' }, { t: 'Brand Film', s: 'Vintage warmth transitions' }, { t: 'Intro', s: 'Lava-lamp style opener' }] },
+    particle: { desc: 'Film grain, dust motes, and analog noise floating through scenes', examples: [{ t: 'Atmosphere', s: 'Dusty vintage ambience' }, { t: 'Nostalgia', s: 'Film burn and grain overlay' }, { t: 'Memory', s: 'Fading retro particles' }] },
+  },
 };
 
 const SB = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/homepage';
@@ -36,10 +51,25 @@ const comboImages = {
     liquid: [`${SB}/combo-anime-liquid-1.webp`, `${SB}/combo-anime-liquid-2.webp`, `${SB}/combo-anime-liquid-3.webp`],
     particle: [`${SB}/combo-anime-particle-1.webp`, `${SB}/combo-anime-particle-2.webp`, `${SB}/combo-anime-particle-3.webp`],
   },
+  watercolour: {
+    kinetic: [`${SB}/combo-watercolour-kinetic-1.webp`, `${SB}/combo-watercolour-kinetic-2.webp`, `${SB}/combo-watercolour-kinetic-3.webp`],
+    liquid: [`${SB}/combo-watercolour-liquid-1.webp`, `${SB}/combo-watercolour-liquid-2.webp`, `${SB}/combo-watercolour-liquid-3.webp`],
+    particle: [`${SB}/combo-watercolour-particle-1.webp`, `${SB}/combo-watercolour-particle-2.webp`, `${SB}/combo-watercolour-particle-3.webp`],
+  },
+  noir: {
+    kinetic: [`${SB}/combo-noir-kinetic-1.webp`, `${SB}/combo-noir-kinetic-2.webp`, `${SB}/combo-noir-kinetic-3.webp`],
+    liquid: [`${SB}/combo-noir-liquid-1.webp`, `${SB}/combo-noir-liquid-2.webp`, `${SB}/combo-noir-liquid-3.webp`],
+    particle: [`${SB}/combo-noir-particle-1.webp`, `${SB}/combo-noir-particle-2.webp`, `${SB}/combo-noir-particle-3.webp`],
+  },
+  retro: {
+    kinetic: [`${SB}/combo-retro-kinetic-1.webp`, `${SB}/combo-retro-kinetic-2.webp`, `${SB}/combo-retro-kinetic-3.webp`],
+    liquid: [`${SB}/combo-retro-liquid-1.webp`, `${SB}/combo-retro-liquid-2.webp`, `${SB}/combo-retro-liquid-3.webp`],
+    particle: [`${SB}/combo-retro-particle-1.webp`, `${SB}/combo-retro-particle-2.webp`, `${SB}/combo-retro-particle-3.webp`],
+  },
 };
 
-const styleNames = { cinematic: 'Cinematic', claymation: 'Claymation', anime: 'Anime' };
-const motionNames = { kinetic: 'Kinetic Type', liquid: 'Liquid Flow', particle: 'Particle FX' };
+const styleNames = { cinematic: 'Cinematic', claymation: 'Claymation', anime: 'Anime', watercolour: 'Watercolour', noir: 'Noir', retro: '1970s Retro' };
+const videoStyleNames = { kinetic: 'Kinetic Type', liquid: 'Liquid Flow', particle: 'Particle FX' };
 
 const marqueeItems = [
   { name: 'WordPress', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 9.7l-1-3.3-3.5 1L15 4.5 12 6 9 4.5 7 7.4l-3.5-1-1 3.3L0 11l2.5 1.3 1 3.3 3.5-1L9 17.5l3-1.5 3 1.5 2-2.9 3.5 1 1-3.3L24 11l-2.5-1.3z"/></svg> },
@@ -59,14 +89,14 @@ const marqueeItems = [
 
 export default function HomePage() {
   const [activeStyle, setActiveStyle] = useState('cinematic');
-  const [activeMotion, setActiveMotion] = useState('kinetic');
+  const [activeVideoStyle, setActiveVideoStyle] = useState('kinetic');
   const [activeProjectTypes, setActiveProjectTypes] = useState([]);
   const [formData, setFormData] = useState({ timeline: '', budget: '', description: '', name: '', email: '', company: '' });
   const [formStatus, setFormStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const combo = comboData[activeStyle]?.[activeMotion];
-  const imgs = comboImages[activeStyle]?.[activeMotion];
+  const combo = comboData[activeStyle]?.[activeVideoStyle];
+  const imgs = comboImages[activeStyle]?.[activeVideoStyle];
 
   const toggleProjectType = (val) => {
     setActiveProjectTypes(prev =>
@@ -287,13 +317,13 @@ export default function HomePage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <div className="section-num">04 - Style × Motion</div>
+              <div className="section-num">04 - Visual Style × Video Style</div>
               <h2 className="section-title">Infinite combinations.<br/><span className="thin">One studio.</span></h2>
             </div>
             <p className="section-desc">Pick a visual style. Pick a motion type. The combination creates something entirely unique to your project.</p>
           </div>
 
-          <p className="combo-section-intro">Every video we produce starts with two creative axes: a <strong>visual style</strong> and a <strong>motion type</strong>. Combine them and you get an almost unlimited range of creative output - from claymation with kinetic typography to 1970s retro with liquid transitions. These are just some of the options.</p>
+          <p className="combo-section-intro">Every video we produce starts with two creative axes: a <strong>visual style</strong> and a <strong>video style</strong>. Combine them and you get an almost unlimited range of creative output - from claymation with kinetic typography to 1970s retro with liquid transitions. These are just some of the options.</p>
 
           <div className="axis-label">Visual Style - select one</div>
           <div className="selector-row">
@@ -301,7 +331,7 @@ export default function HomePage() {
               <button key={key} className={`selector-pill ${activeStyle === key ? 'active' : ''}`} onClick={() => setActiveStyle(key)}>{styleNames[key]}</button>
             ))}
           </div>
-          <p className="selector-more">Plus: Watercolour, Noir, 1970s Retro, 3D/CGI, Pixel Art, Woodblock Print, Charcoal, Neon Synthwave, Isometric, Paper Cut, Stained Glass, and anything you can imagine.</p>
+          <p className="selector-more">Plus: 3D/CGI, Pixel Art, Woodblock Print, Charcoal, Neon Synthwave, Isometric, Paper Cut, Stained Glass, and anything you can imagine.</p>
 
           <div className="combo-connector">
             <div className="combo-x">
@@ -309,13 +339,13 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="axis-label">Motion Type - select one</div>
+          <div className="axis-label">Video Style - select one</div>
           <div className="selector-row">
-            {Object.keys(motionNames).map(key => (
-              <button key={key} className={`selector-pill ${activeMotion === key ? 'active' : ''}`} onClick={() => setActiveMotion(key)}>{motionNames[key]}</button>
+            {Object.keys(videoStyleNames).map(key => (
+              <button key={key} className={`selector-pill ${activeVideoStyle === key ? 'active' : ''}`} onClick={() => setActiveVideoStyle(key)}>{videoStyleNames[key]}</button>
             ))}
           </div>
-          <p className="selector-more">Plus: Impact Cut, Character Motion, Geometric, Parallax Drift, Elastic Bounce, Glitch, Morph, Whip Pan, Zoom Pulse, and more.</p>
+          <p className="selector-more">Plus: Impact Cut, Character Motion, Geometric, Parallax Drift, Elastic Bounce, Glitch, Morph, Whip Pan, and more.</p>
 
           {combo && (
             <div className="combo-result-area">
@@ -323,14 +353,14 @@ export default function HomePage() {
               <div className="combo-current">
                 <span className="pill">{styleNames[activeStyle]}</span>
                 <span className="x">&times;</span>
-                <span className="pill">{motionNames[activeMotion]}</span>
+                <span className="pill">{videoStyleNames[activeVideoStyle]}</span>
                 <span className="eq">=</span>
                 <span className="result-text">{combo.desc}</span>
               </div>
               <div className="combo-result-grid">
                 {combo.examples.map((ex, i) => (
                   <div className="combo-result-card" key={i}>
-                    <div className="thumb"><img src={imgs[i] || imgs[0]} alt={`${styleNames[activeStyle]} ${motionNames[activeMotion]} - ${ex.t}`} /></div>
+                    <div className="thumb"><img src={imgs[i] || imgs[0]} alt={`${styleNames[activeStyle]} ${videoStyleNames[activeVideoStyle]} - ${ex.t}`} /></div>
                     <div className="info"><h4>{ex.t}</h4><p>{ex.s}</p></div>
                   </div>
                 ))}
