@@ -89,6 +89,7 @@ export default async function handler(req, res) {
           const fullPrompt = [slide.image_prompt, style_prompt].filter(Boolean).join('. ');
 
           // Generate background image
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: generating image with ${image_model}...`);
           const bgUrl = await generateImageV2(
             image_model,
             fullPrompt,
@@ -96,6 +97,7 @@ export default async function handler(req, res) {
             keys,
             supabase,
           );
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: image generated → ${bgUrl?.slice(0, 80)}...`);
 
           logCost({
             username: req.user.email,
@@ -105,6 +107,7 @@ export default async function handler(req, res) {
           }).catch(() => {});
 
           // Compose branded slide overlay
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: composing branded overlay...`);
           const composedBuffer = await composeSlide({
             slideType: slide.slide_type,
             canvasW: w,
@@ -130,9 +133,11 @@ export default async function handler(req, res) {
             });
 
           if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: uploaded to ${fileName}`);
 
           const { data: publicUrl } = supabase.storage.from('media').getPublicUrl(fileName);
           const composedUrl = publicUrl?.publicUrl;
+          console.log(`[carousel/generate-images] Slide ${slide.slide_number}: public URL → ${composedUrl?.slice(0, 80)}...`);
 
           // Update slide record
           await supabase.from('carousel_slides')
