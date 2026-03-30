@@ -268,13 +268,13 @@ export async function runShortsPipeline(opts) {
 
     if (wordTimestamps && wordTimestamps.length > 0) {
       console.log(`[shortsPipeline] Step 4: Aligning blocks (TTS-first, model=${videoModel})`);
-      const alignment = alignBlocks(wordTimestamps, ttsDuration, videoModel || 'fal_veo3', frameworkScenes);
+      const alignment = alignBlocks(wordTimestamps, ttsDuration, videoModel || 'fal_kling', frameworkScenes);
       alignedBlocks = alignment.blocks;
       console.log(`[shortsPipeline] ${alignedBlocks.length} blocks, ${alignment.totalClipDuration}s clips, drift ${alignment.drift.toFixed(1)}s`);
     } else {
       console.log('[shortsPipeline] Step 4: Fallback — using framework durations');
       const durationRanges = frameworkScenes?.map(s => s.durationRange) || [[4, 8]];
-      const lockedDurations = solveDurations(video_length_preset, durationRanges, videoModel || 'fal_veo3');
+      const lockedDurations = solveDurations(video_length_preset, durationRanges, videoModel || 'fal_kling');
       alignedBlocks = lockedDurations.map((dur, i) => ({
         clipDuration: dur,
         startTime: lockedDurations.slice(0, i).reduce((a, b) => a + b, 0),

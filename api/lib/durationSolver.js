@@ -5,9 +5,10 @@
 export const MODEL_DURATIONS = {
   // Discrete — only these exact values
   fal_veo3:        { type: 'discrete', values: [4, 6, 8] },
-  fal_veo2:        { type: 'discrete', values: [4, 6, 8] },
+  fal_veo2:        { type: 'discrete', values: [5, 6, 7, 8] },
   fal_kling:       { type: 'discrete', values: [5, 10] },
-  fal_wan:         { type: 'discrete', values: [5, 10] },
+  fal_wan25:       { type: 'discrete', values: [5, 10] },
+  fal_grok_video:  { type: 'range', min: 1, max: 15 },
   fal_pixverse:    { type: 'discrete', values: [5, 8] },
   // Continuous — any integer in range
   fal_kling_v3:    { type: 'range', min: 3, max: 15 },

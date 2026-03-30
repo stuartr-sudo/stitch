@@ -15,11 +15,13 @@ import TemplatesPage from './pages/TemplatesPage';
 import CostDashboardPage from './pages/CostDashboardPage';
 import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
+import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
+import StoryboardWorkspace from './pages/StoryboardWorkspace';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -147,6 +149,14 @@ function App() {
           />
 
           <Route
+            path="/shorts/workbench"
+            element={
+              <ProtectedRoute>
+                <ShortsWorkbenchPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/shorts/new"
             element={<Navigate to="/campaigns/new?type=shorts" replace />}
           />
@@ -189,7 +199,7 @@ function App() {
             path="/storyboards/:id"
             element={
               <ProtectedRoute>
-                <StoryboardsPage />
+                <StoryboardWorkspace />
               </ProtectedRoute>
             }
           />

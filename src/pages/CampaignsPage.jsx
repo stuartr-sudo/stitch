@@ -850,6 +850,9 @@ export default function CampaignsPage() {
               <Button size="sm" variant="outline" onClick={() => loadCampaigns(true)} disabled={isRefreshing}>
                 <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
+              <Button variant="outline" onClick={() => navigate('/shorts/workbench')}>
+                Workbench
+              </Button>
               <Button onClick={() => navigate('/campaigns/new')} className="bg-[#2C666E] hover:bg-[#07393C] text-white">
                 <Plus className="w-4 h-4 mr-2" /> New Campaign
               </Button>

@@ -512,6 +512,15 @@ app.post('/api/storyboard/projects/:id/generate-previews', authenticateToken, as
   return handler(req, res);
 });
 
+// Storyboard production (must be BEFORE projects catch-all)
+app.post('/api/storyboard/projects/:id/produce', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/produce.js')).default(req, res);
+});
+
+app.get('/api/storyboard/projects/:id/production-status', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/production-status.js')).default(req, res);
+});
+
 // Storyboard Tool — CRUD + frame management (catch-all)
 app.all('/api/storyboard/projects*', authenticateToken, async (req, res) => {
   const handler = (await import('./api/storyboard/projects.js')).default;
@@ -573,6 +582,13 @@ app.get('/api/styles/captions', authenticateToken, async (req, res) => {
   res.json({ presets: CAPTION_STYLES });
 });
 app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
+
+// Shorts Workbench (step-by-step pipeline)
+app.post('/api/workbench/:action', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/workbench.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
 
 // Shorts repair & reassemble (with auth)
 app.post('/api/shorts/repair-scene', authenticateToken, async (req, res) => {

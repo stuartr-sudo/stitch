@@ -368,7 +368,7 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   let runningTimestamp = 0;
   const videoKeyframes = videoUrls.map((url, i) => {
     const durationMs = (clipDurations[i] || 8) * 1000; // default 8s if unknown
-    const kf = { url, timestamp: runningTimestamp, duration: durationMs };
+    const kf = { url, timestamp: runningTimestamp, duration: durationMs, audio: false };
     runningTimestamp += durationMs;
     return kf;
   });
