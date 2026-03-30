@@ -116,6 +116,7 @@ export function buildNarrativeSystemPrompt(inputs) {
     targetSceneCount,
     durationConstraints,
     sceneDirection,
+    locationDescription,
     brandStyleGuide,
     clientBrief,
     hasDialogue,
@@ -138,6 +139,11 @@ Concept: ${storyOverview}
 ${clientBrief ? `Client Brief: ${clientBrief}` : ''}
 ${overallMood ? `Mood: ${overallMood}` : ''}
 ${targetAudience ? `Target Audience: ${targetAudience}` : ''}`);
+
+  // ── Location / Setting ──
+  if (locationDescription) {
+    sections.push(`PRIMARY LOCATION — use this as the foundation for scene settings. Scenes may move to different areas within or near this location, but this is the anchor environment:\n${locationDescription}`);
+  }
 
   // ── User-provided story beats ──
   if (storyBeats?.length > 0) {

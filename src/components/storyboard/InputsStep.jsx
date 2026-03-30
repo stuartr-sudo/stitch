@@ -57,6 +57,8 @@ export default function InputsStep({
   // Scene direction (5c)
   sceneDirection,
   onSceneDirectionChange,
+  locationDescription,
+  onLocationDescriptionChange,
 }) {
   const [expandedSection, setExpandedSection] = useState('startImage');
 
@@ -173,6 +175,25 @@ export default function InputsStep({
         <SectionHeader id="direction" label="Scene Direction" subtitle="Global creative direction for all scenes" />
         {expandedSection === 'direction' && (
           <div className="pb-4">
+            <div className="mb-4">
+              <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Location / Setting</span>
+              <p className="text-[10px] text-slate-400 mt-0.5 mb-1.5">Describe the location in detail — where, when, what's around. This guides all scene settings.</p>
+              <textarea
+                value={locationDescription || ''}
+                onChange={(e) => onLocationDescriptionChange?.(e.target.value)}
+                placeholder="e.g. A sunlit suburban footpath in Auckland, New Zealand — pohutukawa trees lining the road, wooden fences, parked cars, clear blue sky, midday summer light..."
+                rows={3}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#2C666E]/30 resize-y placeholder:text-gray-300"
+              />
+              {startFrameDescription && !locationDescription && (
+                <button
+                  onClick={() => onLocationDescriptionChange?.(startFrameDescription)}
+                  className="mt-1.5 text-xs text-[#2C666E] hover:text-[#1e4d54] underline"
+                >
+                  Use start frame analysis as location description
+                </button>
+              )}
+            </div>
             <PillSelector label="Environment" options={SCENE_PILLS.environment} selected={sceneDirection.environment || []} onToggle={(p) => togglePill('environment', p)} />
             <PillSelector label="Character Action" options={SCENE_PILLS.action} selected={sceneDirection.action || []} onToggle={(p) => togglePill('action', p)} />
             <PillSelector label="Expression" options={SCENE_PILLS.expression} selected={sceneDirection.expression || []} onToggle={(p) => togglePill('expression', p)} />

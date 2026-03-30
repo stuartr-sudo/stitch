@@ -82,6 +82,7 @@ export default async function handler(req, res) {
       sceneDirection,
       props,
       negativePrompt,
+      locationDescription,      // Detailed location/setting description
 
       // Step 6: Audio & Model
       globalModel,
@@ -126,6 +127,7 @@ export default async function handler(req, res) {
       targetSceneCount,
       durationConstraints,
       sceneDirection,
+      locationDescription,
       brandStyleGuide,
       clientBrief,
       hasDialogue,
@@ -174,6 +176,7 @@ export default async function handler(req, res) {
       builderColorGrade,
       motionStylePrompt: videoStylePrompt || undefined,
       startFrameDescription: hasStartFrame ? startFrameDescription : undefined,
+      locationDescription: locationDescription || undefined,
       characterDescriptions: characterDescriptions.length > 0 ? characterDescriptions : undefined,
       brandStyleGuide,
       aspectRatio,

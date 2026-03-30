@@ -184,6 +184,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const [sceneDirection, setSceneDirection] = useState({
     environment: [], action: [], expression: [], lighting: [], camera: [],
   });
+  const [locationDescription, setLocationDescription] = useState('');
 
   // Script generation
   const [generatingScript, setGeneratingScript] = useState(false);
@@ -370,6 +371,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     if (sb.builder_color_grade) setBuilderColorGrade(sb.builder_color_grade);
     if (sb.motion_style) setVideoStyle(sb.motion_style);
     if (sb.scene_direction) setSceneDirection(sb.scene_direction);
+    if (sb.location_description) setLocationDescription(sb.location_description);
     if (sb.start_frame_url) setStartFrameUrl(sb.start_frame_url);
     if (sb.start_frame_description) setStartFrameDescription(sb.start_frame_description);
     if (sb.elements?.length) setElements(sb.elements);
@@ -457,6 +459,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     videoStyle,
     globalModel,
     sceneDirection,
+    locationDescription,
     selectedBrand,
   });
 
@@ -476,6 +479,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     if (config.videoStyle) setVideoStyle(config.videoStyle);
     if (config.globalModel) setGlobalModel(config.globalModel);
     if (config.sceneDirection) setSceneDirection(config.sceneDirection);
+    if (config.locationDescription) setLocationDescription(config.locationDescription);
     if (config.selectedBrand !== undefined) setSelectedBrand(config.selectedBrand);
   };
 
@@ -728,6 +732,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       const data = await res.json();
       if (data.success && data.description) {
         setStartFrameDescription(data.description);
+        // Auto-populate location if empty — user can edit it
+        if (!locationDescription) {
+          setLocationDescription(data.description);
+        }
         toast.success('Scene analyzed');
       }
     } catch (err) {
@@ -835,6 +843,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
         sceneDirection,
         props: selectedProps,
         negativePrompt: negFreetext || selectedNegPills?.join(', '),
+        locationDescription: locationDescription || undefined,
         brandStyleGuide: selectedBrand || undefined,
       };
       const res = await apiFetch('/api/storyboard/generate-scenes', {
@@ -1915,6 +1924,8 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             }}
             sceneDirection={sceneDirection}
             onSceneDirectionChange={setSceneDirection}
+            locationDescription={locationDescription}
+            onLocationDescriptionChange={setLocationDescription}
           />
         )}
 

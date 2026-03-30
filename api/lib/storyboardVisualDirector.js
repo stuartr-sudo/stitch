@@ -58,6 +58,7 @@ export function buildVisualDirectorSystemPrompt(inputs) {
     builderColorGrade,    // Manual color grade pill (e.g., "Warm")
     motionStylePrompt,    // From video style preset — ~150 word cinematography direction
     startFrameDescription, // Vision analysis of start frame image
+    locationDescription,  // User-provided detailed location/setting description
     characterDescriptions, // Element descriptions or natural character descriptions
     brandStyleGuide,
     aspectRatio,
@@ -114,6 +115,11 @@ Target prompt length: ${template.promptLength.target} words per scene (min ${tem
   // ── Motion/Cinematography Style (STRUCTURAL) ──
   if (motionStylePrompt) {
     sections.push(`CINEMATOGRAPHY DIRECTION — apply this motion style across all scenes:\n${motionStylePrompt}`);
+  }
+
+  // ── Location / Setting (STRUCTURAL) ──
+  if (locationDescription) {
+    sections.push(`PRIMARY LOCATION — this is the anchor environment for the entire sequence. Every scene's visual prompt must reflect this location (or areas within/near it). Weave location-specific details (architecture, vegetation, ground surface, signage, atmosphere) into each visualPrompt:\n${locationDescription}`);
   }
 
   // ── Scene Direction from pills (lighting + camera) ──
