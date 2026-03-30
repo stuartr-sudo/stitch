@@ -188,6 +188,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   // Script generation
   const [generatingScript, setGeneratingScript] = useState(false);
   const [scriptError, setScriptError] = useState(null);
+  const [generatingPreviews, setGeneratingPreviews] = useState(false);
 
   // Assembly
   const [assembling, setAssembling] = useState(false);
@@ -844,13 +845,16 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
       const data = await res.json();
       if (!data.success || !data.scenes) throw new Error(data.error || 'Failed to generate scenes');
       setStoryboardTitle(data.title || storyboardName);
-      setScenes(data.scenes.map((s, i) => ({
+      const mappedScenes = data.scenes.map((s, i) => ({
         ...s,
         id: `scene-${Date.now()}-${i}`,
         status: 'pending',
         videoUrl: null,
         lastFrameUrl: null,
-      })));
+      }));
+      setScenes(mappedScenes);
+      // Auto-generate preview images in background
+      generatePreviewImages(mappedScenes);
     } catch (err) {
       console.error('[Storyboard] Script generation failed:', err);
       setScriptError(err.message);
@@ -890,6 +894,43 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     [newScenes[index], newScenes[targetIndex]] = [newScenes[targetIndex], newScenes[index]];
     newScenes.forEach((s, i) => s.sceneNumber = i + 1);
     setScenes(newScenes);
+  };
+
+  // ── Auto-generate preview images ──
+  const generatePreviewImages = async (scenesToPreview) => {
+    const currentScenes = scenesToPreview || scenes;
+    if (!currentScenes.length) return;
+    setGeneratingPreviews(true);
+    try {
+      const res = await apiFetch('/api/storyboard/generate-previews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenes: currentScenes.map(s => ({
+            sceneNumber: s.sceneNumber,
+            previewImagePrompt: s.previewImagePrompt,
+            visualPrompt: s.visualPrompt,
+            durationSeconds: s.durationSeconds,
+            narrativeNote: s.narrativeNote,
+          })),
+          aspectRatio,
+          imageModel: 'fal_flux',
+          startFrameUrl,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.previews) {
+        setScenes(prev => prev.map(scene => {
+          const preview = data.previews.find(p => p.sceneNumber === scene.sceneNumber);
+          if (preview?.imageUrl) return { ...scene, previewImageUrl: preview.imageUrl };
+          return scene;
+        }));
+      }
+    } catch (err) {
+      console.warn('[Storyboard] Preview generation failed:', err.message);
+    } finally {
+      setGeneratingPreviews(false);
+    }
   };
 
   // ── Video Generation (sequential with frame chaining) ──
@@ -1715,7 +1756,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Style Preset</h3>
-              <StyleGrid value={style} onChange={(v) => { setStyle(v); setTimeout(() => handleNext(), 150); }} maxHeight="none" columns="grid-cols-4" />
+              <StyleGrid value={style} onChange={setStyle} maxHeight="none" columns="grid-cols-4" />
             </div>
 
             <div className="space-y-4 p-5 bg-white rounded-lg border border-gray-200">
@@ -1913,7 +1954,15 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             {!generatingScript && scenes.length > 0 && (
               <>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">{scenes.length} scenes generated</p>
+                  <p className="text-sm text-gray-500">
+                    {scenes.length} scenes generated
+                    {generatingPreviews && (
+                      <span className="ml-2 text-xs text-[#2C666E]">
+                        <Loader2 className="w-3 h-3 inline animate-spin mr-1" />
+                        Generating preview images...
+                      </span>
+                    )}
+                  </p>
                   <button
                     onClick={() => { setScenes([]); handleGenerateScript(); }}
                     className="text-xs text-gray-400 hover:text-gray-600 underline"
@@ -1978,18 +2027,11 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
                   <span className="ml-2 text-xs text-gray-400">({selectedModelInfo.label})</span>
                 )}
               </span>
-              <div className="flex gap-2">
-                {!generating && scenes.some(s => s.status === 'pending' || s.status === 'error') && (
-                  <Button onClick={generateAllRemaining} size="sm" className="bg-[#2C666E] hover:bg-[#1e4d54]">
-                    Generate All Remaining
-                  </Button>
-                )}
-                {generating && (
-                  <Button onClick={() => { cancelRef.current = true; }} size="sm" variant="outline" className="text-red-600 border-red-200">
-                    Cancel
-                  </Button>
-                )}
-              </div>
+              {generating && (
+                <Button onClick={() => { cancelRef.current = true; }} size="sm" variant="outline" className="text-red-600 border-red-200">
+                  Cancel
+                </Button>
+              )}
             </div>
 
             {scenes.map((scene, i) => (
