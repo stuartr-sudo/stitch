@@ -83,23 +83,35 @@ Built-in template examples for reference:
 - Comparison: hook(3s) → comparison(7s) → comparison(7s) → cta(4s) | BRAND-COMPARISON, AFF-MULTI-COMPARE`;
 
 // ---------------------------------------------------------------------------
-// FAL polling helper (minimal — avoids importing from pipelineHelpers)
+// FAL polling helper — 2-step: poll /status until COMPLETED, then GET bare /requests/{id}
 // ---------------------------------------------------------------------------
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 60, delayMs = 2000) {
-  const pollUrl = requestIdOrUrl.startsWith?.('http')
-    ? requestIdOrUrl
-    : `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
+  let statusUrl, resultUrl;
+  if (requestIdOrUrl.startsWith?.('http')) {
+    const base = requestIdOrUrl.replace(/\/status\/?$/, '');
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  } else {
+    const base = `${FAL_BASE}/${model}/requests/${requestIdOrUrl}`;
+    statusUrl = `${base}/status`;
+    resultUrl = base;
+  }
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(pollUrl, {
+    const res = await fetch(statusUrl, {
       headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
     });
     if (!res.ok) { await sleep(delayMs); continue; }
     const data = await res.json();
-    if (data.status === 'COMPLETED') return data.output;
-    if (!data.status && (data.images || data.image_url || data.video || data.audio)) return data;
+    if (data.status === 'COMPLETED') {
+      const resultRes = await fetch(resultUrl, {
+        headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+      });
+      if (!resultRes.ok) throw new Error(`FAL result fetch failed: ${resultRes.status}`);
+      return resultRes.json();
+    }
     if (data.status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
     await sleep(delayMs);
   }
@@ -111,16 +123,18 @@ async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 60, dela
 // ---------------------------------------------------------------------------
 
 async function extractFrame(videoUrl, frameTime, falKey) {
+  // Map numeric timestamp to frame_type: first (0-1s), middle, or last
+  const frameType = frameTime <= 1 ? 'first' : frameTime >= 10 ? 'last' : 'middle';
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/extract-frame`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ video_url: videoUrl, frame_time: frameTime }),
+    body: JSON.stringify({ video_url: videoUrl, frame_type: frameType }),
   });
   if (!res.ok) throw new Error(`Frame extraction failed: ${await res.text()}`);
   const queueData = await res.json();
-  if (queueData.image_url) return queueData.image_url;
+  if (queueData.images?.[0]?.url) return queueData.images[0].url;
   const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/extract-frame', falKey, 20, 2000);
-  return output?.image_url || null;
+  return output?.images?.[0]?.url || null;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +145,7 @@ async function transcribeAudio(videoUrl, falKey) {
   const res = await fetch(`${FAL_BASE}/fal-ai/whisper`, {
     method: 'POST',
     headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_url: videoUrl, task: 'transcribe', language: 'en', version: '3' }),
+    body: JSON.stringify({ audio_url: videoUrl, task: 'transcribe', language: 'en', chunk_level: 'segment' }),
   });
   if (!res.ok) throw new Error(`Whisper transcription failed: ${await res.text()}`);
   const queueData = await res.json();
