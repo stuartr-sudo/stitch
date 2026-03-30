@@ -1,34 +1,29 @@
 /**
  * Storyboard Preview Generator
  *
- * Generates a cheap preview IMAGE for each scene using the previewImagePrompt
- * from Stage 2 (Visual Director). These images populate the storyboard document
- * that gets exported as PDF for client approval.
+ * Generates a preview IMAGE for each scene. When a character reference image
+ * is available, uses MiniMax Subject Reference (fal-ai/minimax/image-01/subject-reference)
+ * to maintain character consistency across scenes — same character, different scene/action.
  *
- * Cost: ~$0.01 per image × 6 scenes = ~$0.06 total
- * Time: ~10-15 seconds (parallel generation)
- *
- * This runs BEFORE video generation — it's the "creative gate" where the client
- * sees thumbnails and approves the direction before you spend $2-3 on video clips.
+ * Without character refs, falls back to standard T2I using the user's selected image model.
  *
  * POST /api/storyboard/generate-previews
  * Body: {
  *   scenes: [{ sceneNumber, previewImagePrompt, durationSeconds, narrativeNote, ... }],
  *   aspectRatio: '16:9' | '9:16' | '1:1',
- *   imageModel: 'fal_flux' | 'fal_seedream' | 'fal_imagen4' | ...,
- *   startFrameUrl: string | null,  // If provided, Scene 1 uses this instead of generating
- * }
- *
- * Returns: {
- *   success: true,
- *   previews: [{ sceneNumber, imageUrl, prompt }]
+ *   imageModel: 'fal_nano_banana' | 'fal_flux' | ...,
+ *   startFrameUrl: string | null,
+ *   startFrameDescription: string | null,
+ *   characterReferenceUrls: string[],  // character ref images for subject consistency
  * }
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
-import { generateImage, uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
+import { generateImage, uploadUrlToSupabase, pollFalQueue } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
+
+const FAL_QUEUE = 'https://queue.fal.run';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -59,37 +54,39 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // I2I helper — uses nano-banana-2/edit with reference images for style/character consistency
-    // Supports multiple image_urls: starting image + character references
-    const i2iAspectMap = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4' };
-    async function generateI2I(referenceImageUrls, prompt, ar) {
-      const res = await fetch('https://fal.run/fal-ai/nano-banana-2/edit', {
+    // Pick the best character reference: explicit character refs first, then starting image
+    const characterRefUrl = characterReferenceUrls?.[0] || startFrameUrl || null;
+    const useSubjectRef = !!characterRefUrl && !!keys.falKey;
+
+    // MiniMax Subject Reference — generates a new scene with the same character identity
+    const MINIMAX_ENDPOINT = 'fal-ai/minimax/image-01/subject-reference';
+    async function generateWithSubjectRef(characterImageUrl, scenePrompt, ar) {
+      // Submit to FAL queue
+      const submitRes = await fetch(`${FAL_QUEUE}/${MINIMAX_ENDPOINT}`, {
         method: 'POST',
         headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_urls: referenceImageUrls,
-          prompt: `Composite the character(s) into the scene, matching the exact art style, character design, and color palette of the reference image(s). ${prompt}`,
-          aspect_ratio: i2iAspectMap[ar] || '16:9',
-          resolution: '1K',
+          prompt: scenePrompt,
+          image_url: characterImageUrl,
+          aspect_ratio: ar || '16:9',
           num_images: 1,
         }),
       });
-      if (!res.ok) throw new Error(`I2I generation failed: ${await res.text()}`);
-      const data = await res.json();
-      const imgUrl = data.images?.[0]?.url;
-      if (!imgUrl) throw new Error('No image URL from I2I result');
+      if (!submitRes.ok) throw new Error(`MiniMax Subject Ref submit failed: ${await submitRes.text()}`);
+      const submitData = await submitRes.json();
+      const requestId = submitData.request_id;
+      if (!requestId) throw new Error('No request_id from MiniMax Subject Ref');
+
+      // Poll for result
+      const result = await pollFalQueue(requestId, MINIMAX_ENDPOINT, keys.falKey, 60, 3000);
+      const imgUrl = result?.images?.[0]?.url;
+      if (!imgUrl) throw new Error('No image URL from MiniMax Subject Ref result');
       return uploadUrlToSupabase(imgUrl, supabase, 'pipeline/images');
     }
 
-    // Build reference image list: starting image first, then character references
-    const referenceImages = [
-      ...(startFrameUrl ? [startFrameUrl] : []),
-      ...(characterReferenceUrls || []),
-    ].filter(Boolean);
-    const useI2I = referenceImages.length > 0 && !!keys.falKey;
-    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio}, I2I: ${useI2I}, refs: ${referenceImages.length})`);
+    console.log(`[StoryboardPreviews] Generating ${scenes.length} preview images (model: ${imageModel}, aspect: ${aspectRatio}, subjectRef: ${useSubjectRef}, charRef: ${characterRefUrl ? 'yes' : 'no'})`);
 
-    // Generate all preview images in parallel (they're independent)
+    // Generate all preview images in parallel
     const previewPromises = scenes.map(async (scene, i) => {
       // Scene 1: use start frame if provided
       if (i === 0 && startFrameUrl) {
@@ -116,17 +113,16 @@ export default async function handler(req, res) {
       try {
         let imageUrl;
 
-        if (useI2I) {
-          // I2I: pass reference images (starting image + character refs) so the
-          // model can see and match art style, character design, and color palette
-          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via I2I (nano-banana-2/edit) with ${referenceImages.length} reference(s)...`);
-          imageUrl = await generateI2I(referenceImages, basePrompt, aspectRatio);
+        if (useSubjectRef) {
+          // MiniMax Subject Reference: maintains character identity across different scenes
+          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via MiniMax Subject Reference...`);
+          imageUrl = await generateWithSubjectRef(characterRefUrl, basePrompt, aspectRatio);
         } else {
-          // Fallback: T2I with text description of style
+          // Fallback: standard T2I with text description of style
           const prompt = startFrameDescription && basePrompt
             ? `Maintain exact same art style, rendering style, and color palette as: ${startFrameDescription.substring(0, 200)}. Scene: ${basePrompt}`
             : basePrompt;
-          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via T2I...`);
+          console.log(`[StoryboardPreviews] Scene ${i + 1}: generating via T2I (${imageModel})...`);
           imageUrl = await generateImage(
             prompt,
             aspectRatio,
@@ -141,7 +137,7 @@ export default async function handler(req, res) {
           sceneNumber: scene.sceneNumber || i + 1,
           imageUrl,
           prompt: basePrompt,
-          source: useI2I ? 'i2i' : 'generated',
+          source: useSubjectRef ? 'subject_ref' : 'generated',
         };
       } catch (err) {
         console.error(`[StoryboardPreviews] Scene ${i + 1} failed:`, err.message);
@@ -163,9 +159,9 @@ export default async function handler(req, res) {
     if (req.user?.email) {
       logCost({
         username: req.user.email.split('@')[0],
-        category: 'preview_images',
+        category: 'fal',
         operation: 'storyboard_previews',
-        model: imageModel,
+        model: useSubjectRef ? 'minimax-subject-ref' : imageModel,
         count: successCount,
       });
     }
