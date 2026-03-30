@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     const {
       scenes,
       aspectRatio = '16:9',
-      imageModel = 'fal_flux',
+      imageModel = 'fal_nano_banana',
       startFrameUrl = null,
       startFrameDescription = null,
       characterReferenceUrls = [],

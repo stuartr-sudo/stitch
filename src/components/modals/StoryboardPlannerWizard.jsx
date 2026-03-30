@@ -46,6 +46,7 @@ import WizardStepper from '@/components/ui/WizardStepper';
 import InputsStep from '../storyboard/InputsStep';
 import ReviewScene from '../storyboard/ReviewScene';
 import { SCENE_MODELS } from '../storyboard/SceneModelSelector';
+import { IMAGE_MODELS } from '@/lib/modelPresets';
 import CharactersKling from '../storyboard/CharactersKling';
 import CharactersVeo from '../storyboard/CharactersVeo';
 import GenerateScene from '../storyboard/GenerateScene';
@@ -71,7 +72,8 @@ const TARGET_AUDIENCES = ['Children (3-8)', 'Kids (8-12)', 'Teens (13-17)', 'You
 const WIZARD_STEPS = [
   { key: 'story', label: 'Project & Story' },
   { key: 'style', label: 'Look & Feel' },
-  { key: 'model', label: 'Model' },
+  { key: 'image_model', label: 'Image Model' },
+  { key: 'model', label: 'Video Model' },
   { key: 'inputs', label: 'Characters & Scene' },
   { key: 'script', label: 'Script & Storyboard' },
   { key: 'audio', label: 'Audio & Finishing' },
@@ -177,7 +179,10 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
   const [musicUrl, setMusicUrl] = useState(null);
   const [captionStyle, setCaptionStyle] = useState('none');
 
-  // Global model (replaces per-scene model)
+  // Image model for preview/keyframe generation
+  const [imageModel, setImageModel] = useState('fal_nano_banana');
+
+  // Global video model (replaces per-scene model)
   const [globalModel, setGlobalModel] = useState('veo3');
 
   // Scene direction pills
@@ -923,7 +928,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
             narrativeNote: s.narrativeNote,
           })),
           aspectRatio,
-          imageModel: 'fal_flux',
+          imageModel,
           startFrameUrl,
           startFrameDescription,
           // Character reference images for I2I consistency
@@ -1464,6 +1469,7 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
     switch (step) {
       case 'story': return !storyboardName?.trim();
       case 'style': return !style;
+      case 'image_model': return !imageModel;
       case 'model': return !globalModel;
       case 'inputs': return false;
       case 'script': return scenes.length === 0 || generatingScript;
@@ -1842,7 +1848,36 @@ export default function StoryboardPlannerWizard({ isOpen, onClose, onScenesCompl
           </div>
         )}
 
-        {/* ── Step 3: Model ── */}
+        {/* ── Step 3: Image Model ── */}
+        {step === 'image_model' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Select the AI model to generate your scene preview images.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {IMAGE_MODELS.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => setImageModel(m.value)}
+                  className={`rounded-xl border p-4 text-left transition-all ${
+                    imageModel === m.value
+                      ? 'border-[#2C666E] ring-2 ring-[#2C666E]/30 bg-white'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <span className="text-sm font-semibold text-gray-900">{m.label}</span>
+                    {imageModel === m.value && (
+                      <CheckCircle2 className="w-5 h-5 text-[#2C666E] shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-1">{m.strength}</p>
+                  <p className="text-xs text-gray-400">{m.price}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 4: Video Model ── */}
         {step === 'model' && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500">Choose the video generation model for all scenes.</p>
