@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
   Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film,
-  Settings2,
+  Settings2, Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
@@ -51,6 +51,8 @@ export default function CarouselEditor({ carouselId }) {
   const [assembling, setAssembling] = useState(false);
   const [videoModel, setVideoModel] = useState('wavespeed_wan');
   const [videoDuration, setVideoDuration] = useState(5);
+  const [creatingSlideshw, setCreatingSlideshow] = useState(false);
+  const [slideshowDuration, setSlideshowDuration] = useState(3);
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -268,6 +270,26 @@ export default function CarouselEditor({ carouselId }) {
     }
   }
 
+  // ── Create slideshow from static images ──
+  async function handleCreateSlideshow() {
+    setCreatingSlideshow(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/create-slideshow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slide_duration: slideshowDuration }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        setCreatingSlideshow(false);
+      }
+    } catch (err) {
+      toast.error('Failed to create slideshow');
+      setCreatingSlideshow(false);
+    }
+  }
+
   // ── Update slide text ──
   async function handleUpdateSlide(slideId, updates) {
     try {
@@ -447,6 +469,30 @@ export default function CarouselEditor({ carouselId }) {
                 : <Film className="w-4 h-4 mr-2" />}
               Assemble Video
             </Button>
+          )}
+          {!isVideoCarousel && allDone && hasImages && !carousel.assembled_video_url && (
+            <>
+              <select
+                value={slideshowDuration}
+                onChange={e => setSlideshowDuration(Number(e.target.value))}
+                className="text-xs border rounded px-1.5 py-1.5 bg-white text-gray-700"
+                title="Duration per slide"
+              >
+                <option value={3}>3s</option>
+                <option value={5}>5s</option>
+                <option value={8}>8s</option>
+              </select>
+              <Button
+                variant="outline"
+                onClick={handleCreateSlideshow}
+                disabled={creatingSlideshw || carousel.status === 'assembling'}
+              >
+                {creatingSlideshw || carousel.status === 'assembling'
+                  ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  : <Play className="w-4 h-4 mr-2" />}
+                Create Slideshow
+              </Button>
+            </>
           )}
           {hasImages && allDone && carousel.status !== 'published' && (
             <Button onClick={handlePublish} disabled={publishing}>

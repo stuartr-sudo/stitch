@@ -460,6 +460,45 @@ export async function assembleCarouselVideo(videoUrls, falKey, supabase, clipDur
 }
 
 // ---------------------------------------------------------------------------
+// Assemble a slideshow from static images (no AI video generation)
+// ---------------------------------------------------------------------------
+
+export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, slideDuration = 3) {
+  if (!falKey) throw new Error('falKey required for slideshow assembly');
+  if (!imageUrls?.length) throw new Error('No images for slideshow');
+
+  let runningTimestamp = 0;
+  const videoKeyframes = imageUrls.map((url) => {
+    const durationMs = slideDuration * 1000;
+    const kf = { url, timestamp: runningTimestamp, duration: durationMs };
+    runningTimestamp += durationMs;
+    return kf;
+  });
+  const totalDurationSec = runningTimestamp / 1000;
+
+  const tracks = [
+    { id: 'video', type: 'video', keyframes: videoKeyframes },
+  ];
+
+  console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)`);
+
+  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tracks, duration: totalDurationSec }),
+  });
+
+  if (!res.ok) throw new Error(`FAL ffmpeg slideshow assembly failed: ${await res.text()}`);
+  const queueData = await res.json();
+
+  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
+  if (!videoUrl) throw new Error('No video URL from FFmpeg slideshow assembly');
+
+  return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
+}
+
+// ---------------------------------------------------------------------------
 // Extract the first frame from a video clip
 // ---------------------------------------------------------------------------
 

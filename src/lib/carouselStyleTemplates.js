@@ -12,7 +12,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'bold_editorial',
     label: 'Bold Editorial',
-    description: 'Large bold headlines at the bottom with a gradient scrim',
+    description: 'Bottom gradient, bold left-aligned text',
     layout: {
       textAlign: 'left',
       textPosition: 'bottom',
@@ -30,7 +30,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'minimal_center',
     label: 'Minimal Center',
-    description: 'Centered text with a light full-screen overlay',
+    description: 'Light overlay, centered text',
     layout: {
       textAlign: 'center',
       textPosition: 'center',
@@ -48,7 +48,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'dark_cinematic',
     label: 'Dark Cinematic',
-    description: 'Heavy bottom scrim, large text, dramatic contrast',
+    description: 'Heavy dark scrim, dramatic large text',
     layout: {
       textAlign: 'left',
       textPosition: 'bottom',
@@ -66,7 +66,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'magazine',
     label: 'Magazine',
-    description: 'Italic headlines centered with quotation-style framing',
+    description: 'Italic centered headlines, elegant overlay',
     layout: {
       textAlign: 'center',
       textPosition: 'center',
@@ -84,7 +84,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'clean_bottom',
     label: 'Clean Bottom Bar',
-    description: 'Solid dark bar at the bottom, clean text on top',
+    description: 'Solid dark bar, clean left-aligned text',
     layout: {
       textAlign: 'left',
       textPosition: 'bottom',
@@ -102,7 +102,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'top_text',
     label: 'Top Headline',
-    description: 'Text at the top with gradient scrim, image dominates below',
+    description: 'Top gradient scrim, image dominates below',
     layout: {
       textAlign: 'left',
       textPosition: 'top',
@@ -120,7 +120,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'text_only',
     label: 'Text Only',
-    description: 'No background image, solid dark background with centered text',
+    description: 'No background, solid dark with centered text',
     layout: {
       textAlign: 'center',
       textPosition: 'center',
@@ -138,7 +138,7 @@ export const CAROUSEL_STYLE_TEMPLATES = [
   {
     value: 'side_strip',
     label: 'Side Strip',
-    description: 'Dark strip on the left side, text vertically centered',
+    description: 'Left dark strip, text vertically centered',
     layout: {
       textAlign: 'left',
       textPosition: 'center',

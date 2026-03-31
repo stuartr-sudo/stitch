@@ -9,10 +9,10 @@ import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
-  { value: 'instagram', label: 'Instagram', defaultRatio: '1080x1350', ratios: ['1080x1080', '1080x1350'] },
-  { value: 'linkedin', label: 'LinkedIn', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
-  { value: 'tiktok', label: 'TikTok', defaultRatio: '1080x1920', ratios: ['1080x1920'] },
-  { value: 'facebook', label: 'Facebook', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
+  { value: 'instagram', label: 'Instagram', shortRatio: '4:5', defaultRatio: '1080x1350', ratios: ['1080x1080', '1080x1350'] },
+  { value: 'linkedin', label: 'LinkedIn', shortRatio: '1:1', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
+  { value: 'tiktok', label: 'TikTok', shortRatio: '9:16', defaultRatio: '1080x1920', ratios: ['1080x1920'] },
+  { value: 'facebook', label: 'Facebook', shortRatio: '1:1', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
 ];
 
 const RATIO_LABELS = {
@@ -25,6 +25,55 @@ const CAROUSEL_TYPES = [
   { value: 'static', label: 'Static Images', icon: Image, description: 'Image slides' },
   { value: 'video', label: 'Video Carousel', icon: Film, description: 'Animated slides' },
 ];
+
+function StylePreview({ layout }) {
+  const { textAlign, textPosition, scrimType, scrimOpacity, scrimCoverage } = layout;
+  const align = textAlign === 'center' ? 'items-center text-center' : 'items-start';
+  const isItalic = layout.headlineStyle === 'italic';
+
+  // Scrim overlay
+  let scrimStyle = {};
+  let scrimClass = 'absolute';
+  if (scrimType === 'bottom_gradient') {
+    scrimStyle = { background: `linear-gradient(to top, rgba(30,30,40,${scrimOpacity}) 0%, transparent 100%)`, bottom: 0, left: 0, right: 0, height: `${scrimCoverage * 100}%` };
+  } else if (scrimType === 'top_gradient') {
+    scrimStyle = { background: `linear-gradient(to bottom, rgba(30,30,40,${scrimOpacity}) 0%, transparent 100%)`, top: 0, left: 0, right: 0, height: `${scrimCoverage * 100}%` };
+  } else if (scrimType === 'full_overlay') {
+    scrimStyle = { background: `rgba(30,30,40,${scrimOpacity})`, inset: 0 };
+  } else if (scrimType === 'solid_bar') {
+    scrimStyle = { background: `rgba(30,30,40,${scrimOpacity})`, bottom: 0, left: 0, right: 0, height: `${scrimCoverage * 100}%` };
+  } else if (scrimType === 'left_strip') {
+    scrimStyle = { background: `rgba(30,30,40,${scrimOpacity})`, top: 0, bottom: 0, left: 0, width: `${scrimCoverage * 100}%` };
+  }
+
+  // Text position
+  let textContainerClass = `absolute flex flex-col gap-1 px-3 ${align}`;
+  if (scrimType === 'left_strip') {
+    textContainerClass += ' top-0 bottom-0 left-0 justify-center';
+    textContainerClass = textContainerClass.replace('px-3', 'px-2');
+    Object.assign(scrimStyle, {});
+  } else if (textPosition === 'bottom') {
+    textContainerClass += ' bottom-0 left-0 right-0 pb-3';
+  } else if (textPosition === 'top') {
+    textContainerClass += ' top-0 left-0 right-0 pt-3';
+  } else {
+    textContainerClass += ' inset-0 justify-center';
+  }
+
+  const textWidth = scrimType === 'left_strip' ? `${scrimCoverage * 100}%` : '100%';
+
+  return (
+    <>
+      <div className={scrimClass} style={scrimStyle} />
+      <div className={textContainerClass} style={{ width: textWidth }}>
+        <div className={`bg-white/90 rounded-sm h-[6px] ${textAlign === 'center' ? 'mx-auto' : ''} ${isItalic ? 'skew-x-[-6deg]' : ''}`} style={{ width: '65%' }} />
+        <div className={`bg-white/90 rounded-sm h-[6px] ${textAlign === 'center' ? 'mx-auto' : ''} ${isItalic ? 'skew-x-[-6deg]' : ''}`} style={{ width: '45%' }} />
+        <div className={`bg-white/50 rounded-sm h-[3px] mt-0.5 ${textAlign === 'center' ? 'mx-auto' : ''}`} style={{ width: '55%' }} />
+        <div className={`bg-white/50 rounded-sm h-[3px] ${textAlign === 'center' ? 'mx-auto' : ''}`} style={{ width: '35%' }} />
+      </div>
+    </>
+  );
+}
 
 export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [sourceType, setSourceType] = useState('url');
@@ -170,12 +219,13 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
                 <button
                   key={p.value}
                   onClick={() => handlePlatformToggle(p.value)}
-                  className={`relative px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`relative px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                     selected ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   {selected && <Check className="w-3 h-3 absolute top-1 right-1 text-blue-500" />}
-                  {p.label}
+                  <span className="block">{p.label}</span>
+                  <span className={`block text-[10px] mt-0.5 ${selected ? 'text-blue-400' : 'text-gray-400'}`}>{p.shortRatio}</span>
                 </button>
               );
             })}
@@ -226,20 +276,29 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Carousel Style</label>
           <div className="grid grid-cols-2 gap-2">
-            {CAROUSEL_STYLE_TEMPLATES.map(tpl => (
-              <button
-                key={tpl.value}
-                onClick={() => setCarouselStyle(tpl.value)}
-                className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-                  carouselStyle === tpl.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <span className="font-medium block">{tpl.label}</span>
-                <span className="text-xs text-gray-400 block mt-0.5">{tpl.description}</span>
-              </button>
-            ))}
+            {CAROUSEL_STYLE_TEMPLATES.map(tpl => {
+              const L = tpl.layout;
+              return (
+                <button
+                  key={tpl.value}
+                  onClick={() => setCarouselStyle(tpl.value)}
+                  className={`text-left rounded-lg border text-sm transition-colors overflow-hidden ${
+                    carouselStyle === tpl.value
+                      ? 'border-blue-500 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {/* Layout preview */}
+                  <div className="relative w-full aspect-square bg-gradient-to-br from-slate-300 to-slate-400 overflow-hidden">
+                    <StylePreview layout={L} />
+                  </div>
+                  <div className="px-3 py-2">
+                    <span className={`font-medium block text-xs ${carouselStyle === tpl.value ? 'text-blue-700' : 'text-gray-700'}`}>{tpl.label}</span>
+                    <span className="text-[10px] text-gray-400 block mt-0.5 leading-tight">{tpl.description}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
