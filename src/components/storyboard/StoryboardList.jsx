@@ -48,9 +48,9 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
-// ── Create Dialog ──
+// ── Inline Create Panel ──
 
-function CreateStoryboardDialog({ onClose, onCreate }) {
+function CreateStoryboardPanel({ onCancel, onCreate }) {
   const [name, setName] = useState('');
   const [desiredLength, setDesiredLength] = useState(60);
   const [frameInterval, setFrameInterval] = useState(4);
@@ -62,7 +62,6 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
 
   const frameCount = Math.max(1, Math.ceil(desiredLength / frameInterval));
 
-  // Only show R2V and I2V models in create (not V2V or FLF)
   const createModels = SCENE_MODELS.filter(m => m.mode === 'reference-to-video' || m.mode === 'image-to-video');
 
   const handleCreate = async () => {
@@ -96,27 +95,30 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5 shadow-sm">
+      <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">New Storyboard</h2>
+        <button onClick={onCancel} className="text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Project Name</label>
-          <Input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g., Movin Martin — Road Crossing Episode"
-            autoFocus
-            onKeyDown={e => e.key === 'Enter' && handleCreate()}
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Project Name</label>
+        <Input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g., Movin Martin — Road Crossing Episode"
+          autoFocus
+          onKeyDown={e => e.key === 'Enter' && handleCreate()}
+        />
+      </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Length</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {[15, 30, 45, 60, 90, 120].map(len => (
               <button key={len} onClick={() => setDesiredLength(len)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   desiredLength === len ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}>
                 {len}s
@@ -124,42 +126,38 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
             ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Frame Interval</label>
-            <div className="flex gap-1.5">
-              {[2, 4, 6, 8].map(i => (
-                <button key={i} onClick={() => setFrameInterval(i)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    frameInterval === i ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}>
-                  {i}s
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Aspect Ratio</label>
-            <div className="flex gap-1.5">
-              {['16:9', '9:16', '1:1'].map(r => (
-                <button key={r} onClick={() => setAspectRatio(r)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    aspectRatio === r ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}>
-                  {r}
-                </button>
-              ))}
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Frame Interval</label>
+          <div className="flex gap-1.5">
+            {[4, 6, 8].map(i => (
+              <button key={i} onClick={() => setFrameInterval(i)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  frameInterval === i ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                {i}s
+              </button>
+            ))}
           </div>
         </div>
-
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Aspect Ratio</label>
+          <div className="flex gap-1.5">
+            {['16:9', '9:16', '1:1'].map(r => (
+              <button key={r} onClick={() => setAspectRatio(r)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  aspectRatio === r ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Narrative Style</label>
           <div className="flex flex-wrap gap-1.5">
             {NARRATIVE_STYLES.map(s => (
               <button key={s} onClick={() => setNarrativeStyle(s)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+                className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-all ${
                   narrativeStyle === s ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}>
                 {s}
@@ -167,42 +165,40 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
             ))}
           </div>
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Visual Style</label>
-          <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="160px" hideLabel />
+          <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="180px" hideLabel />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
-          <select
-            value={globalModel}
-            onChange={e => setGlobalModel(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
-          >
-            <optgroup label="Reference-to-Video">
-              {createModels.filter(m => m.mode === 'reference-to-video').map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Image-to-Video">
-              {createModels.filter(m => m.mode === 'image-to-video').map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <span className="text-2xl font-bold text-[#2C666E]">{frameCount}</span>
-          <span className="text-sm text-gray-500 ml-2">storyboard frames</span>
-          <p className="text-xs text-gray-400 mt-1">One frame every {frameInterval}s across {desiredLength}s</p>
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <Button onClick={onClose} variant="outline" className="flex-1">Cancel</Button>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
+            <select
+              value={globalModel}
+              onChange={e => setGlobalModel(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
+            >
+              <optgroup label="Reference-to-Video">
+                {createModels.filter(m => m.mode === 'reference-to-video').map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Image-to-Video">
+                {createModels.filter(m => m.mode === 'image-to-video').map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <span className="text-3xl font-bold text-[#2C666E]">{frameCount}</span>
+            <span className="text-sm text-gray-500 ml-2">storyboard frames</span>
+            <p className="text-xs text-gray-400 mt-1">One frame every {frameInterval}s across {desiredLength}s</p>
+          </div>
           <Button onClick={handleCreate} disabled={!name.trim() || creating}
-            className="flex-1 bg-[#2C666E] hover:bg-[#1e4d54] text-white">
+            className="w-full bg-[#2C666E] hover:bg-[#1e4d54] text-white h-11">
             {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Storyboard'}
           </Button>
         </div>
@@ -311,8 +307,18 @@ export default function StoryboardList({ onOpenStoryboard }) {
         </Button>
       </div>
 
+      {/* Inline Create Panel */}
+      {showCreate && (
+        <div className="mb-8">
+          <CreateStoryboardPanel
+            onCancel={() => setShowCreate(false)}
+            onCreate={handleCreate}
+          />
+        </div>
+      )}
+
       {/* Grid */}
-      {storyboards.length === 0 ? (
+      {storyboards.length === 0 && !showCreate ? (
         <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
           <Clapperboard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-gray-700 mb-1">No storyboards yet</h3>
@@ -332,14 +338,6 @@ export default function StoryboardList({ onOpenStoryboard }) {
             />
           ))}
         </div>
-      )}
-
-      {/* Create Dialog */}
-      {showCreate && (
-        <CreateStoryboardDialog
-          onClose={() => setShowCreate(false)}
-          onCreate={handleCreate}
-        />
       )}
     </div>
   );
