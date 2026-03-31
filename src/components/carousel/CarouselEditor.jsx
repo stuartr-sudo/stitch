@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
   Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
@@ -41,6 +42,10 @@ export default function CarouselEditor({ carouselId }) {
   const [pollTimer, setPollTimer] = useState(null);
   const [contentPollTimer, setContentPollTimer] = useState(null);
   const [compositor, setCompositor] = useState('sharp');
+  const [showStyleControls, setShowStyleControls] = useState(false);
+  const [gradientColor, setGradientColor] = useState('');
+  const [headlineScale, setHeadlineScale] = useState(100);
+  const [bodyScale, setBodyScale] = useState(100);
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -149,6 +154,11 @@ export default function CarouselEditor({ carouselId }) {
     setGeneratingImages(true);
     try {
       const stylePrompt = getStylePrompt(carousel.style_preset);
+      const styleOverrides = {};
+      if (gradientColor) styleOverrides.gradient_color = gradientColor;
+      if (headlineScale !== 100) styleOverrides.headline_scale = headlineScale / 100;
+      if (bodyScale !== 100) styleOverrides.body_scale = bodyScale / 100;
+
       const res = await apiFetch(`/api/carousel/${carouselId}/generate-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,6 +167,7 @@ export default function CarouselEditor({ carouselId }) {
           style_prompt: stylePrompt,
           carousel_style: carousel.carousel_style || 'bold_editorial',
           compositor,
+          style_overrides: Object.keys(styleOverrides).length > 0 ? styleOverrides : undefined,
         }),
       });
       const data = await res.json();
@@ -180,6 +191,11 @@ export default function CarouselEditor({ carouselId }) {
     setSlides(prev => prev.map(s => s.id === slideId ? { ...s, generation_status: 'generating' } : s));
 
     try {
+      const regenOverrides = {};
+      if (gradientColor) regenOverrides.gradient_color = gradientColor;
+      if (headlineScale !== 100) regenOverrides.headline_scale = headlineScale / 100;
+      if (bodyScale !== 100) regenOverrides.body_scale = bodyScale / 100;
+
       const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}/regenerate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,6 +204,7 @@ export default function CarouselEditor({ carouselId }) {
           style_prompt: getStylePrompt(carousel.style_preset),
           carousel_style: carousel.carousel_style || 'bold_editorial',
           compositor,
+          style_overrides: Object.keys(regenOverrides).length > 0 ? regenOverrides : undefined,
         }),
       });
       const data = await res.json();
@@ -323,6 +340,15 @@ export default function CarouselEditor({ carouselId }) {
               <option value="satori">Satori (New)</option>
             </select>
           )}
+          {hasSlides && (
+            <button
+              onClick={() => setShowStyleControls(!showStyleControls)}
+              className={`p-2 rounded-lg transition-colors ${showStyleControls ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+              title="Style overrides"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+          )}
           {hasSlides && !allDone && (
             <Button onClick={handleGenerateImages} disabled={generatingImages || carousel.status === 'generating'}>
               {generatingImages || carousel.status === 'generating'
@@ -339,6 +365,68 @@ export default function CarouselEditor({ carouselId }) {
           )}
         </div>
       </div>
+
+      {/* Style override controls */}
+      {showStyleControls && hasSlides && (
+        <div className="bg-white border-b px-4 py-3">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Gradient Color</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={gradientColor || '#000000'}
+                  onChange={e => setGradientColor(e.target.value)}
+                  className="w-7 h-7 rounded border border-gray-200 cursor-pointer"
+                />
+                {gradientColor && (
+                  <button
+                    onClick={() => setGradientColor('')}
+                    className="text-[10px] text-gray-400 hover:text-gray-600 px-1"
+                  >
+                    reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Headline Size</label>
+              <input
+                type="range"
+                min={60}
+                max={160}
+                value={headlineScale}
+                onChange={e => setHeadlineScale(Number(e.target.value))}
+                className="w-24 h-1.5 accent-blue-500"
+              />
+              <span className="text-xs text-gray-400 w-8">{headlineScale}%</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Body Size</label>
+              <input
+                type="range"
+                min={60}
+                max={160}
+                value={bodyScale}
+                onChange={e => setBodyScale(Number(e.target.value))}
+                className="w-24 h-1.5 accent-blue-500"
+              />
+              <span className="text-xs text-gray-400 w-8">{bodyScale}%</span>
+            </div>
+
+            {(gradientColor || headlineScale !== 100 || bodyScale !== 100) && (
+              <button
+                onClick={() => { setGradientColor(''); setHeadlineScale(100); setBodyScale(100); }}
+                className="text-xs text-gray-400 hover:text-gray-600 underline"
+              >
+                Reset all
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* No slides — content is being generated or needs retry */}
       {!hasSlides && (

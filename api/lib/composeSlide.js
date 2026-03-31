@@ -55,54 +55,54 @@ function fitFontSize(text, desiredSize, maxWidth, charWidthRatio = 0.55) {
 
 // ─── Scrim builders ──────────────────────────────────────────────────────────
 
-function bottomGradientScrim(canvasW, canvasH, coverage, maxOpacity) {
+function bottomGradientScrim(canvasW, canvasH, coverage, maxOpacity, color = 'black') {
   const scrimTop = Math.round(canvasH * (1 - coverage));
   return `<defs>
     <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="black" stop-opacity="0" />
-      <stop offset="30%" stop-color="black" stop-opacity="${maxOpacity * 0.3}" />
-      <stop offset="100%" stop-color="black" stop-opacity="${maxOpacity}" />
+      <stop offset="0%" stop-color="${color}" stop-opacity="0" />
+      <stop offset="30%" stop-color="${color}" stop-opacity="${maxOpacity * 0.3}" />
+      <stop offset="100%" stop-color="${color}" stop-opacity="${maxOpacity}" />
     </linearGradient>
   </defs>
   <rect x="0" y="${scrimTop}" width="${canvasW}" height="${canvasH - scrimTop}" fill="url(#scrim)" />`;
 }
 
-function topGradientScrim(canvasW, canvasH, coverage, maxOpacity) {
+function topGradientScrim(canvasW, canvasH, coverage, maxOpacity, color = 'black') {
   const scrimH = Math.round(canvasH * coverage);
   return `<defs>
     <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="black" stop-opacity="${maxOpacity}" />
-      <stop offset="70%" stop-color="black" stop-opacity="${maxOpacity * 0.3}" />
-      <stop offset="100%" stop-color="black" stop-opacity="0" />
+      <stop offset="0%" stop-color="${color}" stop-opacity="${maxOpacity}" />
+      <stop offset="70%" stop-color="${color}" stop-opacity="${maxOpacity * 0.3}" />
+      <stop offset="100%" stop-color="${color}" stop-opacity="0" />
     </linearGradient>
   </defs>
   <rect x="0" y="0" width="${canvasW}" height="${scrimH}" fill="url(#scrim)" />`;
 }
 
-function fullOverlayScrim(canvasW, canvasH, opacity) {
-  return `<rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="black" opacity="${opacity}" />`;
+function fullOverlayScrim(canvasW, canvasH, opacity, color = 'black') {
+  return `<rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="${color}" opacity="${opacity}" />`;
 }
 
-function solidBarScrim(canvasW, canvasH, coverage, opacity) {
+function solidBarScrim(canvasW, canvasH, coverage, opacity, color = 'black') {
   const barH = Math.round(canvasH * coverage);
   const barY = canvasH - barH;
-  return `<rect x="0" y="${barY}" width="${canvasW}" height="${barH}" fill="black" opacity="${opacity}" />`;
+  return `<rect x="0" y="${barY}" width="${canvasW}" height="${barH}" fill="${color}" opacity="${opacity}" />`;
 }
 
-function leftStripScrim(canvasW, canvasH, coverage, opacity) {
+function leftStripScrim(canvasW, canvasH, coverage, opacity, color = 'black') {
   const stripW = Math.round(canvasW * coverage);
-  return `<rect x="0" y="0" width="${stripW}" height="${canvasH}" fill="black" opacity="${opacity}" />`;
+  return `<rect x="0" y="0" width="${stripW}" height="${canvasH}" fill="${color}" opacity="${opacity}" />`;
 }
 
-function buildScrim(type, canvasW, canvasH, coverage, opacity) {
+function buildScrim(type, canvasW, canvasH, coverage, opacity, color = 'black') {
   switch (type) {
-    case 'bottom_gradient': return bottomGradientScrim(canvasW, canvasH, coverage, opacity);
-    case 'top_gradient': return topGradientScrim(canvasW, canvasH, coverage, opacity);
-    case 'full_overlay': return fullOverlayScrim(canvasW, canvasH, opacity);
-    case 'solid_bar': return solidBarScrim(canvasW, canvasH, coverage, opacity);
-    case 'left_strip': return leftStripScrim(canvasW, canvasH, coverage, opacity);
+    case 'bottom_gradient': return bottomGradientScrim(canvasW, canvasH, coverage, opacity, color);
+    case 'top_gradient': return topGradientScrim(canvasW, canvasH, coverage, opacity, color);
+    case 'full_overlay': return fullOverlayScrim(canvasW, canvasH, opacity, color);
+    case 'solid_bar': return solidBarScrim(canvasW, canvasH, coverage, opacity, color);
+    case 'left_strip': return leftStripScrim(canvasW, canvasH, coverage, opacity, color);
     case 'none': return '';
-    default: return bottomGradientScrim(canvasW, canvasH, coverage, opacity);
+    default: return bottomGradientScrim(canvasW, canvasH, coverage, opacity, color);
   }
 }
 
@@ -116,7 +116,7 @@ function logoWatermark(logoDataUri, canvasW, canvasH, logoW, logoH) {
 
 // ─── Unified SVG builder ─────────────────────────────────────────────────────
 
-function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH }) {
+function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors }) {
   const {
     textAlign, textPosition, scrimType, scrimOpacity, scrimCoverage,
     headlineSizeRatio, bodySizeRatio, headlineWeight, bodyWeight,
@@ -178,7 +178,8 @@ function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDat
     `<text x="${textX}" y="${bodyStartY + i * bodyLH}" text-anchor="${anchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${bodySize}" font-weight="${bodyWeight}" fill="white" opacity="0.9">${xmlEscape(line)}</text>`
   ).join('\n    ');
 
-  const scrimSvg = buildScrim(scrimType, canvasW, canvasH, scrimCoverage, scrimOpacity);
+  const scrimColor = brandColors?.[0] || 'black';
+  const scrimSvg = buildScrim(scrimType, canvasW, canvasH, scrimCoverage, scrimOpacity, scrimColor);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}" height="${canvasH}">
   <defs>
@@ -210,6 +211,7 @@ export async function composeSlide({
   statLabel,
   ctaText,
   compositor = 'sharp',
+  styleOverrides,
 }) {
   // Dispatch to Satori compositor if requested
   if (compositor === 'satori') {
@@ -217,12 +219,26 @@ export async function composeSlide({
     return composeSlideSatori({
       slideType, carouselStyle, canvasW, canvasH, backgroundImageUrl,
       logoUrl, brandColors, colorTemplateIndex, headline, bodyText,
-      statValue, statLabel, ctaText,
+      statValue, statLabel, ctaText, styleOverrides,
     });
   }
 
   const template = getCarouselTemplate(carouselStyle);
-  const layout = template.layout;
+  const layout = { ...template.layout };
+
+  // Apply style overrides from the editor
+  if (styleOverrides) {
+    if (styleOverrides.gradient_color) {
+      // Override brand colors so scrim uses this color
+      brandColors = [styleOverrides.gradient_color, ...(brandColors || []).slice(1)];
+    }
+    if (styleOverrides.headline_scale) {
+      layout.headlineSizeRatio = layout.headlineSizeRatio * styleOverrides.headline_scale;
+    }
+    if (styleOverrides.body_scale) {
+      layout.bodySizeRatio = layout.bodySizeRatio * styleOverrides.body_scale;
+    }
+  }
 
   // Normalize: hook shows headline only, everything else shows headline + body
   const effectiveBody = slideType === 'hook' ? '' : (bodyText || ctaText || (statValue ? `${statValue} — ${statLabel}` : ''));
@@ -256,7 +272,7 @@ export async function composeSlide({
   // Build SVG overlay
   const svgString = buildUnifiedSvg({
     canvasW, canvasH, headline, bodyText: effectiveBody,
-    layout, logoDataUri, logoW, logoH,
+    layout, logoDataUri, logoW, logoH, brandColors,
   });
   const svgBuffer = Buffer.from(svgString, 'utf-8');
 

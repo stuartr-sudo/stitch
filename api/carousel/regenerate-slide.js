@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const { id, slideId } = req.params;
   if (!id || !slideId) return res.status(400).json({ error: 'carousel id and slideId are required' });
 
-  const { image_model = 'fal_nano_banana', style_prompt = '', compositor = 'sharp' } = req.body || {};
+  const { image_model = 'fal_nano_banana', style_prompt = '', compositor = 'sharp', style_overrides } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -94,6 +94,7 @@ export default async function handler(req, res) {
       statLabel: slide.stat_label,
       ctaText: slide.cta_text,
       compositor,
+      styleOverrides: style_overrides,
     });
 
     const fileName = `carousels/${req.user.id}/${id}/slide-${slide.slide_number}.png`;

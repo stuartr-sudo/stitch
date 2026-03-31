@@ -262,9 +262,23 @@ export async function composeSlideSatori({
   statValue,
   statLabel,
   ctaText,
+  styleOverrides,
 }) {
   const template = getCarouselTemplate(carouselStyle);
-  const layout = template.layout;
+  const layout = { ...template.layout };
+
+  // Apply style overrides
+  if (styleOverrides) {
+    if (styleOverrides.gradient_color) {
+      brandColors = [styleOverrides.gradient_color, ...(brandColors || []).slice(1)];
+    }
+    if (styleOverrides.headline_scale) {
+      layout.headlineSizeRatio = layout.headlineSizeRatio * styleOverrides.headline_scale;
+    }
+    if (styleOverrides.body_scale) {
+      layout.bodySizeRatio = layout.bodySizeRatio * styleOverrides.body_scale;
+    }
+  }
 
   // Normalize text same as original
   const effectiveBody = slideType === 'hook' ? '' : (bodyText || ctaText || (statValue ? `${statValue} — ${statLabel}` : ''));
