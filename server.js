@@ -21,6 +21,15 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// Redirect sewo.io to stitchstudios.app
+app.use((req, res, next) => {
+  const host = req.hostname;
+  if (host === 'sewo.io' || host === 'www.sewo.io') {
+    return res.redirect(301, `https://stitchstudios.app${req.originalUrl}`);
+  }
+  next();
+});
+
 // Auth middleware - verify Supabase JWT and attach user to request
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -539,6 +548,10 @@ app.post('/api/campaigns/preview-script', authenticateToken, (await import('./ap
 app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);
 app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campaigns/topics.js')).default);
 
+// ─── LinkedIn OAuth ───────────────────────────────────────────────
+app.get('/api/linkedin/oauth/auth', authenticateToken, (await import('./api/linkedin/oauth-auth.js')).default);
+app.get('/api/linkedin/oauth/callback', (await import('./api/linkedin/oauth-callback.js')).default); // No auth — redirect from LinkedIn
+
 // ─── LinkedIn ───────────────────────────────────────────────────
 app.get('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/get-config.js')).default);
 app.put('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/update-config.js')).default);
@@ -555,6 +568,18 @@ app.patch('/api/linkedin/posts/:id', authenticateToken, (await import('./api/lin
 app.post('/api/linkedin/posts/:id/recompose', authenticateToken, (await import('./api/linkedin/recompose.js')).default);
 app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);
 app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./api/linkedin/publish.js')).default);
+
+// ─── TikTok OAuth ─────────────────────────────────────────────────────────
+app.get('/api/tiktok/auth', authenticateToken, (await import('./api/tiktok/auth.js')).default);
+app.get('/api/tiktok/callback', (await import('./api/tiktok/callback.js')).default); // No auth — redirect from TikTok
+
+// ─── Meta OAuth (Instagram + Facebook) ────────────────────────────────────
+app.get('/api/meta/auth', authenticateToken, (await import('./api/meta/auth.js')).default);
+app.get('/api/meta/callback', (await import('./api/meta/callback.js')).default); // No auth — redirect from Meta
+
+// ─── Connected Accounts routes ────────────────────────────────────────────
+app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);
+app.delete('/api/accounts/connections/:platform', authenticateToken, (await import('./api/accounts/connections.js')).default);
 
 // ─── Carousel routes ───────────────────────────────────────────────────────
 app.post('/api/carousel', authenticateToken, (await import('./api/carousel/create.js')).default);
