@@ -18,6 +18,29 @@ import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
 const SPEED_OPTIONS = [0.75, 0.85, 0.9, 1.0, 1.1, 1.25, 1.3, 1.4];
 
+const NICHE_VISUAL_MOODS = {
+  ai_tech_news: 'Clean futuristic aesthetic, cool blue and white tones, sleek technology, holographic displays, neon accents',
+  finance_money: 'Professional dark backgrounds, gold and green accents, financial charts, luxury textures, wealth imagery',
+  motivation_self_help: 'Warm golden-hour lighting, sunrise/sunset tones, silhouettes overcoming obstacles, hopeful upward compositions',
+  scary_horror: 'Dark oppressive atmosphere, deep shadows, desaturated cold tones, fog and mist, flickering dim light, horror film color grading',
+  history_did_you_know: 'Sepia and warm amber tones, aged parchment textures, dramatic oil painting lighting, historical architecture',
+  true_crime: 'Dark noir aesthetic, high-contrast with red accents, crime scene tape, rain-slicked streets, surveillance footage grain',
+  science_nature: 'Vivid macro photography, deep ocean blues and electric greens, laboratory aesthetics, cosmic nebula colors',
+  relationships_dating: 'Warm soft lighting, intimate close-ups, bokeh backgrounds, romantic golden tones, emotional connection',
+  health_fitness: 'High-energy gym lighting, dynamic action shots, bold vibrant colors, motivational energy',
+  gaming_popculture: 'Neon-lit dark environments, RGB gaming aesthetics, vibrant purple and electric blue, retro-futuristic',
+  conspiracy_mystery: 'Shadowy dimly-lit rooms, redacted documents, pinboard with red string, surveillance grain, paranoid aesthetic',
+  business_entrepreneur: 'Sleek modern offices, city skyline views, sharp professional attire, corporate power aesthetic',
+  food_cooking: 'Warm kitchen lighting, rich saturated food colors, steam and sizzle, rustic surfaces, appetizing close-ups',
+  travel_adventure: 'Breathtaking landscape vistas, golden hour travel photography, vibrant local culture, aerial drone perspectives',
+  psychology_mindblown: 'Abstract thought visualizations, surreal dreamlike imagery, optical illusions, moody introspective lighting',
+  space_cosmos: 'Deep space blacks with nebula colors, planet surfaces, star fields, awe-inspiring celestial imagery',
+  animals_wildlife: 'Lush jungle greens, savanna golden light, wildlife close-ups with intense eye contact, nature documentary',
+  sports_athletes: 'Stadium floodlights, action freeze-frames, dramatic slow-motion captures, championship trophy gold',
+  education_learning: 'Clean educational infographic style, chalkboard aesthetics, bright curious colors, engaging classroom energy',
+  paranormal_ufo: 'Eerie night skies, grainy VHS footage aesthetic, mysterious lights in darkness, alien encounter atmosphere',
+};
+
 const NICHES = [
   { key: 'ai_tech_news', label: 'AI/Tech', icon: '🤖' },
   { key: 'finance_money', label: 'Finance', icon: '💰' },
@@ -53,6 +76,18 @@ const STEPS = [
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 const isFLF = (model) => FLF_MODELS.includes(model);
+
+/** Parse API response with proper error handling for non-OK status codes */
+async function parseApiResponse(res) {
+  if (!res.ok) {
+    let msg = `Server error (${res.status})`;
+    try { const body = await res.json(); if (body.error) msg = body.error; } catch {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
 
 function getVisualStylePrompt(key) {
   for (const cat of STYLE_CATEGORIES) {
@@ -281,7 +316,8 @@ export default function ShortsWorkbenchPage() {
   // ── Step 2: Timing & Music ──────────────────────────────────────
   const [blocks, setBlocks] = useState([]);
   const [timingLoading, setTimingLoading] = useState(false);
-  const [ttsDuration, setTtsDuration] = useState(null);
+  const [ttsDuration, setTtsDuration] = useState(null); // raw TTS duration at 1x speed
+  const [rawTtsDuration, setRawTtsDuration] = useState(null);
   const [musicUrl, setMusicUrl] = useState(null);
   const [musicLoading, setMusicLoading] = useState(false);
   const [musicApproved, setMusicApproved] = useState(false);
@@ -318,25 +354,29 @@ export default function ShortsWorkbenchPage() {
     step, niche, topic, storyContext, framework: framework?.id || null,
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
-    blocks, ttsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
+    blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
     frames, scenePrompts, clips, finalVideoUrl: finalUrl,
   });
 
+  const saveDraftRef = useRef(false);
   const saveDraft = async () => {
-    if (savingDraft) return;
+    if (saveDraftRef.current) return; // prevent concurrent saves
+    saveDraftRef.current = true;
     setSavingDraft(true);
     try {
+      const state = getWorkbenchState();
+      // Don't create a new draft if there's no script yet (auto-save guard)
+      if (!draftId && !state.script?.trim()) return;
       const res = await apiFetch('/api/workbench/save-draft', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft_id: draftId, state: getWorkbenchState() }),
+        body: JSON.stringify({ draft_id: draftId, state }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       if (data.draft_id && !draftId) setDraftId(data.draft_id);
       lastSaveRef.current = Date.now();
     } catch (err) { console.warn('Draft save failed:', err.message); }
-    finally { setSavingDraft(false); }
+    finally { saveDraftRef.current = false; setSavingDraft(false); }
   };
 
   const loadDraft = async (id) => {
@@ -345,8 +385,7 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ draft_id: id }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       const s = data.draft?.storyboard_json;
       if (!s) return;
       setDraftId(id);
@@ -355,7 +394,7 @@ export default function ShortsWorkbenchPage() {
       setGeminiVoice(s.geminiVoice || 'Perseus'); setStyleInstructions(s.styleInstructions || '');
       setVoiceSpeed(s.voiceSpeed || 1.0); setVoiceoverUrl(s.voiceoverUrl || null);
       setVoiceApproved(s.voiceApproved || false);
-      setBlocks(s.blocks || []); setTtsDuration(s.ttsDuration || null);
+      setBlocks(s.blocks || []); setTtsDuration(s.rawTtsDuration || s.ttsDuration || null); setRawTtsDuration(s.rawTtsDuration || s.ttsDuration || null);
       setMusicUrl(s.musicUrl || null); setMusicApproved(s.musicApproved || false);
       setMusicVolume(s.musicVolume ?? 0.2); setEnableMusic(s.enableMusic ?? true);
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
@@ -413,8 +452,7 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ niche, topic: topic.trim() }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       if (data.stories) {
         setResearchedStories(data.stories);
         setSelectedStoryIdx(null);
@@ -431,8 +469,7 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, videoLengthPreset: duration, framework: framework?.id }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       const scriptData = data.script || data;
       const fullScript = scriptData.narration_full || scriptData.scenes?.map(s => s.narration_segment).filter(Boolean).join(' ') || '';
       setScript(fullScript);
@@ -456,8 +493,7 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: script, voice: geminiVoice, style_instructions: styleInstructions, speed: voiceSpeed }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       setVoiceoverUrl(data.audio_url);
       toast.success('Voiceover generated');
     } catch (err) { toast.error(err.message || 'Voiceover failed'); }
@@ -472,10 +508,10 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_url: voiceoverUrl, video_model: videoModel, framework_id: framework?.id, video_length_preset: duration, voice_speed: voiceSpeed }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       setBlocks(data.blocks || []);
-      setTtsDuration(data.tts_duration);
+      setRawTtsDuration(data.raw_tts_duration || data.tts_duration);
+      setTtsDuration(data.raw_tts_duration || data.tts_duration); // store raw (1x speed) duration
       toast.success(`${data.blocks?.length} scene blocks aligned`);
     } catch (err) { toast.error(err.message || 'Timing analysis failed'); }
     finally { setTimingLoading(false); }
@@ -489,8 +525,7 @@ export default function ShortsWorkbenchPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ framework_id: framework?.id, niche, duration: Math.ceil(effectiveDuration) + 3 }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       setMusicUrl(data.audio_url);
       toast.success('Music generated');
     } catch (err) { toast.error(err.message || 'Music generation failed'); }
@@ -528,10 +563,10 @@ export default function ShortsWorkbenchPage() {
           scene_index: sceneIdx,
           frame_type: type,
           vision_context: sceneIdx > 0 ? frames[sceneIdx - 1]?.visionAnalysis : null,
+          niche,
         }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
 
       setFrames(prev => ({
         ...prev,
@@ -570,8 +605,7 @@ export default function ShortsWorkbenchPage() {
           scene_index: sceneIdx,
         }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
 
       setClips(prev => ({
         ...prev,
@@ -615,8 +649,7 @@ export default function ShortsWorkbenchPage() {
           caption_config: { font_name: 'Montserrat', font_size: 100, font_weight: 'bold', font_color: 'white', highlight_color: 'purple', stroke_width: 3, stroke_color: 'black', words_per_subtitle: 1, enable_animation: true },
         }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await parseApiResponse(res);
       setFinalUrl(data.video_url);
       toast.success('Video assembled!');
     } catch (err) { toast.error(err.message || 'Assembly failed'); }
@@ -1078,6 +1111,18 @@ export default function ShortsWorkbenchPage() {
                 </div>
               </div>
             </Panel>
+
+            {/* Theme Feel */}
+            {niche && NICHE_VISUAL_MOODS[niche] && (
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Theme Feel</span>
+                  <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">{NICHES.find(n => n.key === niche)?.label}</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed italic">{NICHE_VISUAL_MOODS[niche]}</p>
+                <p className="text-[9px] text-slate-500 mt-1.5">This mood/atmosphere is applied to all generated frames. Select a different niche in Step 1 to change it.</p>
+              </div>
+            )}
 
             {/* Mode indicator */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-xs text-blue-800">

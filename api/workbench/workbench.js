@@ -25,6 +25,7 @@ import {
   uploadUrlToSupabase, pollFalQueue, extractLastFrame, analyzeFrameContinuity,
 } from '../lib/pipelineHelpers.js';
 import { getFramework } from '../lib/videoStyleFrameworks.js';
+import { SHORTS_TEMPLATES } from '../lib/shortsTemplates.js';
 import { burnCaptions } from '../lib/captionBurner.js';
 import { solveDurations } from '../lib/durationSolver.js';
 import { composeVideoPrompt } from '../lib/visualPromptComposer.js';
@@ -109,7 +110,9 @@ export default async function handler(req, res) {
       case 'music': {
         const { framework_id, niche, duration = 65 } = req.body;
         const framework = framework_id ? getFramework(framework_id) : null;
-        const prompt = buildMusicPrompt(framework?.music || framework?.musicMood || 'cinematic background', framework?.category);
+        // Use framework music config first, then fall back to niche-specific music mood
+        const nicheMood = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche].music_mood : null;
+        const prompt = buildMusicPrompt(framework?.music || framework?.musicMood || nicheMood || 'cinematic background', framework?.category);
         const audioUrl = await genMusic(prompt, duration, keys, supabase, 'beatoven');
         if (!audioUrl) return res.status(500).json({ error: 'Music generation failed' });
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: 'beatoven', metadata: { track_count: 1 } });
@@ -121,7 +124,7 @@ export default async function handler(req, res) {
         const {
           prompt, narration, visual_style, visual_style_prompt, video_style,
           image_model = 'fal_nano_banana', aspect_ratio = '9:16',
-          reference_image_url, scene_index, frame_type, vision_context,
+          reference_image_url, scene_index, frame_type, vision_context, niche,
         } = req.body;
 
         if (!prompt && !narration) return res.status(400).json({ error: 'prompt or narration required' });
@@ -129,9 +132,14 @@ export default async function handler(req, res) {
         let imageUrl;
         const effectivePrompt = prompt || narration;
 
+        // Get niche visual mood for atmosphere/tone guidance
+        const nicheTemplate = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche] : null;
+        const nicheMood = nicheTemplate?.visual_mood || null;
+
         // Synthesize a proper visual description via LLM (not raw concatenation)
         const openai = new OpenAI({ apiKey: keys.openaiKey });
         const sections = [];
+        if (nicheMood) sections.push(`ATMOSPHERE & MOOD (CRITICAL — this defines the overall tone): ${nicheMood}`);
         sections.push(`NARRATION/SCENE CONTEXT: ${effectivePrompt}`);
         if (visual_style_prompt) sections.push(`VISUAL STYLE: ${visual_style_prompt}`);
         if (video_style) sections.push(`VIDEO/MOTION STYLE: ${video_style}`);
@@ -144,7 +152,7 @@ export default async function handler(req, res) {
           const llmRes = await openai.chat.completions.create({
             model: 'gpt-4.1-mini',
             messages: [
-              { role: 'system', content: 'You are a visual prompt engineer for AI image generation. Given a narration/scene context, visual style, and optional continuity notes, synthesize a single vivid image generation prompt (2-4 sentences). Describe ONLY what should be VISIBLE in the image — people, objects, environment, lighting, composition, colors, mood. Never include narration text, dialogue, or abstract concepts. Output the prompt only, no explanation.' },
+              { role: 'system', content: 'You are a visual prompt engineer for AI image generation. Given a narration/scene context, atmosphere/mood, visual style, and optional continuity notes, synthesize a single vivid image generation prompt (2-4 sentences). The ATMOSPHERE & MOOD section is the most important — it defines the color palette, lighting, and emotional tone. Every image must feel like it belongs in that genre. Describe ONLY what should be VISIBLE in the image — people, objects, environment, lighting, composition, colors, mood. Never include narration text, dialogue, or abstract concepts. Output the prompt only, no explanation.' },
               { role: 'user', content: sections.join('\n\n') },
             ],
             max_tokens: 300,
@@ -313,10 +321,9 @@ export default async function handler(req, res) {
         const videoUrls = clips.map(c => c.url);
         const clipDurations = clips.map(c => c.duration);
 
-        // If voice is sped up/down, the effective TTS duration changes.
-        // We need to time-stretch the voiceover audio before assembly.
-        // For now, pass the effective duration to assembleShort.
-        const effectiveTtsDuration = tts_duration ? tts_duration / voice_speed : null;
+        // tts_duration from frontend is already the effective duration (raw / speed).
+        // Don't divide by voice_speed again — that was causing a double-division bug.
+        const effectiveTtsDuration = tts_duration || null;
 
         // Assemble with audio stripping on video tracks (Bug 3 fix)
         const assembledUrl = await assembleShort(
@@ -351,7 +358,7 @@ export default async function handler(req, res) {
           const { error } = await supabase.from('ad_drafts')
             .update({
               storyboard_json: state,
-              generation_status: state.step >= 4 ? 'complete' : 'in_progress',
+              generation_status: state.step === 'assemble' && state.finalVideoUrl ? 'complete' : 'in_progress',
               voiceover_url: state.voiceoverUrl || null,
               music_url: state.musicUrl || null,
               final_video_url: state.finalVideoUrl || null,
@@ -376,7 +383,7 @@ export default async function handler(req, res) {
           campaign_id: campaign.id,
           user_id: req.user.id,
           storyboard_json: state,
-          generation_status: state.step >= 4 ? 'complete' : 'in_progress',
+          generation_status: state.step === 'assemble' && state.finalVideoUrl ? 'complete' : 'in_progress',
           template_type: 'workbench',
           voiceover_url: state.voiceoverUrl || null,
           music_url: state.musicUrl || null,

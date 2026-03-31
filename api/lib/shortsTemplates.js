@@ -59,6 +59,7 @@ export const SHORTS_SCENE_ROLES = {
  *   - voice_pacing: instruction for GPT narration scripting
  *   - default_voice: FAL voice name (e.g. 'Adam', 'Brian', 'Roger')
  *   - visual_style: recommended VISUAL_STYLE_PRESETS key
+ *   - visual_mood: atmosphere/tone description for image generation prompts
  */
 export const SHORTS_TEMPLATES = {
   [SHORTS_NICHE_TYPES.AI_TECH_NEWS]: {
@@ -79,6 +80,7 @@ export const SHORTS_TEMPLATES = {
     voice_pacing: 'Fast-paced, authoritative news-anchor energy. Short punchy sentences. Pattern interrupts every 10 seconds.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Clean futuristic aesthetic, cool blue and white tones, sleek technology, holographic displays, data visualizations, neon accents, dark polished surfaces, professional lighting',
     script_system_prompt: `You are a tech journalist creating a viral 60-second news breakdown.
 Rules:
 - Open with the most shocking stat or claim
@@ -106,6 +108,7 @@ Rules:
     voice_pacing: 'Confident and calm, like a trusted financial advisor. Clear actionable language. Build credibility through specific numbers.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Professional dark backgrounds, gold and green accents, financial charts and graphs, luxury textures, sharp typography, wealth imagery, polished corporate aesthetic',
     script_system_prompt: `You are a financial educator creating a viral 55-second money strategy video.
 Rules:
 - Open with a stat that makes viewers feel they're losing money
@@ -133,6 +136,7 @@ Rules:
     voice_pacing: 'Slow and deliberate at emotional moments, building intensity. Pauses for impact. Like a storyteller around a campfire.',
     default_voice: 'Brian',
     visual_style: 'cinematic',
+    visual_mood: 'Warm golden-hour lighting, sunrise/sunset tones, silhouettes of people overcoming obstacles, dramatic lens flares, hopeful upward compositions, inspirational landscapes',
     script_system_prompt: `You are a master storyteller creating a viral 55-second motivation video.
 Rules:
 - Tell a SPECIFIC story, not generic advice
@@ -162,6 +166,7 @@ Rules:
     voice_pacing: 'Slow and hushed, building dread. Whisper-like at tense moments. Sudden pace changes at reveals. Like reading a scary story at midnight.',
     default_voice: 'Roger',
     visual_style: 'documentary',
+    visual_mood: 'Dark oppressive atmosphere, deep shadows, desaturated cold tones, fog and mist, abandoned locations, flickering dim light, unsettling angles, horror film color grading with sickly greens and deep blacks',
     script_system_prompt: `You are a horror storyteller creating a viral 60-second scary story.
 Rules:
 - Tell a SPECIFIC story — not generic creepypasta tropes
@@ -192,6 +197,7 @@ Rules:
     voice_pacing: 'Storyteller energy — measured pace with dramatic pauses. Build wonder and surprise.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Sepia and warm amber tones, aged parchment textures, dramatic oil painting lighting, historical architecture, candlelit interiors, epic wide landscape shots, documentary gravitas',
     script_system_prompt: `You are a history storyteller creating a viral 60-second video.
 Rules:
 - Pick ONE specific historical event — not a broad overview
@@ -220,6 +226,7 @@ Rules:
     voice_pacing: 'Measured and deliberate like a documentary narrator. Build dread with facts. Let silences breathe.',
     default_voice: 'Roger',
     visual_style: 'documentary',
+    visual_mood: 'Dark noir aesthetic, high-contrast black and white with red accents, crime scene tape, rain-slicked streets, surveillance footage grain, dramatic spotlight shadows, investigative documentary feel',
     script_system_prompt: `You are a true crime documentarian creating a viral 60-second case breakdown.
 Rules:
 - Focus on ONE specific real case (or a composite based on real cases)
@@ -249,6 +256,7 @@ Rules:
     voice_pacing: 'Curious and enthusiastic like a passionate science teacher. Build from simple to mind-blowing. Use analogies.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'Vivid macro photography, deep ocean blues and electric greens, laboratory aesthetics, microscopic worlds, cosmic nebula colors, nature close-ups with dramatic depth of field, wonder and discovery',
     script_system_prompt: `You are a science communicator creating a viral 60-second educational video.
 Rules:
 - Pick ONE specific phenomenon — not a broad topic overview
@@ -277,6 +285,7 @@ Rules:
     voice_pacing: 'Warm and conversational, like a trusted friend who studied psychology. Empathetic tone. No judgment.',
     default_voice: 'Brian',
     visual_style: 'cinematic',
+    visual_mood: 'Warm soft lighting, intimate close-ups, bokeh backgrounds, cozy indoor scenes, warm skin tones, romantic golden tones, thoughtful contemplative poses, emotional connection',
     script_system_prompt: `You are a relationship psychology educator creating a viral 55-second video.
 Rules:
 - Address ONE specific relationship dynamic, not general advice
@@ -306,6 +315,7 @@ Rules:
     voice_pacing: 'Energetic and direct, like a knowledgeable personal trainer. Cut through myths with confidence. Use numbers.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'High-energy gym lighting, dynamic action shots, athletic bodies in motion, clean bright environments, sweat and determination, bold vibrant colors, motivational energy',
     script_system_prompt: `You are a health and fitness educator creating a viral 55-second video.
 Rules:
 - Focus on ONE specific health myth, habit, or strategy
@@ -335,6 +345,7 @@ Rules:
     voice_pacing: 'Enthusiastic fan energy — excited but knowledgeable. Like the most passionate person at a gaming convention.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'Neon-lit dark environments, RGB gaming aesthetics, pixel art accents, vibrant purple and electric blue, screen glow reflections, retro-futuristic pop culture mashups, energetic compositions',
     script_system_prompt: `You are a gaming and pop culture expert creating a viral 60-second deep-dive video.
 Rules:
 - Focus on ONE specific game, movie, show, or franchise
@@ -364,6 +375,7 @@ Rules:
     voice_pacing: 'Measured and curious, like a journalist uncovering something. Not sensationalist — let the facts speak.',
     default_voice: 'Adam',
     visual_style: 'documentary',
+    visual_mood: 'Shadowy dimly-lit rooms, redacted documents, pinboard with red string connections, surveillance camera grain, mysterious symbols, eerie government buildings, paranoid documentary aesthetic',
     script_system_prompt: `You are an investigative journalist creating a viral 60-second mystery breakdown.
 Rules:
 - Focus on ONE specific mystery, unsolved case, or anomaly
@@ -393,6 +405,7 @@ Rules:
     voice_pacing: 'Direct and high-energy, like a successful founder on a podcast. No corporate fluff. Talk straight.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Sleek modern offices, conference rooms with city skyline views, sharp professional attire, bold typography overlays, ambitious upward angles, corporate power aesthetic with warm amber accents',
     script_system_prompt: `You are a serial entrepreneur creating a viral 55-second business strategy video.
 Rules:
 - Lead with a specific business insight, not a vague motivational statement
@@ -421,6 +434,7 @@ Rules:
     voice_pacing: 'Warm and enthusiastic, like a passionate chef sharing secrets. Use sensory language — describe tastes, textures, aromas.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'Warm kitchen lighting, rich saturated food colors, steam and sizzle, rustic wooden surfaces, overhead flat-lay compositions, appetizing close-ups with shallow depth of field, cozy inviting atmosphere',
     script_system_prompt: `You are a food scientist and chef creating a viral 55-second food video.
 Rules:
 - Focus on ONE specific food fact, technique, or recipe secret
@@ -449,6 +463,7 @@ Rules:
     voice_pacing: 'Dreamy and vivid like a travel documentary. Paint pictures with words. Build wonder and desire.',
     default_voice: 'Brian',
     visual_style: 'cinematic',
+    visual_mood: 'Breathtaking landscape vistas, golden hour travel photography, vibrant local culture and colors, aerial drone perspectives, turquoise waters, ancient ruins, wanderlust adventure aesthetic',
     script_system_prompt: `You are a travel documentarian creating a viral 55-second destination video.
 Rules:
 - Focus on ONE specific destination, experience, or travel secret
@@ -477,6 +492,7 @@ Rules:
     voice_pacing: 'Measured and insightful, like a fascinating psychology professor. Build revelations gradually. Use "you" to make it personal.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Abstract thought visualizations, brain neural networks, surreal dreamlike imagery, optical illusions, split-screen duality, moody introspective lighting, intellectual depth with purple and deep blue tones',
     script_system_prompt: `You are a psychology expert creating a viral 60-second mind-bending video.
 Rules:
 - Focus on ONE specific psychological phenomenon, bias, or experiment
@@ -507,6 +523,7 @@ Rules:
     voice_pacing: 'Awestruck and measured, building from curiosity to cosmic wonder. Use analogies to make incomprehensible scales relatable.',
     default_voice: 'George',
     visual_style: 'cinematic',
+    visual_mood: 'Deep space blacks with nebula colors, cosmic scale comparisons, planet surfaces, star fields, astronaut silhouettes against Earth, epic orbital photography, awe-inspiring celestial imagery',
     script_system_prompt: `You are a space science communicator creating a viral 60-second cosmic video.
 Rules:
 - Focus on ONE specific space phenomenon, discovery, or cosmic fact
@@ -536,6 +553,7 @@ Rules:
     voice_pacing: 'Curious and amazed like a nature documentary narrator. Build wonder through specific details. Use vivid descriptions.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'Lush jungle greens, savanna golden light, wildlife close-ups with intense eye contact, underwater marine blue, nature documentary cinematography, dramatic predator-prey tension, pristine wilderness',
     script_system_prompt: `You are a wildlife documentarian creating a viral 55-second animal video.
 Rules:
 - Focus on ONE specific animal and its most incredible ability
@@ -566,6 +584,7 @@ Rules:
     voice_pacing: 'Excited sports commentary energy, building tension toward the climax. Slow down at emotional beats. Fast during action.',
     default_voice: 'Adam',
     visual_style: 'cinematic',
+    visual_mood: 'Stadium floodlights, action freeze-frames, sweat and intensity close-ups, dramatic slow-motion captures, championship trophy gold, roaring crowd energy, athletic peak performance',
     script_system_prompt: `You are a sports storyteller creating a viral 60-second epic moment video.
 Rules:
 - Focus on ONE specific moment, match, or athlete story
@@ -595,6 +614,7 @@ Rules:
     voice_pacing: 'Enthusiastic teacher energy, like someone who just discovered something incredible. Build surprise through delivery.',
     default_voice: 'Charlie',
     visual_style: 'cinematic',
+    visual_mood: 'Clean educational infographic style, chalkboard and whiteboard aesthetics, bright curious colors, animated diagram feel, clear visual explanations, engaging classroom energy',
     script_system_prompt: `You are an educator creating a viral 55-second "things school never taught you" video.
 Rules:
 - Focus on ONE specific fact, concept, or piece of knowledge
@@ -625,6 +645,7 @@ Rules:
     voice_pacing: 'Investigative journalist tone — serious and measured. Let the evidence speak. Build intrigue through facts, not sensationalism.',
     default_voice: 'Roger',
     visual_style: 'documentary',
+    visual_mood: 'Eerie night skies, grainy VHS footage aesthetic, mysterious lights in darkness, declassified document overlays, isolated rural landscapes, unsettling alien encounter atmosphere, X-Files investigation tone',
     script_system_prompt: `You are an investigative journalist covering a viral 60-second UFO/paranormal case.
 Rules:
 - Focus on ONE specific documented case or encounter
