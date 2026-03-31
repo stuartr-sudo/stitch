@@ -71,29 +71,31 @@ async function handleGenerateScript(req, res) {
 
   if (sbErr || !sb) return res.status(404).json({ error: 'Storyboard not found' });
 
-  // Load existing frames
-  const { data: frames } = await supabase
+  // Load existing frames (may be empty for first run)
+  const { data: existingFrames } = await supabase
     .from('storyboard_frames')
     .select('*')
     .eq('storyboard_id', storyboardId)
     .order('frame_number', { ascending: true });
 
-  if (!frames?.length) return res.status(400).json({ error: 'No frames exist — create the storyboard first' });
+  const hasExistingFrames = existingFrames?.length > 0;
 
   const { openaiKey } = await getUserKeys(userId, req.user.email);
   if (!openaiKey) return res.status(400).json({ error: 'OpenAI API key not configured.' });
 
   const openai = new OpenAI({ apiKey: openaiKey });
-  const frameCount = frames.length;
 
-  console.log(`[Storyboard Script] Generating for "${sb.name}" — ${frameCount} frames at ${sb.frame_interval}s intervals`);
-
-  // Get model duration constraints
+  // If frames exist, match that count. Otherwise let AI decide based on duration + style.
   const durationConstraints = {
-    allowed: [sb.frame_interval], // each frame = one interval
-    min: sb.frame_interval,
-    max: sb.frame_interval,
+    allowed: [sb.frame_interval || 4],
+    min: sb.frame_interval || 4,
+    max: sb.frame_interval || 4,
   };
+  const targetSceneCount = hasExistingFrames
+    ? existingFrames.length
+    : calculateSceneCount(sb.desired_length, durationConstraints, sb.narrative_style || 'entertaining');
+
+  console.log(`[Storyboard Script] Generating for "${sb.name}" — ${targetSceneCount} scenes (${hasExistingFrames ? 'updating existing' : 'creating new'})`);
 
   // Character descriptions
   const activeElements = (sb.elements || []).filter(el => el.description);
@@ -110,7 +112,7 @@ async function handleGenerateScript(req, res) {
       narrativeStyle: sb.narrative_style || 'entertaining',
       targetAudience: sb.target_audience,
       desiredLength: sb.desired_length,
-      targetSceneCount: frameCount,
+      targetSceneCount,
       durationConstraints,
       sceneDirection: sb.scene_direction,
       brandStyleGuide: sb.brand_data,
@@ -171,46 +173,85 @@ async function handleGenerateScript(req, res) {
 
     console.log(`[Storyboard Script] Stage 2 complete: ${processedScenes.length} visual prompts`);
 
-    // ── Write to frames table ──
-    const updates = [];
-    for (let i = 0; i < frames.length; i++) {
-      const frame = frames[i];
-      const beat = arc.beats[i] || {};
-      const vis = processedScenes[i] || {};
+    // ── Write frames ──
+    let framesUpdated = 0;
+    let framesSkipped = 0;
+    let finalFrames = [];
 
-      // Don't overwrite user-edited frames unless they're still empty
-      if (frame.locked) continue;
+    const buildFrameData = (beat, vis) => ({
+      beat_type: beat.beatType || null,
+      narrative_note: beat.narrativeMoment || null,
+      setting: beat.setting || null,
+      character_action: beat.characterAction || null,
+      character_emotion: beat.characterEmotion || null,
+      emotional_tone: beat.emotionalTone || null,
+      pacing_note: beat.pacingNote || null,
+      transition_note: beat.transitionNote || null,
+      dialogue: beat.dialogue || null,
+      visual_prompt: vis.visualPrompt || null,
+      motion_prompt: vis.motionPrompt || null,
+      camera_angle: vis.cameraAngle || null,
+      preview_image_prompt: vis.previewImagePrompt || null,
+      negative_prompt: vis.negativePrompt || null,
+      continuity_note: vis.continuityNote || null,
+      brand_warnings: vis.brandWarnings || [],
+    });
 
-      updates.push({
-        id: frame.id,
-        // Narrative (Stage 1)
-        beat_type: beat.beatType || null,
-        narrative_note: beat.narrativeMoment || null,
-        setting: beat.setting || null,
-        character_action: beat.characterAction || null,
-        character_emotion: beat.characterEmotion || null,
-        emotional_tone: beat.emotionalTone || null,
-        pacing_note: beat.pacingNote || null,
-        transition_note: beat.transitionNote || null,
-        dialogue: beat.dialogue || null,
-        // Visual (Stage 2)
-        visual_prompt: vis.visualPrompt || null,
-        motion_prompt: vis.motionPrompt || null,
-        camera_angle: vis.cameraAngle || null,
-        preview_image_prompt: vis.previewImagePrompt || null,
-        negative_prompt: vis.negativePrompt || null,
-        continuity_note: vis.continuityNote || null,
-        brand_warnings: vis.brandWarnings || [],
-      });
-    }
+    if (!hasExistingFrames) {
+      // ── CREATE frames from script output ──
+      let runningTime = 0;
+      const newFrames = [];
+      for (let i = 0; i < arc.beats.length; i++) {
+        const beat = arc.beats[i] || {};
+        const vis = processedScenes[i] || {};
+        const duration = beat.durationSeconds || (sb.frame_interval || 4);
+        newFrames.push({
+          storyboard_id: storyboardId,
+          frame_number: i + 1,
+          timestamp_seconds: runningTime,
+          duration_seconds: duration,
+          ...buildFrameData(beat, vis),
+        });
+        runningTime += duration;
+      }
 
-    // Batch update
-    for (const update of updates) {
-      const { id, ...data } = update;
-      await supabase
+      const { data: inserted, error: insertErr } = await supabase
         .from('storyboard_frames')
-        .update(data)
-        .eq('id', id);
+        .insert(newFrames)
+        .select();
+
+      if (insertErr) throw new Error('Failed to create frames: ' + insertErr.message);
+      finalFrames = inserted || [];
+      framesUpdated = finalFrames.length;
+      console.log(`[Storyboard Script] Created ${framesUpdated} new frames`);
+    } else {
+      // ── UPDATE existing unlocked frames ──
+      for (let i = 0; i < existingFrames.length; i++) {
+        const frame = existingFrames[i];
+        const beat = arc.beats[i] || {};
+        const vis = processedScenes[i] || {};
+
+        if (frame.locked) {
+          framesSkipped++;
+          continue;
+        }
+
+        const data = buildFrameData(beat, vis);
+        await supabase
+          .from('storyboard_frames')
+          .update(data)
+          .eq('id', frame.id);
+        framesUpdated++;
+      }
+
+      // Re-fetch for response
+      const { data: refreshed } = await supabase
+        .from('storyboard_frames')
+        .select('*')
+        .eq('storyboard_id', storyboardId)
+        .order('frame_number', { ascending: true });
+      finalFrames = refreshed || [];
+      console.log(`[Storyboard Script] Updated ${framesUpdated} frames, skipped ${framesSkipped} locked`);
     }
 
     // Update storyboard status + metadata
@@ -222,16 +263,15 @@ async function handleGenerateScript(req, res) {
       })
       .eq('id', storyboardId);
 
-    console.log(`[Storyboard Script] Wrote ${updates.length} frames to database`);
-
     return res.json({
       success: true,
       title: arc.title,
       logline: arc.logline,
       narrativeStyle: arc.narrativeStyle,
       emotionalArc: arc.overallEmotionalArc,
-      framesUpdated: updates.length,
-      framesSkipped: frames.length - updates.length,
+      framesUpdated,
+      framesSkipped,
+      frames: finalFrames,
       brandWarnings: processedScenes.flatMap(s => s.brandWarnings || []),
     });
 

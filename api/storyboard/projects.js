@@ -9,6 +9,8 @@
  *
  * PUT    /api/storyboard/projects/:id/frames    — Batch update frames
  * PUT    /api/storyboard/projects/:id/frames/:frameId — Update single frame
+ * DELETE /api/storyboard/projects/:id/frames/:frameId — Delete frame + renumber
+ * POST   /api/storyboard/projects/:id/frames/:frameId/split — Split frame in two
  *
  * POST   /api/storyboard/projects/:id/share     — Generate share link
  * GET    /api/storyboard/review/:token           — Public share view (no auth)
@@ -54,9 +56,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Route: /api/storyboard/projects/:id/frames/:frameId/split
+  if (pathParts[1] === 'frames' && pathParts[2] && pathParts[3] === 'split') {
+    if (req.method === 'POST') return splitFrame(req, res, supabase, userId, storyboardId, pathParts[2]);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   // Route: /api/storyboard/projects/:id/frames/:frameId
   if (pathParts[1] === 'frames' && pathParts[2]) {
     if (req.method === 'PUT') return updateFrame(req, res, supabase, userId, storyboardId, pathParts[2]);
+    if (req.method === 'DELETE') return deleteFrame(req, res, supabase, userId, storyboardId, pathParts[2]);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -152,9 +161,6 @@ async function createStoryboard(req, res, supabase, userId) {
     return res.status(400).json({ error: 'Storyboard name is required' });
   }
 
-  // Calculate frame count
-  const frameCount = Math.max(1, Math.ceil(desiredLength / frameInterval));
-
   const { data: storyboard, error: sbError } = await supabase
     .from('storyboards')
     .insert({
@@ -193,31 +199,12 @@ async function createStoryboard(req, res, supabase, userId) {
 
   if (sbError) return res.status(500).json({ error: sbError.message });
 
-  // Create empty frames at the correct intervals
-  const frames = [];
-  for (let i = 0; i < frameCount; i++) {
-    frames.push({
-      storyboard_id: storyboard.id,
-      frame_number: i + 1,
-      timestamp_seconds: i * frameInterval,
-      duration_seconds: frameInterval,
-    });
-  }
-
-  const { error: framesError } = await supabase
-    .from('storyboard_frames')
-    .insert(frames);
-
-  if (framesError) {
-    console.error('[Storyboard CRUD] Frame creation failed:', framesError.message);
-    // Don't fail — storyboard exists, frames can be added later
-  }
-
-  console.log(`[Storyboard CRUD] Created "${name}" — ${frameCount} frames at ${frameInterval}s intervals`);
+  // Frames are created later by Generate Script — not at creation time
+  console.log(`[Storyboard CRUD] Created "${name}" — no frames yet (generate script to create scenes)`);
 
   return res.status(201).json({
     success: true,
-    storyboard: { ...storyboard, frameCount },
+    storyboard: { ...storyboard, frameCount: 0 },
   });
 }
 
@@ -370,6 +357,148 @@ async function batchUpdateFrames(req, res, supabase, userId, storyboardId) {
   }
 
   return res.json({ success: true, frames: results, updated: results.length });
+}
+
+// ── DELETE FRAME ──────────────────────────────────────────────────────────────
+
+async function deleteFrame(req, res, supabase, userId, storyboardId, frameId) {
+  // Verify ownership
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  // Check frame exists and is not locked
+  const { data: frame } = await supabase
+    .from('storyboard_frames')
+    .select('id, locked')
+    .eq('id', frameId)
+    .eq('storyboard_id', storyboardId)
+    .single();
+
+  if (!frame) return res.status(404).json({ error: 'Frame not found' });
+  if (frame.locked) return res.status(400).json({ error: 'Cannot delete a locked frame' });
+
+  // Delete the frame
+  const { error: delError } = await supabase
+    .from('storyboard_frames')
+    .delete()
+    .eq('id', frameId);
+
+  if (delError) return res.status(500).json({ error: delError.message });
+
+  // Fetch remaining frames, renumber, recalculate timestamps
+  const { data: remaining, error: fetchError } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true });
+
+  if (fetchError) return res.status(500).json({ error: fetchError.message });
+
+  let runningTime = 0;
+  for (let i = 0; i < remaining.length; i++) {
+    remaining[i].frame_number = i + 1;
+    remaining[i].timestamp_seconds = runningTime;
+    runningTime += remaining[i].duration_seconds;
+
+    await supabase
+      .from('storyboard_frames')
+      .update({ frame_number: i + 1, timestamp_seconds: remaining[i].timestamp_seconds })
+      .eq('id', remaining[i].id);
+  }
+
+  console.log(`[Storyboard CRUD] Deleted frame ${frameId}, ${remaining.length} frames remain`);
+  return res.json({ success: true, frames: remaining });
+}
+
+// ── SPLIT FRAME ──────────────────────────────────────────────────────────────
+
+async function splitFrame(req, res, supabase, userId, storyboardId, frameId) {
+  // Verify ownership
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  // Load the target frame
+  const { data: frame } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('id', frameId)
+    .eq('storyboard_id', storyboardId)
+    .single();
+
+  if (!frame) return res.status(404).json({ error: 'Frame not found' });
+  if (frame.locked) return res.status(400).json({ error: 'Cannot split a locked frame' });
+
+  const halfDuration = Math.max(1, Math.floor(frame.duration_seconds / 2));
+  const otherHalf = frame.duration_seconds - halfDuration;
+
+  // Update original frame with first half duration
+  await supabase
+    .from('storyboard_frames')
+    .update({ duration_seconds: halfDuration })
+    .eq('id', frameId);
+
+  // Bump frame_number for all subsequent frames (work from highest to avoid unique constraint)
+  const { data: allFrames } = await supabase
+    .from('storyboard_frames')
+    .select('id, frame_number')
+    .eq('storyboard_id', storyboardId)
+    .gt('frame_number', frame.frame_number)
+    .order('frame_number', { ascending: false });
+
+  for (const f of (allFrames || [])) {
+    await supabase
+      .from('storyboard_frames')
+      .update({ frame_number: f.frame_number + 1 })
+      .eq('id', f.id);
+  }
+
+  // Insert new frame after the original
+  const { error: insertError } = await supabase
+    .from('storyboard_frames')
+    .insert({
+      storyboard_id: storyboardId,
+      frame_number: frame.frame_number + 1,
+      timestamp_seconds: 0, // recalculated below
+      duration_seconds: otherHalf,
+    });
+
+  if (insertError) return res.status(500).json({ error: insertError.message });
+
+  // Fetch all frames, recalculate timestamps
+  const { data: updated, error: fetchError } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true });
+
+  if (fetchError) return res.status(500).json({ error: fetchError.message });
+
+  let runningTime = 0;
+  for (let i = 0; i < updated.length; i++) {
+    if (updated[i].timestamp_seconds !== runningTime) {
+      await supabase
+        .from('storyboard_frames')
+        .update({ timestamp_seconds: runningTime })
+        .eq('id', updated[i].id);
+      updated[i].timestamp_seconds = runningTime;
+    }
+    runningTime += updated[i].duration_seconds;
+  }
+
+  console.log(`[Storyboard CRUD] Split frame ${frameId} → ${updated.length} frames total`);
+  return res.json({ success: true, frames: updated });
 }
 
 // ── SHARE LINK ──────────────────────────────────────────────────────────────

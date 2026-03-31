@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Type, Loader2, LayoutGrid, Image, Film } from 'lucide-react';
+import { Link2, Type, Loader2, LayoutGrid, Image, Film, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
@@ -31,7 +31,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [sourceUrl, setSourceUrl] = useState('');
   const [topic, setTopic] = useState('');
   const [title, setTitle] = useState('');
-  const [platform, setPlatform] = useState('instagram');
+  const [platforms, setPlatforms] = useState(new Set(['instagram']));
   const [aspectRatio, setAspectRatio] = useState('1080x1350');
   const [brandKitId, setBrandKitId] = useState('');
   const [brands, setBrands] = useState([]);
@@ -41,7 +41,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [slideCount, setSlideCount] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const selectedPlatform = PLATFORMS.find(p => p.value === platform);
+  const singlePlatform = platforms.size === 1 ? PLATFORMS.find(p => p.value === [...platforms][0]) : null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,10 +50,21 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
     }).catch(() => {});
   }, [isOpen]);
 
-  function handlePlatformChange(p) {
-    setPlatform(p);
-    const plat = PLATFORMS.find(x => x.value === p);
-    if (plat) setAspectRatio(plat.defaultRatio);
+  function handlePlatformToggle(p) {
+    setPlatforms(prev => {
+      const next = new Set(prev);
+      if (next.has(p)) {
+        if (next.size > 1) next.delete(p);
+      } else {
+        next.add(p);
+      }
+      // Update aspect ratio when exactly one platform is selected
+      if (next.size === 1) {
+        const plat = PLATFORMS.find(x => x.value === [...next][0]);
+        if (plat) setAspectRatio(plat.defaultRatio);
+      }
+      return next;
+    });
   }
 
   async function handleCreate() {
@@ -68,41 +79,49 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
 
     setCreating(true);
     try {
-      const res = await apiFetch('/api/carousel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim() || (sourceType === 'url' ? 'From URL' : topic.trim().slice(0, 60)),
-          platform,
-          aspect_ratio: aspectRatio,
-          brand_kit_id: brandKitId || null,
-          source_url: sourceType === 'url' ? sourceUrl.trim() : null,
-          style_preset: visualStyle || null,
-          carousel_type: carouselType,
-          carousel_style: carouselStyle,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-        return;
+      const platformList = [...platforms];
+      const baseTitle = title.trim() || (sourceType === 'url' ? 'From URL' : topic.trim().slice(0, 60));
+      let firstCarousel = null;
+
+      for (const plat of platformList) {
+        const platConfig = PLATFORMS.find(x => x.value === plat);
+        const ratio = platformList.length === 1 ? aspectRatio : platConfig.defaultRatio;
+        const carouselTitle = platformList.length > 1 ? `${baseTitle} (${platConfig.label})` : baseTitle;
+
+        const res = await apiFetch('/api/carousel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: carouselTitle,
+            platform: plat,
+            aspect_ratio: ratio,
+            brand_kit_id: brandKitId || null,
+            source_url: sourceType === 'url' ? sourceUrl.trim() : null,
+            style_preset: visualStyle || null,
+            carousel_type: carouselType,
+            carousel_style: carouselStyle,
+          }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          toast.error(data.error);
+          continue;
+        }
+
+        if (!firstCarousel) firstCarousel = data.carousel;
+
+        const genBody = {};
+        if (sourceType === 'topic') genBody.topic = topic.trim();
+        if (slideCount) genBody.slide_count = parseInt(slideCount, 10);
+
+        apiFetch(`/api/carousel/${data.carousel.id}/generate-content`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(genBody),
+        }).catch((err) => console.error('[carousel] generate-content failed:', err));
       }
 
-      const carouselId = data.carousel.id;
-      const genBody = {};
-      if (sourceType === 'topic') {
-        genBody.topic = topic.trim();
-      }
-      if (slideCount) {
-        genBody.slide_count = parseInt(slideCount, 10);
-      }
-      apiFetch(`/api/carousel/${carouselId}/generate-content`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(genBody),
-      }).catch((err) => console.error('[carousel] generate-content failed:', err));
-
-      onCreated(data.carousel);
+      if (firstCarousel) onCreated(firstCarousel);
     } catch (err) {
       toast.error('Failed to create carousel');
     } finally {
@@ -141,30 +160,37 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
           </div>
         </div>
 
-        {/* Platform */}
+        {/* Platform (multi-select) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
           <div className="grid grid-cols-4 gap-2">
-            {PLATFORMS.map(p => (
-              <button
-                key={p.value}
-                onClick={() => handlePlatformChange(p.value)}
-                className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  platform === p.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+            {PLATFORMS.map(p => {
+              const selected = platforms.has(p.value);
+              return (
+                <button
+                  key={p.value}
+                  onClick={() => handlePlatformToggle(p.value)}
+                  className={`relative px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    selected ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {selected && <Check className="w-3 h-3 absolute top-1 right-1 text-blue-500" />}
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
+          {platforms.size > 1 && (
+            <p className="text-xs text-gray-400 mt-1.5">Each platform gets its own carousel with optimal dimensions</p>
+          )}
         </div>
 
-        {/* Aspect ratio (if platform allows choice) */}
-        {selectedPlatform?.ratios.length > 1 && (
+        {/* Aspect ratio (if single platform with choice) */}
+        {singlePlatform?.ratios.length > 1 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
             <div className="flex gap-2">
-              {selectedPlatform.ratios.map(r => (
+              {singlePlatform.ratios.map(r => (
                 <button
                   key={r}
                   onClick={() => setAspectRatio(r)}
@@ -303,7 +329,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={handleCreate} disabled={creating}>
           {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          Create Carousel
+          {platforms.size > 1 ? `Create ${platforms.size} Carousels` : 'Create Carousel'}
         </Button>
       </SlideOverFooter>
     </SlideOverPanel>

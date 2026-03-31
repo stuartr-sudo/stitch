@@ -24,7 +24,7 @@ import {
   ChevronDown, ChevronRight, ChevronLeft, Clock, Camera, MessageSquare,
   Film, Eye, Share2, ExternalLink, Copy, ArrowLeft, RotateCcw,
   Image as ImageIcon, AlertTriangle, CheckCircle2, Zap, Settings,
-  Volume2, Music, Type, Pause, RefreshCw, Send, Video,
+  Volume2, Music, Type, Pause, RefreshCw, Send, Video, Scissors, Trash2,
 } from 'lucide-react';
 import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
 
@@ -211,7 +211,7 @@ function BeatGroupHeader({ beatType, frameCount, intervalSeconds }) {
 // Detail Panel (right sidebar)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function DetailPanel({ frame, onUpdate }) {
+function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
   const [editField, setEditField] = useState(null);
   const [editVal, setEditVal] = useState('');
 
@@ -355,15 +355,33 @@ function DetailPanel({ frame, onUpdate }) {
       </div>
 
       {/* Actions */}
-      <div className="px-4 py-3 border-t border-gray-200 flex gap-2">
-        <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
-          <RotateCcw size={11} /> Regen Preview
-        </button>
-        {frame.video_url && (
+      <div className="px-4 py-3 border-t border-gray-200 space-y-2">
+        <div className="flex gap-2">
           <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
-            <RotateCcw size={11} /> Retry Video
+            <RotateCcw size={11} /> Regen Preview
           </button>
-        )}
+          {frame.video_url && (
+            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
+              <RotateCcw size={11} /> Retry Video
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onSplit?.(frame.id)}
+            disabled={frame.locked || isProducing}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Scissors size={11} /> Split Scene
+          </button>
+          <button
+            onClick={() => onDelete?.(frame.id)}
+            disabled={frame.locked || isProducing}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-red-200 rounded-md hover:bg-red-50 text-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={11} /> Delete Scene
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -545,7 +563,9 @@ export default function StoryboardWorkspace() {
       if (data.success) {
         setStoryboard(data.storyboard);
         setFrames(data.frames || []);
-        if (!selectedFrameId && data.frames?.length) {
+        if (!data.frames?.length) {
+          setActiveTab('settings');
+        } else if (!selectedFrameId && data.frames?.length) {
           setSelectedFrameId(data.frames[0].id);
         }
       } else {
@@ -588,9 +608,16 @@ export default function StoryboardWorkspace() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Script generated — ${data.framesUpdated} frames populated`);
+        toast.success(`Script generated — ${data.framesUpdated} scenes created`);
         if (data.brandWarnings?.length) data.brandWarnings.forEach(w => toast.warning(w));
-        await loadStoryboard();
+        if (data.frames?.length) {
+          setFrames(data.frames);
+          setSelectedFrameId(data.frames[0].id);
+          setStoryboard(prev => ({ ...prev, status: 'scripted', logline: data.logline }));
+        } else {
+          await loadStoryboard();
+        }
+        setActiveTab('storyboard');
       } else {
         throw new Error(data.error);
       }
@@ -675,6 +702,44 @@ export default function StoryboardWorkspace() {
       }
     } catch (err) {
       toast.error('Share failed: ' + err.message);
+    }
+  };
+
+  // ── Split Frame ──
+  const handleSplitFrame = async (frameId) => {
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/frames/${frameId}/split`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFrames(data.frames);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      toast.error('Split failed: ' + err.message);
+    }
+  };
+
+  // ── Delete Frame ──
+  const handleDeleteFrame = async (frameId) => {
+    if (!confirm('Delete this scene? This cannot be undone.')) return;
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/frames/${frameId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFrames(data.frames);
+        if (frameId === selectedFrameId) {
+          setSelectedFrameId(data.frames[0]?.id || null);
+        }
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      toast.error('Delete failed: ' + err.message);
     }
   };
 
@@ -769,17 +834,17 @@ export default function StoryboardWorkspace() {
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
                   {status.label}
                 </span>
-                <span className="text-[10px] text-gray-400">{frames.length} frames · {totalDuration}s · {storyboard.frame_interval}s intervals · {storyboard.aspect_ratio}</span>
+                <span className="text-[10px] text-gray-400">
+                  {frames.length > 0
+                    ? `${frames.length} scenes · ${totalDuration}s · ${storyboard.aspect_ratio}`
+                    : `${storyboard.desired_length}s · ${storyboard.aspect_ratio} · No scenes yet`
+                  }
+                </span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {!hasScript && (
-              <Button onClick={handleGenerateScript} disabled={generatingScript} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white text-xs">
-                {generatingScript ? <><Loader2 size={14} className="animate-spin mr-1" /> Generating...</> : <><Sparkles size={14} className="mr-1" /> Generate Script</>}
-              </Button>
-            )}
             {hasScript && (
               <Button onClick={() => handleGeneratePreviews()} disabled={generatingPreviews} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white text-xs">
                 {generatingPreviews ? <><Loader2 size={14} className="animate-spin mr-1" /> Previews...</> : <><ImageIcon size={14} className="mr-1" /> Previews ({previewCount}/{frames.length})</>}
@@ -819,9 +884,9 @@ export default function StoryboardWorkspace() {
       {/* ── Tabs ── */}
       <div className="bg-white border-b border-gray-200 px-5 flex items-center">
         {[
-          { key: 'storyboard', label: 'Storyboard', icon: Film, badge: frames.length },
+          ...(frames.length > 0 ? [{ key: 'storyboard', label: 'Storyboard', icon: Film, badge: frames.length }] : []),
           { key: 'settings', label: 'Settings', icon: Settings },
-          { key: 'production', label: 'Production', icon: Zap },
+          ...(frames.length > 0 ? [{ key: 'production', label: 'Production', icon: Zap }] : []),
         ].map(tab => (
           <button
             key={tab.key}
@@ -871,11 +936,31 @@ export default function StoryboardWorkspace() {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <StoryboardSettings
-              storyboard={storyboard}
-              onUpdate={(updated) => setStoryboard(updated)}
-              isProducing={storyboard?.production_status === 'producing'}
-            />
+            <div>
+              <StoryboardSettings
+                storyboard={storyboard}
+                onUpdate={(updated) => setStoryboard(updated)}
+                isProducing={storyboard?.production_status === 'producing'}
+              />
+              {/* Generate Script CTA */}
+              <div className="mt-8 border-t border-gray-200 pt-6 pb-4">
+                {frames.length === 0 ? (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500 mb-3">Configure your settings above, then generate the script to create scenes.</p>
+                    <Button onClick={handleGenerateScript} disabled={generatingScript} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white">
+                      {generatingScript ? <><Loader2 size={16} className="animate-spin mr-2" /> Generating Script...</> : <><Sparkles size={16} className="mr-2" /> Generate Script</>}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 mb-2">Regenerating will overwrite unlocked frames. Locked frames are preserved.</p>
+                    <Button onClick={handleGenerateScript} disabled={generatingScript} variant="outline" size="sm">
+                      {generatingScript ? <><Loader2 size={14} className="animate-spin mr-1" /> Regenerating...</> : <><RotateCcw size={14} className="mr-1" /> Regenerate Script</>}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Production Tab */}
@@ -893,7 +978,7 @@ export default function StoryboardWorkspace() {
         {/* Detail Panel (storyboard tab only) */}
         {activeTab === 'storyboard' && (
           <div className="w-80 border-l border-gray-200 bg-white flex-shrink-0 overflow-hidden">
-            <DetailPanel frame={selectedFrame} onUpdate={updateFrame} />
+            <DetailPanel frame={selectedFrame} onUpdate={updateFrame} onSplit={handleSplitFrame} onDelete={handleDeleteFrame} isProducing={isProducing} />
           </div>
         )}
       </div>
