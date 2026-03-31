@@ -147,22 +147,44 @@ export default async function handler(req, res) {
         if (frame_type === 'end') sections.push(`FRAME TYPE: End frame — show the conclusion/result of the action described.`);
         else if (frame_type === 'start') sections.push(`FRAME TYPE: Start frame — show the beginning/setup of the action described.`);
 
+        // LLM MUST synthesize the prompt — never concatenate raw inputs
         let finalPrompt;
+        const llmMessages = [
+          { role: 'system', content: `You are a visual prompt engineer for AI image generation. Synthesize ALL inputs into a single vivid image generation prompt (2-4 sentences).
+
+PRIORITY ORDER:
+1. ATMOSPHERE & MOOD — this is the VISUAL UNDERTONE. It defines color palette, lighting, and emotional tone. Every image must feel like it belongs in this genre.
+2. NARRATION — extract ONLY the visual elements implied by the story (setting, characters, objects, environment).
+3. VISUAL STYLE — artistic rendering approach.
+4. CONTINUITY — match previous scene's look if provided.
+
+Rules:
+- Describe ONLY what should be VISIBLE — people, objects, environment, lighting, composition, colors, mood.
+- The mood/atmosphere must permeate every visual choice (lighting, color grading, composition).
+- Never include narration text, dialogue, or abstract concepts.
+- Output the prompt only, no explanation.` },
+          { role: 'user', content: sections.join('\n\n') },
+        ];
+
         try {
           const llmRes = await openai.chat.completions.create({
             model: 'gpt-4.1-mini',
-            messages: [
-              { role: 'system', content: 'You are a visual prompt engineer for AI image generation. Given a narration/scene context, atmosphere/mood, visual style, and optional continuity notes, synthesize a single vivid image generation prompt (2-4 sentences). The ATMOSPHERE & MOOD section is the most important — it defines the color palette, lighting, and emotional tone. Every image must feel like it belongs in that genre. Describe ONLY what should be VISIBLE in the image — people, objects, environment, lighting, composition, colors, mood. Never include narration text, dialogue, or abstract concepts. Output the prompt only, no explanation.' },
-              { role: 'user', content: sections.join('\n\n') },
-            ],
+            messages: llmMessages,
             max_tokens: 300,
           });
           finalPrompt = (llmRes.choices[0]?.message?.content || '').trim();
-          console.log(`[workbench/generate-frame] LLM prompt (${finalPrompt.length} chars): ${finalPrompt.slice(0, 120)}...`);
+          console.log(`[workbench/generate-frame] LLM prompt (${finalPrompt.length} chars): ${finalPrompt.slice(0, 200)}...`);
         } catch (err) {
-          console.warn(`[workbench/generate-frame] LLM prompt synthesis failed, using fallback: ${err.message}`);
-          finalPrompt = effectivePrompt;
-          if (visual_style_prompt) finalPrompt += `, ${visual_style_prompt}`;
+          console.warn(`[workbench/generate-frame] LLM prompt synthesis failed, retrying with smaller model: ${err.message}`);
+          // Retry with gpt-4.1-nano — still LLM synthesis, never concatenation
+          try {
+            const retryRes = await openai.chat.completions.create({ model: 'gpt-4.1-nano', messages: llmMessages, max_tokens: 200 });
+            finalPrompt = (retryRes.choices[0]?.message?.content || '').trim();
+          } catch (retryErr) {
+            console.error(`[workbench/generate-frame] Both LLM calls failed, using narration only: ${retryErr.message}`);
+            // Last resort: use narration as-is (no concatenation)
+            finalPrompt = effectivePrompt;
+          }
         }
 
         if (reference_image_url && frame_type === 'end') {
@@ -372,10 +394,9 @@ export default async function handler(req, res) {
         // Create new campaign + draft
         const { data: campaign, error: campErr } = await supabase.from('campaigns').insert({
           user_id: req.user.id,
-          niche: state.niche || 'general',
-          topic: state.topic || 'Untitled',
+          name: state.topic || 'Untitled Workbench',
+          content_type: 'shorts',
           status: 'workbench',
-          total_drafts: 1,
         }).select('id').single();
         if (campErr) throw new Error(`Campaign create failed: ${campErr.message}`);
 
@@ -413,7 +434,7 @@ export default async function handler(req, res) {
       // ─── List Drafts ─────────────────────────────────────────────
       case 'list-drafts': {
         const { data: drafts, error } = await supabase.from('ad_drafts')
-          .select('id, storyboard_json, generation_status, voiceover_url, music_url, final_video_url, created_at, updated_at, campaigns!inner(topic, niche)')
+          .select('id, storyboard_json, generation_status, voiceover_url, music_url, final_video_url, created_at, updated_at, campaigns!inner(name)')
           .eq('user_id', req.user.id)
           .eq('template_type', 'workbench')
           .order('updated_at', { ascending: false })
@@ -422,8 +443,8 @@ export default async function handler(req, res) {
 
         const items = (drafts || []).map(d => ({
           id: d.id,
-          topic: d.campaigns?.topic || d.storyboard_json?.topic || 'Untitled',
-          niche: d.campaigns?.niche || d.storyboard_json?.niche,
+          topic: d.campaigns?.name || d.storyboard_json?.topic || 'Untitled',
+          niche: d.storyboard_json?.niche,
           step: d.storyboard_json?.step || 0,
           status: d.generation_status,
           has_video: !!d.final_video_url,
