@@ -46,6 +46,11 @@ export default function CarouselEditor({ carouselId }) {
   const [gradientColor, setGradientColor] = useState('');
   const [headlineScale, setHeadlineScale] = useState(100);
   const [bodyScale, setBodyScale] = useState(100);
+  const [fontFamily, setFontFamily] = useState('inter');
+  const [generatingVideos, setGeneratingVideos] = useState(false);
+  const [assembling, setAssembling] = useState(false);
+  const [videoModel, setVideoModel] = useState('wavespeed_wan');
+  const [videoDuration, setVideoDuration] = useState(5);
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -71,9 +76,10 @@ export default function CarouselEditor({ carouselId }) {
     loadCarousel();
   }, [loadCarousel]);
 
-  // ── Poll for image generation progress ──
+  // ── Poll for generation progress (images, videos, assembly) ──
+  const pollableStatuses = ['generating', 'generating_videos', 'assembling'];
   useEffect(() => {
-    if (carousel?.status === 'generating') {
+    if (carousel && pollableStatuses.includes(carousel.status)) {
       const timer = setInterval(async () => {
         try {
           const res = await apiFetch(`/api/carousel/${carouselId}`);
@@ -81,8 +87,11 @@ export default function CarouselEditor({ carouselId }) {
           if (!data.error) {
             setCarousel(data.carousel);
             setSlides(data.carousel.carousel_slides || []);
-            if (data.carousel.status !== 'generating') {
+            if (!pollableStatuses.includes(data.carousel.status)) {
               clearInterval(timer);
+              setGeneratingImages(false);
+              setGeneratingVideos(false);
+              setAssembling(false);
             }
           }
         } catch {}
@@ -158,6 +167,7 @@ export default function CarouselEditor({ carouselId }) {
       if (gradientColor) styleOverrides.gradient_color = gradientColor;
       if (headlineScale !== 100) styleOverrides.headline_scale = headlineScale / 100;
       if (bodyScale !== 100) styleOverrides.body_scale = bodyScale / 100;
+      if (fontFamily !== 'inter') styleOverrides.font_family = fontFamily;
 
       const res = await apiFetch(`/api/carousel/${carouselId}/generate-images`, {
         method: 'POST',
@@ -195,6 +205,7 @@ export default function CarouselEditor({ carouselId }) {
       if (gradientColor) regenOverrides.gradient_color = gradientColor;
       if (headlineScale !== 100) regenOverrides.headline_scale = headlineScale / 100;
       if (bodyScale !== 100) regenOverrides.body_scale = bodyScale / 100;
+      if (fontFamily !== 'inter') regenOverrides.font_family = fontFamily;
 
       const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}/regenerate`, {
         method: 'POST',
@@ -216,6 +227,44 @@ export default function CarouselEditor({ carouselId }) {
       setSlides(prev => prev.map(s => s.id === slideId ? data.slide : s));
     } catch (err) {
       toast.error('Regeneration failed');
+    }
+  }
+
+  // ── Generate videos for all slides ──
+  async function handleGenerateVideos() {
+    setGeneratingVideos(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/generate-videos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_model: videoModel, video_duration: videoDuration }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        setGeneratingVideos(false);
+      }
+    } catch (err) {
+      toast.error('Failed to start video generation');
+      setGeneratingVideos(false);
+    }
+  }
+
+  // ── Assemble all slide videos into one ──
+  async function handleAssembleVideo() {
+    setAssembling(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/assemble-video`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        setAssembling(false);
+      }
+    } catch (err) {
+      toast.error('Failed to start assembly');
+      setAssembling(false);
     }
   }
 
@@ -292,6 +341,9 @@ export default function CarouselEditor({ carouselId }) {
   const hasSlides = slides.length > 0;
   const hasImages = slides.some(s => s.composed_image_url);
   const allDone = slides.every(s => s.generation_status === 'done');
+  const isVideoCarousel = carousel?.carousel_type === 'video';
+  const allVideoDone = slides.length > 0 && slides.every(s => s.video_generation_status === 'done' && s.video_url);
+  const hasAnyVideo = slides.some(s => s.video_url);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -357,6 +409,45 @@ export default function CarouselEditor({ carouselId }) {
               Generate Images
             </Button>
           )}
+          {isVideoCarousel && allDone && !allVideoDone && (
+            <>
+              <select
+                value={videoModel}
+                onChange={e => setVideoModel(e.target.value)}
+                className="text-xs border rounded px-2 py-1.5 bg-white text-gray-700"
+                title="Video model"
+              >
+                <option value="wavespeed_wan">WAN 2.5</option>
+                <option value="fal_kling">Kling 2.0</option>
+                <option value="fal_veo3_fast">Veo 3.1 Fast</option>
+                <option value="fal_hailuo">Hailuo</option>
+              </select>
+              <select
+                value={videoDuration}
+                onChange={e => setVideoDuration(Number(e.target.value))}
+                className="text-xs border rounded px-1.5 py-1.5 bg-white text-gray-700"
+                title="Duration per slide"
+              >
+                <option value={3}>3s</option>
+                <option value={5}>5s</option>
+                <option value={8}>8s</option>
+              </select>
+              <Button onClick={handleGenerateVideos} disabled={generatingVideos || carousel.status === 'generating_videos'}>
+                {generatingVideos || carousel.status === 'generating_videos'
+                  ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  : <Film className="w-4 h-4 mr-2" />}
+                Generate Videos
+              </Button>
+            </>
+          )}
+          {isVideoCarousel && allVideoDone && !carousel.assembled_video_url && (
+            <Button onClick={handleAssembleVideo} disabled={assembling || carousel.status === 'assembling'}>
+              {assembling || carousel.status === 'assembling'
+                ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                : <Film className="w-4 h-4 mr-2" />}
+              Assemble Video
+            </Button>
+          )}
           {hasImages && allDone && carousel.status !== 'published' && (
             <Button onClick={handlePublish} disabled={publishing}>
               {publishing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
@@ -416,14 +507,50 @@ export default function CarouselEditor({ carouselId }) {
               <span className="text-xs text-gray-400 w-8">{bodyScale}%</span>
             </div>
 
-            {(gradientColor || headlineScale !== 100 || bodyScale !== 100) && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Font</label>
+              <select
+                value={fontFamily}
+                onChange={e => setFontFamily(e.target.value)}
+                className="text-xs border rounded px-2 py-1 bg-white text-gray-700"
+              >
+                <option value="inter">Inter (Sans)</option>
+                <option value="playfair">Playfair Display (Serif)</option>
+                <option value="jetbrains">JetBrains Mono</option>
+                <option value="caveat">Caveat (Handwritten)</option>
+              </select>
+            </div>
+
+            {(gradientColor || headlineScale !== 100 || bodyScale !== 100 || fontFamily !== 'inter') && (
               <button
-                onClick={() => { setGradientColor(''); setHeadlineScale(100); setBodyScale(100); }}
+                onClick={() => { setGradientColor(''); setHeadlineScale(100); setBodyScale(100); setFontFamily('inter'); }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline"
               >
                 Reset all
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Assembled video player */}
+      {carousel?.assembled_video_url && (
+        <div className="bg-gray-50 border-b px-4 py-3">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-medium text-gray-500">Assembled Video</span>
+            <video
+              src={carousel.assembled_video_url}
+              controls
+              className="h-20 rounded border"
+            />
+            <a
+              href={carousel.assembled_video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-500 hover:underline"
+            >
+              Download
+            </a>
           </div>
         </div>
       )}
@@ -476,10 +603,15 @@ export default function CarouselEditor({ carouselId }) {
                   <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                     {i + 1}
                   </span>
-                  {slide.generation_status === 'generating' && (
+                  {(slide.generation_status === 'generating' || slide.video_generation_status === 'generating') && (
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                       <Loader2 className="w-4 h-4 text-white animate-spin" />
                     </div>
+                  )}
+                  {isVideoCarousel && slide.video_generation_status === 'done' && (
+                    <span className="absolute bottom-1 right-1 bg-green-500/80 text-white text-[8px] px-1 py-0.5 rounded">
+                      <Film className="w-2.5 h-2.5 inline" />
+                    </span>
                   )}
                 </div>
                 <p className="text-[10px] text-gray-500 px-1.5 py-1 truncate">{slide.slide_type}</p>

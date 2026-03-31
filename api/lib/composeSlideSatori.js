@@ -12,23 +12,8 @@
 
 import satori from 'satori';
 import sharp from 'sharp';
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { getCarouselTemplate } from './carouselStyleTemplates.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Load Inter font (static weights) once at module level
-let interRegular, interBold;
-try {
-  const regularData = readFileSync(resolve(__dirname, '../../fonts/Inter-Regular.woff'));
-  const boldData = readFileSync(resolve(__dirname, '../../fonts/Inter-Bold.woff'));
-  interRegular = { name: 'Inter', data: regularData, weight: 400, style: 'normal' };
-  interBold = { name: 'Inter', data: boldData, weight: 700, style: 'normal' };
-} catch (err) {
-  console.warn('[composeSlideSatori] Inter font not found, falling back to system font');
-}
+import { getFontsForSatori, getFontFamilyCss } from './fontRegistry.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,7 +131,7 @@ function getTextContainerStyle(layout, canvasW, canvasH) {
 
 // ── Build Satori JSX tree ────────────────────────────────────────────────────
 
-function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors }) {
+function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss }) {
   const headSize = Math.round(canvasH * layout.headlineSizeRatio);
   const bodySize = Math.round(canvasH * layout.bodySizeRatio);
   const marginPx = Math.round(canvasW * layout.margin);
@@ -239,7 +224,7 @@ function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataU
         position: 'relative',
         width: `${canvasW}px`,
         height: `${canvasH}px`,
-        fontFamily: 'Inter, sans-serif',
+        fontFamily: fontFamilyCss || 'Inter, sans-serif',
       },
       children,
     },
@@ -309,20 +294,16 @@ export async function composeSlideSatori({
     }
   }
 
+  // Resolve font family
+  const fontKey = styleOverrides?.font_family || 'inter';
+  const fonts = getFontsForSatori(fontKey);
+  const fontFamilyCss = getFontFamilyCss(fontKey);
+
   // Build JSX tree for Satori
   const jsx = buildSlideJsx({
     canvasW, canvasH, headline, bodyText: effectiveBody,
-    layout, logoDataUri, logoW, logoH, brandColors,
+    layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss,
   });
-
-  // Render JSX → SVG using Satori
-  const fonts = [];
-  if (interRegular) fonts.push(interRegular);
-  if (interBold) fonts.push(interBold);
-  // Fallback if font didn't load
-  if (fonts.length === 0) {
-    console.warn('[composeSlideSatori] No fonts loaded, using empty font list');
-  }
 
   const overlaySvg = await satori(jsx, {
     width: canvasW,

@@ -563,6 +563,8 @@ app.put('/api/carousel/:id', authenticateToken, (await import('./api/carousel/up
 app.delete('/api/carousel/:id', authenticateToken, (await import('./api/carousel/delete.js')).default);
 app.post('/api/carousel/:id/generate-content', authenticateToken, (await import('./api/carousel/generate-content.js')).default);
 app.post('/api/carousel/:id/generate-images', authenticateToken, (await import('./api/carousel/generate-images.js')).default);
+app.post('/api/carousel/:id/generate-videos', authenticateToken, (await import('./api/carousel/generate-videos.js')).default);
+app.post('/api/carousel/:id/assemble-video', authenticateToken, (await import('./api/carousel/assemble-video.js')).default);
 app.put('/api/carousel/:id/slides/:slideId', authenticateToken, (await import('./api/carousel/update-slide.js')).default);
 app.post('/api/carousel/:id/slides/:slideId/regenerate', authenticateToken, (await import('./api/carousel/regenerate-slide.js')).default);
 app.post('/api/carousel/:id/reorder', authenticateToken, (await import('./api/carousel/reorder.js')).default);

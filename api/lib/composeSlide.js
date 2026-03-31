@@ -213,6 +213,11 @@ export async function composeSlide({
   compositor = 'sharp',
   styleOverrides,
 }) {
+  // Auto-switch to Satori for custom fonts (Sharp SVG can't use WOFF fonts)
+  if (styleOverrides?.font_family && styleOverrides.font_family !== 'inter') {
+    compositor = 'satori';
+  }
+
   // Dispatch to Satori compositor if requested
   if (compositor === 'satori') {
     const { composeSlideSatori } = await import('./composeSlideSatori.js');

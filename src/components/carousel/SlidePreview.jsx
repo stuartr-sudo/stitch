@@ -9,6 +9,30 @@ const ASPECT_CLASSES = {
 export default function SlidePreview({ slide, aspectRatio = '1080x1080', size = 'large' }) {
   const aspectClass = ASPECT_CLASSES[aspectRatio] || 'aspect-square';
 
+  // Video takes priority over image
+  if (slide.video_url) {
+    return (
+      <div className={`${aspectClass} w-full rounded-lg overflow-hidden bg-black relative`}>
+        <video
+          src={slide.video_url}
+          className="w-full h-full object-cover"
+          controls={size === 'large'}
+          muted
+          loop
+          autoPlay={size === 'large'}
+          playsInline
+        />
+        {size === 'thumb' && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-5 h-5 rounded-full bg-black/40 flex items-center justify-center">
+              <div className="w-0 h-0 border-l-[6px] border-l-white border-y-[4px] border-y-transparent ml-0.5" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // If we have a composed image, show it
   if (slide.composed_image_url) {
     return (

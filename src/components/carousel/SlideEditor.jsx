@@ -150,6 +150,24 @@ export default function SlideEditor({ slide, onUpdate, onRegenerate, captionText
         Regenerate Image
       </Button>
 
+      {/* Video status (for video carousels) */}
+      {slide.video_generation_status && slide.video_generation_status !== 'pending' && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-gray-500">Video:</span>
+          {slide.video_generation_status === 'generating' && (
+            <span className="text-purple-600 flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+            </span>
+          )}
+          {slide.video_generation_status === 'done' && (
+            <span className="text-green-600">Done</span>
+          )}
+          {slide.video_generation_status === 'failed' && (
+            <span className="text-red-600">Failed</span>
+          )}
+        </div>
+      )}
+
       <hr className="border-gray-100" />
 
       {/* Post caption */}

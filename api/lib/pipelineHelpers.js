@@ -412,6 +412,54 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
 }
 
 // ---------------------------------------------------------------------------
+// Assemble carousel video (no voiceover required)
+// ---------------------------------------------------------------------------
+
+/**
+ * Stitches carousel slide videos into a single video.
+ * Unlike assembleShort(), voiceover is not required.
+ */
+export async function assembleCarouselVideo(videoUrls, falKey, supabase, clipDurations = [], musicUrl = null, musicVolume = 0.15) {
+  if (!falKey) throw new Error('falKey required for carousel assembly');
+  if (!videoUrls?.length) throw new Error('No video clips to assemble');
+
+  let runningTimestamp = 0;
+  const videoKeyframes = videoUrls.map((url, i) => {
+    const durationMs = (clipDurations[i] || 5) * 1000;
+    const kf = { url, timestamp: runningTimestamp, duration: durationMs, audio: true };
+    runningTimestamp += durationMs;
+    return kf;
+  });
+  const totalDurationMs = runningTimestamp;
+
+  const tracks = [
+    { id: 'video', type: 'video', keyframes: videoKeyframes },
+  ];
+
+  if (musicUrl) {
+    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume }] });
+  }
+
+  const totalDurationSec = totalDurationMs / 1000;
+  console.log(`[assembleCarouselVideo] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s)${musicUrl ? ` + music` : ''}`);
+
+  const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tracks, duration: totalDurationSec }),
+  });
+
+  if (!res.ok) throw new Error(`FAL ffmpeg carousel assembly failed: ${await res.text()}`);
+  const queueData = await res.json();
+
+  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const videoUrl = output?.video_url || output?.video?.url || output?.output_url;
+  if (!videoUrl) throw new Error('No video URL from FFmpeg carousel assembly');
+
+  return await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/finals');
+}
+
+// ---------------------------------------------------------------------------
 // Extract the first frame from a video clip
 // ---------------------------------------------------------------------------
 
