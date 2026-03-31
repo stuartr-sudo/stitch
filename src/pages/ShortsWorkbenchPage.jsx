@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Check, ChevronDown, ChevronUp,
-  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X,
+  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
@@ -12,6 +12,7 @@ import StyleGrid from '@/components/ui/StyleGrid';
 import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 import { FRAMEWORK_CARDS, getFrameworksForNiche } from '@/lib/videoStyleFrameworks';
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
+import LibraryModal from '@/components/modals/LibraryModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -247,43 +248,47 @@ function AudioPlayer({ url, speed, onSpeedChange }) {
 
 function FramePair({ startUrl, endUrl, startLabel, endLabel, onRegenStart, onRegenEnd, loading }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
-      <div className="border-2 border-slate-200 rounded-xl overflow-hidden">
+    <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center max-w-md mx-auto">
+      <div className="border border-slate-200 rounded-lg overflow-hidden">
         {startUrl ? (
           <img src={startUrl} alt="Start frame" className="w-full aspect-[9/16] object-cover" />
         ) : (
-          <div className="w-full aspect-[9/16] bg-slate-100 flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-slate-300" />
+          <div className="w-full aspect-[9/16] bg-slate-50 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-slate-300" />
           </div>
         )}
-        <div className="px-3 py-2 bg-emerald-50 text-center">
-          <span className="text-[10px] font-bold text-emerald-700 uppercase">{startLabel || 'Start Frame'}</span>
+        <div className="px-2 py-1.5 bg-emerald-50 text-center border-t border-emerald-100">
+          <span className="text-[9px] font-bold text-emerald-700 uppercase">{startLabel || 'Start Frame'}</span>
         </div>
-        <div className="px-3 py-1.5 flex justify-center">
-          <button onClick={onRegenStart} disabled={loading} className="text-[10px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
-            <RotateCcw className="w-3 h-3 inline mr-1" />Regenerate
-          </button>
-        </div>
+        {startUrl && (
+          <div className="px-2 py-1 flex justify-center border-t border-slate-100">
+            <button onClick={onRegenStart} disabled={loading} className="text-[9px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
+              <RotateCcw className="w-2.5 h-2.5 inline mr-0.5" />Redo
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="text-2xl text-[#2C666E] font-bold">→</div>
+      <div className="text-lg text-slate-400">→</div>
 
-      <div className="border-2 border-slate-200 rounded-xl overflow-hidden">
+      <div className="border border-slate-200 rounded-lg overflow-hidden">
         {endUrl ? (
           <img src={endUrl} alt="End frame" className="w-full aspect-[9/16] object-cover" />
         ) : (
-          <div className="w-full aspect-[9/16] bg-slate-100 flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-slate-300" />
+          <div className="w-full aspect-[9/16] bg-slate-50 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-slate-300" />
           </div>
         )}
-        <div className="px-3 py-2 bg-amber-50 text-center">
-          <span className="text-[10px] font-bold text-amber-700 uppercase">{endLabel || 'End Frame'}</span>
+        <div className="px-2 py-1.5 bg-amber-50 text-center border-t border-amber-100">
+          <span className="text-[9px] font-bold text-amber-700 uppercase">{endLabel || 'End Frame'}</span>
         </div>
-        <div className="px-3 py-1.5 flex justify-center">
-          <button onClick={onRegenEnd} disabled={loading} className="text-[10px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
-            <RotateCcw className="w-3 h-3 inline mr-1" />Regenerate
-          </button>
-        </div>
+        {endUrl && (
+          <div className="px-2 py-1 flex justify-center border-t border-slate-100">
+            <button onClick={onRegenEnd} disabled={loading} className="text-[9px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
+              <RotateCcw className="w-2.5 h-2.5 inline mr-0.5" />Redo
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -312,58 +317,73 @@ function SingleFrame({ url, label, onRegen, loading }) {
   );
 }
 
-function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, prevLabel }) {
-  const [showInput, setShowInput] = useState(false);
+function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, prevLabel, onOpenLibrary }) {
+  const [showOptions, setShowOptions] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const ref = sceneRefs[sceneIdx];
 
-  const setRef = (url, source) => setSceneRefs(prev => ({ ...prev, [sceneIdx]: { url, source } }));
+  const setRef = (url, source) => { setSceneRefs(prev => ({ ...prev, [sceneIdx]: { url, source } })); setShowOptions(false); setShowUrlInput(false); };
   const clearRef = () => setSceneRefs(prev => { const n = { ...prev }; delete n[sceneIdx]; return n; });
 
   if (ref?.url) {
     return (
-      <div className="flex items-center gap-2 mt-2 bg-indigo-50 border border-indigo-200 rounded-lg p-2">
-        <img src={ref.url} alt="Reference" className="w-10 h-14 object-cover rounded" />
+      <div className="flex items-center gap-2.5 mt-2 bg-indigo-50/80 border border-indigo-200 rounded-lg p-2">
+        <img src={ref.url} alt="Reference" className="w-10 h-14 object-cover rounded border border-indigo-200" />
         <div className="flex-1 min-w-0">
-          <div className="text-[9px] font-bold text-indigo-700 uppercase">Reference Image ({ref.source})</div>
-          <div className="text-[9px] text-indigo-500 truncate">{ref.url.split('/').pop()}</div>
+          <div className="text-[9px] font-bold text-indigo-700 uppercase">I2I Reference ({ref.source})</div>
+          <div className="text-[9px] text-indigo-400 truncate">{ref.url.split('/').pop()}</div>
         </div>
-        <button onClick={clearRef} className="p-1 text-indigo-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+        <button onClick={() => { clearRef(); setShowOptions(true); }}
+          className="text-[9px] text-indigo-500 hover:text-indigo-700 font-medium">Change</button>
+        <button onClick={clearRef} className="p-1 text-indigo-300 hover:text-red-500"><X className="w-3 h-3" /></button>
+      </div>
+    );
+  }
+
+  if (showUrlInput) {
+    return (
+      <div className="mt-2 flex gap-1.5 items-center">
+        <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="Paste image URL..."
+          className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[10px] focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]/20 outline-none" autoFocus />
+        <button onClick={() => { if (urlInput.trim()) { setRef(urlInput.trim(), 'url'); setUrlInput(''); } }}
+          disabled={!urlInput.trim()}
+          className="px-2.5 py-1.5 bg-[#2C666E] text-white rounded-lg text-[9px] font-semibold disabled:opacity-50">Use</button>
+        <button onClick={() => { setShowUrlInput(false); setShowOptions(true); }}
+          className="px-2 py-1.5 text-slate-400 text-[9px] hover:text-slate-600">Back</button>
+      </div>
+    );
+  }
+
+  if (!showOptions) {
+    return (
+      <div className="mt-2">
+        <button onClick={() => setShowOptions(true)}
+          className="text-[10px] text-slate-500 font-medium hover:text-[#2C666E] flex items-center gap-1 transition-colors">
+          <ImageIcon className="w-3 h-3" />Add reference image (I2I)
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="mt-2">
-      {!showInput ? (
-        <button onClick={() => setShowInput(true)}
-          className="text-[10px] text-indigo-600 font-medium hover:underline flex items-center gap-1">
-          <Link className="w-3 h-3" />Use reference image (I2I)
+    <div className="mt-2 flex gap-1.5 flex-wrap items-center">
+      <span className="text-[9px] font-semibold text-slate-400 uppercase">Ref:</span>
+      {prevFrameUrl && (
+        <button onClick={() => setRef(prevFrameUrl, prevLabel || 'prev scene')}
+          className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-semibold hover:bg-indigo-100 border border-indigo-200 transition-colors">
+          <Film className="w-2.5 h-2.5" />{prevLabel || 'Prev frame'}
         </button>
-      ) : (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1.5">
-          <div className="text-[9px] font-bold text-slate-500 uppercase">Reference Image for I2I</div>
-          <div className="flex gap-1.5">
-            {prevFrameUrl && (
-              <button onClick={() => { setRef(prevFrameUrl, prevLabel || 'prev scene'); setShowInput(false); }}
-                className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-semibold hover:bg-indigo-200 truncate max-w-[140px]">
-                {prevLabel || 'Prev scene frame'}
-              </button>
-            )}
-            <button onClick={() => setShowInput(false)} className="px-2 py-1 text-slate-400 text-[9px] hover:text-slate-600">Cancel</button>
-          </div>
-          <div className="flex gap-1">
-            <input value={urlInput} onChange={e => setUrlInput(e.target.value)}
-              placeholder="Paste image URL..."
-              className="flex-1 border border-slate-200 rounded px-2 py-1 text-[10px]" />
-            <button onClick={() => { if (urlInput.trim()) { setRef(urlInput.trim(), 'url'); setUrlInput(''); setShowInput(false); } }}
-              disabled={!urlInput.trim()}
-              className="px-2 py-1 bg-[#2C666E] text-white rounded text-[9px] font-semibold disabled:opacity-50">
-              Use
-            </button>
-          </div>
-        </div>
       )}
+      <button onClick={() => onOpenLibrary?.(sceneIdx)}
+        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded-md text-[9px] font-semibold hover:bg-amber-100 border border-amber-200 transition-colors">
+        <FolderOpen className="w-2.5 h-2.5" />Library
+      </button>
+      <button onClick={() => { setShowOptions(false); setShowUrlInput(true); }}
+        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md text-[9px] font-semibold hover:bg-slate-100 border border-slate-200 transition-colors">
+        <Link className="w-2.5 h-2.5" />Paste URL
+      </button>
+      <button onClick={() => setShowOptions(false)} className="text-[9px] text-slate-400 hover:text-slate-600 ml-1">Cancel</button>
     </div>
   );
 }
@@ -426,6 +446,7 @@ export default function ShortsWorkbenchPage() {
   const [frameLoading, setFrameLoading] = useState(null); // 'scene-0-start' etc.
   const [scenePrompts, setScenePrompts] = useState({}); // { sceneIdx: { startPrompt, endPrompt, motionPrompt } }
   const [sceneRefs, setSceneRefs] = useState({}); // { sceneIdx: { url, source } } — per-scene reference images for I2I
+  const [libraryForScene, setLibraryForScene] = useState(null); // sceneIdx when library picker is open
 
   // ── Step 4: Clips ───────────────────────────────────────────────
   const [clips, setClips] = useState({}); // { sceneIdx: { url, actualDuration, status } }
@@ -1306,7 +1327,8 @@ export default function ShortsWorkbenchPage() {
 
                       <ReferenceImageInput sceneIdx={i} sceneRefs={sceneRefs} setSceneRefs={setSceneRefs}
                         prevFrameUrl={i > 0 ? (frames[i - 1]?.end || frames[i - 1]?.start) : null}
-                        prevLabel={i > 0 ? `Scene ${i} frame` : null} />
+                        prevLabel={i > 0 ? `Scene ${i} frame` : null}
+                        onOpenLibrary={setLibraryForScene} />
 
                       {/* Vision analysis */}
                       {sceneFrames.visionAnalysis && (
@@ -1336,7 +1358,8 @@ export default function ShortsWorkbenchPage() {
                           )}
                           <ReferenceImageInput sceneIdx={i} sceneRefs={sceneRefs} setSceneRefs={setSceneRefs}
                             prevFrameUrl={i > 0 ? (frames[i - 1]?.extractedLastFrame || frames[i - 1]?.start) : null}
-                            prevLabel={i > 0 ? `Scene ${i} last frame` : null} />
+                            prevLabel={i > 0 ? `Scene ${i} last frame` : null}
+                            onOpenLibrary={setLibraryForScene} />
                         </div>
                       </div>
                       {!sceneFrames.start && i === 0 && (
@@ -1513,6 +1536,17 @@ export default function ShortsWorkbenchPage() {
           </>
         )}
       </main>
+
+      {/* Library picker for reference images */}
+      {libraryForScene !== null && (
+        <LibraryModal isOpen={true} mediaType="image"
+          onClose={() => setLibraryForScene(null)}
+          onSelect={(item) => {
+            const url = item.url || item.public_url;
+            if (url) setSceneRefs(prev => ({ ...prev, [libraryForScene]: { url, source: 'library' } }));
+            setLibraryForScene(null);
+          }} />
+      )}
     </div>
   );
 }
