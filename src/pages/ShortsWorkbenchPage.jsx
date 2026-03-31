@@ -11,6 +11,7 @@ import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 import StyleGrid from '@/components/ui/StyleGrid';
 import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 import { FRAMEWORK_CARDS, getFrameworksForNiche } from '@/lib/videoStyleFrameworks';
+import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -259,6 +260,12 @@ export default function ShortsWorkbenchPage() {
   const [storyContext, setStoryContext] = useState('');
   const [framework, setFramework] = useState(null);
   const [duration, setDuration] = useState(60);
+  const [topicL1, setTopicL1] = useState('');
+  const [topicL2, setTopicL2] = useState('');
+  const [topicL3, setTopicL3] = useState('');
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchedStories, setResearchedStories] = useState([]);
+  const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
@@ -301,7 +308,35 @@ export default function ShortsWorkbenchPage() {
   const mode = isFLF(videoModel) ? 'flf' : 'i2v';
   const effectiveDuration = ttsDuration ? ttsDuration / voiceSpeed : duration;
 
+  // ── Niche change: clear funnel + framework ─────────────────────
+  const handleNicheChange = (key) => {
+    setNiche(key);
+    setTopicL1(''); setTopicL2(''); setTopicL3('');
+    setTopic('');
+    setResearchedStories([]); setSelectedStoryIdx(null);
+    setStoryContext('');
+    if (framework?.applicableNiches && !framework.applicableNiches.includes(key)) setFramework(null);
+  };
+
   // ── API calls ───────────────────────────────────────────────────
+
+  const handleResearch = async () => {
+    if (!niche || !topic.trim()) { toast.error('Select a niche and enter a topic first'); return; }
+    setResearchLoading(true);
+    try {
+      const res = await apiFetch('/api/campaigns/research', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, topic: topic.trim() }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      if (data.stories) {
+        setResearchedStories(data.stories);
+        setSelectedStoryIdx(null);
+      }
+    } catch (err) { toast.error(err.message || 'Research failed'); }
+    finally { setResearchLoading(false); }
+  };
 
   const generateScript = async () => {
     if (!niche || !topic.trim()) { toast.error('Pick a niche and enter a topic'); return; }
@@ -548,7 +583,7 @@ export default function ShortsWorkbenchPage() {
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Niche</label>
                   <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
                     {NICHES.map(n => (
-                      <button key={n.key} onClick={() => setNiche(n.key)}
+                      <button key={n.key} onClick={() => handleNicheChange(n.key)}
                         className={cn('p-2 rounded-lg border text-center transition-all text-[11px]',
                           niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300')}>
                         <div className="text-base">{n.icon}</div>
@@ -558,15 +593,29 @@ export default function ShortsWorkbenchPage() {
                   </div>
 
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-4 mb-1">Framework</label>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {(niche ? getFrameworksForNiche(niche) : FRAMEWORK_CARDS).slice(0, 8).map(fw => (
+                  {(() => {
+                    const allFw = niche ? getFrameworksForNiche(niche) : FRAMEWORK_CARDS;
+                    const nicheFw = allFw.filter(f => f.applicableNiches);
+                    const universalFw = allFw.filter(f => !f.applicableNiches);
+                    const fwButton = (fw) => (
                       <button key={fw.id} onClick={() => { setFramework(fw); if (fw.supportedDurations?.length) setDuration(fw.supportedDurations[0]); }}
                         className={cn('px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all',
                           framework?.id === fw.id ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-200 text-slate-600 hover:border-slate-300')}>
                         {fw.name}
                       </button>
-                    ))}
-                  </div>
+                    );
+                    return (
+                      <div className="space-y-2">
+                        {nicheFw.length > 0 && (
+                          <div>
+                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Recommended for {NICHES.find(n => n.key === niche)?.label}</span>
+                            <div className="flex gap-1.5 flex-wrap mt-1">{nicheFw.map(fwButton)}</div>
+                          </div>
+                        )}
+                        <div className="flex gap-1.5 flex-wrap">{universalFw.slice(0, 8).map(fwButton)}</div>
+                      </div>
+                    );
+                  })()}
 
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-4 mb-1">Duration</label>
                   <div className="flex gap-2">
@@ -581,9 +630,100 @@ export default function ShortsWorkbenchPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Topic</label>
-                  <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="What is this short about?"
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Topic</label>
+                    <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()}
+                      className="text-[11px] font-semibold text-[#2C666E] hover:underline disabled:opacity-50 flex items-center gap-1">
+                      {researchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+                      Research
+                    </button>
+                  </div>
+                  <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Type a topic or pick from suggestions below..."
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3" />
+
+                  {/* 3-level topic funnel */}
+                  {niche && TOPIC_SUGGESTIONS[niche] && (() => {
+                    const nicheData = TOPIC_SUGGESTIONS[niche];
+                    const l1Items = nicheData.topics || [];
+                    const l1Match = l1Items.find(t => t.label === topicL1);
+                    const l2Items = l1Match?.sub || [];
+                    const l2Match = l2Items.find(t => t.label === topicL2);
+                    const l3Items = l2Match?.sub || [];
+                    return (
+                      <div className="space-y-2 mb-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1">Category</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {l1Items.map(t => (
+                              <button key={t.label} onClick={() => {
+                                setTopicL1(topicL1 === t.label ? '' : t.label);
+                                setTopicL2(''); setTopicL3('');
+                                setTopic(t.label);
+                              }}
+                                className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
+                                  topicL1 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {l2Items.length > 0 && (
+                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1">Angle</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {l2Items.map(t => (
+                                <button key={t.label} onClick={() => {
+                                  setTopicL2(topicL2 === t.label ? '' : t.label);
+                                  setTopicL3('');
+                                  setTopic(`${topicL1} — ${t.label}`);
+                                }}
+                                  className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
+                                    topicL2 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                  {t.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {l3Items.length > 0 && (
+                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase font-medium block mb-1">Hook</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {l3Items.map(t => (
+                                <button key={t} onClick={() => {
+                                  setTopicL3(topicL3 === t ? '' : t);
+                                  setTopic(`${topicL1} — ${topicL2} — ${t}`);
+                                }}
+                                  className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
+                                    topicL3 === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                  {t}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Research results */}
+                  {researchedStories.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">Trending Stories — click to use</label>
+                      {researchedStories.map((s, i) => (
+                        <button key={i} onClick={() => {
+                          setSelectedStoryIdx(i);
+                          setTopic(s.title);
+                          setStoryContext(s.story_context || s.summary || '');
+                        }}
+                          className={cn('w-full text-left p-3 border-2 rounded-xl text-xs transition-all',
+                            selectedStoryIdx === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
+                          <div className="font-semibold text-slate-800">{s.title}</div>
+                          <div className="text-slate-500 mt-0.5 leading-relaxed">{s.angle || s.summary}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Script</label>
