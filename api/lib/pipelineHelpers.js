@@ -503,9 +503,9 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
         return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'fal_lyria2');
       }
       const queueData = await res.json();
-      if (!queueData.request_id) return null;
+      if (!queueData.request_id && !queueData.response_url) return null;
       const output = await pollFalQueue(
-        queueData.request_id,
+        queueData.response_url || queueData.request_id,
         'fal-ai/elevenlabs/music',
         keys.falKey,
         180,
