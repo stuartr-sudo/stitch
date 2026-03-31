@@ -265,7 +265,7 @@ async function updateStoryboard(req, res, supabase, userId, storyboardId) {
     'music_mood', 'music_volume', 'music_url', 'caption_style', 'brand_data',
     'elements', 'veo_reference_images', 'start_frame_url', 'start_frame_description',
     'scene_direction', 'props', 'negative_prompt', 'assembled_url', 'captioned_url',
-    'pdf_url', 'client_brief',
+    'pdf_url', 'client_brief', 'location_description', 'image_model', 'production_status',
   ];
 
   const updates = {};

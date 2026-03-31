@@ -65,8 +65,6 @@ import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import ProviderStatusChip from '@/components/ProviderStatusChip';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
 import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
-import StoryboardPlannerModal from '@/components/modals/StoryboardPlannerWizard';
-
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
 
@@ -75,7 +73,6 @@ export default function VideoAdvertCreator() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const [activeModal, setActiveModal] = useState(null);
-  const [storyboardBridgeData, setStoryboardBridgeData] = useState(null);
   const [createdVideos, setCreatedVideos] = useState([]);
   const [createdImages, setCreatedImages] = useState([]);
   const [showApiKeys, setShowApiKeys] = useState(false);
@@ -107,30 +104,13 @@ export default function VideoAdvertCreator() {
   // Keep ref in sync with state
   useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
 
-  // Bridge: detect ?fromStoryboard=<id> and open wizard pre-populated
+  // Bridge: detect ?fromStoryboard=<id> and redirect to workspace
   useEffect(() => {
     const storyboardId = searchParams.get('fromStoryboard');
     if (!storyboardId) return;
-
-    // Clear the param so it doesn't re-trigger
     searchParams.delete('fromStoryboard');
     setSearchParams(searchParams, { replace: true });
-
-    // Fetch storyboard + frames, then open the wizard
-    apiFetch(`/api/storyboard/projects/${storyboardId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.storyboard && data.frames?.length) {
-          setStoryboardBridgeData({ storyboard: data.storyboard, frames: data.frames });
-          setActiveModal('storyboard');
-          console.log(`[Storyboard Bridge] Loaded "${data.storyboard.name}" — ${data.frames.length} frames → opening wizard`);
-        } else {
-          toast.error('Failed to load storyboard data');
-        }
-      })
-      .catch(err => {
-        toast.error('Error loading storyboard: ' + err.message);
-      });
+    navigate(`/storyboards/${storyboardId}`);
   }, [searchParams]);
 
   // Listen for open-tool events from child modals (e.g., Imagineer Edit result actions)
@@ -722,7 +702,7 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
-                    onClick={() => setActiveModal('storyboard')}
+                    onClick={() => navigate('/storyboards')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2">
@@ -1169,19 +1149,6 @@ export default function VideoAdvertCreator() {
         onClose={() => { setActiveModal(null); setPendingImage(null); }}
         initialImage={pendingImage}
         onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet', 'turnaround')}
-      />
-
-      <StoryboardPlannerModal
-        isOpen={activeModal === 'storyboard'}
-        onClose={() => { setActiveModal(null); setPendingImage(null); setStoryboardBridgeData(null); }}
-        initialImage={pendingImage}
-        initialStoryboardData={storyboardBridgeData}
-        onScenesComplete={async (completedScenes) => {
-          for (const scene of completedScenes) {
-            const actualDuration = scene.durationSeconds || 5;
-            handleVideoCreated(scene.videoUrl, scene.title, 'storyboard', actualDuration);
-          }
-        }}
       />
 
       <ApiKeysModal

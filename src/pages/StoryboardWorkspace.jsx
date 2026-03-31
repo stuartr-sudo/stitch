@@ -26,6 +26,7 @@ import {
   Image as ImageIcon, AlertTriangle, CheckCircle2, Zap, Settings,
   Volume2, Music, Type, Pause, RefreshCw, Send, Video,
 } from 'lucide-react';
+import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
 
 // ── Beat colors for narrative arc visualization ──
 
@@ -870,27 +871,11 @@ export default function StoryboardWorkspace() {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="max-w-2xl space-y-3">
-              <p className="text-xs text-gray-400 mb-4">
-                {isProducing ? 'Settings are locked during production.' : 'Edit settings before starting production.'}
-              </p>
-              {[
-                { label: 'Story', desc: `${storyboard.narrative_style || 'entertaining'} · ${storyboard.target_audience || 'General'}${storyboard.client_brief ? ' · Has client brief' : ''}` },
-                { label: 'Visual Style', desc: `${storyboard.visual_style || 'cinematic'}${storyboard.builder_lighting ? ` · ${storyboard.builder_lighting}` : ''}${storyboard.motion_style ? ` · ${storyboard.motion_style}` : ''}` },
-                { label: 'Models', desc: `Video: ${storyboard.global_model || 'veo3'} · Image: ${storyboard.image_model || 'fal_nano_banana'}` },
-                { label: 'Characters', desc: `${storyboard.elements?.filter(e => e.description).length || 0} elements · ${storyboard.veo_reference_images?.length || 0} reference images` },
-                { label: 'Scene Direction', desc: storyboard.location_description ? storyboard.location_description.substring(0, 80) + '...' : 'No location set' },
-                { label: 'Audio', desc: `${storyboard.tts_model || 'elevenlabs-v3'} · ${storyboard.voice || 'Rachel'} · Lipsync: ${storyboard.lipsync_model || 'none'} · Captions: ${storyboard.caption_style || 'none'}` },
-              ].map(section => (
-                <div key={section.label} className={`bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center justify-between ${isProducing ? 'opacity-60 cursor-not-allowed' : 'hover:border-gray-300 cursor-pointer'}`}>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-800">{section.label}</span>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{section.desc}</p>
-                  </div>
-                  {!isProducing && <Edit2 size={14} className="text-gray-400" />}
-                </div>
-              ))}
-            </div>
+            <StoryboardSettings
+              storyboard={storyboard}
+              onUpdate={(updated) => setStoryboard(updated)}
+              isProducing={storyboard?.production_status === 'producing'}
+            />
           )}
 
           {/* Production Tab */}

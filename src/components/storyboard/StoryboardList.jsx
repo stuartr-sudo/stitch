@@ -17,8 +17,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import StyleGrid from '@/components/ui/StyleGrid';
+import { SCENE_MODELS } from '@/components/storyboard/SceneModelSelector';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+
+const NARRATIVE_STYLES = [
+  'entertaining', 'educational', 'dramatic', 'cinematic',
+  'comedic', 'documentary', 'poetic', 'suspenseful',
+];
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-600',
@@ -48,9 +55,15 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
   const [desiredLength, setDesiredLength] = useState(60);
   const [frameInterval, setFrameInterval] = useState(4);
   const [aspectRatio, setAspectRatio] = useState('16:9');
+  const [narrativeStyle, setNarrativeStyle] = useState('entertaining');
+  const [visualStyle, setVisualStyle] = useState('');
+  const [globalModel, setGlobalModel] = useState('veo3');
   const [creating, setCreating] = useState(false);
 
   const frameCount = Math.max(1, Math.ceil(desiredLength / frameInterval));
+
+  // Only show R2V and I2V models in create (not V2V or FLF)
+  const createModels = SCENE_MODELS.filter(m => m.mode === 'reference-to-video' || m.mode === 'image-to-video');
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -64,6 +77,9 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
           desiredLength,
           frameInterval,
           aspectRatio,
+          narrativeStyle,
+          visualStyle: visualStyle || undefined,
+          globalModel,
         }),
       });
       const data = await res.json();
@@ -81,7 +97,7 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-5 shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-gray-900">New Storyboard</h2>
 
         <div>
@@ -136,6 +152,45 @@ function CreateStoryboardDialog({ onClose, onCreate }) {
               ))}
             </div>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Narrative Style</label>
+          <div className="flex flex-wrap gap-1.5">
+            {NARRATIVE_STYLES.map(s => (
+              <button key={s} onClick={() => setNarrativeStyle(s)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+                  narrativeStyle === s ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Visual Style</label>
+          <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="160px" hideLabel />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
+          <select
+            value={globalModel}
+            onChange={e => setGlobalModel(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
+          >
+            <optgroup label="Reference-to-Video">
+              {createModels.filter(m => m.mode === 'reference-to-video').map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Image-to-Video">
+              {createModels.filter(m => m.mode === 'image-to-video').map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </optgroup>
+          </select>
         </div>
 
         <div className="bg-gray-50 rounded-lg p-3 text-center">
