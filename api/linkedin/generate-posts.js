@@ -6,6 +6,7 @@ import { composeImage } from '../lib/composeImage.js';
 import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
+import { getPostFormat } from '../../src/lib/postFormatTemplates.js';
 
 const ANTI_SLOP = `RULES (violating any = rejection):
 - First line MUST be under 200 characters
@@ -65,8 +66,9 @@ export default async function handler(req, res) {
   const {
     topic_id, template_index,
     style_preset, brand_kit_id, carousel_style,
-    style_overrides,
+    style_overrides, post_format, writing_style,
   } = req.body || {};
+  const formatTemplate = post_format ? getPostFormat(post_format) : null;
   if (!topic_id) return res.status(400).json({ error: 'topic_id is required' });
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -133,17 +135,36 @@ export default async function handler(req, res) {
     const postNumber = (maxNum?.post_number || 0) + 1;
     const tplIndex = template_index != null ? template_index : (postNumber - 1) % 6;
 
-    // Generate 3 posts in parallel
-    const styles = ['contrarian', 'story', 'data'];
+    // Determine which styles to generate
+    // When a post format is specified, generate format-specific variations
+    // When a specific writing_style is chosen (not 'all'), generate only that style
+    let styles;
+    if (formatTemplate) {
+      // Format mode: generate 3 variations using the format's LinkedIn prompt
+      styles = ['format_v1', 'format_v2', 'format_v3'];
+    } else if (writing_style && writing_style !== 'all') {
+      styles = [writing_style];
+    } else {
+      styles = ['contrarian', 'story', 'data'];
+    }
+
     const results = await Promise.allSettled(
       styles.map(async (style) => {
+        let systemPrompt;
+        if (formatTemplate) {
+          // Use format-specific LinkedIn prompt with anti-slop rules
+          systemPrompt = `${formatTemplate.linkedinPrompt}\n\n${ANTI_SLOP}`;
+        } else {
+          systemPrompt = STYLE_PROMPTS[style];
+        }
+
         const completion = await client.chat.completions.create({
           model: 'gpt-4.1',
           messages: [
-            { role: 'system', content: STYLE_PROMPTS[style] },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
-          temperature: 0.8,
+          temperature: formatTemplate ? 0.85 : 0.8,
           max_tokens: 1000,
         });
 
@@ -347,6 +368,7 @@ export default async function handler(req, res) {
             carousel_style: carousel_style || 'bold_editorial',
             style_preset: style_preset || null,
             brand_kit_id: brand_kit_id || null,
+            post_format: post_format || null,
             style_overrides: style_overrides || {},
           })
           .select()

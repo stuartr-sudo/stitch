@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     source_url = null,
     carousel_type = 'static',
     carousel_style = 'bold_editorial',
+    post_format = null,
   } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
       source_url: source_url || null,
       carousel_type: carousel_type || 'static',
       carousel_style: carousel_style || 'bold_editorial',
+      post_format: post_format || null,
     })
     .select()
     .single();

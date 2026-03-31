@@ -4,6 +4,7 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 import { scrapeArticle } from '../lib/pipelineHelpers.js';
 import { fetchUrlContent, resolveExaKey } from '../lib/newsjackScorer.js';
 import { logCost } from '../lib/costLogger.js';
+import { getPostFormat } from '../../src/lib/postFormatTemplates.js';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -95,8 +96,11 @@ const IMAGE_PROMPT_RULES = `IMAGE PROMPT CONSISTENCY — CRITICAL:
 
 // ─── Stage 1: Research Synthesis ──────────────────────────────────────────────
 
-async function synthesizeResearch(client, content, topic, brandContext, platform) {
+async function synthesizeResearch(client, content, topic, brandContext, platform, formatTemplate) {
   const platformInfo = PLATFORM_GUIDANCE[platform] || PLATFORM_GUIDANCE.instagram;
+  const slideRange = formatTemplate
+    ? `${formatTemplate.slideStructure.minSlides}-${formatTemplate.slideStructure.maxSlides}`
+    : platformInfo.slideRange;
 
   const systemPrompt = `You are a research analyst preparing a creative brief for a carousel content writer.
 
@@ -111,9 +115,10 @@ Rules:
 - The hook_options should be provocative, curiosity-driven, and SHORT (3-8 words). They should make someone stop scrolling.
 - The visual_world must describe a concrete PHYSICAL ENVIRONMENT — not an artistic style. Not "warm watercolor illustration" but "kitchen countertop next to a window, herb pots, cutting boards, morning sunlight". The artistic style is controlled separately. Describe only the setting, objects, and lighting.
 - The narrative_arc should have genuine tension: what's the problem/surprise/contradiction that makes this worth reading?
+${formatTemplate ? `\nPOST FORMAT: ${formatTemplate.label}\n${formatTemplate.synthesisPrompt}` : ''}
 
 Platform: ${platform} (${platformInfo.ratioNote})
-Target slide count: ${platformInfo.slideRange}`;
+Target slide count: ${slideRange}`;
 
   const userMsg = content
     ? `Here is the raw research material. Extract one focused story from it:\n\n${content.slice(0, 10000)}${topic ? `\n\nThe user's intended topic focus: ${topic}` : ''}`
@@ -149,9 +154,13 @@ Target slide count: ${platformInfo.slideRange}`;
 
 // ─── Stage 2: Slide Writing ───────────────────────────────────────────────────
 
-async function writeSlides(client, synthesis, platform, brandContext, slideCount) {
+async function writeSlides(client, synthesis, platform, brandContext, slideCount, formatTemplate) {
   const platformInfo = PLATFORM_GUIDANCE[platform] || PLATFORM_GUIDANCE.instagram;
-  const slideTarget = slideCount ? `exactly ${slideCount}` : platformInfo.slideRange;
+  const slideTarget = slideCount
+    ? `exactly ${slideCount}`
+    : formatTemplate
+      ? `${formatTemplate.slideStructure.minSlides}-${formatTemplate.slideStructure.maxSlides}`
+      : platformInfo.slideRange;
 
   const systemPrompt = `You are an expert carousel copywriter. You receive a creative brief and write the actual slide-by-slide content.
 
@@ -208,6 +217,8 @@ CAPTION (caption_text):
 - ${platformInfo.captionLength}
 - ${platform === 'linkedin' ? 'Professional but human tone. No hashtag spam — 3 max. End with an engaging question.' : ''}
 - ${platform === 'instagram' ? 'Include 5-10 relevant hashtags at the end.' : ''}
+
+${formatTemplate ? `\nPOST FORMAT RULES (${formatTemplate.label}):\n${formatTemplate.writingPrompt}` : ''}
 
 ${ANTI_SLOP}
 
@@ -314,7 +325,8 @@ export default async function handler(req, res) {
 
   // ── Gather content ──
   let content = carousel.source_content;
-  const { topic, bullet_points, slide_count } = req.body || {};
+  const { topic, bullet_points, slide_count, post_format } = req.body || {};
+  const formatTemplate = post_format ? getPostFormat(post_format) : null;
 
   if (carousel.source_url && (!content || content.length < 200)) {
     try {
@@ -373,7 +385,7 @@ export default async function handler(req, res) {
     // ── STAGE 1: Research Synthesis ──
     console.log(`[carousel/generate-content] Stage 1: Synthesizing research for carousel ${id}...`);
     const { synthesis, usage: synthUsage } = await synthesizeResearch(
-      client, content, topic, brandContext, carousel.platform
+      client, content, topic, brandContext, carousel.platform, formatTemplate
     );
 
     if (!synthesis?.thesis) {
@@ -395,7 +407,7 @@ export default async function handler(req, res) {
     // ── STAGE 2: Slide Writing ──
     console.log(`[carousel/generate-content] Stage 2: Writing slides...`);
     const { output, usage: writeUsage } = await writeSlides(
-      client, synthesis, carousel.platform, brandContext, slide_count
+      client, synthesis, carousel.platform, brandContext, slide_count, formatTemplate
     );
 
     if (!output?.slides?.length) {
@@ -446,6 +458,7 @@ export default async function handler(req, res) {
         slide_count: output.slides.length,
         caption_text: stripEmDash(output.caption_text),
         visual_world: synthesis.visual_world,
+        post_format: post_format || null,
         status: 'draft',
       })
       .eq('id', id);

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, ListOrdered, BarChart3, Quote, ArrowRightLeft, Search, GitCompare, Lightbulb, Flame, BookOpen, Eye, Award, Smile, Megaphone, FileText, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import StyleGrid from '@/components/ui/StyleGrid';
 import { CAROUSEL_STYLE_TEMPLATES } from '@/lib/carouselStyleTemplates';
+import { POST_FORMAT_TEMPLATES } from '@/lib/postFormatTemplates';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -14,12 +15,38 @@ const WRITING_STYLES = [
   { value: 'data', label: 'Data Punch', description: 'Lead with a surprising stat' },
 ];
 
+const FORMAT_ICONS = {
+  educational_listicle: ListOrdered,
+  data_infographic: BarChart3,
+  step_by_step: ListOrdered,
+  checklist: Check,
+  comparison: GitCompare,
+  myth_vs_reality: Search,
+  problem_solution: Lightbulb,
+  hot_take: Flame,
+  before_after: ArrowRightLeft,
+  carousel_story: BookOpen,
+  behind_the_scenes: Eye,
+  testimonial: Award,
+  quote_card: Quote,
+  meme_humor: Smile,
+  announcement: Megaphone,
+  case_study: FileText,
+};
+
+// Filter to formats that work well on LinkedIn
+const LINKEDIN_FORMATS = POST_FORMAT_TEMPLATES.filter(f => {
+  const s = f.platforms.linkedin?.suitability;
+  return s === 'excellent' || s === 'good';
+});
+
 export default function LinkedInCreateModal({ isOpen, onClose, topicId, topicHeadline, onCreated }) {
   const [brandKitId, setBrandKitId] = useState('');
   const [brands, setBrands] = useState([]);
   const [visualStyle, setVisualStyle] = useState('');
   const [carouselStyle, setCarouselStyle] = useState('bold_editorial');
   const [writingStyle, setWritingStyle] = useState('all');
+  const [postFormat, setPostFormat] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -41,6 +68,7 @@ export default function LinkedInCreateModal({ isOpen, onClose, topicId, topicHea
           brand_kit_id: brandKitId || null,
           carousel_style: carouselStyle,
           writing_style: writingStyle,
+          post_format: postFormat || null,
         }),
       });
       const data = await res.json();
@@ -85,6 +113,47 @@ export default function LinkedInCreateModal({ isOpen, onClose, topicId, topicHea
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Post Format */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Post Format</label>
+          <div className="grid grid-cols-2 gap-2 max-h-[16rem] overflow-y-auto pr-1">
+            <button
+              onClick={() => setPostFormat('')}
+              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                !postFormat
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="font-medium block">Auto</span>
+              <span className="text-xs text-gray-400 block mt-0.5">Use writing style above</span>
+            </button>
+            {LINKEDIN_FORMATS.map(fmt => {
+              const Icon = FORMAT_ICONS[fmt.value] || ListOrdered;
+              return (
+                <button
+                  key={fmt.value}
+                  onClick={() => setPostFormat(fmt.value)}
+                  className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                    postFormat === fmt.value
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-medium">{fmt.label}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 block mt-0.5 leading-tight">{fmt.description}</span>
+                </button>
+              );
+            })}
+          </div>
+          {postFormat && (
+            <p className="text-xs text-gray-400 mt-1.5">Post format overrides writing style for content structure</p>
+          )}
         </div>
 
         {/* Brand kit */}
