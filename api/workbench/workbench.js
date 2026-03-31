@@ -129,11 +129,32 @@ export default async function handler(req, res) {
         let imageUrl;
         const effectivePrompt = prompt || narration;
 
-        // Build final prompt with visual style
-        let finalPrompt = effectivePrompt;
-        if (visual_style_prompt) finalPrompt += `, ${visual_style_prompt}`;
-        if (vision_context && reference_image_url) {
-          finalPrompt = `Continuing from: ${vision_context.slice(0, 200)}. ${finalPrompt}`;
+        // Synthesize a proper visual description via LLM (not raw concatenation)
+        const openai = new OpenAI({ apiKey: keys.openaiKey });
+        const sections = [];
+        sections.push(`NARRATION/SCENE CONTEXT: ${effectivePrompt}`);
+        if (visual_style_prompt) sections.push(`VISUAL STYLE: ${visual_style_prompt}`);
+        if (video_style) sections.push(`VIDEO/MOTION STYLE: ${video_style}`);
+        if (vision_context) sections.push(`CONTINUITY FROM PREVIOUS SCENE: ${vision_context.slice(0, 300)}`);
+        if (frame_type === 'end') sections.push(`FRAME TYPE: End frame — show the conclusion/result of the action described.`);
+        else if (frame_type === 'start') sections.push(`FRAME TYPE: Start frame — show the beginning/setup of the action described.`);
+
+        let finalPrompt;
+        try {
+          const llmRes = await openai.chat.completions.create({
+            model: 'gpt-4.1-mini',
+            messages: [
+              { role: 'system', content: 'You are a visual prompt engineer for AI image generation. Given a narration/scene context, visual style, and optional continuity notes, synthesize a single vivid image generation prompt (2-4 sentences). Describe ONLY what should be VISIBLE in the image — people, objects, environment, lighting, composition, colors, mood. Never include narration text, dialogue, or abstract concepts. Output the prompt only, no explanation.' },
+              { role: 'user', content: sections.join('\n\n') },
+            ],
+            max_tokens: 300,
+          });
+          finalPrompt = (llmRes.choices[0]?.message?.content || '').trim();
+          console.log(`[workbench/generate-frame] LLM prompt (${finalPrompt.length} chars): ${finalPrompt.slice(0, 120)}...`);
+        } catch (err) {
+          console.warn(`[workbench/generate-frame] LLM prompt synthesis failed, using fallback: ${err.message}`);
+          finalPrompt = effectivePrompt;
+          if (visual_style_prompt) finalPrompt += `, ${visual_style_prompt}`;
         }
 
         if (reference_image_url && frame_type === 'end') {
@@ -169,7 +190,6 @@ export default async function handler(req, res) {
         let visionAnalysis = null;
         if (frame_type === 'end' || frame_type === 'single') {
           try {
-            const openai = new OpenAI({ apiKey: keys.openaiKey });
             visionAnalysis = await analyzeFrameContinuity(imageUrl, openai);
           } catch (err) {
             console.warn(`[workbench] Vision analysis failed: ${err.message}`);
