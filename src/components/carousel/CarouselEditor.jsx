@@ -89,7 +89,10 @@ export default function CarouselEditor({ carouselId }) {
   // ── Poll for content generation (slides appearing) ──
   useEffect(() => {
     if (carousel && slides.length === 0 && !generating) {
+      let pollCount = 0;
       const timer = setInterval(async () => {
+        pollCount++;
+        if (pollCount > 30) { clearInterval(timer); return; } // give up after ~90s
         try {
           const res = await apiFetch(`/api/carousel/${carouselId}`);
           const data = await res.json();
@@ -115,9 +118,7 @@ export default function CarouselEditor({ carouselId }) {
     try {
       const body = {};
       if (!carousel.source_url) {
-        // Use the carousel title as the topic (set during creation)
         body.topic = carousel.title || 'Untitled';
-        if (bulletPoints.trim()) body.bullet_points = bulletPoints.trim();
       }
 
       const res = await apiFetch(`/api/carousel/${carouselId}/generate-content`, {
@@ -325,19 +326,33 @@ export default function CarouselEditor({ carouselId }) {
         </div>
       </div>
 
-      {/* No slides — content is being generated */}
+      {/* No slides — content is being generated or needs retry */}
       {!hasSlides && (
         <div className="max-w-md mx-auto mt-24 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mx-auto mb-4" />
-          <h3 className="text-base font-medium text-gray-700 mb-1">
-            {carousel.source_url ? 'Scraping article and generating slides...' : 'Researching topic and generating slides...'}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {carousel.source_url
-              ? carousel.source_url
-              : `Topic: ${carousel.title}`}
-          </p>
-          <p className="text-xs text-gray-300 mt-4">This usually takes 10-30 seconds</p>
+          {generating ? (
+            <>
+              <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mx-auto mb-4" />
+              <h3 className="text-base font-medium text-gray-700 mb-1">
+                {carousel.source_url ? 'Scraping article and generating slides...' : 'Researching topic and generating slides...'}
+              </h3>
+              <p className="text-sm text-gray-400">
+                {carousel.source_url ? carousel.source_url : `Topic: ${carousel.title}`}
+              </p>
+              <p className="text-xs text-gray-300 mt-4">This usually takes 15-45 seconds</p>
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-base font-medium text-gray-700 mb-1">No slides yet</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                {carousel.source_url ? carousel.source_url : `Topic: ${carousel.title}`}
+              </p>
+              <Button onClick={handleGenerateContent} disabled={generating}>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Generate Content
+              </Button>
+            </>
+          )}
         </div>
       )}
 

@@ -96,7 +96,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(genBody),
-      }).catch(() => {});
+      }).catch((err) => console.error('[carousel] generate-content failed:', err));
 
       onCreated(data.carousel);
     } catch (err) {
