@@ -265,7 +265,7 @@ export default function CampaignsNewPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   const [searchParams] = useSearchParams();
-  const [contentType, setContentType] = useState(searchParams.get('type') === 'shorts' ? 'shorts' : 'ad');
+  const [contentType, setContentType] = useState('ad');
 
   // Shorts-specific state
   const [niche, setNiche] = useState('');
@@ -726,36 +726,14 @@ export default function CampaignsNewPage() {
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         {/* Content type toggle — only visible on first step */}
-        <div className={`bg-white rounded-2xl p-6 border shadow-sm ${wizardStep !== 'niche' && contentType === 'shorts' ? 'hidden' : ''}`}>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setContentType('ad')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                contentType === 'ad' ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Ad
-            </button>
-            <button
-              onClick={() => { setContentType('shorts'); setSelectedBrand(''); }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                contentType === 'shorts' ? 'bg-[#2C666E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Short
-            </button>
+        <div className="bg-white rounded-2xl p-6 border shadow-sm">
+          <div className="mt-0">
+            <Label className="text-sm text-slate-700">Brand</Label>
+            <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+              <option value="">None</option>
+              {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
+            </select>
           </div>
-
-          {/* Brand selector — only for Ad mode (Shorts wizard has its own in Step 1) */}
-          {contentType === 'ad' && (
-            <div className="mt-4">
-              <Label className="text-sm text-slate-700">Brand</Label>
-              <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mt-1">
-                <option value="">None</option>
-                {brands.map(b => <option key={b.username} value={b.username}>{b.brand_name || b.username}</option>)}
-              </select>
-            </div>
-          )}
         </div>
 
         {/* Ad form */}

@@ -159,7 +159,7 @@ function App() {
           />
           <Route
             path="/shorts/new"
-            element={<Navigate to="/campaigns/new?type=shorts" replace />}
+            element={<Navigate to="/shorts/workbench" replace />}
           />
           <Route
             path="/shorts/draft/:draftId"
