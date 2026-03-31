@@ -707,20 +707,9 @@ export default function VideoAdvertCreator() {
                   >
                     <div className="flex items-center gap-2">
                       <Clapperboard className="w-4 h-4 text-[#2C666E]" />
-                      <span className="text-xs font-medium text-gray-800">Storyboard</span>
+                      <span className="text-xs font-medium text-gray-800">Storyboards</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">Multi-scene sequences</p>
-                  </div>
-
-                  <div
-                    onClick={() => navigate('/storyboards')}
-                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#2C666E]" />
-                      <span className="text-xs font-medium text-gray-800">Storyboard Tool</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">Frame-level planning</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Plan & produce videos</p>
                   </div>
 
                   <div
