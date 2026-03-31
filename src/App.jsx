@@ -23,6 +23,9 @@ import LinkedInPostEditor from './components/linkedin/LinkedInPostEditor';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
 import StoryboardWorkspace from './pages/StoryboardWorkspace';
+import SettingsAccountsPage from './pages/SettingsAccountsPage';
+import AdsManagerPage from './pages/AdsManagerPage';
+import AdCampaignEditor from './pages/AdCampaignEditor';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -217,6 +220,32 @@ function App() {
             element={
               <ProtectedRoute>
                 <StoryboardsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ads"
+            element={
+              <ProtectedRoute>
+                <AdsManagerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ads/:id"
+            element={
+              <ProtectedRoute>
+                <AdCampaignEditor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings/accounts"
+            element={
+              <ProtectedRoute>
+                <SettingsAccountsPage />
               </ProtectedRoute>
             }
           />

@@ -577,6 +577,17 @@ app.get('/api/tiktok/callback', (await import('./api/tiktok/callback.js')).defau
 app.get('/api/meta/auth', authenticateToken, (await import('./api/meta/auth.js')).default);
 app.get('/api/meta/callback', (await import('./api/meta/callback.js')).default); // No auth — redirect from Meta
 
+// ─── Paid Ads Manager ────────────────────────────────────────────────────
+app.post('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
+app.get('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
+app.get('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.patch('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.delete('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.post('/api/ads/campaigns/:id/generate', authenticateToken, (await import('./api/ads/generate.js')).default);
+app.patch('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
+app.delete('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
+app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import('./api/ads/regenerate.js')).default);
+
 // ─── Connected Accounts routes ────────────────────────────────────────────
 app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);
 app.delete('/api/accounts/connections/:platform', authenticateToken, (await import('./api/accounts/connections.js')).default);
