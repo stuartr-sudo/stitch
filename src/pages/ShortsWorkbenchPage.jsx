@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Check, ChevronDown, ChevronUp,
-  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle,
+  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
@@ -312,6 +312,62 @@ function SingleFrame({ url, label, onRegen, loading }) {
   );
 }
 
+function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, prevLabel }) {
+  const [showInput, setShowInput] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const ref = sceneRefs[sceneIdx];
+
+  const setRef = (url, source) => setSceneRefs(prev => ({ ...prev, [sceneIdx]: { url, source } }));
+  const clearRef = () => setSceneRefs(prev => { const n = { ...prev }; delete n[sceneIdx]; return n; });
+
+  if (ref?.url) {
+    return (
+      <div className="flex items-center gap-2 mt-2 bg-indigo-50 border border-indigo-200 rounded-lg p-2">
+        <img src={ref.url} alt="Reference" className="w-10 h-14 object-cover rounded" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] font-bold text-indigo-700 uppercase">Reference Image ({ref.source})</div>
+          <div className="text-[9px] text-indigo-500 truncate">{ref.url.split('/').pop()}</div>
+        </div>
+        <button onClick={clearRef} className="p-1 text-indigo-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      {!showInput ? (
+        <button onClick={() => setShowInput(true)}
+          className="text-[10px] text-indigo-600 font-medium hover:underline flex items-center gap-1">
+          <Link className="w-3 h-3" />Use reference image (I2I)
+        </button>
+      ) : (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1.5">
+          <div className="text-[9px] font-bold text-slate-500 uppercase">Reference Image for I2I</div>
+          <div className="flex gap-1.5">
+            {prevFrameUrl && (
+              <button onClick={() => { setRef(prevFrameUrl, prevLabel || 'prev scene'); setShowInput(false); }}
+                className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-semibold hover:bg-indigo-200 truncate max-w-[140px]">
+                {prevLabel || 'Prev scene frame'}
+              </button>
+            )}
+            <button onClick={() => setShowInput(false)} className="px-2 py-1 text-slate-400 text-[9px] hover:text-slate-600">Cancel</button>
+          </div>
+          <div className="flex gap-1">
+            <input value={urlInput} onChange={e => setUrlInput(e.target.value)}
+              placeholder="Paste image URL..."
+              className="flex-1 border border-slate-200 rounded px-2 py-1 text-[10px]" />
+            <button onClick={() => { if (urlInput.trim()) { setRef(urlInput.trim(), 'url'); setUrlInput(''); setShowInput(false); } }}
+              disabled={!urlInput.trim()}
+              className="px-2 py-1 bg-[#2C666E] text-white rounded text-[9px] font-semibold disabled:opacity-50">
+              Use
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -369,6 +425,7 @@ export default function ShortsWorkbenchPage() {
   const [frames, setFrames] = useState({}); // { sceneIdx: { start: url, end: url, visionAnalysis: string } }
   const [frameLoading, setFrameLoading] = useState(null); // 'scene-0-start' etc.
   const [scenePrompts, setScenePrompts] = useState({}); // { sceneIdx: { startPrompt, endPrompt, motionPrompt } }
+  const [sceneRefs, setSceneRefs] = useState({}); // { sceneIdx: { url, source } } — per-scene reference images for I2I
 
   // ── Step 4: Clips ───────────────────────────────────────────────
   const [clips, setClips] = useState({}); // { sceneIdx: { url, actualDuration, status } }
@@ -392,7 +449,7 @@ export default function ShortsWorkbenchPage() {
     voiceoverUrl, voiceApproved,
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
-    frames, scenePrompts, clips, finalVideoUrl: finalUrl,
+    frames, scenePrompts, sceneRefs, clips, finalVideoUrl: finalUrl,
   });
 
   const saveDraftRef = useRef(false);
@@ -436,7 +493,7 @@ export default function ShortsWorkbenchPage() {
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
       setAspectRatio(s.aspectRatio || '9:16');
-      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setClips(s.clips || {});
+      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setClips(s.clips || {});
       setFinalUrl(s.finalVideoUrl || null);
       if (s.step) setStep(s.step);
       setShowDrafts(false);
@@ -578,12 +635,18 @@ export default function ShortsWorkbenchPage() {
       const block = blocks[sceneIdx];
       const promptData = scenePrompts[sceneIdx] || {};
 
-      // For FLF end frames or I2V continuation: use previous scene's end frame as reference
+      // Reference image: user-provided ref > prev scene end frame > prev extracted last frame
       let referenceImageUrl = null;
-      if (type === 'start' && sceneIdx > 0 && mode === 'flf') {
+      let useAsI2I = false;
+      const userRef = sceneRefs[sceneIdx]?.url;
+      if (userRef) {
+        referenceImageUrl = userRef;
+        useAsI2I = true; // always do I2I when user explicitly provides a ref
+      } else if (type === 'start' && sceneIdx > 0 && mode === 'flf') {
         referenceImageUrl = frames[sceneIdx - 1]?.end || null;
-      }
-      if (type === 'single' && sceneIdx > 0 && mode === 'i2v') {
+      } else if (type === 'end' && mode === 'flf') {
+        referenceImageUrl = frames[sceneIdx]?.start || null; // end frame derives from start
+      } else if (type === 'single' && sceneIdx > 0 && mode === 'i2v') {
         referenceImageUrl = frames[sceneIdx - 1]?.extractedLastFrame || null;
       }
 
@@ -602,6 +665,7 @@ export default function ShortsWorkbenchPage() {
           frame_type: type,
           vision_context: sceneIdx > 0 ? frames[sceneIdx - 1]?.visionAnalysis : null,
           niche,
+          use_as_i2i: useAsI2I,
         }),
       });
       const data = await parseApiResponse(res);
@@ -1240,6 +1304,10 @@ export default function ShortsWorkbenchPage() {
                         )}
                       </div>
 
+                      <ReferenceImageInput sceneIdx={i} sceneRefs={sceneRefs} setSceneRefs={setSceneRefs}
+                        prevFrameUrl={i > 0 ? (frames[i - 1]?.end || frames[i - 1]?.start) : null}
+                        prevLabel={i > 0 ? `Scene ${i} frame` : null} />
+
                       {/* Vision analysis */}
                       {sceneFrames.visionAnalysis && (
                         <div className="mt-3 bg-slate-900 text-slate-400 rounded-lg p-3">
@@ -1266,6 +1334,9 @@ export default function ShortsWorkbenchPage() {
                           ) : (
                             <p>Will be extracted from Scene {i}'s video output.</p>
                           )}
+                          <ReferenceImageInput sceneIdx={i} sceneRefs={sceneRefs} setSceneRefs={setSceneRefs}
+                            prevFrameUrl={i > 0 ? (frames[i - 1]?.extractedLastFrame || frames[i - 1]?.start) : null}
+                            prevLabel={i > 0 ? `Scene ${i} last frame` : null} />
                         </div>
                       </div>
                       {!sceneFrames.start && i === 0 && (

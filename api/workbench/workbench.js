@@ -187,9 +187,13 @@ Rules:
           }
         }
 
-        if (reference_image_url && frame_type === 'end') {
-          // I2I: Generate end frame from start frame (for FLF mode)
-          // Use nano-banana-2/edit for image-to-image
+        if (reference_image_url && frame_type === 'start' && scene_index > 0 && !req.body.use_as_i2i) {
+          // FLF chain: start frame = previous scene's end frame (just pass through)
+          imageUrl = reference_image_url;
+        } else if (reference_image_url) {
+          // I2I: Generate from reference image (user-provided, prev scene frame, or FLF end frame)
+          // Use nano-banana-2/edit for image-to-image composition with LLM-synthesized prompt
+          console.log(`[workbench/generate-frame] I2I mode: ref=${reference_image_url.slice(-40)}, prompt=${finalPrompt.slice(0, 100)}...`);
           const i2iRes = await fetch('https://fal.run/fal-ai/nano-banana-2/edit', {
             method: 'POST',
             headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
@@ -206,9 +210,6 @@ Rules:
           imageUrl = i2iData.images?.[0]?.url;
           if (!imageUrl) throw new Error('No image from I2I');
           imageUrl = await uploadUrlToSupabase(imageUrl, supabase, 'pipeline/workbench');
-        } else if (reference_image_url && frame_type === 'start' && scene_index > 0) {
-          // FLF chain: start frame = previous scene's end frame (just pass through)
-          imageUrl = reference_image_url;
         } else {
           // T2I: Fresh image generation
           imageUrl = await generateImageV2(image_model, finalPrompt, aspect_ratio, keys, supabase, {
