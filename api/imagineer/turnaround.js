@@ -12,15 +12,93 @@
  * The 3-minute timeout on this route (set in server.js) covers sync calls.
  */
 
+import sharp from 'sharp';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 import { getPoseSetById, getPoseSetGrid } from '../lib/turnaroundPoseSets.js';
+import { createClient } from '@supabase/supabase-js';
+
+/**
+ * Stitch multiple reference images into a single side-by-side grid image.
+ * Arranges images in a row (up to 4), or a 2×N grid if >4 images.
+ * Returns a Supabase public URL of the stitched image.
+ */
+async function stitchReferenceImages(imageUrls, supabase) {
+  if (!imageUrls || imageUrls.length <= 1) return imageUrls?.[0] || null;
+
+  // Fetch all images as buffers
+  const buffers = await Promise.all(
+    imageUrls.map(async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch reference image: ${url}`);
+      return Buffer.from(await res.arrayBuffer());
+    })
+  );
+
+  // Get metadata to determine sizing
+  const metas = await Promise.all(buffers.map(b => sharp(b).metadata()));
+
+  // Normalize all images to the same height (use the smallest height, max 768px)
+  const targetHeight = Math.min(768, ...metas.map(m => m.height || 768));
+  const resized = await Promise.all(
+    buffers.map(b => sharp(b).resize({ height: targetHeight }).toBuffer())
+  );
+
+  // Get resized dimensions
+  const resizedMetas = await Promise.all(resized.map(b => sharp(b).metadata()));
+
+  // Layout: single row if ≤4 images, else 2 columns
+  const cols = imageUrls.length <= 4 ? imageUrls.length : 2;
+  const rows = Math.ceil(imageUrls.length / cols);
+
+  // Calculate canvas size
+  const colWidths = [];
+  for (let c = 0; c < cols; c++) {
+    let maxW = 0;
+    for (let r = 0; r < rows; r++) {
+      const idx = r * cols + c;
+      if (idx < resizedMetas.length) maxW = Math.max(maxW, resizedMetas[idx].width);
+    }
+    colWidths.push(maxW);
+  }
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  const totalHeight = targetHeight * rows;
+
+  // Composite all images onto a white canvas
+  const composites = resized.map((buf, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const left = colWidths.slice(0, col).reduce((a, b) => a + b, 0);
+    const top = row * targetHeight;
+    return { input: buf, left, top };
+  });
+
+  const stitchedBuffer = await sharp({
+    create: { width: totalWidth, height: totalHeight, channels: 3, background: { r: 255, g: 255, b: 255 } },
+  })
+    .composite(composites)
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  // Upload to Supabase
+  const filename = `turnaround-ref-stitch-${Date.now()}.jpg`;
+  const path = `media/turnaround/${filename}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('media')
+    .upload(`turnaround/${filename}`, stitchedBuffer, { contentType: 'image/jpeg', upsert: true });
+
+  if (uploadErr) throw new Error(`Stitch upload failed: ${uploadErr.message}`);
+
+  const { data: urlData } = supabase.storage.from('media').getPublicUrl(`turnaround/${filename}`);
+  console.log(`[Turnaround] Stitched ${imageUrls.length} reference images → ${urlData.publicUrl}`);
+  return urlData.publicUrl;
+}
 
 /**
  * Builds a single cohesive prompt from all structured inputs.
  * This is the ONLY place prompt text is assembled — the frontend sends raw data.
  */
-function buildTurnaroundPrompt({ characterDescription, style, hasReference, props, negativePrompt, brandStyleGuide, poseSet, backgroundMode, sceneEnvironment }) {
+function buildTurnaroundPrompt({ characterDescription, style, hasReference, multipleReferences, props, negativePrompt, brandStyleGuide, poseSet, backgroundMode, sceneEnvironment }) {
   // Style rendering instructions
   const stylePrompt = (style && style.trim())
     ? `Rendered in ${style.trim()} style with high quality, detailed ${style.trim()} aesthetic throughout every cell`
@@ -28,7 +106,9 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, prop
 
   // Reference handling
   const refNote = hasReference
-    ? 'Use the reference image as the character design. Recreate this exact character in every cell of the grid'
+    ? multipleReferences
+      ? 'The reference image contains multiple views of the same character stitched together. Study ALL views carefully to understand the character from every angle. Recreate this exact character consistently in every cell of the grid, maintaining accurate proportions, colors, outfit, and details from all reference angles'
+      : 'Use the reference image as the character design. Recreate this exact character in every cell of the grid'
     : 'Same character in every cell with consistent design, proportions, colors, and outfit throughout the entire sheet';
 
   // Props — woven into the pose descriptions
@@ -245,7 +325,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const {
-    referenceImageUrl,
+    referenceImageUrl,   // legacy single URL (backward compat)
+    referenceImageUrls,  // new: array of URLs
     characterDescription,
     style = 'concept-art',
     model = 'nano-banana-2-edit',
@@ -272,12 +353,28 @@ export default async function handler(req, res) {
   const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
   if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
 
-  const hasRef = !!referenceImageUrl;
+  // Resolve reference images — stitch multiple into one if needed
+  const rawRefUrls = referenceImageUrls?.length ? referenceImageUrls : (referenceImageUrl ? [referenceImageUrl] : []);
+  let resolvedRefUrl = rawRefUrls[0] || null;
+
+  if (rawRefUrls.length > 1) {
+    try {
+      const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      resolvedRefUrl = await stitchReferenceImages(rawRefUrls, supabase);
+      console.log(`[Turnaround] Stitched ${rawRefUrls.length} reference images into composite`);
+    } catch (err) {
+      console.error('[Turnaround] Stitch failed, using first image:', err.message);
+      resolvedRefUrl = rawRefUrls[0];
+    }
+  }
+
+  const hasRef = !!resolvedRefUrl;
   const negPrompt = negativePrompt?.trim() || undefined;
   const prompt = buildTurnaroundPrompt({
     characterDescription,
     style,
     hasReference: hasRef,
+    multipleReferences: rawRefUrls.length > 1,
     props: Array.isArray(props) ? props : undefined,
     negativePrompt: negPrompt,
     brandStyleGuide: brandStyleGuide || undefined,
@@ -304,7 +401,7 @@ export default async function handler(req, res) {
 
     if (modelDef.type === 'edit' || (modelDef.type === 'both' && hasRef)) {
       // Edit path — try with automatic fallback through available models
-      result = await tryEditWithFallback(FAL_KEY, model, modelDef, prompt, referenceImageUrl, extras);
+      result = await tryEditWithFallback(FAL_KEY, model, modelDef, prompt, resolvedRefUrl, extras);
 
     } else if (modelDef.type === 'both' && !hasRef) {
       // Flux without reference → generate endpoint, queue

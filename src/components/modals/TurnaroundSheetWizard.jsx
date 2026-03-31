@@ -213,7 +213,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   // Form
   const [characters, setCharacters] = useState([
-    { id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: '', referencePreview: '' }
+    { id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImages: [] }
   ]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
@@ -236,8 +236,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       id: `char-${Date.now()}`,
       name: '',
       description: '',
-      referenceImageUrl: '',
-      referencePreview: '',
+      referenceImages: [],
     }]);
   };
 
@@ -341,7 +340,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     && selectedStyles.length > 0
     && selectedPoseSets.length > 0
     && !characters.some(c =>
-      !c.referenceImageUrl && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
+      c.referenceImages.length === 0 && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef
     );
 
   // ─── Gallery filter helpers ────────────────────────────────────────────────
@@ -434,12 +433,12 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
       if (initialImage) {
         const initCharId = `char-${Date.now()}`;
-        setCharacters([{ id: initCharId, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: initialImage, referencePreview: initialImage }]);
+        setCharacters([{ id: initCharId, name: '', description: DEFAULT_CHARACTER_DESC, referenceImages: [{ url: initialImage, preview: initialImage }] }]);
         setUploadingRef(false);
         setAnalyzingRef(false);
         describeCharacter(initCharId, initialImage);
       } else {
-        setCharacters([{ id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImageUrl: '', referencePreview: '' }]);
+        setCharacters([{ id: `char-${Date.now()}`, name: '', description: DEFAULT_CHARACTER_DESC, referenceImages: [] }]);
         setUploadingRef(false);
         setAnalyzingRef(false);
       }
@@ -528,14 +527,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
   // ─── File upload ──────────────────────────────────────────────────────────
 
   const handleFileUploadForChar = async (charId, file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      // invalid file type
-      return;
-    }
+    if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const dataUrl = ev.target.result;
-      updateCharacter(charId, 'referencePreview', dataUrl);
       setUploadingRef(true);
       try {
         const res = await apiFetch('/api/library/save', {
@@ -545,18 +540,31 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         });
         const data = await res.json();
         if (data.url) {
-          updateCharacter(charId, 'referenceImageUrl', data.url);
-          // Reference uploaded, analyzing
-          describeCharacter(charId, data.url);
+          // Append to referenceImages array
+          setCharacters(prev => prev.map(c => c.id === charId
+            ? { ...c, referenceImages: [...c.referenceImages, { url: data.url, preview: data.url }] }
+            : c
+          ));
+          // Auto-analyze the first reference image
+          const char = characters.find(c => c.id === charId);
+          if (!char?.referenceImages?.length) {
+            describeCharacter(charId, data.url);
+          }
         } else throw new Error(data.error || 'Upload failed');
       } catch (err) {
         toast.error('Upload failed: ' + err.message);
-        updateCharacter(charId, 'referencePreview', '');
       } finally {
         setUploadingRef(false);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const removeReferenceImage = (charId, imgIndex) => {
+    setCharacters(prev => prev.map(c => c.id === charId
+      ? { ...c, referenceImages: c.referenceImages.filter((_, i) => i !== imgIndex) }
+      : c
+    ));
   };
 
   // ─── Generate (cartesian product: characters × styles × pose sets) ──────────
@@ -568,7 +576,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           characterDescription: sheet.character.description.trim(),
-          referenceImageUrl: sheet.character.referenceImageUrl?.trim() || undefined,
+          referenceImageUrls: sheet.character.referenceImages?.map(img => img.url).filter(Boolean) || [],
           style: sheet.styleText.trim(),
           poseSet: sheet.poseSet,
           characterName: sheet.character.name.trim(),
@@ -1179,42 +1187,48 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                       onChange={e => updateCharacter(char.id, 'description', e.target.value)}
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#2C666E]"
                     />
-                    {/* Reference image section */}
-                    <div className="flex items-center gap-2">
-                      {char.referencePreview ? (
-                        <div className="relative w-16 h-16 rounded overflow-hidden border border-slate-300">
-                          <img src={char.referencePreview} alt="" className="w-full h-full object-cover" />
-                          <button onClick={() => { updateCharacter(char.id, 'referenceImageUrl', ''); updateCharacter(char.id, 'referencePreview', ''); }}
-                            className="absolute top-0 right-0 bg-black/60 p-0.5 rounded-bl">
-                            <X className="w-3 h-3 text-white" />
-                          </button>
+                    {/* Reference images section — multiple allowed */}
+                    <div className="space-y-2">
+                      {char.referenceImages.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {char.referenceImages.map((img, imgIdx) => (
+                            <div key={imgIdx} className="relative w-16 h-16 rounded overflow-hidden border border-slate-300">
+                              <img src={img.preview || img.url} alt={`Ref ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                              <button onClick={() => removeReferenceImage(char.id, imgIdx)}
+                                className="absolute top-0 right-0 bg-black/60 p-0.5 rounded-bl">
+                                <X className="w-3 h-3 text-white" />
+                              </button>
+                            </div>
+                          ))}
                           {uploadingRef && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded">
+                            <div className="w-16 h-16 rounded border border-dashed border-slate-300 flex items-center justify-center">
                               <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
                             </div>
                           )}
                         </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => {
-                            setShowLibrary(char.id);
-                          }} className="text-xs gap-1">
-                            <FolderOpen className="w-3.5 h-3.5" /> Library
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => {
-                            setShowLibrary(char.id);
-                            fileInputRef.current?.click();
-                          }} className="text-xs gap-1">
-                            <Upload className="w-3.5 h-3.5" /> Upload
-                          </Button>
-                        </div>
                       )}
-                      {char.referenceImageUrl && (
-                        <Button variant="outline" size="sm" onClick={() => describeCharacter(char.id, char.referenceImageUrl)}
-                          disabled={analyzingRef} className="text-xs gap-1">
-                          {analyzingRef ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</> : <><Sparkles className="w-3 h-3" /> Analyze</>}
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setShowLibrary(char.id);
+                        }} className="text-xs gap-1">
+                          <FolderOpen className="w-3.5 h-3.5" /> Library
                         </Button>
-                      )}
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setShowLibrary(char.id);
+                          fileInputRef.current?.click();
+                        }} className="text-xs gap-1">
+                          <Upload className="w-3.5 h-3.5" /> Upload
+                        </Button>
+                        {char.referenceImages.length > 0 && (
+                          <Button variant="outline" size="sm" onClick={() => describeCharacter(char.id, char.referenceImages[0].url)}
+                            disabled={analyzingRef} className="text-xs gap-1">
+                            {analyzingRef ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</> : <><Sparkles className="w-3 h-3" /> Analyze</>}
+                          </Button>
+                        )}
+                        {char.referenceImages.length > 0 && (
+                          <span className="text-xs text-slate-400">{char.referenceImages.length} image{char.referenceImages.length !== 1 ? 's' : ''}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1227,7 +1241,11 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
             {/* Footer */}
             <div className="flex justify-between items-center gap-3 px-5 py-3 border-t bg-slate-50 flex-shrink-0">
               <span className="text-sm text-slate-400">
-                4 cols x 6 rows = 24 poses
+                {(() => {
+                  const ps = getPoseSetById(selectedPoseSets[0] || 'standard-24');
+                  const { cols, rows, total } = getPoseSetGrid(selectedPoseSets[0] || 'standard-24');
+                  return `${cols} cols x ${rows} rows = ${total} poses`;
+                })()}
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -1301,7 +1319,7 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                 </div>
 
                 {/* Warning if no ref + model needs it */}
-                {characters.some(c => !c.referenceImageUrl) && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
+                {characters.some(c => c.referenceImages.length === 0) && MODEL_OPTIONS.find(m => m.value === selectedModel)?.needsRef && (
                   <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-md">
                     <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-800">
@@ -2011,19 +2029,25 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
       onSelect={(item) => {
         const charId = typeof showLibrary === 'string' ? showLibrary : characters[0]?.id;
         if (charId) {
-          updateCharacter(charId, 'referenceImageUrl', item.url);
-          updateCharacter(charId, 'referencePreview', item.thumbnail_url || item.url);
-          // If the library item has a description/prompt, offer to auto-fill
+          // Append to referenceImages array
+          setCharacters(prev => prev.map(c => c.id === charId
+            ? { ...c, referenceImages: [...c.referenceImages, { url: item.url, preview: item.thumbnail_url || item.url }] }
+            : c
+          ));
+          // If the library item has a description/prompt, auto-fill if empty
           if (item.prompt || item.alt_text) {
             const char = characters.find(c => c.id === charId);
             if (char && !char.description.trim()) {
               updateCharacter(charId, 'description', item.prompt || item.alt_text);
             }
           }
+          // Auto-analyze the first reference image only
+          const char = characters.find(c => c.id === charId);
+          if (!char?.referenceImages?.length) {
+            describeCharacter(charId, item.url);
+          }
         }
         setShowLibrary(false);
-        // Reference selected, analyzing
-        if (charId) describeCharacter(charId, item.url);
       }}
       mediaType="images"
     />
