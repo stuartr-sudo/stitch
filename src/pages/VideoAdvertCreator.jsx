@@ -460,6 +460,9 @@ export default function VideoAdvertCreator() {
                 <Link to="/campaigns">Campaigns</Link>
               </Button>
               <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
+                <Link to="/shorts/workbench">Workbench</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
                 <Link to="/templates">Templates</Link>
               </Button>
               <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
