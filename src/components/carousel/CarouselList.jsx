@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Loader2, LayoutGrid, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, Trash2, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -87,9 +87,14 @@ export default function CarouselList() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Carousels</h1>
-          <p className="text-sm text-gray-500 mt-1">Create branded carousel posts for social media</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/')} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Carousels</h1>
+            <p className="text-sm text-gray-500 mt-1">Create branded carousel posts for social media</p>
+          </div>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4 mr-2" />
