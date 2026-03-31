@@ -41,6 +41,42 @@ const NICHE_VISUAL_MOODS = {
   paranormal_ufo: 'Eerie night skies, grainy VHS footage aesthetic, mysterious lights in darkness, alien encounter atmosphere',
 };
 
+// Niche-specific voice style instructions (from SHORTS_TEMPLATES voice_pacing)
+const NICHE_VOICE_STYLES = {
+  ai_tech_news: 'Fast-paced, authoritative news-anchor energy. Short punchy sentences. Pattern interrupts every 10 seconds.',
+  finance_money: 'Confident and calm, like a trusted financial advisor. Clear actionable language. Build credibility through specific numbers.',
+  motivation_self_help: 'Slow and deliberate at emotional moments, building intensity. Pauses for impact. Like a storyteller around a campfire.',
+  scary_horror: 'Slow and hushed, building dread. Whisper-like at tense moments. Sudden pace changes at reveals. Like reading a scary story at midnight.',
+  history_did_you_know: 'Storyteller energy — measured pace with dramatic pauses. Build wonder and surprise.',
+  true_crime: 'Measured and deliberate like a documentary narrator. Build dread with facts. Let silences breathe.',
+  science_nature: 'Curious and enthusiastic like a passionate science teacher. Build from simple to mind-blowing. Use analogies.',
+  relationships_dating: 'Warm and conversational, like a trusted friend who studied psychology. Empathetic tone. No judgment.',
+  health_fitness: 'Energetic and direct, like a knowledgeable personal trainer. Cut through myths with confidence. Use numbers.',
+  gaming_popculture: 'Enthusiastic fan energy — excited but knowledgeable. Like the most passionate person at a gaming convention.',
+  conspiracy_mystery: 'Measured and curious, like a journalist uncovering something. Not sensationalist — let the facts speak.',
+  business_entrepreneur: 'Direct and high-energy, like a successful founder on a podcast. No corporate fluff. Talk straight.',
+  food_cooking: 'Warm and enthusiastic, like a passionate chef sharing secrets. Use sensory language — describe tastes, textures, aromas.',
+  travel_adventure: 'Dreamy and vivid like a travel documentary. Paint pictures with words. Build wonder and desire.',
+  psychology_mindblown: 'Measured and insightful, like a fascinating psychology professor. Build revelations gradually. Use "you" to make it personal.',
+  space_cosmos: 'Awestruck and measured, building from curiosity to cosmic wonder. Use analogies to make incomprehensible scales relatable.',
+  animals_wildlife: 'Curious and amazed like a nature documentary narrator. Build wonder through specific details. Use vivid descriptions.',
+  sports_athletes: 'Excited sports commentary energy, building tension toward the climax. Slow down at emotional beats. Fast during action.',
+  education_learning: 'Enthusiastic teacher energy, like someone who just discovered something incredible. Build surprise through delivery.',
+  paranormal_ufo: 'Investigative journalist tone — serious and measured. Let the evidence speak. Build intrigue through facts, not sensationalism.',
+};
+
+// Universal voice style quick-picks (niche-independent)
+const VOICE_STYLE_PRESETS = [
+  { label: 'Documentary', value: 'Authoritative documentary narrator. Measured pace, dramatic pauses at reveals, steady confident delivery.' },
+  { label: 'Storyteller', value: 'Captivating storyteller energy. Build tension gradually, vary pace with the narrative arc, pause at emotional peaks.' },
+  { label: 'News Anchor', value: 'Fast-paced breaking news energy. Short punchy sentences, urgent tone, pattern interrupts to maintain attention.' },
+  { label: 'Whispering', value: 'Hushed and intimate, like sharing a secret. Slow deliberate delivery, whisper-like at tense moments, sudden pace changes.' },
+  { label: 'High Energy', value: 'Electric high-energy delivery. Rapid-fire sentences, enthusiastic peaks, keep the adrenaline pumping throughout.' },
+  { label: 'Teacher', value: 'Enthusiastic teacher sharing a breakthrough discovery. Build from simple to mind-blowing, use analogies, keep it personal.' },
+  { label: 'Campfire', value: 'Fireside storyteller. Slow and deliberate, building intensity at emotional moments. Pauses for impact. Draw listeners in.' },
+  { label: 'Podcast Host', value: 'Casual conversational podcast energy. Direct, no fluff, talk straight like you\'re explaining to a friend over coffee.' },
+];
+
 const NICHES = [
   { key: 'ai_tech_news', label: 'AI/Tech', icon: '🤖' },
   { key: 'finance_money', label: 'Finance', icon: '💰' },
@@ -307,10 +343,10 @@ export default function ShortsWorkbenchPage() {
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
-  const [styleInstructions, setStyleInstructions] = useState('Speak with authoritative documentary narrator tone.');
+  const [styleInstructions, setStyleInstructions] = useState('Authoritative documentary narrator. Measured pace, dramatic pauses at reveals, steady confident delivery.');
   const [voiceoverUrl, setVoiceoverUrl] = useState(null);
   const [voiceLoading, setVoiceLoading] = useState(false);
-  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [voiceSpeed, setVoiceSpeed] = useState(1.1);
   const [voiceApproved, setVoiceApproved] = useState(false);
 
   // ── Step 2: Timing & Music ──────────────────────────────────────
@@ -392,7 +428,7 @@ export default function ShortsWorkbenchPage() {
       setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || '');
       setDuration(s.duration || 60); setScript(s.script || '');
       setGeminiVoice(s.geminiVoice || 'Perseus'); setStyleInstructions(s.styleInstructions || '');
-      setVoiceSpeed(s.voiceSpeed || 1.0); setVoiceoverUrl(s.voiceoverUrl || null);
+      setVoiceSpeed(s.voiceSpeed || 1.1); setVoiceoverUrl(s.voiceoverUrl || null);
       setVoiceApproved(s.voiceApproved || false);
       setBlocks(s.blocks || []); setTtsDuration(s.rawTtsDuration || s.ttsDuration || null); setRawTtsDuration(s.rawTtsDuration || s.ttsDuration || null);
       setMusicUrl(s.musicUrl || null); setMusicApproved(s.musicApproved || false);
@@ -440,6 +476,8 @@ export default function ShortsWorkbenchPage() {
     setResearchedStories([]); setSelectedStoryIdx(null);
     setStoryContext('');
     if (framework?.applicableNiches && !framework.applicableNiches.includes(key)) setFramework(null);
+    // Auto-set voice style to match the niche
+    if (NICHE_VOICE_STYLES[key]) setStyleInstructions(NICHE_VOICE_STYLES[key]);
   };
 
   // ── API calls ───────────────────────────────────────────────────
@@ -914,9 +952,18 @@ export default function ShortsWorkbenchPage() {
                     ))}
                   </div>
 
-                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-3 mb-1">Style Instructions</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-3 mb-1">Voice Style</label>
+                  <div className="flex gap-1 flex-wrap mb-1.5">
+                    {(niche && NICHE_VOICE_STYLES[niche] ? [{ label: NICHES.find(n => n.key === niche)?.label || 'Niche', value: NICHE_VOICE_STYLES[niche] }, ...VOICE_STYLE_PRESETS] : VOICE_STYLE_PRESETS).map(p => (
+                      <button key={p.label} onClick={() => setStyleInstructions(p.value)}
+                        className={cn('px-2 py-0.5 rounded text-[9px] font-medium border transition-all',
+                          styleInstructions === p.value ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200 text-slate-500 hover:border-slate-300')}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                   <textarea value={styleInstructions} onChange={e => setStyleInstructions(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm h-16 resize-none" />
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[11px] h-14 resize-none text-slate-600" placeholder="Custom voice style instructions..." />
                 </div>
 
                 <div>
