@@ -40,6 +40,7 @@
     "react-dom": "^18.2.0",
     "react-konva": "^18.2.10",
     "react-router-dom": "^7.2.0",
+    "satori": "^0.26.0",
     "sharp": "^0.34.5",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",

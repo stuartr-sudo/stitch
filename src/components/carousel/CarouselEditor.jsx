@@ -40,6 +40,7 @@ export default function CarouselEditor({ carouselId }) {
   const [publishing, setPublishing] = useState(false);
   const [pollTimer, setPollTimer] = useState(null);
   const [contentPollTimer, setContentPollTimer] = useState(null);
+  const [compositor, setCompositor] = useState('sharp');
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -155,6 +156,7 @@ export default function CarouselEditor({ carouselId }) {
           image_model: 'fal_nano_banana',
           style_prompt: stylePrompt,
           carousel_style: carousel.carousel_style || 'bold_editorial',
+          compositor,
         }),
       });
       const data = await res.json();
@@ -185,6 +187,7 @@ export default function CarouselEditor({ carouselId }) {
           image_model: 'fal_nano_banana',
           style_prompt: getStylePrompt(carousel.style_preset),
           carousel_style: carousel.carousel_style || 'bold_editorial',
+          compositor,
         }),
       });
       const data = await res.json();
@@ -309,6 +312,17 @@ export default function CarouselEditor({ carouselId }) {
           >
             <Trash2 className="w-4 h-4" />
           </button>
+          {hasSlides && (
+            <select
+              value={compositor}
+              onChange={(e) => setCompositor(e.target.value)}
+              className="text-xs border rounded px-2 py-1.5 bg-white text-gray-700"
+              title="Compositor engine"
+            >
+              <option value="sharp">Sharp (Classic)</option>
+              <option value="satori">Satori (New)</option>
+            </select>
+          )}
           {hasSlides && !allDone && (
             <Button onClick={handleGenerateImages} disabled={generatingImages || carousel.status === 'generating'}>
               {generatingImages || carousel.status === 'generating'

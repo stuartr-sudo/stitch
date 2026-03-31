@@ -209,7 +209,18 @@ export async function composeSlide({
   statValue,
   statLabel,
   ctaText,
+  compositor = 'sharp',
 }) {
+  // Dispatch to Satori compositor if requested
+  if (compositor === 'satori') {
+    const { composeSlideSatori } = await import('./composeSlideSatori.js');
+    return composeSlideSatori({
+      slideType, carouselStyle, canvasW, canvasH, backgroundImageUrl,
+      logoUrl, brandColors, colorTemplateIndex, headline, bodyText,
+      statValue, statLabel, ctaText,
+    });
+  }
+
   const template = getCarouselTemplate(carouselStyle);
   const layout = template.layout;
 

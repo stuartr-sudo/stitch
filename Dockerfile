@@ -24,6 +24,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY api ./api
 COPY server.js ./
+COPY fonts ./fonts
 
 RUN npm prune --omit=dev 2>/dev/null; true
 

@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'carousel id is required' });
 
-  const { image_model = 'fal_nano_banana', style_prompt = '', carousel_style } = req.body || {};
+  const { image_model = 'fal_nano_banana', style_prompt = '', carousel_style, compositor = 'sharp' } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -134,6 +134,7 @@ export default async function handler(req, res) {
             statValue: slide.stat_value,
             statLabel: slide.stat_label,
             ctaText: slide.cta_text,
+            compositor,
           });
 
           // Upload composed image to Supabase storage
