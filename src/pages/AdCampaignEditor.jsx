@@ -35,7 +35,11 @@ export default function AdCampaignEditor() {
   const [activePlatform, setActivePlatform] = useState('linkedin');
   const [selectedVariationIdx, setSelectedVariationIdx] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [brandName, setBrandName] = useState('');
+  const [brand, setBrand] = useState(null);
+  const [showStylePicker, setShowStylePicker] = useState(null); // variation id when open
+  const [selectedStyle, setSelectedStyle] = useState('');
+
+  const brandName = brand?.brand_name || '';
 
   const loadCampaign = useCallback(async () => {
     try {
@@ -44,7 +48,6 @@ export default function AdCampaignEditor() {
       if (data.campaign) {
         setCampaign(data.campaign);
         setVariations(data.campaign.ad_variations || []);
-        // Default to first platform that has variations, or first campaign platform
         const platforms = data.campaign.platforms || ['linkedin'];
         setActivePlatform(platforms[0] || 'linkedin');
       }
@@ -55,10 +58,10 @@ export default function AdCampaignEditor() {
     }
   }, [id]);
 
-  // Load brand name for preview
+  // Load brand kit for preview (logo, name, etc.)
   useEffect(() => {
-    apiFetch('/api/brand').then(r => r.json()).then(d => {
-      setBrandName(d.brand?.brand_name || d.brand_name || '');
+    apiFetch('/api/brand/kit').then(r => r.json()).then(d => {
+      setBrand(d.brand || d || null);
     }).catch(() => {});
   }, []);
 
@@ -91,8 +94,9 @@ export default function AdCampaignEditor() {
     }
   };
 
-  const handleRegenerate = async (variationId, imageOnly = false) => {
+  const handleRegenerate = async (variationId, imageOnly = false, stylePreset = null) => {
     setRegeneratingId(variationId);
+    setShowStylePicker(null);
     try {
       const res = await apiFetch(`/api/ads/variations/${variationId}/regenerate`, {
         method: 'POST',
@@ -100,6 +104,7 @@ export default function AdCampaignEditor() {
         body: JSON.stringify({
           regenerate_copy: !imageOnly,
           regenerate_image: imageOnly,
+          style_preset: stylePreset || undefined,
         }),
       });
       const data = await res.json();
@@ -412,13 +417,13 @@ export default function AdCampaignEditor() {
                 {activePlatform === 'linkedin' ? 'LinkedIn Feed Preview' : activePlatform === 'google' ? 'Google Search Preview' : activePlatform === 'meta' ? 'Facebook / Instagram Preview' : `${activePlatform} Preview`}
               </p>
               {activePlatform === 'linkedin' && (
-                <LinkedInAdPreview variation={selectedVariation} brandName={brandName} />
+                <LinkedInAdPreview variation={selectedVariation} brandName={brandName} brandLogoUrl={brand?.logo_url} />
               )}
               {activePlatform === 'google' && (
                 <GoogleAdPreview variation={selectedVariation} landingUrl={campaign?.landing_url} />
               )}
               {activePlatform === 'meta' && (
-                <MetaAdPreview variation={selectedVariation} brandName={brandName} />
+                <MetaAdPreview variation={selectedVariation} brandName={brandName} brandLogoUrl={brand?.logo_url} />
               )}
             </div>
           ) : (

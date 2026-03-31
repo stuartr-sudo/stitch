@@ -1,7 +1,7 @@
 import React from 'react';
 import { Globe, ThumbsUp, MessageCircle, Repeat2, Send } from 'lucide-react';
 
-export default function LinkedInAdPreview({ variation, brandName }) {
+export default function LinkedInAdPreview({ variation, brandName, brandLogoUrl }) {
   const copy = variation?.copy_data || {};
   const imageUrl = variation?.image_urls?.[0];
   const displayName = brandName || 'Your Company';
@@ -16,10 +16,14 @@ export default function LinkedInAdPreview({ variation, brandName }) {
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-start gap-3">
-          {/* Avatar */}
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
+          {/* Avatar / Logo */}
+          {brandLogoUrl ? (
+            <img src={brandLogoUrl} alt={displayName} className="w-12 h-12 rounded-full object-cover flex-shrink-0 border" />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm text-gray-900 leading-tight">{displayName}</p>
             <p className="text-xs text-gray-500 leading-tight mt-0.5">Promoted</p>

@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { id } = req.params;
-  const { regenerate_copy, regenerate_image } = req.body || {};
+  const { regenerate_copy, regenerate_image, style_preset } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -65,10 +65,29 @@ export default async function handler(req, res) {
     const systemPrompt = REGEN_PROMPTS[variation.platform];
     if (!systemPrompt) return res.status(400).json({ error: `Unsupported platform: ${variation.platform}` });
 
+    // Fetch brand kit for context
+    let brandContext = '';
+    try {
+      const { data: brandKit } = await supabase
+        .from('brand_kit')
+        .select('brand_name, tagline, industry, target_audience')
+        .eq('user_id', req.user.id)
+        .single();
+      if (brandKit) {
+        const parts = [];
+        if (brandKit.brand_name) parts.push(`Brand: ${brandKit.brand_name}`);
+        if (brandKit.tagline) parts.push(`Tagline: ${brandKit.tagline}`);
+        if (brandKit.industry) parts.push(`Industry: ${brandKit.industry}`);
+        if (brandKit.target_audience) parts.push(`Brand Audience: ${brandKit.target_audience}`);
+        brandContext = parts.join('\n');
+      }
+    } catch {}
+
     const userMessage = [
       `Product/Service: ${campaign.product_description || campaign.name}`,
       campaign.landing_url ? `Landing URL: ${campaign.landing_url}` : null,
       campaign.target_audience ? `Target Audience: ${campaign.target_audience}` : null,
+      brandContext || null,
     ].filter(Boolean).join('\n');
 
     const completion = await client.chat.completions.create({
@@ -107,7 +126,8 @@ export default async function handler(req, res) {
   if (regenerate_image && keys.falKey) {
     const aspectMap = { linkedin: { width: 1200, height: 627 }, google: { width: 1200, height: 628 }, meta: { width: 1080, height: 1080 } };
     const aspect = aspectMap[variation.platform] || { width: 1080, height: 1080 };
-    const prompt = `${campaign.product_description || campaign.name}. Professional, high quality. No text, no logos.`;
+    const styleText = style_preset ? ` Visual style: ${style_preset}.` : '';
+    const prompt = `${campaign.product_description || campaign.name}. Professional, high quality.${styleText} No text, no logos.`;
 
     try {
       const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {

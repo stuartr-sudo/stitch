@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ThumbsUp, Share2 } from 'lucide-react';
 
-export default function MetaAdPreview({ variation, brandName }) {
+export default function MetaAdPreview({ variation, brandName, brandLogoUrl }) {
   const [mode, setMode] = useState('feed'); // 'feed' or 'stories'
   const copy = variation?.copy_data || {};
   const imageUrl = variation?.image_urls?.[0];
@@ -41,11 +41,15 @@ export default function MetaAdPreview({ variation, brandName }) {
             {/* Top bar overlay */}
             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/60 to-transparent">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-0.5">
-                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                    <span className="text-[8px] font-bold text-gray-700">{displayName.charAt(0)}</span>
+                {brandLogoUrl ? (
+                  <img src={brandLogoUrl} alt={displayName} className="w-8 h-8 rounded-full object-cover border" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-0.5">
+                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                      <span className="text-[8px] font-bold text-gray-700">{displayName.charAt(0)}</span>
+                    </div>
                   </div>
-                </div>
+                )}
                 <span className="text-white text-xs font-medium">{displayName}</span>
                 <span className="text-white/60 text-[10px]">Sponsored</span>
               </div>
@@ -94,9 +98,13 @@ export default function MetaAdPreview({ variation, brandName }) {
         {/* Header */}
         <div className="px-4 pt-3 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
+            {brandLogoUrl ? (
+              <img src={brandLogoUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover border" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-semibold text-gray-900">{displayName}</span>

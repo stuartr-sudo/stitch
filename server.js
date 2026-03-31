@@ -588,6 +588,8 @@ app.patch('/api/ads/variations/:id', authenticateToken, (await import('./api/ads
 app.delete('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
 app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import('./api/ads/regenerate.js')).default);
 app.post('/api/ads/variations/:id/split-test', authenticateToken, (await import('./api/ads/split-test.js')).default);
+app.get('/api/ads/google/auth', authenticateToken, (await import('./api/ads/google-auth.js')).default);
+app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js')).default);
 
 // ─── Connected Accounts routes ────────────────────────────────────────────
 app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);

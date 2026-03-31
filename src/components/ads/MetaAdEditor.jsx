@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UTMBuilder from './UTMBuilder';
+import AdImageSection from './AdImageSection';
 
 const CTA_OPTIONS = [
   'Book Now', 'Contact Us', 'Download', 'Get Offer',
@@ -113,26 +114,13 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
         </div>
       </div>
 
-      {/* Image */}
-      {variation?.image_urls?.[0] && (
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-1 block">Ad Image</label>
-          <div className="relative rounded-lg overflow-hidden border">
-            <img
-              src={variation.image_urls[0]}
-              alt="Ad creative"
-              className="w-full aspect-square object-cover"
-            />
-            <button
-              onClick={() => onRegenerate(variation.id, true)}
-              disabled={regenerating}
-              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-lg p-1.5 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Image with style picker */}
+      <AdImageSection
+        imageUrl={variation?.image_urls?.[0]}
+        onRegenerate={(style) => onRegenerate(variation.id, true, style)}
+        regenerating={regenerating}
+        aspectClass="aspect-square"
+      />
 
       {/* UTM Tracking */}
       <UTMBuilder
