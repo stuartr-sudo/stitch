@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { saveTokens } from '../lib/tokenManager.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -103,6 +104,23 @@ export default async function handler(req, res) {
   if (upsertError) {
     console.error('[youtube/callback] Upsert error:', upsertError);
     return res.redirect('/studio?youtube_error=save_failed');
+  }
+
+  // Dual-write to platform_connections for unified token management
+  try {
+    await saveTokens(user_id, 'youtube', {
+      access_token,
+      refresh_token,
+      expires_in,
+      platform_user_id: channelId,
+      platform_username: channelTitle || brand_username,
+      platform_page_id: channelId,
+      platform_page_name: channelTitle,
+      scopes: 'youtube.upload youtube.readonly',
+    }, supabase);
+  } catch (err) {
+    console.error('[youtube/callback] platform_connections write failed:', err.message);
+    // Non-fatal — legacy table is the primary
   }
 
   console.log(`[youtube/callback] Connected ${brand_username} → ${channelTitle || channelId}`);

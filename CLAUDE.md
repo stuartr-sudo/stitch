@@ -129,6 +129,7 @@ All env vars are documented in `.env.example` — refer to that file for the ful
 - `OWNER_EMAIL` controls API key fallback in `getUserKeys()` — if the authenticated user's email matches, server env vars are used instead of the `user_api_keys` table
 - `SEARCHAPI_KEY` and `SERP_API_KEY` are interchangeable (code checks both)
 - Both Gemini TTS and legacy ElevenLabs TTS work through the FAL proxy (`FAL_KEY` only) — `ELEVENLABS_API_KEY` is optional for direct access
+- OAuth env vars: `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`, `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REDIRECT_URI`. YouTube already has `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`
 
 ## Gotchas
 
@@ -139,7 +140,9 @@ All env vars are documented in `.env.example` — refer to that file for the ful
 - Migrations are loose SQL files at project root (`supabase-migration.sql`, `supabase-migration-v2.sql` through `v8`, plus `-tags`, `-storyboard-presets`, `-shorts-overhaul`, `-linkedin`, `-app-source`, `-library-metadata`, `-proposal-media`, `-storyboard-system`, `-carousel`, `-carousel-video`) and in `api/migrations/`. Not managed by Supabase CLI.
 - Vite dev server runs on port 4390 (not the default 5173).
 - Some routes return immediately and do background work (e.g., `generate-thumbnails`). Check for `res.json()` before async blocks.
-- Webhook routes (`/api/webhooks/content`, `/api/article/from-url`, `/api/article/bulk`) skip auth — they use webhook secrets or brand_username verification instead.
+- Webhook routes (`/api/webhooks/content`, `/api/article/from-url`, `/api/article/bulk`) skip auth — they use webhook secrets or brand_username verification instead. OAuth callback routes (`/api/linkedin/oauth/callback`, `/api/meta/callback`, `/api/tiktok/callback`, `/api/youtube/callback`) also skip auth — they're redirect targets from external OAuth providers.
+- `platform_connections` is the unified token store for all platforms. Legacy tables (`brand_youtube_tokens`, `linkedin_config`) are still read as fallback during migration. When adding new publishing features, always resolve tokens via `tokenManager.loadTokens()` first.
+- Meta OAuth stores nonces with platform `'meta'` (not `'instagram'` or `'facebook'`), since a single OAuth flow discovers both platforms.
 - All Veo 3.1 endpoints (`generate.js`, `extend.js`) use `auto_fix: true` so FAL rewrites prompts that trigger content policy (copyrighted brand names). The Cohesive Prompt Builder's storyboard system prompt also strips brand names (Pixar, Disney, DreamWorks, Cocomelon, etc.) proactively. All style preset files are now brand-free — brand names have been stripped from `videoStylePresets.js`, `stylePresets.js`, `visualStyles.js`, `visualStylePresets.js`, and `api/imagineer/generate.js`. If Veo R2V returns 422 "no_media_generated", check for brand names in the prompt.
 - FAL CDN URLs (`v3b.fal.media`, `fal.media`) are temporary and expire within hours. Always upload generated media to Supabase storage via `uploadUrlToSupabase()` or the `/api/library/save` endpoint before storing URLs in the database or displaying them in production pages. The Shorts Workbench does this automatically via `animateImageV2`.
 - Video model duration formats differ by provider: Veo 3.1 accepts ONLY `'4s'`, `'6s'`, `'8s'` — any other value (including `'5s'`, `'7s'`) causes a 422 error. The `veoDuration()` function in modelRegistry.js maps: ≤4→4s, ≤6→6s, else→8s. Kling/Wan/PixVerse use `"5"`/`"10"` (string number), Wavespeed uses integer `5`/`8`, some models (Hailuo, Wan Pro) don't accept duration at all. The model registry handles this — don't hardcode duration format.

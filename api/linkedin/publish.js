@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { publishToLinkedIn } from '../lib/linkedinPublisher.js';
+import { loadTokens } from '../lib/tokenManager.js';
 
 export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -18,20 +19,27 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Cannot publish post with status: ${post.status}` });
     }
 
-    // Fetch config for LinkedIn token
-    const { data: config } = await supabase
-      .from('linkedin_config')
-      .select('*')
-      .eq('user_id', req.user.id)
-      .maybeSingle();
+    // Resolve LinkedIn token: platform_connections first, fallback to legacy linkedin_config
+    let accessToken = null;
+    const conn = await loadTokens(req.user.id, 'linkedin', supabase);
+    if (conn?.access_token) {
+      accessToken = conn.access_token;
+    } else {
+      const { data: config } = await supabase
+        .from('linkedin_config')
+        .select('linkedin_access_token')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+      accessToken = config?.linkedin_access_token;
+    }
 
-    if (!config?.linkedin_access_token) {
-      return res.status(400).json({ error: 'LinkedIn access token not configured. Go to Settings.' });
+    if (!accessToken) {
+      return res.status(400).json({ error: 'LinkedIn not connected. Go to Settings → Connected Accounts.' });
     }
 
     // Publish to LinkedIn — use pre-generated square image
     const linkedinResult = await publishToLinkedIn({
-      accessToken: config.linkedin_access_token,
+      accessToken,
       body: post.body,
       imageUrl: post.featured_image_square || null,
     });

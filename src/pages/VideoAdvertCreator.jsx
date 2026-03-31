@@ -37,6 +37,12 @@ import {
   Zap,
   RotateCcw,
   Box,
+  LayoutGrid,
+  FileText,
+  Share2,
+  Linkedin,
+  GalleryHorizontalEnd,
+  Megaphone,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -83,6 +89,7 @@ export default function VideoAdvertCreator() {
     videoTools: true,
     yourAssets: false,
     audioTools: true,
+    socialTools: true,
   });
   const [showBrandKit, setShowBrandKit] = useState(false);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
@@ -436,22 +443,6 @@ export default function VideoAdvertCreator() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
-                <Link to="/campaigns">Campaigns</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
-                <Link to="/shorts/workbench">Workbench</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
-                <Link to="/templates">Templates</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
-                <Link to="/linkedin">LinkedIn</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 gap-1.5 hidden md:flex">
-                <Link to="/carousels">Carousels</Link>
-              </Button>
-              <div className="h-4 w-px bg-gray-300 hidden md:block mx-1"></div>
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="w-32 h-8 bg-white border-gray-300 text-gray-900 text-xs">
                   <SelectValue />
@@ -748,6 +739,99 @@ export default function VideoAdvertCreator() {
                       <span className="text-xs font-medium text-gray-800">Audio Studio</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">Voiceovers & Music</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Social Tools Section */}
+            <div>
+              <button
+                onClick={() => toggleSection('socialTools')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-[#2C666E]" /> Social Tools
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.socialTools ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.socialTools && (
+                <div className="mt-2 space-y-1">
+                  <div
+                    onClick={() => navigate('/campaigns')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Campaigns</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Manage ad campaigns</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/ads')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Ads Manager</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Google, LinkedIn & Meta ads</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/shorts/workbench')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Workbench</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Shorts workbench</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/templates')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Templates</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Browse & use templates</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/linkedin')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Linkedin className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">LinkedIn</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">LinkedIn content tools</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/carousels')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <GalleryHorizontalEnd className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Carousels</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Create carousel posts</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/storyboards')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clapperboard className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Storyboards</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Plan & produce videos</p>
                   </div>
                 </div>
               )}
