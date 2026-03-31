@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Loader2, Wand2, Image as ImageIcon, Send, RefreshCw,
+  ArrowLeft, Loader2, Image as ImageIcon, Send, RefreshCw,
   Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film,
   Settings2, Play,
 } from 'lucide-react';
@@ -36,12 +36,11 @@ export default function CarouselEditor({ carouselId }) {
   const [slides, setSlides] = useState([]);
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [pollTimer, setPollTimer] = useState(null);
   const [contentPollTimer, setContentPollTimer] = useState(null);
-  const [compositor, setCompositor] = useState('sharp');
+  const [compositor, setCompositor] = useState('satori');
   const [showStyleControls, setShowStyleControls] = useState(false);
   const [gradientColor, setGradientColor] = useState('');
   const [headlineScale, setHeadlineScale] = useState(100);
@@ -105,7 +104,7 @@ export default function CarouselEditor({ carouselId }) {
 
   // ── Poll for content generation (slides appearing) ──
   useEffect(() => {
-    if (carousel && slides.length === 0 && !generating) {
+    if (carousel && slides.length === 0) {
       let pollCount = 0;
       const timer = setInterval(async () => {
         pollCount++;
@@ -127,38 +126,7 @@ export default function CarouselEditor({ carouselId }) {
       setContentPollTimer(timer);
       return () => clearInterval(timer);
     }
-  }, [carousel, slides.length, generating, carouselId]);
-
-  // ── Generate content from URL/topic ──
-  async function handleGenerateContent() {
-    setGenerating(true);
-    try {
-      const body = {};
-      if (!carousel.source_url) {
-        body.topic = carousel.title || 'Untitled';
-      }
-
-      const res = await apiFetch(`/api/carousel/${carouselId}/generate-content`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-        return;
-      }
-      setSlides(data.slides || []);
-      setActiveSlideIdx(0);
-      if (data.caption_text) {
-        setCarousel(prev => ({ ...prev, caption_text: data.caption_text, slide_count: data.slides?.length }));
-      }
-    } catch (err) {
-      toast.error('Content generation failed');
-    } finally {
-      setGenerating(false);
-    }
-  }
+  }, [carousel, slides.length, carouselId]);
 
   // ── Generate images for all slides ──
   async function handleGenerateImages() {
@@ -404,17 +372,6 @@ export default function CarouselEditor({ carouselId }) {
             <Trash2 className="w-4 h-4" />
           </button>
           {hasSlides && (
-            <select
-              value={compositor}
-              onChange={(e) => setCompositor(e.target.value)}
-              className="text-xs border rounded px-2 py-1.5 bg-white text-gray-700"
-              title="Compositor engine"
-            >
-              <option value="sharp">Sharp (Classic)</option>
-              <option value="satori">Satori (New)</option>
-            </select>
-          )}
-          {hasSlides && (
             <button
               onClick={() => setShowStyleControls(!showStyleControls)}
               className={`p-2 rounded-lg transition-colors ${showStyleControls ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
@@ -601,33 +558,17 @@ export default function CarouselEditor({ carouselId }) {
         </div>
       )}
 
-      {/* No slides — content is being generated or needs retry */}
+      {/* No slides — content is being generated */}
       {!hasSlides && (
         <div className="max-w-md mx-auto mt-24 text-center">
-          {generating ? (
-            <>
-              <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mx-auto mb-4" />
-              <h3 className="text-base font-medium text-gray-700 mb-1">
-                {carousel.source_url ? 'Scraping article and generating slides...' : 'Researching topic and generating slides...'}
-              </h3>
-              <p className="text-sm text-gray-400">
-                {carousel.source_url ? carousel.source_url : `Topic: ${carousel.title}`}
-              </p>
-              <p className="text-xs text-gray-300 mt-4">This usually takes 15-45 seconds</p>
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-8 h-8 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-base font-medium text-gray-700 mb-1">No slides yet</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                {carousel.source_url ? carousel.source_url : `Topic: ${carousel.title}`}
-              </p>
-              <Button onClick={handleGenerateContent} disabled={generating}>
-                <Wand2 className="w-4 h-4 mr-2" />
-                Generate Content
-              </Button>
-            </>
-          )}
+          <Loader2 className="w-8 h-8 animate-spin text-[#2C666E] mx-auto mb-4" />
+          <h3 className="text-base font-medium text-gray-700 mb-1">
+            {carousel.source_url ? 'Scraping article and generating slides...' : 'Researching topic and generating slides...'}
+          </h3>
+          <p className="text-sm text-gray-400">
+            {carousel.source_url ? carousel.source_url : `Topic: ${carousel.title}`}
+          </p>
+          <p className="text-xs text-gray-300 mt-4">This usually takes 15-45 seconds</p>
         </div>
       )}
 
