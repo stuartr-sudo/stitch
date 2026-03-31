@@ -502,7 +502,8 @@ export default function HomePage() {
         <div className="footer-inner">
           <div className="footer-logo">STITCH <span>STUDIOS</span></div>
           <div className="footer-links"><a href="#">Twitter</a><a href="#">LinkedIn</a><a href="#">Contact</a></div>
-          <div className="footer-copy">&copy; 2026 Stitch Studios. Made in New Zealand.</div>
+          <div className="footer-copy" style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.7, lineHeight: 1.5 }}>1007 N Orange St, 4th Floor, Ste 1382, Wilmington, DE 19801</div>
+          <div className="footer-copy">&copy; 2026 Stitch Studios.</div>
         </div>
       </div>
     </div>
