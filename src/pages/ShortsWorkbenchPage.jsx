@@ -16,7 +16,7 @@ import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
-const SPEED_OPTIONS = [0.75, 0.85, 0.9, 1.0, 1.1, 1.25];
+const SPEED_OPTIONS = [0.75, 0.85, 0.9, 1.0, 1.1, 1.25, 1.3, 1.4];
 
 const NICHES = [
   { key: 'ai_tech_news', label: 'AI/Tech', icon: '🤖' },
