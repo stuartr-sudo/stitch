@@ -348,11 +348,12 @@ export default function ShortsWorkbenchPage() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const fullScript = data.narration_full || data.scenes?.map(s => s.narration_segment).filter(Boolean).join(' ') || '';
+      const scriptData = data.script || data;
+      const fullScript = scriptData.narration_full || scriptData.scenes?.map(s => s.narration_segment).filter(Boolean).join(' ') || '';
       setScript(fullScript);
       // Store scene prompts for later
       const prompts = {};
-      (data.scenes || []).forEach((s, i) => {
+      (scriptData.scenes || []).forEach((s, i) => {
         prompts[i] = { startPrompt: s.visual_prompt || s.narration_segment, endPrompt: '', motionPrompt: s.motion_prompt || '' };
       });
       setScenePrompts(prompts);

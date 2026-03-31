@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       framework,
     });
 
-    return res.json({ ...script, niche });
+    return res.json({ script, niche });
   } catch (err) {
     console.error('[shorts/preview-script] Error:', err);
     return res.status(500).json({ error: err.message });
