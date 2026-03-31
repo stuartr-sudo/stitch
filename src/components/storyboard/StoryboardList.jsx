@@ -18,15 +18,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import StyleGrid from '@/components/ui/StyleGrid';
-import { SCENE_MODELS } from '@/components/storyboard/SceneModelSelector';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
-
-const NARRATIVE_STYLES = [
-  'entertaining', 'educational', 'dramatic', 'cinematic',
-  'comedic', 'documentary', 'poetic', 'suspenseful',
-];
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-600',
@@ -53,17 +46,7 @@ function timeAgo(dateStr) {
 
 function CreateStoryboardPanel({ onCancel, onCreate }) {
   const [name, setName] = useState('');
-  const [desiredLength, setDesiredLength] = useState(60);
-  const [frameInterval, setFrameInterval] = useState(4);
-  const [aspectRatio, setAspectRatio] = useState('16:9');
-  const [narrativeStyle, setNarrativeStyle] = useState('entertaining');
-  const [visualStyle, setVisualStyle] = useState('');
-  const [globalModel, setGlobalModel] = useState('veo3');
   const [creating, setCreating] = useState(false);
-
-  const frameCount = Math.max(1, Math.ceil(desiredLength / frameInterval));
-
-  const createModels = SCENE_MODELS.filter(m => m.mode === 'reference-to-video' || m.mode === 'image-to-video');
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -72,15 +55,7 @@ function CreateStoryboardPanel({ onCancel, onCreate }) {
       const res = await apiFetch('/api/storyboard/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          desiredLength,
-          frameInterval,
-          aspectRatio,
-          narrativeStyle,
-          visualStyle: visualStyle || undefined,
-          globalModel,
-        }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       const data = await res.json();
       if (data.success) {
@@ -96,114 +71,23 @@ function CreateStoryboardPanel({ onCancel, onCreate }) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">New Storyboard</h2>
-        <button onClick={onCancel} className="text-sm text-gray-400 hover:text-gray-600">Cancel</button>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Project Name</label>
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3">
         <Input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="e.g., Movin Martin — Road Crossing Episode"
+          placeholder="Storyboard name — e.g., Movin Martin Episode 1"
           autoFocus
           onKeyDown={e => e.key === 'Enter' && handleCreate()}
+          className="flex-1"
         />
+        <Button onClick={handleCreate} disabled={!name.trim() || creating}
+          className="bg-[#2C666E] hover:bg-[#1e4d54] text-white shrink-0">
+          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+        </Button>
+        <button onClick={onCancel} className="text-sm text-gray-400 hover:text-gray-600 shrink-0">Cancel</button>
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Length</label>
-          <div className="flex flex-wrap gap-1.5">
-            {[15, 30, 45, 60, 90, 120].map(len => (
-              <button key={len} onClick={() => setDesiredLength(len)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  desiredLength === len ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}>
-                {len}s
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Frame Interval</label>
-          <div className="flex gap-1.5">
-            {[4, 6, 8].map(i => (
-              <button key={i} onClick={() => setFrameInterval(i)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  frameInterval === i ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}>
-                {i}s
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Aspect Ratio</label>
-          <div className="flex gap-1.5">
-            {['16:9', '9:16', '1:1'].map(r => (
-              <button key={r} onClick={() => setAspectRatio(r)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  aspectRatio === r ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}>
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Narrative Style</label>
-          <div className="flex flex-wrap gap-1.5">
-            {NARRATIVE_STYLES.map(s => (
-              <button key={s} onClick={() => setNarrativeStyle(s)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-all ${
-                  narrativeStyle === s ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Visual Style</label>
-          <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="180px" hideLabel />
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Video Model</label>
-            <select
-              value={globalModel}
-              onChange={e => setGlobalModel(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E]"
-            >
-              <optgroup label="Reference-to-Video">
-                {createModels.filter(m => m.mode === 'reference-to-video').map(m => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Image-to-Video">
-                {createModels.filter(m => m.mode === 'image-to-video').map(m => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <span className="text-3xl font-bold text-[#2C666E]">{frameCount}</span>
-            <span className="text-sm text-gray-500 ml-2">storyboard frames</span>
-            <p className="text-xs text-gray-400 mt-1">One frame every {frameInterval}s across {desiredLength}s</p>
-          </div>
-          <Button onClick={handleCreate} disabled={!name.trim() || creating}
-            className="w-full bg-[#2C666E] hover:bg-[#1e4d54] text-white h-11">
-            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Storyboard'}
-          </Button>
-        </div>
-      </div>
+      <p className="text-xs text-gray-400 mt-2">Configure everything else in Settings after creation</p>
     </div>
   );
 }
