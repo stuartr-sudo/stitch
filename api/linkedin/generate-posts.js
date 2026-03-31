@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { fetchUrlContent, resolveExaKey } from '../lib/newsjackScorer.js';
 import { composeImage } from '../lib/composeImage.js';
+import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
+import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
 
 const ANTI_SLOP = `RULES (violating any = rejection):
@@ -60,7 +62,11 @@ function cleanPostBody(body) {
 }
 
 export default async function handler(req, res) {
-  const { topic_id, template_index } = req.body || {};
+  const {
+    topic_id, template_index,
+    style_preset, brand_kit_id, carousel_style,
+    style_overrides,
+  } = req.body || {};
   if (!topic_id) return res.status(400).json({ error: 'topic_id is required' });
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -197,8 +203,15 @@ export default async function handler(req, res) {
 
     // Generate base image via FAL Nano Banana 2
     let squareImageUrl = null;
+    let storedBaseImageUrl = null;
     if (keys.falKey) {
       try {
+        // Build image prompt — inject style_preset promptText if provided
+        let imagePrompt = `Professional editorial photograph for LinkedIn post about: ${topic.headline}. Clean, modern, business context. No text, no logos.`;
+        if (style_preset) {
+          imagePrompt = `${style_preset}. LinkedIn post about: ${topic.headline}. No text, no logos.`;
+        }
+
         const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
           method: 'POST',
           headers: {
@@ -206,7 +219,7 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: `Professional editorial photograph for LinkedIn post about: ${topic.headline}. Clean, modern, business context. No text, no logos.`,
+            prompt: imagePrompt,
             image_size: 'square_hd',
             num_images: 1,
           }),
@@ -244,31 +257,68 @@ export default async function handler(req, res) {
             model: 'nano-banana-2',
           }).catch(() => {});
 
-          // Compose branded square image
-          if (baseImageUrl && brand?.logo_url) {
+          // Upload base image to Supabase for persistence (FAL CDN URLs expire)
+          if (baseImageUrl) {
             try {
-              const squareBuffer = await composeImage({
-                image_url: baseImageUrl,
-                logo_url: brand.logo_url,
-                series_title: config?.series_title || 'INDUSTRY WATCH',
-                post_number: postNumber,
+              storedBaseImageUrl = await uploadUrlToSupabase(baseImageUrl, supabase, 'linkedin');
+            } catch (err) {
+              console.warn('[linkedin/generate-posts] Base image upload failed:', err.message);
+              storedBaseImageUrl = baseImageUrl; // fallback to FAL URL
+            }
+          }
+
+          // Compose branded square image using Satori compositor
+          const effectiveCarouselStyle = carousel_style || 'bold_editorial';
+          if (baseImageUrl) {
+            try {
+              const composedBuffer = await composeLinkedInSatori({
+                backgroundImageUrl: baseImageUrl,
+                logoUrl: brand?.logo_url,
                 excerpt,
-                template_index: tplIndex,
-                format: 'square',
+                seriesTitle: config?.series_title || 'INDUSTRY WATCH',
+                postNumber,
+                carouselStyle: effectiveCarouselStyle,
+                templateIndex: tplIndex,
+                styleOverrides: style_overrides,
               });
 
               const ts = Date.now();
               const rand = Math.random().toString(36).slice(2, 8);
               const { data: upload, error: uploadErr } = await supabase.storage
                 .from('media')
-                .upload(`linkedin/composed-sq-${ts}-${rand}.png`, squareBuffer, { contentType: 'image/png', upsert: false });
+                .upload(`linkedin/composed-sq-${ts}-${rand}.png`, composedBuffer, { contentType: 'image/png', upsert: false });
 
               if (!uploadErr) {
                 const { data: publicUrl } = supabase.storage.from('media').getPublicUrl(upload.path);
                 squareImageUrl = publicUrl.publicUrl;
               }
             } catch (err) {
-              console.warn('[linkedin/generate-posts] Image composition failed:', err.message);
+              console.warn('[linkedin/generate-posts] Satori composition failed, falling back to legacy:', err.message);
+              // Fallback to legacy composeImage if Satori fails
+              if (brand?.logo_url) {
+                try {
+                  const squareBuffer = await composeImage({
+                    image_url: baseImageUrl,
+                    logo_url: brand.logo_url,
+                    series_title: config?.series_title || 'INDUSTRY WATCH',
+                    post_number: postNumber,
+                    excerpt,
+                    template_index: tplIndex,
+                    format: 'square',
+                  });
+                  const ts2 = Date.now();
+                  const rand2 = Math.random().toString(36).slice(2, 8);
+                  const { data: upload2, error: uploadErr2 } = await supabase.storage
+                    .from('media')
+                    .upload(`linkedin/composed-sq-${ts2}-${rand2}.png`, squareBuffer, { contentType: 'image/png', upsert: false });
+                  if (!uploadErr2) {
+                    const { data: publicUrl2 } = supabase.storage.from('media').getPublicUrl(upload2.path);
+                    squareImageUrl = publicUrl2.publicUrl;
+                  }
+                } catch (fallbackErr) {
+                  console.warn('[linkedin/generate-posts] Legacy fallback also failed:', fallbackErr.message);
+                }
+              }
             }
           }
         }
@@ -293,6 +343,11 @@ export default async function handler(req, res) {
             post_number: postNumber,
             template_index: tplIndex,
             featured_image_square: squareImageUrl,
+            base_image_url: storedBaseImageUrl,
+            carousel_style: carousel_style || 'bold_editorial',
+            style_preset: style_preset || null,
+            brand_kit_id: brand_kit_id || null,
+            style_overrides: style_overrides || {},
           })
           .select()
           .single();

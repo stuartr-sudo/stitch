@@ -12,10 +12,10 @@ function styleBadgeClass(style) {
   return STYLE_BADGE[style?.toLowerCase()] ?? 'bg-slate-100 text-slate-600';
 }
 
-export default function PostCard({ post, config, onApprove, onEdit, onReject, onRegenerate, onPublish }) {
+export default function PostCard({ post, config, onApprove, onEdit, onReject, onRegenerate, onPublish, onOpenPost }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(post.content ?? '');
+  const [draft, setDraft] = useState(post.body ?? '');
   const [publishing, setPublishing] = useState(false);
 
   const isPublished = post.status === 'published';
@@ -36,11 +36,11 @@ export default function PostCard({ post, config, onApprove, onEdit, onReject, on
   }
 
   function handleCancel() {
-    setDraft(post.content ?? '');
+    setDraft(post.body ?? '');
     setEditing(false);
   }
 
-  const contentText = post.content ?? '';
+  const contentText = post.body ?? '';
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col gap-3">
@@ -144,6 +144,11 @@ export default function PostCard({ post, config, onApprove, onEdit, onReject, on
                   'Approve & Publish'
                 )}
               </Button>
+              {onOpenPost && (
+                <Button size="sm" variant="ghost" onClick={() => onOpenPost(post.id)}>
+                  Open
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 Edit
               </Button>

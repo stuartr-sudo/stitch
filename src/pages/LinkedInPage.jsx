@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Settings, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import TopicQueue from '@/components/linkedin/TopicQueue';
 import PostFeed from '@/components/linkedin/PostFeed';
 import LinkedInConfigModal from '@/components/linkedin/LinkedInConfigModal';
+import LinkedInCreateModal from '@/components/linkedin/LinkedInCreateModal';
 
 export default function LinkedInPage() {
   const [topics, setTopics]               = useState([]);
@@ -13,6 +15,8 @@ export default function LinkedInPage() {
   const [loading, setLoading]             = useState(true);
   const [showConfig, setShowConfig]       = useState(false);
   const [generatingTopicId, setGeneratingTopicId] = useState(null);
+  const [createModal, setCreateModal]     = useState({ open: false, topicId: null, headline: '' });
+  const navigate = useNavigate();
 
   // ── Initial data load ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -114,39 +118,30 @@ export default function LinkedInPage() {
     }
   }, []);
 
-  const onGenerate = useCallback(async (topicId, templateIndex) => {
-    setGeneratingTopicId(topicId);
-    try {
-      const res  = await apiFetch('/api/linkedin/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic_id: topicId, template_index: templateIndex }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-        return;
+  const onGenerate = useCallback((topicId) => {
+    const topic = topics.find(t => t.id === topicId);
+    setCreateModal({ open: true, topicId, headline: topic?.headline || '' });
+  }, [topics]);
+
+  const onCreateModalDone = useCallback((newPosts) => {
+    if (newPosts.length > 0) {
+      setPosts(prev => [...newPosts, ...prev.filter(p => !newPosts.find(np => np.id === p.id))]);
+      // Mark the topic as generated
+      const topicId = newPosts[0]?.topic_id;
+      if (topicId) {
+        setTopics(prev => prev.map(t => t.id === topicId ? { ...t, status: 'generated' } : t));
       }
-      // Mark topic as generated
-      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, status: 'generated' } : t));
-      // Add new posts
-      const newPosts = data.posts ?? (data.post ? [data.post] : []);
-      if (newPosts.length > 0) {
-        setPosts(prev => [...newPosts, ...prev.filter(p => !newPosts.find(np => np.id === p.id))]);
-        toast.success('Posts generated');
-      }
-    } catch (err) {
-      console.error('[LinkedIn] generate error', err);
-      toast.error('Generation failed');
-    } finally {
-      setGeneratingTopicId(null);
     }
   }, []);
 
   const onDismiss = useCallback(async (topicId) => {
     setTopics(prev => prev.filter(t => t.id !== topicId));
     try {
-      const res  = await apiFetch(`/api/linkedin/topics/${topicId}`, { method: 'DELETE' });
+      const res  = await apiFetch(`/api/linkedin/topics/${topicId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dismissed' }),
+      });
       const data = await res.json();
       if (data.error) toast.error(data.error);
     } catch (err) {
@@ -173,7 +168,7 @@ export default function LinkedInPage() {
       const res  = await apiFetch(`/api/linkedin/posts/${postId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ body: content }),
       });
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
@@ -222,6 +217,10 @@ export default function LinkedInPage() {
     }
   }, []);
 
+  const onOpenPost = useCallback((postId) => {
+    navigate(`/linkedin/${postId}`);
+  }, [navigate]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -268,6 +267,7 @@ export default function LinkedInPage() {
               onReject={onReject}
               onRegenerate={onRegenerate}
               onPublish={onPublish}
+              onOpenPost={onOpenPost}
             />
           </div>
         </div>
@@ -278,6 +278,14 @@ export default function LinkedInPage() {
         onOpenChange={setShowConfig}
         config={config}
         onSaved={(updated) => setConfig(updated)}
+      />
+
+      <LinkedInCreateModal
+        isOpen={createModal.open}
+        onClose={() => setCreateModal({ open: false, topicId: null, headline: '' })}
+        topicId={createModal.topicId}
+        topicHeadline={createModal.headline}
+        onCreated={onCreateModalDone}
       />
     </div>
   );

@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
+import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
+import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 
 const ANTI_SLOP = `RULES (violating any = rejection):
 - First line MUST be under 200 characters
@@ -104,9 +106,104 @@ export default async function handler(req, res) {
       finalBody += `\n${config.linkedin_cta_text} → ${config.linkedin_cta_url}`;
     }
 
+    // Merge style overrides if provided
+    const { style_overrides, regenerate_image } = req.body || {};
+    const updateFields = { body: finalBody, status: 'generated' };
+    if (style_overrides) {
+      updateFields.style_overrides = { ...(post.style_overrides || {}), ...style_overrides };
+    }
+
+    // Optionally regenerate image with new style
+    if (regenerate_image && keys.falKey) {
+      try {
+        // Generate new base image
+        const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
+          method: 'POST',
+          headers: {
+            Authorization: `Key ${keys.falKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: `Professional editorial photograph for LinkedIn post about: ${topic.headline}. Clean, modern, business context. No text, no logos.`,
+            image_size: 'square_hd',
+            num_images: 1,
+          }),
+        });
+
+        if (falRes.ok) {
+          const falData = await falRes.json();
+          let baseImageUrl = null;
+          const requestId = falData.request_id;
+          if (requestId) {
+            for (let i = 0; i < 30; i++) {
+              await new Promise(r => setTimeout(r, 2000));
+              const statusRes = await fetch(`https://queue.fal.run/fal-ai/nano-banana-2/requests/${requestId}/status`, {
+                headers: { Authorization: `Key ${keys.falKey}` },
+              });
+              const statusData = await statusRes.json();
+              if (statusData.status === 'COMPLETED') {
+                const resultRes = await fetch(`https://queue.fal.run/fal-ai/nano-banana-2/requests/${requestId}`, {
+                  headers: { Authorization: `Key ${keys.falKey}` },
+                });
+                const resultData = await resultRes.json();
+                baseImageUrl = resultData.images?.[0]?.url;
+                break;
+              }
+              if (statusData.status === 'FAILED') break;
+            }
+          } else if (falData.images?.[0]?.url) {
+            baseImageUrl = falData.images[0].url;
+          }
+
+          if (baseImageUrl) {
+            const storedBase = await uploadUrlToSupabase(baseImageUrl, supabase, 'linkedin').catch(() => baseImageUrl);
+            updateFields.base_image_url = storedBase;
+
+            // Fetch brand for composition
+            const { data: brand } = await supabase
+              .from('brand_kit')
+              .select('logo_url')
+              .eq('user_id', req.user.id)
+              .maybeSingle();
+
+            const composedBuffer = await composeLinkedInSatori({
+              backgroundImageUrl: baseImageUrl,
+              logoUrl: brand?.logo_url,
+              excerpt: post.excerpt || '',
+              seriesTitle: config?.series_title || 'INDUSTRY WATCH',
+              postNumber: post.post_number || 1,
+              carouselStyle: post.carousel_style || 'bold_editorial',
+              templateIndex: post.template_index || 0,
+              styleOverrides: updateFields.style_overrides || post.style_overrides || {},
+            });
+
+            const ts = Date.now();
+            const rand = Math.random().toString(36).slice(2, 8);
+            const { data: upload, error: uploadErr } = await supabase.storage
+              .from('media')
+              .upload(`linkedin/composed-sq-${ts}-${rand}.png`, composedBuffer, { contentType: 'image/png', upsert: false });
+
+            if (!uploadErr) {
+              const { data: publicUrl } = supabase.storage.from('media').getPublicUrl(upload.path);
+              updateFields.featured_image_square = publicUrl.publicUrl;
+            }
+          }
+        }
+
+        logCost({
+          username: req.user.email,
+          category: 'fal',
+          operation: 'linkedin_regenerate_image',
+          model: 'nano-banana-2',
+        }).catch(() => {});
+      } catch (imgErr) {
+        console.warn('[linkedin/regenerate-post] Image regeneration failed:', imgErr.message);
+      }
+    }
+
     const { data: updated, error: updateErr } = await supabase
       .from('linkedin_posts')
-      .update({ body: finalBody, status: 'generated' })
+      .update(updateFields)
       .eq('id', req.params.id)
       .select()
       .single();

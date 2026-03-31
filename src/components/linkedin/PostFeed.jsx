@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText } from 'lucide-react';
 import PostCard from './PostCard';
 
-export default function PostFeed({ posts, config, onApprove, onEdit, onReject, onRegenerate, onPublish }) {
+export default function PostFeed({ posts, config, onApprove, onEdit, onReject, onRegenerate, onPublish, onOpenPost }) {
   const items = posts ?? [];
 
   if (items.length === 0) {
@@ -45,6 +45,7 @@ export default function PostFeed({ posts, config, onApprove, onEdit, onReject, o
               onReject={onReject}
               onRegenerate={onRegenerate}
               onPublish={onPublish}
+              onOpenPost={onOpenPost}
             />
           ))}
         </div>

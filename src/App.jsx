@@ -19,6 +19,7 @@ import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
+import LinkedInPostEditor from './components/linkedin/LinkedInPostEditor';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
 import StoryboardWorkspace from './pages/StoryboardWorkspace';
@@ -174,6 +175,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <LinkedInPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/linkedin/:id"
+            element={
+              <ProtectedRoute>
+                <LinkedInPostEditor />
               </ProtectedRoute>
             }
           />

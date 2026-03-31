@@ -550,7 +550,9 @@ app.get('/api/linkedin/topics', authenticateToken, (await import('./api/linkedin
 app.patch('/api/linkedin/topics/:id', authenticateToken, (await import('./api/linkedin/update-topic.js')).default);
 app.post('/api/linkedin/generate', authenticateToken, (await import('./api/linkedin/generate-posts.js')).default);
 app.get('/api/linkedin/posts', authenticateToken, (await import('./api/linkedin/posts.js')).default);
+app.get('/api/linkedin/posts/:id', authenticateToken, (await import('./api/linkedin/get-post.js')).default);
 app.patch('/api/linkedin/posts/:id', authenticateToken, (await import('./api/linkedin/update-post.js')).default);
+app.post('/api/linkedin/posts/:id/recompose', authenticateToken, (await import('./api/linkedin/recompose.js')).default);
 app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);
 app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./api/linkedin/publish.js')).default);
 
