@@ -6,7 +6,7 @@ import { composeImage } from '../lib/composeImage.js';
 import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
-import { getPostFormat } from '../../src/lib/postFormatTemplates.js';
+import { getPostFormat } from '../lib/postFormatTemplates.js';
 
 const ANTI_SLOP = `RULES (violating any = rejection):
 - First line MUST be under 200 characters

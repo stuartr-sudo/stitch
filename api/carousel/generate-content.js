@@ -4,7 +4,7 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 import { scrapeArticle } from '../lib/pipelineHelpers.js';
 import { fetchUrlContent, resolveExaKey } from '../lib/newsjackScorer.js';
 import { logCost } from '../lib/costLogger.js';
-import { getPostFormat } from '../../src/lib/postFormatTemplates.js';
+import { getPostFormat } from '../lib/postFormatTemplates.js';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
