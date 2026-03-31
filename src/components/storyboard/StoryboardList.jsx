@@ -11,9 +11,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, Loader2, Film, Clock, Layers, Trash2, ExternalLink,
-  ChevronRight, Clapperboard, FileDown, MoreHorizontal,
+  ChevronRight, Clapperboard, FileDown, MoreHorizontal, ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -259,6 +260,7 @@ function StoryboardCard({ storyboard, onClick, onDelete }) {
 // ── Main List Page ──
 
 export default function StoryboardList({ onOpenStoryboard }) {
+  const navigate = useNavigate();
   const [storyboards, setStoryboards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -305,6 +307,15 @@ export default function StoryboardList({ onOpenStoryboard }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Back to app */}
+      <button
+        onClick={() => navigate('/')}
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors mb-6"
+      >
+        <ArrowLeft size={16} />
+        Back to Studio
+      </button>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
