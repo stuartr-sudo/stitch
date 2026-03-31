@@ -5,11 +5,8 @@ import { Input } from '@/components/ui/input';
 
 const SLIDE_TYPES = [
   { value: 'hook', label: 'Hook' },
-  { value: 'content', label: 'Content' },
-  { value: 'stat', label: 'Stat' },
-  { value: 'quote', label: 'Quote' },
-  { value: 'cta', label: 'CTA' },
-  { value: 'image_focus', label: 'Image Focus' },
+  { value: 'story', label: 'Story' },
+  { value: 'conclusion', label: 'Conclusion' },
 ];
 
 const STATUS_INFO = {
@@ -22,21 +19,14 @@ const STATUS_INFO = {
 export default function SlideEditor({ slide, onUpdate, onRegenerate, captionText, onUpdateCaption }) {
   const [headline, setHeadline] = useState('');
   const [bodyText, setBodyText] = useState('');
-  const [statValue, setStatValue] = useState('');
-  const [statLabel, setStatLabel] = useState('');
-  const [ctaText, setCtaText] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
   const [caption, setCaption] = useState('');
   const [regenerating, setRegendering] = useState(false);
 
-  // Sync state when slide changes
   useEffect(() => {
     if (slide) {
       setHeadline(slide.headline || '');
       setBodyText(slide.body_text || '');
-      setStatValue(slide.stat_value || '');
-      setStatLabel(slide.stat_label || '');
-      setCtaText(slide.cta_text || '');
       setImagePrompt(slide.image_prompt || '');
     }
   }, [slide?.id]);
@@ -96,12 +86,12 @@ export default function SlideEditor({ slide, onUpdate, onRegenerate, captionText
       {/* Slide type selector */}
       <div>
         <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex gap-1">
           {SLIDE_TYPES.map(t => (
             <button
               key={t.value}
               onClick={() => handleTypeChange(t.value)}
-              className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+              className={`flex-1 px-2 py-1.5 text-xs rounded-md border transition-colors ${
                 slide.slide_type === t.value
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -113,71 +103,29 @@ export default function SlideEditor({ slide, onUpdate, onRegenerate, captionText
         </div>
       </div>
 
-      {/* Text fields — show based on slide type */}
+      {/* Text fields — same for all types */}
       <div className="space-y-3">
-        {(slide.slide_type !== 'stat' || slide.headline) && (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              {slide.slide_type === 'quote' ? 'Quote Text' : 'Headline'}
-            </label>
-            <Input
-              value={headline}
-              onChange={e => setHeadline(e.target.value)}
-              onBlur={() => handleBlur('headline', headline)}
-              placeholder="Main text"
-            />
-          </div>
-        )}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Headline</label>
+          <Input
+            value={headline}
+            onChange={e => setHeadline(e.target.value)}
+            onBlur={() => handleBlur('headline', headline)}
+            placeholder="Main text"
+          />
+        </div>
 
-        {slide.slide_type === 'content' && (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Body Text</label>
-            <textarea
-              value={bodyText}
-              onChange={e => setBodyText(e.target.value)}
-              onBlur={() => handleBlur('body_text', bodyText)}
-              placeholder="Supporting text"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[80px]"
-            />
-          </div>
-        )}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Body Text</label>
+          <textarea
+            value={bodyText}
+            onChange={e => setBodyText(e.target.value)}
+            onBlur={() => handleBlur('body_text', bodyText)}
+            placeholder={slide.slide_type === 'hook' ? 'Usually empty for hook slides' : 'Supporting detail'}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[80px]"
+          />
+        </div>
 
-        {slide.slide_type === 'stat' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Stat Value</label>
-              <Input
-                value={statValue}
-                onChange={e => setStatValue(e.target.value)}
-                onBlur={() => handleBlur('stat_value', statValue)}
-                placeholder="e.g. 73%"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Stat Label</label>
-              <Input
-                value={statLabel}
-                onChange={e => setStatLabel(e.target.value)}
-                onBlur={() => handleBlur('stat_label', statLabel)}
-                placeholder="e.g. of marketers agree"
-              />
-            </div>
-          </>
-        )}
-
-        {slide.slide_type === 'cta' && (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">CTA Text</label>
-            <Input
-              value={ctaText}
-              onChange={e => setCtaText(e.target.value)}
-              onBlur={() => handleBlur('cta_text', ctaText)}
-              placeholder="e.g. Follow for more"
-            />
-          </div>
-        )}
-
-        {/* Image prompt */}
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Image Prompt</label>
           <textarea
@@ -202,7 +150,6 @@ export default function SlideEditor({ slide, onUpdate, onRegenerate, captionText
         Regenerate Image
       </Button>
 
-      {/* Divider */}
       <hr className="border-gray-100" />
 
       {/* Post caption */}

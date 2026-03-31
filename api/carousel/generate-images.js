@@ -23,21 +23,22 @@ function parseAspectRatio(ar) {
 
 /**
  * Build the final image generation prompt.
- * Style goes FIRST so the model treats it as the primary directive.
- * The slide's image_prompt describes the scene content only.
+ * Visual world anchors the scene, style sets the aesthetic, slide prompt adds the angle.
  */
-function buildImagePrompt(slideImagePrompt, stylePrompt) {
-  // Style first, scene second — this is critical for consistency
-  const parts = [stylePrompt, slideImagePrompt].filter(Boolean);
-  if (parts.length === 0) return 'abstract background';
-  return parts.join('. ');
+function buildImagePrompt(slideImagePrompt, stylePrompt, visualWorld) {
+  const parts = [
+    visualWorld ? `Scene: ${visualWorld}` : null,
+    stylePrompt,
+    slideImagePrompt,
+  ].filter(Boolean);
+  return parts.join('. ') || 'abstract background';
 }
 
 export default async function handler(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'carousel id is required' });
 
-  const { image_model = 'fal_nano_banana', style_prompt = '' } = req.body || {};
+  const { image_model = 'fal_nano_banana', style_prompt = '', carousel_style } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -97,8 +98,8 @@ export default async function handler(req, res) {
             .update({ generation_status: 'generating' })
             .eq('id', slide.id);
 
-          // Build prompt: STYLE FIRST, then scene description
-          const fullPrompt = buildImagePrompt(slide.image_prompt, style_prompt);
+          // Build prompt: visual world + style + scene angle
+          const fullPrompt = buildImagePrompt(slide.image_prompt, style_prompt, carousel.visual_world);
 
           // Generate background image
           console.log(`[carousel/generate-images] Slide ${slide.slide_number}: prompt="${fullPrompt.slice(0, 120)}..."`);
@@ -122,12 +123,12 @@ export default async function handler(req, res) {
           console.log(`[carousel/generate-images] Slide ${slide.slide_number}: composing branded overlay...`);
           const composedBuffer = await composeSlide({
             slideType: slide.slide_type,
+            carouselStyle: carousel_style || carousel.carousel_style || 'bold_editorial',
             canvasW: w,
             canvasH: h,
             backgroundImageUrl: bgUrl,
             logoUrl,
             brandColors,
-            colorTemplateIndex: carousel.color_template || 0,
             headline: slide.headline,
             bodyText: slide.body_text,
             statValue: slide.stat_value,

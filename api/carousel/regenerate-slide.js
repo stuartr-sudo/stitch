@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const { id, slideId } = req.params;
   if (!id || !slideId) return res.status(400).json({ error: 'carousel id and slideId are required' });
 
-  const { image_model = 'fal_nano_banana' } = req.body || {};
+  const { image_model = 'fal_nano_banana', style_prompt = '' } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -63,7 +63,13 @@ export default async function handler(req, res) {
       .update({ generation_status: 'generating' })
       .eq('id', slideId);
 
-    const fullPrompt = slide.image_prompt || 'abstract background, soft lighting';
+    // Build prompt with visual_world for consistency + style
+    const promptParts = [
+      carousel.visual_world ? `Scene: ${carousel.visual_world}` : null,
+      style_prompt,
+      slide.image_prompt,
+    ].filter(Boolean);
+    const fullPrompt = promptParts.join('. ') || 'abstract background, soft lighting';
 
     const bgUrl = await generateImageV2(image_model, fullPrompt, ratio, keys, supabase);
 
@@ -76,12 +82,12 @@ export default async function handler(req, res) {
 
     const composedBuffer = await composeSlide({
       slideType: slide.slide_type,
+      carouselStyle: carousel.carousel_style || 'bold_editorial',
       canvasW: w,
       canvasH: h,
       backgroundImageUrl: bgUrl,
       logoUrl,
       brandColors,
-      colorTemplateIndex: carousel.color_template || 0,
       headline: slide.headline,
       bodyText: slide.body_text,
       statValue: slide.stat_value,

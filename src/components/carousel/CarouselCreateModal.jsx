@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import StyleGrid from '@/components/ui/StyleGrid';
+import { CAROUSEL_STYLE_TEMPLATES } from '@/lib/carouselStyleTemplates';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -35,6 +36,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [brandKitId, setBrandKitId] = useState('');
   const [brands, setBrands] = useState([]);
   const [visualStyle, setVisualStyle] = useState('');
+  const [carouselStyle, setCarouselStyle] = useState('bold_editorial');
   const [carouselType, setCarouselType] = useState('static');
   const [creating, setCreating] = useState(false);
 
@@ -76,6 +78,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
           source_url: sourceType === 'url' ? sourceUrl.trim() : null,
           style_preset: visualStyle || null,
           carousel_type: carouselType,
+          carousel_style: carouselStyle,
         }),
       });
       const data = await res.json();
@@ -84,13 +87,11 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         return;
       }
 
-      // Immediately kick off content generation so the editor doesn't ask again
       const carouselId = data.carousel.id;
       const genBody = {};
       if (sourceType === 'topic') {
         genBody.topic = topic.trim();
       }
-      // Fire and forget — the editor will poll for results
       apiFetch(`/api/carousel/${carouselId}/generate-content`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,7 +192,28 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
           </div>
         )}
 
-        {/* Visual Style */}
+        {/* Carousel Style (layout template) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Carousel Style</label>
+          <div className="grid grid-cols-2 gap-2">
+            {CAROUSEL_STYLE_TEMPLATES.map(tpl => (
+              <button
+                key={tpl.value}
+                onClick={() => setCarouselStyle(tpl.value)}
+                className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                  carouselStyle === tpl.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className="font-medium block">{tpl.label}</span>
+                <span className="text-xs text-gray-400 block mt-0.5">{tpl.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Visual Style (image aesthetic) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Visual Style</label>
           <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="14rem" />

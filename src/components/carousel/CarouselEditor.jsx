@@ -150,14 +150,17 @@ export default function CarouselEditor({ carouselId }) {
       const res = await apiFetch(`/api/carousel/${carouselId}/generate-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_model: 'fal_nano_banana', style_prompt: stylePrompt }),
+        body: JSON.stringify({
+          image_model: 'fal_nano_banana',
+          style_prompt: stylePrompt,
+          carousel_style: carousel.carousel_style || 'bold_editorial',
+        }),
       });
       const data = await res.json();
       if (data.error) {
         toast.error(data.error);
         return;
       }
-      // Start polling
       setCarousel(prev => ({ ...prev, status: 'generating' }));
     } catch (err) {
       toast.error('Image generation failed');
@@ -177,7 +180,11 @@ export default function CarouselEditor({ carouselId }) {
       const res = await apiFetch(`/api/carousel/${carouselId}/slides/${slideId}/regenerate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_model: 'fal_nano_banana', style_prompt: getStylePrompt(carousel.style_preset) }),
+        body: JSON.stringify({
+          image_model: 'fal_nano_banana',
+          style_prompt: getStylePrompt(carousel.style_preset),
+          carousel_style: carousel.carousel_style || 'bold_editorial',
+        }),
       });
       const data = await res.json();
       if (data.error) {

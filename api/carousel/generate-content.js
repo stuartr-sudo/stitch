@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-import { z } from 'zod';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { scrapeArticle } from '../lib/pipelineHelpers.js';
 import { fetchUrlContent, resolveExaKey } from '../lib/newsjackScorer.js';
@@ -18,40 +17,38 @@ const SynthesisSchema = {
       items: { type: 'string' },
       description: '3 punchy hook lines (3-8 words each) that would stop a scroll',
     },
-    key_facts: {
+    story_beats: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          fact: { type: 'string' },
-          source_detail: { type: 'string' },
+          beat: { type: 'string', description: 'What this story beat reveals (1 sentence)' },
+          evidence: { type: 'string', description: 'The specific fact/stat/quote that proves it' },
+          source: { type: 'string' },
         },
-        required: ['fact', 'source_detail'],
+        required: ['beat', 'evidence', 'source'],
         additionalProperties: false,
       },
-      description: '5-7 specific facts, stats, or quotes extracted from the research. Each must include where it came from.',
+      description: '5-8 sequential story beats that build on each other. NOT a random list — each must follow from the previous.',
     },
     narrative_arc: { type: 'string', description: 'The story in 2-3 sentences: what tension opens it, what insight resolves it, what action closes it' },
     visual_world: { type: 'string', description: 'A consistent SCENE SETTING for all slide backgrounds — describe the physical environment, not the artistic style. E.g. "kitchen countertop with herbs and cutting boards, warm morning window light, shallow depth of field". 1-2 sentences.' },
     cta_direction: { type: 'string', description: 'What should the reader do after reading? Be specific.' },
   },
-  required: ['thesis', 'angle', 'hook_options', 'key_facts', 'narrative_arc', 'visual_world', 'cta_direction'],
+  required: ['thesis', 'angle', 'hook_options', 'story_beats', 'narrative_arc', 'visual_world', 'cta_direction'],
   additionalProperties: false,
 };
 
 const SlideItemSchema = {
   type: 'object',
   properties: {
-    slide_type: { type: 'string', enum: ['hook', 'content', 'stat', 'quote', 'cta', 'image_focus'] },
-    headline: { type: 'string' },
-    body_text: { type: 'string' },
-    stat_value: { type: 'string', description: 'SHORT number only — max 6 characters. Examples: "73%", "$2.4M", "10x", "20". NEVER a phrase or sentence.' },
-    stat_label: { type: 'string' },
-    cta_text: { type: 'string' },
-    image_prompt: { type: 'string' },
+    slide_type: { type: 'string', enum: ['hook', 'story', 'conclusion'] },
+    headline: { type: 'string', description: 'The main bold text. 3-10 words.' },
+    body_text: { type: 'string', description: 'Supporting detail. 1-2 sentences for story/conclusion slides. Empty string for hook.' },
+    image_prompt: { type: 'string', description: 'Scene description for background image. 20-40 words. Physical objects + camera angle only.' },
     transition_note: { type: 'string', description: 'Internal note: why does this slide follow the previous one?' },
   },
-  required: ['slide_type', 'headline', 'body_text', 'stat_value', 'stat_label', 'cta_text', 'image_prompt', 'transition_note'],
+  required: ['slide_type', 'headline', 'body_text', 'image_prompt', 'transition_note'],
   additionalProperties: false,
 };
 
@@ -59,7 +56,7 @@ const CarouselOutputSchema = {
   type: 'object',
   properties: {
     slides: { type: 'array', items: SlideItemSchema },
-    caption_text: { type: 'string' },
+    caption_text: { type: 'string', description: 'The social media post caption. This EXPANDS on the slides with more detail — not a summary.' },
   },
   required: ['slides', 'caption_text'],
   additionalProperties: false,
@@ -68,10 +65,10 @@ const CarouselOutputSchema = {
 // ─── Platform config ──────────────────────────────────────────────────────────
 
 const PLATFORM_GUIDANCE = {
-  instagram: { slideRange: '6-10', textDensity: 'medium — punchy headlines, 1-2 sentence bodies max', ratioNote: 'portrait 4:5 or square 1:1', captionLength: '100-200 words with hashtags' },
-  linkedin: { slideRange: '6-10', textDensity: 'higher — more text per slide is acceptable, professionals read more', ratioNote: 'square 1:1', captionLength: '150-300 words, professional tone, end with a question' },
+  instagram: { slideRange: '6-10', textDensity: 'medium — punchy headlines, 1-2 sentence bodies max', ratioNote: 'portrait 4:5 or square 1:1', captionLength: '150-250 words with hashtags' },
+  linkedin: { slideRange: '6-10', textDensity: 'higher — more text per slide is acceptable, professionals read more', ratioNote: 'square 1:1', captionLength: '200-400 words, professional tone, end with a question' },
   tiktok: { slideRange: '5-8', textDensity: 'minimal — big bold text, 5-8 words per slide max', ratioNote: 'vertical 9:16', captionLength: '50-100 words, casual tone' },
-  facebook: { slideRange: '5-8', textDensity: 'medium', ratioNote: 'square 1:1', captionLength: '80-150 words' },
+  facebook: { slideRange: '5-8', textDensity: 'medium', ratioNote: 'square 1:1', captionLength: '100-200 words' },
 };
 
 // ─── Quality rules ────────────────────────────────────────────────────────────
@@ -85,15 +82,15 @@ const ANTI_SLOP = `HARD RULES — violating any means the output is rejected:
 - Every single line must contain a SPECIFIC claim, name, number, or concrete detail
 - If you can't be specific, cut the slide entirely — fewer good slides beats more mediocre ones`;
 
-const IMAGE_PROMPT_RULES = `IMAGE PROMPT RULES — CRITICAL:
-- Image prompts describe the SCENE ONLY — objects, setting, composition, camera angle
-- NEVER include artistic style, medium, or aesthetic directions (e.g. "watercolor", "photorealistic", "illustration", "warm tones", "cinematic") — the visual style is applied separately and you will BREAK consistency if you add style words
+const IMAGE_PROMPT_RULES = `IMAGE PROMPT CONSISTENCY — CRITICAL:
+- ALL image prompts must describe the EXACT SAME physical environment: the visual_world from the brief
+- Vary ONLY: camera angle (close-up, wide, overhead, eye-level), focus point, and minor compositional shifts
+- Do NOT introduce new locations, objects, or settings between slides
+- Think of it as ONE photo shoot in ONE location — you're just moving the camera
+- NEVER include artistic style, medium, or aesthetic directions (no "watercolor", "cinematic", "illustration")
 - NEVER describe text, overlays, UI elements, or typography
 - NEVER use abstract concepts ("innovation", "growth", "success") — only physical, filmable things
-- All prompts should describe the SAME physical environment from different angles/compositions for visual consistency
-- Good: "kitchen countertop with small hydroponic planter, seedlings visible through clear water reservoir, morning light from window, cutting board and herbs nearby"
-- Bad: "warm watercolor illustration of a cozy kitchen with plants, soft golden lighting" (this adds style words — NEVER do this)
-- Keep prompts 20-50 words, concrete and specific`;
+- Keep prompts 20-40 words, starting with the environment, ending with the camera angle`;
 
 // ─── Stage 1: Research Synthesis ──────────────────────────────────────────────
 
@@ -108,6 +105,7 @@ CRITICAL: You are NOT writing the carousel. You are preparing a focused brief so
 
 Rules:
 - Pick ONE thesis. Not three. Not a survey of the topic. ONE argument.
+- The story_beats must be SEQUENTIAL — each beat builds on the previous one. Think: Setup → Tension → Evidence → Evidence → Insight → Resolution. NOT a random list of facts.
 - Extract SPECIFIC facts with real numbers, names, dates, places. If the research doesn't contain specifics, say so — don't invent them.
 - The hook_options should be provocative, curiosity-driven, and SHORT (3-8 words). They should make someone stop scrolling.
 - The visual_world must describe a concrete PHYSICAL ENVIRONMENT — not an artistic style. Not "warm watercolor illustration" but "kitchen countertop next to a window, herb pots, cutting boards, morning sunlight". The artistic style is controlled separately. Describe only the setting, objects, and lighting.
@@ -159,46 +157,54 @@ YOUR BRIEF:
 - Thesis: ${synthesis.thesis}
 - Angle: ${synthesis.angle}
 - Narrative arc: ${synthesis.narrative_arc}
-- Visual world: ${synthesis.visual_world}
+- Scene setting: ${synthesis.visual_world}
 - CTA direction: ${synthesis.cta_direction}
 
-AVAILABLE FACTS (use these — don't invent new ones):
-${synthesis.key_facts.map((f, i) => `${i + 1}. ${f.fact} [source: ${f.source_detail}]`).join('\n')}
+STORY BEATS (use these in order — they ARE the story):
+${synthesis.story_beats.map((b, i) => `${i + 1}. ${b.beat}\n   Evidence: ${b.evidence} [source: ${b.source}]`).join('\n')}
 
 HOOK OPTIONS (pick the best one or combine):
 ${synthesis.hook_options.map((h, i) => `${i + 1}. "${h}"`).join('\n')}
 
-CAROUSEL STRUCTURE:
-- Slide 1: type "hook" — use one of the hook options above. Headline ONLY, no body_text. 3-8 words MAX.
-- Slides 2-N: mix of "content", "stat", "quote", "image_focus" — tell the story slide by slide
-  - "content": headline (key point, max 8 words) + body_text (1-2 sentences with a SPECIFIC fact or claim)
-  - "stat": stat_value (SHORT number ONLY, max 6 chars: "73%", "$2.4M", "10x", "20d") + stat_label (what it means, max 12 words) + headline (context, max 6 words). NEVER put a phrase in stat_value.
-  - "quote": headline contains a specific, memorable insight from the research (NOT a generic platitude like "patience pays off"). Must be tied to a concrete fact or finding.
-  - "image_focus": headline is a short 3-5 word caption; the image does the talking
-- Final slide: type "cta" — cta_text is the action, headline is supporting context
+THERE ARE ONLY 3 SLIDE TYPES — every slide looks the same, just different content:
 
-SLIDE FLOW:
+1. "hook" (Slide 1 only):
+   - headline: The scroll-stopping hook. 3-8 words MAX. Use one of the hook options above.
+   - body_text: Empty string "". The hook has no body.
+
+2. "story" (All middle slides):
+   - headline: The key claim or point of this beat. Max 10 words.
+   - body_text: The specific evidence, fact, or detail. 1-2 sentences.
+   - Each story slide is ONE beat advancing the narrative. NOT a random fact.
+
+3. "conclusion" (Final slide only):
+   - headline: The takeaway or call-to-action. Max 8 words.
+   - body_text: What should the reader do or think differently? 1 sentence.
+
+STORY FLOW (CRITICAL):
+- This is ONE story told across slides: Setup → Tension → Evidence → Insight → Resolution
 - Each slide must EARN the next swipe. The reader should think "wait, tell me more"
-- Use the transition_note field to explain (to yourself) WHY this slide follows the previous one
-- Good transitions: "this raises the question...", "the proof is in the numbers...", "but here's the catch...", "and it gets worse/better..."
+- Use the transition_note to explain (to yourself) WHY this slide follows the previous one
+- Good: "the hook sets up curiosity → this slide reveals the surprising answer → this slide shows the proof → this slide shows the consequence → this slide tells them what to do"
 - BAD: random fact, random fact, random fact (no connective tissue)
 
 IMAGE PROMPTS:
-- All image prompts must describe scenes within this environment: "${synthesis.visual_world}"
-- Each slide should show a DIFFERENT angle, composition, or detail of the same environment
-- Describe only physical objects, camera angle, and composition — NO style words (no "watercolor", "cinematic", "illustration", "photorealistic")
-- The artistic style is applied automatically — adding style words will break visual consistency
+- ALL prompts describe the SAME environment: "${synthesis.visual_world}"
+- Each slide shows a DIFFERENT angle or detail of this SAME location
+- Slide 1: wide establishing shot. Slide 2: medium shot. Slide 3: close-up detail. Etc.
+- NEVER introduce new locations. NEVER add style words. Physical objects + camera angle only.
+- 20-40 words per prompt.
 
 PLATFORM: ${platform}
 - Text density: ${platformInfo.textDensity}
 - Slide count: ${platformInfo.slideRange} slides total
-- Caption: ${platformInfo.captionLength}
 
-CAPTION:
-- Write caption_text for the social post
-- Summarize the key insight (don't just repeat slide text)
-- End with a question or call to engage
-- ${platform === 'linkedin' ? 'Professional but human tone. No hashtag spam — 3 max.' : ''}
+CAPTION (caption_text):
+- The caption is NOT a summary of the slides — it EXPANDS on them.
+- Include details, context, and nuance that didn't fit on slides.
+- Think of slides as the trailer, caption as the article.
+- ${platformInfo.captionLength}
+- ${platform === 'linkedin' ? 'Professional but human tone. No hashtag spam — 3 max. End with an engaging question.' : ''}
 - ${platform === 'instagram' ? 'Include 5-10 relevant hashtags at the end.' : ''}
 
 ${ANTI_SLOP}
@@ -229,7 +235,7 @@ ${IMAGE_PROMPT_RULES}`;
   };
 }
 
-// ─── Research gathering (unchanged logic, cleaner formatting) ─────────────────
+// ─── Research gathering ──────────────────────────────────────────────────────
 
 async function gatherResearch(topic, userId, userEmail) {
   const searchApiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
@@ -262,7 +268,6 @@ async function gatherResearch(topic, userId, userEmail) {
 
   if (articles.length === 0) return null;
 
-  // Scrape top 3 for deeper content
   const scrapeResults = await Promise.allSettled(
     articles.slice(0, 3).map(async (art) => {
       try {
@@ -273,7 +278,6 @@ async function gatherResearch(topic, userId, userEmail) {
     })
   );
 
-  // Format as structured research (not raw dump)
   const formattedArticles = articles.map((art, i) => {
     const scraped = scrapeResults[i]?.status === 'fulfilled' ? scrapeResults[i].value : '';
     return `SOURCE ${i + 1}: "${art.title}"\nURL: ${art.url}\nSummary: ${art.snippet}\n${scraped ? `Full text excerpt:\n${scraped}` : '(full text unavailable)'}`;
@@ -292,7 +296,6 @@ export default async function handler(req, res) {
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  // Fetch carousel
   const { data: carousel, error: cErr } = await supabase
     .from('carousels')
     .select('*')
@@ -311,7 +314,6 @@ export default async function handler(req, res) {
   let content = carousel.source_content;
   const { topic, bullet_points } = req.body || {};
 
-  // Scrape URL if we have one and don't have cached content
   if (carousel.source_url && (!content || content.length < 200)) {
     try {
       const exaKey = await resolveExaKey(req.user.id);
@@ -327,7 +329,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Topic-based research if no URL content
   if (!content && topic) {
     try {
       content = await gatherResearch(topic, req.user.id, req.user.email);
@@ -336,7 +337,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Add bullet points as supplementary context
   if (content && bullet_points) {
     content += `\n\nUSER'S KEY POINTS (prioritize these):\n${bullet_points}`;
   } else if (!content && topic) {
@@ -412,8 +412,6 @@ export default async function handler(req, res) {
     }).catch(() => {});
 
     // ── Save to DB ──
-
-    // Delete existing slides
     await supabase.from('carousel_slides').delete().eq('carousel_id', id);
 
     const slideRows = output.slides.map((slide, i) => ({
@@ -422,9 +420,9 @@ export default async function handler(req, res) {
       slide_type: slide.slide_type,
       headline: slide.headline || '',
       body_text: slide.body_text || '',
-      stat_value: slide.stat_value || '',
-      stat_label: slide.stat_label || '',
-      cta_text: slide.cta_text || '',
+      stat_value: '',
+      stat_label: '',
+      cta_text: '',
       image_prompt: slide.image_prompt || '',
       generation_status: 'pending',
     }));
@@ -436,12 +434,13 @@ export default async function handler(req, res) {
 
     if (insertErr) return res.status(500).json({ error: insertErr.message });
 
-    // Update carousel metadata — also store the synthesis for potential re-use
+    // Save visual_world on the carousel for image consistency
     await supabase
       .from('carousels')
       .update({
         slide_count: output.slides.length,
         caption_text: output.caption_text,
+        visual_world: synthesis.visual_world,
         status: 'draft',
       })
       .eq('id', id);
@@ -450,7 +449,6 @@ export default async function handler(req, res) {
       success: true,
       slides: slides.sort((a, b) => a.slide_number - b.slide_number),
       caption_text: output.caption_text,
-      // Return synthesis so the frontend could display it or allow editing
       synthesis: {
         thesis: synthesis.thesis,
         angle: synthesis.angle,
