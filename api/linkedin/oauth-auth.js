@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     client_id: clientId,
     redirect_uri: redirectUri,
     state,
-    scope: 'openid profile w_member_social',
+    scope: 'openid profile w_member_social r_ads w_ads r_ads_reporting',
   });
 
   const url = `https://www.linkedin.com/oauth/v2/authorization?${params}`;
