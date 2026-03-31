@@ -233,9 +233,18 @@ function StoryboardCard({ storyboard, onClick, onDelete }) {
 
       {/* Info */}
       <div className="p-3">
-        <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#2C666E] transition-colors">
-          {storyboard.name}
-        </h3>
+        <div className="flex items-start justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#2C666E] transition-colors">
+            {storyboard.name}
+          </h3>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all -mt-0.5 -mr-1 shrink-0"
+            title="Delete storyboard"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
         <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400">
           <span className="flex items-center gap-0.5"><Layers size={10} /> {storyboard.frameCount} frames</span>
           <span className="flex items-center gap-0.5"><Clock size={10} /> {storyboard.desired_length}s</span>
