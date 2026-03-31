@@ -49,10 +49,23 @@ export default async function handler(req, res) {
         const { text, voice = 'Perseus', style_instructions, speed = 1.0 } = req.body;
         if (!text?.trim()) return res.status(400).json({ error: 'text required' });
 
+        // Build pacing directive based on requested speed so TTS generates
+        // naturally faster speech instead of relying solely on playback speedup
+        let baseStyle = style_instructions || 'Speak in a warm, conversational tone.';
+        let pacingPrefix = '';
+        if (speed >= 1.3) {
+          pacingPrefix = 'Speak at a brisk, fast pace with high energy. Keep sentences flowing quickly with minimal pauses between phrases. ';
+        } else if (speed >= 1.15) {
+          pacingPrefix = 'Speak at an uptempo, lively pace. Keep momentum between sentences with short pauses. ';
+        } else if (speed >= 1.05) {
+          pacingPrefix = 'Speak at a slightly quick, engaging pace. ';
+        }
+        const finalStyle = pacingPrefix + baseStyle;
+
         const audioUrl = await generateGeminiVoiceover(text, keys, supabase, {
           voice,
           model: 'gemini-2.5-flash-tts',
-          styleInstructions: style_instructions || 'Speak in a warm, conversational tone.',
+          styleInstructions: finalStyle,
         });
 
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'gemini-2.5-flash-tts', metadata: { character_count: text.length } });

@@ -43,38 +43,38 @@ const NICHE_VISUAL_MOODS = {
 
 // Niche-specific voice style instructions (from SHORTS_TEMPLATES voice_pacing)
 const NICHE_VOICE_STYLES = {
-  ai_tech_news: 'Fast-paced, authoritative news-anchor energy. Short punchy sentences. Pattern interrupts every 10 seconds.',
-  finance_money: 'Confident and calm, like a trusted financial advisor. Clear actionable language. Build credibility through specific numbers.',
-  motivation_self_help: 'Slow and deliberate at emotional moments, building intensity. Pauses for impact. Like a storyteller around a campfire.',
-  scary_horror: 'Slow and hushed, building dread. Whisper-like at tense moments. Sudden pace changes at reveals. Like reading a scary story at midnight.',
-  history_did_you_know: 'Storyteller energy — measured pace with dramatic pauses. Build wonder and surprise.',
-  true_crime: 'Measured and deliberate like a documentary narrator. Build dread with facts. Let silences breathe.',
-  science_nature: 'Curious and enthusiastic like a passionate science teacher. Build from simple to mind-blowing. Use analogies.',
-  relationships_dating: 'Warm and conversational, like a trusted friend who studied psychology. Empathetic tone. No judgment.',
-  health_fitness: 'Energetic and direct, like a knowledgeable personal trainer. Cut through myths with confidence. Use numbers.',
-  gaming_popculture: 'Enthusiastic fan energy — excited but knowledgeable. Like the most passionate person at a gaming convention.',
-  conspiracy_mystery: 'Measured and curious, like a journalist uncovering something. Not sensationalist — let the facts speak.',
-  business_entrepreneur: 'Direct and high-energy, like a successful founder on a podcast. No corporate fluff. Talk straight.',
-  food_cooking: 'Warm and enthusiastic, like a passionate chef sharing secrets. Use sensory language — describe tastes, textures, aromas.',
-  travel_adventure: 'Dreamy and vivid like a travel documentary. Paint pictures with words. Build wonder and desire.',
-  psychology_mindblown: 'Measured and insightful, like a fascinating psychology professor. Build revelations gradually. Use "you" to make it personal.',
-  space_cosmos: 'Awestruck and measured, building from curiosity to cosmic wonder. Use analogies to make incomprehensible scales relatable.',
-  animals_wildlife: 'Curious and amazed like a nature documentary narrator. Build wonder through specific details. Use vivid descriptions.',
-  sports_athletes: 'Excited sports commentary energy, building tension toward the climax. Slow down at emotional beats. Fast during action.',
-  education_learning: 'Enthusiastic teacher energy, like someone who just discovered something incredible. Build surprise through delivery.',
-  paranormal_ufo: 'Investigative journalist tone — serious and measured. Let the evidence speak. Build intrigue through facts, not sensationalism.',
+  ai_tech_news: 'Speak with fast-paced, punchy news-anchor energy. Hit each fact hard. Keep momentum high with short sharp sentences and quick transitions between ideas.',
+  finance_money: 'Speak with confident authority at a brisk pace. Be direct and clear. Punch the numbers. Keep it moving like a sharp financial briefing.',
+  motivation_self_help: 'Speak with rising intensity and conviction. Build emotional momentum. Vary between powerful declarations and brief meaningful pauses. Sound genuinely passionate.',
+  scary_horror: 'Speak with building tension and suspense. Start hushed, then shift suddenly louder at reveals. Vary pace dramatically — slow creeping dread, then rapid bursts.',
+  history_did_you_know: 'Speak with animated storyteller energy at a lively pace. Sound genuinely fascinated. Hit reveals with dramatic emphasis. Keep it moving between facts.',
+  true_crime: 'Speak with gripping documentary intensity. Let key facts land with weight. Keep a driving forward momentum. Sound focused and compelling.',
+  science_nature: 'Speak with infectious curiosity and excitement at a quick pace. Sound amazed by the facts. Build energy toward each mind-blowing reveal.',
+  relationships_dating: 'Speak warmly and directly like a perceptive friend. Quick conversational pace. Sound genuine and insightful. Keep it real and engaging.',
+  health_fitness: 'Speak with energetic, direct coaching energy. Be punchy and confident. Cut through the noise with fast, clear statements.',
+  gaming_popculture: 'Speak with excited, rapid-fire fan energy. Sound genuinely hyped. Quick pace with enthusiastic emphasis on key moments.',
+  conspiracy_mystery: 'Speak with intense investigative energy. Drive forward through each revelation. Sound focused and intrigued. Build momentum toward each twist.',
+  business_entrepreneur: 'Speak with sharp, high-energy founder energy. Fast pace, no filler. Be direct and punchy. Sound like someone who gets results.',
+  food_cooking: 'Speak with warm enthusiasm at a lively pace. Sound genuinely excited about flavors and techniques. Be vivid and engaging.',
+  travel_adventure: 'Speak with vivid, excited energy about each destination. Quick pace with wonder in your voice. Make every place sound irresistible.',
+  psychology_mindblown: 'Speak with fascinated intensity. Build each insight with growing excitement. Sound genuinely amazed. Quick pace between revelations.',
+  space_cosmos: 'Speak with awestruck wonder at a driving pace. Sound genuinely amazed by cosmic scale. Build from curiosity to mind-blowing reveals.',
+  animals_wildlife: 'Speak with animated fascination at a lively pace. Sound genuinely amazed by each creature. Keep the energy up with vivid descriptions.',
+  sports_athletes: 'Speak with electric sports commentary energy. Fast pace building toward the climax. Sound excited and fully invested in the action.',
+  education_learning: 'Speak with infectious enthusiasm at a quick pace. Sound like you just discovered something incredible and can barely contain your excitement.',
+  paranormal_ufo: 'Speak with serious investigative intensity. Drive through evidence with building intrigue. Sound focused and compelling. Keep momentum high.',
 };
 
 // Universal voice style quick-picks (niche-independent)
 const VOICE_STYLE_PRESETS = [
-  { label: 'Documentary', value: 'Authoritative documentary narrator. Measured pace, dramatic pauses at reveals, steady confident delivery.' },
-  { label: 'Storyteller', value: 'Captivating storyteller energy. Build tension gradually, vary pace with the narrative arc, pause at emotional peaks.' },
-  { label: 'News Anchor', value: 'Fast-paced breaking news energy. Short punchy sentences, urgent tone, pattern interrupts to maintain attention.' },
-  { label: 'Whispering', value: 'Hushed and intimate, like sharing a secret. Slow deliberate delivery, whisper-like at tense moments, sudden pace changes.' },
-  { label: 'High Energy', value: 'Electric high-energy delivery. Rapid-fire sentences, enthusiastic peaks, keep the adrenaline pumping throughout.' },
-  { label: 'Teacher', value: 'Enthusiastic teacher sharing a breakthrough discovery. Build from simple to mind-blowing, use analogies, keep it personal.' },
-  { label: 'Campfire', value: 'Fireside storyteller. Slow and deliberate, building intensity at emotional moments. Pauses for impact. Draw listeners in.' },
-  { label: 'Podcast Host', value: 'Casual conversational podcast energy. Direct, no fluff, talk straight like you\'re explaining to a friend over coffee.' },
+  { label: 'Documentary', value: 'Speak with authoritative documentary narrator confidence. Drive forward with momentum. Emphasize reveals dramatically. Keep a compelling pace.' },
+  { label: 'Storyteller', value: 'Speak with captivating storyteller energy. Vary your pace — quick during action, slower at emotional peaks. Build tension and release. Sound fully invested.' },
+  { label: 'News Anchor', value: 'Speak with fast-paced breaking news energy. Short punchy sentences, urgent tone. Hit each point hard and move on. Keep the audience locked in.' },
+  { label: 'Whispering', value: 'Speak in a hushed, intimate whisper like sharing a dangerous secret. Slow and deliberate, then suddenly shift pace at shocking moments.' },
+  { label: 'High Energy', value: 'Speak with electric, rapid-fire energy. Sound excited and fully committed. Keep the adrenaline pumping with quick sentences and enthusiastic peaks.' },
+  { label: 'Teacher', value: 'Speak with infectious enthusiasm like a teacher sharing a breakthrough. Build excitement from simple to mind-blowing. Keep a quick, engaging pace.' },
+  { label: 'Campfire', value: 'Speak like a compelling fireside storyteller. Build intensity gradually, vary between hushed moments and powerful declarations. Draw listeners in deep.' },
+  { label: 'Podcast Host', value: 'Speak with casual, direct podcast energy. Quick conversational pace, no filler. Sound real and relatable like talking to a friend.' },
 ];
 
 const NICHES = [
@@ -399,10 +399,10 @@ export default function ShortsWorkbenchPage() {
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
-  const [styleInstructions, setStyleInstructions] = useState('Authoritative documentary narrator. Measured pace, dramatic pauses at reveals, steady confident delivery.');
+  const [styleInstructions, setStyleInstructions] = useState('Speak with authoritative documentary narrator confidence. Drive forward with momentum. Emphasize reveals dramatically. Keep a compelling pace.');
   const [voiceoverUrl, setVoiceoverUrl] = useState(null);
   const [voiceLoading, setVoiceLoading] = useState(false);
-  const [voiceSpeed, setVoiceSpeed] = useState(1.1);
+  const [voiceSpeed, setVoiceSpeed] = useState(1.15);
   const [voiceApproved, setVoiceApproved] = useState(false);
 
   // ── Step 2: Timing & Music ──────────────────────────────────────
@@ -995,7 +995,7 @@ export default function ShortsWorkbenchPage() {
                     </button>
                   </div>
                   <textarea value={script} onChange={e => setScript(e.target.value)} placeholder="Write or generate your narration script..."
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm h-40 resize-none" />
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[160px] resize-y" />
                   <div className="text-[10px] text-slate-400 mt-1">{script.split(/\s+/).filter(Boolean).length} words · ~{Math.round(script.split(/\s+/).filter(Boolean).length / 2.7)}s at 2.7 wps</div>
                 </div>
               </div>
