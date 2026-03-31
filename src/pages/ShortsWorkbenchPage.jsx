@@ -228,11 +228,14 @@ function SingleFrame({ url, label, onRegen, loading }) {
           <ImageIcon className="w-8 h-8 text-slate-300" />
         </div>
       )}
-      <div className="px-3 py-2 bg-slate-50 text-center flex items-center justify-between">
-        <span className="text-[10px] font-bold text-slate-600 uppercase">{label}</span>
-        <button onClick={onRegen} disabled={loading} className="text-[10px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
-          <RotateCcw className="w-3 h-3" />
-        </button>
+      <div className="px-3 py-2 bg-slate-50 text-center">
+        <span className="text-[10px] font-bold text-slate-600 uppercase block">{label}</span>
+        {url && (
+          <button onClick={onRegen} disabled={loading}
+            className="mt-1.5 px-3 py-1.5 bg-[#2C666E] text-white rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-[#234f56] transition-colors w-full">
+            <RotateCcw className="w-3 h-3 inline mr-1" />Regenerate
+          </button>
+        )}
       </div>
     </div>
   );
@@ -964,6 +967,15 @@ export default function ShortsWorkbenchPage() {
                 ? 'Generate START + END frame per scene. Approve pairs, then videos fire in parallel. Each scene\'s end frame becomes the next scene\'s start.'
                 : 'Generate one frame per scene. Videos are sequential — each clip\'s last frame is extracted and becomes the next scene\'s input.'}
             </div>
+
+            {/* Generate All / scene actions */}
+            {blocks.length > 0 && mode === 'i2v' && !frames[0]?.start && (
+              <button onClick={() => generateFrame(0, 'single')} disabled={!!frameLoading}
+                className="w-full mb-4 px-4 py-3 bg-[#2C666E] text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-[#234f56] transition-colors">
+                {frameLoading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <ImageIcon className="w-4 h-4 inline mr-2" />}
+                Generate Scene 1 Frame
+              </button>
+            )}
 
             {/* Scene frames */}
             {blocks.map((block, i) => {
