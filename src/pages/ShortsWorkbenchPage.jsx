@@ -379,12 +379,15 @@ export default function ShortsWorkbenchPage() {
     } catch {}
   };
 
-  // Auto-save when completing a step
+  // Auto-save when key milestones are reached
+  const frameCount = Object.keys(frames).length;
+  const clipCount = Object.keys(clips).length;
   useEffect(() => {
-    if (voiceoverUrl || blocks.length > 0 || Object.keys(frames).length > 0 || finalUrl) {
-      saveDraft();
+    if (voiceoverUrl || blocks.length > 0 || frameCount > 0 || finalUrl) {
+      const timer = setTimeout(() => saveDraft(), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [voiceoverUrl, blocks.length, Object.keys(frames).length, Object.keys(clips).length, finalUrl]);
+  }, [voiceoverUrl, blocks.length, frameCount, clipCount, finalUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Derived state ───────────────────────────────────────────────
   const mode = isFLF(videoModel) ? 'flf' : 'i2v';
