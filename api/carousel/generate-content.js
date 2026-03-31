@@ -76,8 +76,9 @@ const PLATFORM_GUIDANCE = {
 const ANTI_SLOP = `HARD RULES — violating any means the output is rejected:
 - ZERO filler phrases: "In today's world", "Let's dive in", "Here's the thing", "Did you know", "It's no secret"
 - ZERO hedging: "might", "could potentially", "it's possible that"
-- ZERO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry", "game-changer", "revolutionize"
+- ZERO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry", "game-changer", "game changer", "change the game", "revolutionize", "unlock", "supercharge", "empower", "elevate", "seamless", "cutting-edge", "next-level", "harness"
 - ZERO emojis in slide text (captions can have them sparingly)
+- ZERO em dashes (—) — use hyphens (-) instead. This is a strict formatting rule.
 - ZERO repetition — if you said it on slide 3, don't rephrase it on slide 5
 - Every single line must contain a SPECIFIC claim, name, number, or concrete detail
 - If you can't be specific, cut the slide entirely — fewer good slides beats more mediocre ones`;
@@ -148,8 +149,9 @@ Target slide count: ${platformInfo.slideRange}`;
 
 // ─── Stage 2: Slide Writing ───────────────────────────────────────────────────
 
-async function writeSlides(client, synthesis, platform, brandContext) {
+async function writeSlides(client, synthesis, platform, brandContext, slideCount) {
   const platformInfo = PLATFORM_GUIDANCE[platform] || PLATFORM_GUIDANCE.instagram;
+  const slideTarget = slideCount ? `exactly ${slideCount}` : platformInfo.slideRange;
 
   const systemPrompt = `You are an expert carousel copywriter. You receive a creative brief and write the actual slide-by-slide content.
 
@@ -197,7 +199,7 @@ IMAGE PROMPTS:
 
 PLATFORM: ${platform}
 - Text density: ${platformInfo.textDensity}
-- Slide count: ${platformInfo.slideRange} slides total
+- Slide count: ${slideTarget} slides total
 
 CAPTION (caption_text):
 - The caption is NOT a summary of the slides — it EXPANDS on them.
@@ -312,7 +314,7 @@ export default async function handler(req, res) {
 
   // ── Gather content ──
   let content = carousel.source_content;
-  const { topic, bullet_points } = req.body || {};
+  const { topic, bullet_points, slide_count } = req.body || {};
 
   if (carousel.source_url && (!content || content.length < 200)) {
     try {
@@ -393,7 +395,7 @@ export default async function handler(req, res) {
     // ── STAGE 2: Slide Writing ──
     console.log(`[carousel/generate-content] Stage 2: Writing slides...`);
     const { output, usage: writeUsage } = await writeSlides(
-      client, synthesis, carousel.platform, brandContext
+      client, synthesis, carousel.platform, brandContext, slide_count
     );
 
     if (!output?.slides?.length) {
@@ -414,12 +416,15 @@ export default async function handler(req, res) {
     // ── Save to DB ──
     await supabase.from('carousel_slides').delete().eq('carousel_id', id);
 
+    // Strip em dashes from all text
+    const stripEmDash = (s) => (s || '').replace(/—/g, ' - ').replace(/ {2,}/g, ' ').trim();
+
     const slideRows = output.slides.map((slide, i) => ({
       carousel_id: id,
       slide_number: i + 1,
       slide_type: slide.slide_type,
-      headline: slide.headline || '',
-      body_text: slide.body_text || '',
+      headline: stripEmDash(slide.headline),
+      body_text: stripEmDash(slide.body_text),
       stat_value: '',
       stat_label: '',
       cta_text: '',
@@ -439,7 +444,7 @@ export default async function handler(req, res) {
       .from('carousels')
       .update({
         slide_count: output.slides.length,
-        caption_text: output.caption_text,
+        caption_text: stripEmDash(output.caption_text),
         visual_world: synthesis.visual_world,
         status: 'draft',
       })

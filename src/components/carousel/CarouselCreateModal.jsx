@@ -38,6 +38,7 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [visualStyle, setVisualStyle] = useState('');
   const [carouselStyle, setCarouselStyle] = useState('bold_editorial');
   const [carouselType, setCarouselType] = useState('static');
+  const [slideCount, setSlideCount] = useState('');
   const [creating, setCreating] = useState(false);
 
   const selectedPlatform = PLATFORMS.find(p => p.value === platform);
@@ -91,6 +92,9 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
       const genBody = {};
       if (sourceType === 'topic') {
         genBody.topic = topic.trim();
+      }
+      if (slideCount) {
+        genBody.slide_count = parseInt(slideCount, 10);
       }
       apiFetch(`/api/carousel/${carouselId}/generate-content`, {
         method: 'POST',
@@ -208,6 +212,24 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
               >
                 <span className="font-medium block">{tpl.label}</span>
                 <span className="text-xs text-gray-400 block mt-0.5">{tpl.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Slide Count */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Number of Slides</label>
+          <div className="grid grid-cols-5 gap-2">
+            {['', '5', '7', '8', '10'].map(v => (
+              <button
+                key={v}
+                onClick={() => setSlideCount(v)}
+                className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  slideCount === v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {v || 'Auto'}
               </button>
             ))}
           </div>
