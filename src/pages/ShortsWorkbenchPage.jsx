@@ -562,6 +562,9 @@ export default function ShortsWorkbenchPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Home</button>
+            <button onClick={() => navigate('/campaigns')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Campaigns</button>
+            <button onClick={() => navigate('/storyboards')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Storyboards</button>
             <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-md text-[9px] font-bold uppercase">
               🔇 No audio in clips
             </span>
@@ -595,7 +598,7 @@ export default function ShortsWorkbenchPage() {
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-4 mb-1">Framework</label>
                   {(() => {
                     const allFw = niche ? getFrameworksForNiche(niche) : FRAMEWORK_CARDS;
-                    const nicheFw = allFw.filter(f => f.applicableNiches);
+                    const nicheFw = niche ? allFw.filter(f => f.applicableNiches) : [];
                     const universalFw = allFw.filter(f => !f.applicableNiches);
                     const fwButton = (fw) => (
                       <button key={fw.id} onClick={() => { setFramework(fw); if (fw.supportedDurations?.length) setDuration(fw.supportedDurations[0]); }}
