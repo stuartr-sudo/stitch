@@ -34,7 +34,7 @@ import OpenAI from 'openai';
 const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const action = req.url.split('/').pop().split('?')[0];
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -339,6 +339,91 @@ export default async function handler(req, res) {
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_assemble', model: 'ffmpeg-compose', metadata: { clip_count: clips.length } });
 
         return res.json({ video_url: finalUrl, uncaptioned_url: assembledUrl });
+      }
+
+      // ─── Save Draft ──────────────────────────────────────────────
+      case 'save-draft': {
+        const { draft_id, state } = req.body;
+        if (!state) return res.status(400).json({ error: 'state required' });
+
+        if (draft_id) {
+          // Update existing draft
+          const { error } = await supabase.from('ad_drafts')
+            .update({
+              storyboard_json: state,
+              generation_status: state.step >= 4 ? 'complete' : 'in_progress',
+              voiceover_url: state.voiceoverUrl || null,
+              music_url: state.musicUrl || null,
+              final_video_url: state.finalVideoUrl || null,
+            })
+            .eq('id', draft_id)
+            .eq('user_id', req.user.id);
+          if (error) throw new Error(`Save failed: ${error.message}`);
+          return res.json({ draft_id });
+        }
+
+        // Create new campaign + draft
+        const { data: campaign, error: campErr } = await supabase.from('campaigns').insert({
+          user_id: req.user.id,
+          niche: state.niche || 'general',
+          topic: state.topic || 'Untitled',
+          status: 'workbench',
+          total_drafts: 1,
+        }).select('id').single();
+        if (campErr) throw new Error(`Campaign create failed: ${campErr.message}`);
+
+        const { data: draft, error: draftErr } = await supabase.from('ad_drafts').insert({
+          campaign_id: campaign.id,
+          user_id: req.user.id,
+          storyboard_json: state,
+          generation_status: state.step >= 4 ? 'complete' : 'in_progress',
+          template_type: 'workbench',
+          voiceover_url: state.voiceoverUrl || null,
+          music_url: state.musicUrl || null,
+        }).select('id').single();
+        if (draftErr) throw new Error(`Draft create failed: ${draftErr.message}`);
+
+        return res.json({ draft_id: draft.id, campaign_id: campaign.id });
+      }
+
+      // ─── Load Draft ──────────────────────────────────────────────
+      case 'load-draft': {
+        const draftId = req.method === 'GET'
+          ? new URL(req.url, 'http://localhost').searchParams.get('id')
+          : req.body?.draft_id;
+        if (!draftId) return res.status(400).json({ error: 'draft_id required' });
+
+        const { data: draft, error } = await supabase.from('ad_drafts')
+          .select('id, storyboard_json, voiceover_url, music_url, final_video_url, created_at, updated_at, campaign_id')
+          .eq('id', draftId)
+          .eq('user_id', req.user.id)
+          .single();
+        if (error || !draft) return res.status(404).json({ error: 'Draft not found' });
+
+        return res.json({ draft });
+      }
+
+      // ─── List Drafts ─────────────────────────────────────────────
+      case 'list-drafts': {
+        const { data: drafts, error } = await supabase.from('ad_drafts')
+          .select('id, storyboard_json, generation_status, voiceover_url, music_url, final_video_url, created_at, updated_at, campaigns!inner(topic, niche)')
+          .eq('user_id', req.user.id)
+          .eq('template_type', 'workbench')
+          .order('updated_at', { ascending: false })
+          .limit(20);
+        if (error) throw new Error(`List failed: ${error.message}`);
+
+        const items = (drafts || []).map(d => ({
+          id: d.id,
+          topic: d.campaigns?.topic || d.storyboard_json?.topic || 'Untitled',
+          niche: d.campaigns?.niche || d.storyboard_json?.niche,
+          step: d.storyboard_json?.step || 0,
+          status: d.generation_status,
+          has_video: !!d.final_video_url,
+          updated_at: d.updated_at,
+        }));
+
+        return res.json({ drafts: items });
       }
 
       default:

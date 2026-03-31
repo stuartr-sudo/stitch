@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -307,6 +307,85 @@ export default function ShortsWorkbenchPage() {
   const [assembleLoading, setAssembleLoading] = useState(false);
   const [totalCost, setTotalCost] = useState(0);
 
+  // ── Draft persistence ──────────────────────────────────────────
+  const [draftId, setDraftId] = useState(null);
+  const [draftList, setDraftList] = useState([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const lastSaveRef = useRef(null);
+
+  const getWorkbenchState = () => ({
+    step, niche, topic, storyContext, framework: framework?.id || null,
+    duration, script, geminiVoice, styleInstructions, voiceSpeed,
+    voiceoverUrl, voiceApproved,
+    blocks, ttsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
+    visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
+    frames, scenePrompts, clips, finalVideoUrl: finalUrl,
+  });
+
+  const saveDraft = async () => {
+    if (savingDraft) return;
+    setSavingDraft(true);
+    try {
+      const res = await apiFetch('/api/workbench/save-draft', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: draftId, state: getWorkbenchState() }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      if (data.draft_id && !draftId) setDraftId(data.draft_id);
+      lastSaveRef.current = Date.now();
+    } catch (err) { console.warn('Draft save failed:', err.message); }
+    finally { setSavingDraft(false); }
+  };
+
+  const loadDraft = async (id) => {
+    try {
+      const res = await apiFetch(`/api/workbench/load-draft`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: id }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const s = data.draft?.storyboard_json;
+      if (!s) return;
+      setDraftId(id);
+      setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || '');
+      setDuration(s.duration || 60); setScript(s.script || '');
+      setGeminiVoice(s.geminiVoice || 'Perseus'); setStyleInstructions(s.styleInstructions || '');
+      setVoiceSpeed(s.voiceSpeed || 1.0); setVoiceoverUrl(s.voiceoverUrl || null);
+      setVoiceApproved(s.voiceApproved || false);
+      setBlocks(s.blocks || []); setTtsDuration(s.ttsDuration || null);
+      setMusicUrl(s.musicUrl || null); setMusicApproved(s.musicApproved || false);
+      setMusicVolume(s.musicVolume ?? 0.2); setEnableMusic(s.enableMusic ?? true);
+      setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
+      setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
+      setAspectRatio(s.aspectRatio || '9:16');
+      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setClips(s.clips || {});
+      setFinalUrl(s.finalVideoUrl || null);
+      if (s.step) setStep(s.step);
+      setShowDrafts(false);
+    } catch (err) { toast.error(`Load failed: ${err.message}`); }
+  };
+
+  const loadDraftList = async () => {
+    try {
+      const res = await apiFetch('/api/workbench/list-drafts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.drafts) setDraftList(data.drafts);
+    } catch {}
+  };
+
+  // Auto-save when completing a step
+  useEffect(() => {
+    if (voiceoverUrl || blocks.length > 0 || Object.keys(frames).length > 0 || finalUrl) {
+      saveDraft();
+    }
+  }, [voiceoverUrl, blocks.length, Object.keys(frames).length, Object.keys(clips).length, finalUrl]);
+
   // ── Derived state ───────────────────────────────────────────────
   const mode = isFLF(videoModel) ? 'flf' : 'i2v';
   const effectiveDuration = ttsDuration ? ttsDuration / voiceSpeed : duration;
@@ -566,15 +645,52 @@ export default function ShortsWorkbenchPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => { loadDraftList(); setShowDrafts(!showDrafts); }}
+              className="text-xs text-[#2C666E] hover:text-[#234f56] font-semibold border border-[#2C666E]/30 px-2.5 py-1.5 rounded-lg hover:bg-[#2C666E]/5">
+              My Drafts
+            </button>
+            <button onClick={saveDraft} disabled={savingDraft || !script}
+              className="text-xs text-white bg-[#2C666E] px-2.5 py-1.5 rounded-lg font-semibold disabled:opacity-50 hover:bg-[#234f56]">
+              {savingDraft ? 'Saving...' : draftId ? 'Save' : 'Save Draft'}
+            </button>
             <button onClick={() => navigate('/')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Home</button>
             <button onClick={() => navigate('/campaigns')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Campaigns</button>
-            <button onClick={() => navigate('/storyboards')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Storyboards</button>
             <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-md text-[9px] font-bold uppercase">
               🔇 No audio in clips
             </span>
           </div>
         </div>
       </header>
+
+      {/* Drafts dropdown */}
+      {showDrafts && (
+        <div className="bg-white border-b shadow-md">
+          <div className="max-w-5xl mx-auto px-6 py-4">
+            <h3 className="text-sm font-bold text-slate-700 mb-3">Saved Drafts</h3>
+            {draftList.length === 0 ? (
+              <p className="text-xs text-slate-400">No saved drafts yet.</p>
+            ) : (
+              <div className="grid gap-2">
+                {draftList.map(d => (
+                  <button key={d.id} onClick={() => loadDraft(d.id)}
+                    className={cn('text-left px-4 py-3 rounded-lg border transition-all hover:bg-slate-50',
+                      d.id === draftId ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200')}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-800">{d.topic}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(d.updated_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {d.niche && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{d.niche}</span>}
+                      <span className="text-[10px] text-slate-400">Step {d.step || '?'}</span>
+                      {d.has_video && <span className="text-[10px] text-emerald-600 font-bold">Video ready</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-6 py-6">
         <StepRail current={step} completed={completed} onSelect={goTo} />

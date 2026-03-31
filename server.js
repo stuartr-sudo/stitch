@@ -584,7 +584,7 @@ app.get('/api/styles/captions', authenticateToken, async (req, res) => {
 app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
 
 // Shorts Workbench (step-by-step pipeline)
-app.post('/api/workbench/:action', authenticateToken, async (req, res) => {
+app.all('/api/workbench/:action', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('workbench/workbench.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
