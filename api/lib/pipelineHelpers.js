@@ -105,12 +105,18 @@ export async function pollFalQueue(requestIdOrUrl, model, falKey, maxRetries = 1
     if (i === 0 || i % 10 === 0) console.log(`[pollFalQueue] Poll ${i}: status=${status || 'none'} queue_pos=${data.queue_position ?? 'n/a'}`);
 
     if (status === 'COMPLETED') {
-      // Fetch the actual result from the bare request URL
-      const resultRes = await fetch(resultUrl, {
-        headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-      });
-      if (!resultRes.ok) throw new Error(`FAL result fetch failed: HTTP ${resultRes.status}`);
-      return resultRes.json();
+      // Fetch the actual result from the bare request URL (retry on transient 5xx)
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const resultRes = await fetch(resultUrl, {
+          headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+        });
+        if (resultRes.ok) return resultRes.json();
+        if (resultRes.status < 500 || attempt === 2) {
+          throw new Error(`FAL result fetch failed: HTTP ${resultRes.status}`);
+        }
+        console.warn(`[pollFalQueue] Result fetch attempt ${attempt + 1} got ${resultRes.status}, retrying...`);
+        await sleep(2000);
+      }
     }
     if (status === 'FAILED') throw new Error(`FAL job failed: ${data.error || 'unknown'}`);
 
