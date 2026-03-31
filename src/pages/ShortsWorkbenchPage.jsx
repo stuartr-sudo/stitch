@@ -385,7 +385,7 @@ export default function ShortsWorkbenchPage() {
     try {
       const res = await apiFetch('/api/workbench/timing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio_url: voiceoverUrl, video_model: videoModel, framework_id: framework?.id, video_length_preset: duration }),
+        body: JSON.stringify({ audio_url: voiceoverUrl, video_model: videoModel, framework_id: framework?.id, video_length_preset: duration, voice_speed: voiceSpeed }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);

@@ -61,11 +61,19 @@ export default async function handler(req, res) {
 
       // ─── Timing (Whisper + Block Aligner) ─────────────────────────
       case 'timing': {
-        const { audio_url, video_model = 'fal_veo3', framework_id, video_length_preset = 60 } = req.body;
+        const { audio_url, video_model = 'fal_veo3', framework_id, video_length_preset = 60, voice_speed = 1.0 } = req.body;
         if (!audio_url) return res.status(400).json({ error: 'audio_url required' });
 
-        // Whisper
-        const { words, totalDuration } = await getWordTimestamps(audio_url, keys.falKey);
+        // Whisper — timestamps are at 1x speed
+        const { words, totalDuration: rawDuration } = await getWordTimestamps(audio_url, keys.falKey);
+
+        // Adjust for playback speed: at 1.25x a 90s clip plays in 72s
+        const effectiveDuration = rawDuration / voice_speed;
+        const effectiveWords = words.map(w => ({
+          ...w,
+          start: w.start / voice_speed,
+          end: w.end / voice_speed,
+        }));
 
         // Framework scene hints
         const framework = framework_id ? getFramework(framework_id) : null;
@@ -73,15 +81,15 @@ export default async function handler(req, res) {
           || framework?.sceneStructure?.[framework?.supportedDurations?.[0]]
           || null;
 
-        // Align
+        // Align using speed-adjusted timestamps
         let blocks;
-        if (words.length > 0) {
-          const alignment = alignBlocks(words, totalDuration, video_model, frameworkScenes);
+        if (effectiveWords.length > 0) {
+          const alignment = alignBlocks(effectiveWords, effectiveDuration, video_model, frameworkScenes);
           blocks = alignment.blocks;
         } else {
           // Fallback: framework durations
           const ranges = frameworkScenes?.map(s => s.durationRange) || [[4, 8]];
-          const durations = solveDurations(video_length_preset, ranges, video_model);
+          const durations = solveDurations(Math.round(effectiveDuration), ranges, video_model);
           blocks = durations.map((dur, i) => ({
             clipDuration: dur,
             startTime: durations.slice(0, i).reduce((a, b) => a + b, 0),
@@ -94,7 +102,7 @@ export default async function handler(req, res) {
 
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_whisper', model: 'whisper-v3', metadata: { word_count: words.length } });
 
-        return res.json({ blocks, tts_duration: totalDuration, word_count: words.length });
+        return res.json({ blocks, tts_duration: effectiveDuration, raw_tts_duration: rawDuration, voice_speed, word_count: words.length });
       }
 
       // ─── Music ────────────────────────────────────────────────────
