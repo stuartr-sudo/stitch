@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock, Copy, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -161,6 +161,32 @@ export default function AdCampaignEditor() {
     }
   };
 
+  const [splittingId, setSplittingId] = useState(null);
+
+  const handleSplitTest = async (variationId, mode) => {
+    setSplittingId(variationId);
+    try {
+      const res = await apiFetch(`/api/ads/variations/${variationId}/split-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      const data = await res.json();
+      if (data.variation) {
+        setVariations(prev => [...prev, data.variation]);
+        // Select the new variation
+        const newPlatformVars = [...platformVariations, data.variation];
+        setSelectedVariationIdx(newPlatformVars.length - 1);
+      } else {
+        toast.error(data.error || 'Failed to create split test');
+      }
+    } catch {
+      toast.error('Failed to create split test');
+    } finally {
+      setSplittingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -277,7 +303,7 @@ export default function AdCampaignEditor() {
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    <span>Variation {idx + 1}</span>
+                    <span>{String.fromCharCode(65 + idx)}</span>
                     <span className={`ml-1.5 ${STATUS_COLORS[v.status] || ''}`}>
                       {v.status === 'approved' && <Check className="w-3 h-3 inline" />}
                       {v.status === 'rejected' && <X className="w-3 h-3 inline" />}
@@ -310,6 +336,32 @@ export default function AdCampaignEditor() {
                       {selectedVariation.status === 'rejected' ? 'Rejected' : 'Reject'}
                     </Button>
                     <div className="flex-1" />
+
+                    {/* Split test buttons */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSplitTest(selectedVariation.id, 'duplicate')}
+                      disabled={splittingId === selectedVariation.id}
+                      title="Duplicate for manual A/B editing"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Duplicate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSplitTest(selectedVariation.id, 'ai')}
+                      disabled={splittingId === selectedVariation.id}
+                      title="AI generates a different angle for split testing"
+                    >
+                      {splittingId === selectedVariation.id
+                        ? <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                        : <FlaskConical className="w-3 h-3 mr-1" />
+                      }
+                      Split Test
+                    </Button>
+
                     <button
                       onClick={() => handleDeleteVariation(selectedVariation.id)}
                       className="text-xs text-gray-400 hover:text-red-500 transition-colors"
@@ -324,6 +376,7 @@ export default function AdCampaignEditor() {
                       onUpdate={handleUpdateVariation}
                       onRegenerate={handleRegenerate}
                       regenerating={regeneratingId === selectedVariation.id}
+                      landingUrl={campaign?.landing_url}
                     />
                   )}
                   {activePlatform === 'google' && (
@@ -333,6 +386,7 @@ export default function AdCampaignEditor() {
                       onRegenerate={handleRegenerate}
                       regenerating={regeneratingId === selectedVariation.id}
                       campaignName={campaign?.name}
+                      landingUrl={campaign?.landing_url}
                     />
                   )}
                   {activePlatform === 'meta' && (
@@ -341,6 +395,7 @@ export default function AdCampaignEditor() {
                       onUpdate={handleUpdateVariation}
                       onRegenerate={handleRegenerate}
                       regenerating={regeneratingId === selectedVariation.id}
+                      landingUrl={campaign?.landing_url}
                     />
                   )}
                 </div>

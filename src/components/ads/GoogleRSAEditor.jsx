@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, Loader2, Pin, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import UTMBuilder from './UTMBuilder';
 
 const MAX_HEADLINE = 30;
 const MAX_DESCRIPTION = 90;
@@ -68,7 +69,7 @@ function exportCSV(headlines, descriptions, campaignName) {
   URL.revokeObjectURL(url);
 }
 
-export default function GoogleRSAEditor({ variation, onUpdate, onRegenerate, regenerating, campaignName }) {
+export default function GoogleRSAEditor({ variation, onUpdate, onRegenerate, regenerating, campaignName, landingUrl }) {
   const copy = variation?.copy_data || {};
   const headlines = copy.headlines || Array(15).fill('');
   const descriptions = copy.descriptions || Array(4).fill('');
@@ -209,6 +210,19 @@ export default function GoogleRSAEditor({ variation, onUpdate, onRegenerate, reg
           ))}
         </div>
       </div>
+
+      {/* UTM Tracking */}
+      <UTMBuilder
+        utmParams={copy.utm_params || {}}
+        onChange={(params) => {
+          onUpdate({
+            ...variation,
+            copy_data: { ...copy, utm_params: params },
+          });
+        }}
+        landingUrl={landingUrl}
+        platform="google"
+      />
     </div>
   );
 }

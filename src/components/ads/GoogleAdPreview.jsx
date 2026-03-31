@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Shuffle } from 'lucide-react';
+import { buildTrackedUrl } from './UTMBuilder';
 
 /**
  * Google Search Ad preview mockup.
@@ -51,10 +52,12 @@ export default function GoogleAdPreview({ variation, landingUrl }) {
     setDisplayD(pickDescriptions());
   };
 
-  // Format URL for display
+  // Format URL for display — show tracked URL if UTMs are set
+  const utmParams = copy.utm_params || {};
+  const trackedUrl = buildTrackedUrl(landingUrl, utmParams);
   const displayUrl = (() => {
     try {
-      const u = new URL(landingUrl || 'https://example.com');
+      const u = new URL(trackedUrl || landingUrl || 'https://example.com');
       return u.hostname.replace(/^www\./, '');
     } catch {
       return 'example.com';
@@ -104,6 +107,14 @@ export default function GoogleAdPreview({ variation, landingUrl }) {
           {descText}
         </p>
       </div>
+
+      {/* Tracked URL */}
+      {Object.values(utmParams).some(v => v?.trim()) && trackedUrl && (
+        <div className="mt-3 bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-gray-500 font-medium mb-0.5">Tracked URL</p>
+          <p className="text-[10px] text-gray-600 break-all font-mono">{trackedUrl}</p>
+        </div>
+      )}
 
       {/* Stats hint */}
       <div className="mt-3 text-center">

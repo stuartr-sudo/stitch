@@ -587,6 +587,7 @@ app.post('/api/ads/campaigns/:id/generate', authenticateToken, (await import('./
 app.patch('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
 app.delete('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
 app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import('./api/ads/regenerate.js')).default);
+app.post('/api/ads/variations/:id/split-test', authenticateToken, (await import('./api/ads/split-test.js')).default);
 
 // ─── Connected Accounts routes ────────────────────────────────────────────
 app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);

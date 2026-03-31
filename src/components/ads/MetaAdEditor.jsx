@@ -1,6 +1,7 @@
 import React from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import UTMBuilder from './UTMBuilder';
 
 const CTA_OPTIONS = [
   'Book Now', 'Contact Us', 'Download', 'Get Offer',
@@ -22,7 +23,7 @@ function CharCounter({ current, max }) {
   );
 }
 
-export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regenerating }) {
+export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regenerating, landingUrl }) {
   const copy = variation?.copy_data || {};
 
   const handleChange = (field, value) => {
@@ -132,6 +133,14 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
           </div>
         </div>
       )}
+
+      {/* UTM Tracking */}
+      <UTMBuilder
+        utmParams={copy.utm_params || {}}
+        onChange={(params) => handleChange('utm_params', params)}
+        landingUrl={landingUrl}
+        platform="meta"
+      />
     </div>
   );
 }
