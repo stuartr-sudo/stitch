@@ -54,6 +54,8 @@ export default function CarouselEditor({ carouselId }) {
   const [videoDuration, setVideoDuration] = useState(5);
   const [creatingSlideshw, setCreatingSlideshow] = useState(false);
   const [slideshowDuration, setSlideshowDuration] = useState(3);
+  const [slideshowVoiceover, setSlideshowVoiceover] = useState(false);
+  const [slideshowVoice, setSlideshowVoice] = useState('Rachel');
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -252,7 +254,11 @@ export default function CarouselEditor({ carouselId }) {
       const res = await apiFetch(`/api/carousel/${carouselId}/create-slideshow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slide_duration: slideshowDuration }),
+        body: JSON.stringify({
+          slide_duration: slideshowDuration,
+          voiceover: slideshowVoiceover,
+          voice: slideshowVoice,
+        }),
       });
       const data = await res.json();
       if (data.error) {
@@ -449,6 +455,34 @@ export default function CarouselEditor({ carouselId }) {
                 <option value={5}>5s</option>
                 <option value={8}>8s</option>
               </select>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={slideshowVoiceover}
+                  onChange={e => setSlideshowVoiceover(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                Voiceover
+              </label>
+              {slideshowVoiceover && (
+                <select
+                  value={slideshowVoice}
+                  onChange={e => setSlideshowVoice(e.target.value)}
+                  className="text-xs border rounded px-1.5 py-1.5 bg-white text-gray-700"
+                  title="Voice"
+                >
+                  <option value="Rachel">Rachel</option>
+                  <option value="Adam">Adam</option>
+                  <option value="Laura">Laura</option>
+                  <option value="Brian">Brian</option>
+                  <option value="Charlotte">Charlotte</option>
+                  <option value="Charlie">Charlie</option>
+                  <option value="George">George</option>
+                  <option value="Alice">Alice</option>
+                  <option value="Lily">Lily</option>
+                  <option value="Daniel">Daniel</option>
+                </select>
+              )}
               <Button
                 variant="outline"
                 onClick={handleCreateSlideshow}

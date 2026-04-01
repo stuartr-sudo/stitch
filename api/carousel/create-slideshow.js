@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { assembleCarouselSlideshow } from '../lib/pipelineHelpers.js';
+import { generateVoiceover } from '../lib/voiceoverGenerator.js';
 
 export default async function handler(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'carousel id is required' });
 
   const slideDuration = req.body?.slide_duration || 3;
+  const voiceover = req.body?.voiceover || false;
+  const voice = req.body?.voice || 'Rachel';
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -34,13 +37,30 @@ export default async function handler(req, res) {
   await supabase.from('carousels').update({ status: 'assembling' }).eq('id', id);
 
   // Return immediately — assemble in background
-  res.json({ success: true, message: `Creating slideshow from ${slides.length} slides (${slideDuration}s each)` });
+  res.json({ success: true, message: `Creating slideshow from ${slides.length} slides (${slideDuration}s each)${voiceover ? ' with voiceover' : ''}` });
 
   try {
     const imageUrls = slides.map(s => s.composed_image_url);
+    let audioUrl = null;
+
+    // Generate voiceover from slide text if requested
+    if (voiceover) {
+      const script = slides.map(s => {
+        const parts = [];
+        if (s.headline) parts.push(s.headline);
+        if (s.body_text) parts.push(s.body_text);
+        if (s.stat_value && s.stat_label) parts.push(`${s.stat_value} — ${s.stat_label}`);
+        if (s.cta_text) parts.push(s.cta_text);
+        return parts.join('. ');
+      }).filter(Boolean).join(' ... ');
+
+      console.log(`[carousel/create-slideshow] Generating voiceover: ${script.length} chars, voice=${voice}`);
+      audioUrl = await generateVoiceover(script, keys, supabase, { voiceId: voice });
+      console.log(`[carousel/create-slideshow] Voiceover ready: ${audioUrl?.slice(0, 80)}...`);
+    }
 
     console.log(`[carousel/create-slideshow] Assembling ${imageUrls.length} images for carousel ${id}`);
-    const assembledUrl = await assembleCarouselSlideshow(imageUrls, keys.falKey, supabase, slideDuration);
+    const assembledUrl = await assembleCarouselSlideshow(imageUrls, keys.falKey, supabase, slideDuration, audioUrl);
 
     await supabase.from('carousels')
       .update({

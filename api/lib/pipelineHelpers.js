@@ -463,7 +463,7 @@ export async function assembleCarouselVideo(videoUrls, falKey, supabase, clipDur
 // Assemble a slideshow from static images (no AI video generation)
 // ---------------------------------------------------------------------------
 
-export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, slideDuration = 3) {
+export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, slideDuration = 3, audioUrl = null) {
   if (!falKey) throw new Error('falKey required for slideshow assembly');
   if (!imageUrls?.length) throw new Error('No images for slideshow');
 
@@ -480,7 +480,14 @@ export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, sli
     { id: 'images', type: 'image', keyframes: videoKeyframes },
   ];
 
-  console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)`);
+  // Add voiceover audio track if provided
+  if (audioUrl) {
+    const totalDurationMs = totalDurationSec * 1000;
+    tracks.push({ id: 'voiceover', type: 'audio', keyframes: [{ url: audioUrl, timestamp: 0, duration: totalDurationMs }] });
+    console.log(`[assembleCarouselSlideshow] Adding voiceover audio track`);
+  }
+
+  console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)${audioUrl ? ' + voiceover' : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
