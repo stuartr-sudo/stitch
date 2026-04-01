@@ -61,6 +61,30 @@ export const POSE_SETS = [
     ],
   },
   {
+    id: 'r2v-reference',
+    name: 'R2V Reference',
+    description: '6-cell reference sheet optimized for video generation — full body + matching portrait per angle',
+    thumbnail: '/assets/pose-sets/r2v-reference.svg',
+    rows: [
+      {
+        label: 'Full Body Turnaround',
+        cells: [
+          { prompt: 'front view facing camera directly, 0-degree rotation, full body standing in relaxed A-pose with arms slightly away from body, symmetrical, centered in frame, full character visible head to toe, consistent head height alignment', shortLabel: 'Front' },
+          { prompt: 'three-quarter front view at 45-degree angle, full body standing in relaxed pose, showing front and one side clearly, centered in frame, full character visible head to toe, consistent head height alignment', shortLabel: '3/4 Front' },
+          { prompt: 'exact 90-degree side profile view, full body standing in relaxed pose, strict side silhouette, nose pointing left, one ear visible, centered in frame, full character visible head to toe, consistent head height alignment', shortLabel: 'Side' },
+        ],
+      },
+      {
+        label: 'Portrait Close-ups (Matching Angles)',
+        cells: [
+          { prompt: 'front view portrait close-up, head and shoulders, facing camera directly, matching the front full-body pose above, detailed facial features, same lighting and expression', shortLabel: 'Front Portrait' },
+          { prompt: 'three-quarter portrait close-up, head and shoulders, at 45-degree angle matching the 3/4 full-body pose above, detailed facial features, same lighting and expression', shortLabel: '3/4 Portrait' },
+          { prompt: 'side profile portrait close-up, head and shoulders, exact 90-degree profile matching the side full-body pose above, detailed facial features, same lighting and expression', shortLabel: 'Side Portrait' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'standard-24',
     name: 'Standard 24',
     description: 'Classic turnaround with expressions, walk cycles, action, and detail views',
