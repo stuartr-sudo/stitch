@@ -744,18 +744,18 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   onChange={(e) => handleModelChange(e.target.value)}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none"
                 >
-                  {trainingModels.filter(m => m.type === 'image').length > 0 && (
+                  {trainingModels.filter(m => m.category === 'image').length > 0 && (
                     <optgroup label="Image Models">
-                      {trainingModels.filter(m => m.type === 'image').map(m => (
+                      {trainingModels.filter(m => m.category === 'image').map(m => (
                         <option key={m.id} value={m.id}>
                           {m.name} — {m.baseModel} ({m.pricing})
                         </option>
                       ))}
                     </optgroup>
                   )}
-                  {trainingModels.filter(m => m.type === 'video').length > 0 && (
+                  {trainingModels.filter(m => m.category === 'video').length > 0 && (
                     <optgroup label="Video Models">
-                      {trainingModels.filter(m => m.type === 'video').map(m => (
+                      {trainingModels.filter(m => m.category === 'video').map(m => (
                         <option key={m.id} value={m.id}>
                           {m.name} — {m.baseModel} ({m.pricing})
                         </option>
