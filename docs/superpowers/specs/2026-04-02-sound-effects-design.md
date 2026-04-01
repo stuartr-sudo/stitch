@@ -106,10 +106,17 @@ New `sfx` case in `api/workbench/workbench.js`:
 case 'sfx': {
   const { niche, duration = 65 } = req.body;
   const prompt = buildSfxPrompt(niche);
-  const sfxUrl = await generateSoundEffect(prompt, duration, keys.falKey, supabase);
-  return res.json({ sfx_url: sfxUrl });
+  try {
+    const sfxUrl = await generateSoundEffect(prompt, duration, keys.falKey, supabase);
+    return res.json({ sfx_url: sfxUrl });
+  } catch (err) {
+    console.warn('[workbench/sfx] SFX generation failed (non-blocking):', err.message);
+    return res.json({ sfx_url: null });
+  }
 }
 ```
+
+Note: The response uses `sfx_url` (not `audio_url` like the music action) to clearly distinguish SFX from music in the frontend.
 
 ## Frontend Changes
 
@@ -136,13 +143,15 @@ const [enableSfx, setEnableSfx] = useState(true);
 
 ### Draft Persistence
 
-`sfxUrl`, `sfxVolume`, and `enableSfx` are included in `getWorkbenchState()` and restored on draft load, following the same pattern as `musicUrl`, `musicVolume`, and `enableMusic`.
+`sfxUrl`, `sfxVolume`, and `enableSfx` are stored inside `storyboard_json` via `getWorkbenchState()` and restored on draft load. No dedicated database column needed — unlike `music_url` which has its own column in `ad_drafts`, SFX lives only in the JSON blob. This is appropriate since SFX is optional polish, not a primary asset.
 
 ## Error Handling
 
-**SFX generation failure:** Log warning, return `{ sfx_url: null }`. Frontend shows a subtle "SFX generation failed" message but does not block the workflow. Assembly proceeds without SFX.
+**SFX generation failure:** Unlike the `music` action (which returns 500 on failure), the `sfx` action catches errors and returns `{ sfx_url: null }` with a 200 status. SFX is optional polish — it should never block the workflow. Frontend shows a brief `toast.warning('SFX generation failed')` but continues normally. Assembly proceeds without SFX.
 
-**Assembly with SFX failure:** If the FFmpeg compose fails specifically because of the SFX track, retry assembly without SFX (remove the track and resubmit). This is a safety net — FFmpeg compose handles multiple audio tracks reliably.
+This is an intentional deviation from the music action pattern. Music is a core audio layer; SFX is ambient polish. The `sfx` action wraps `generateSoundEffect()` in a try-catch that returns null on any failure.
+
+**Assembly:** No special SFX error handling in assembly. If `sfxUrl` is provided, it's added as a track. If the URL is bad, FFmpeg compose will fail and the standard assembly error handling applies (same as if any other track URL was invalid).
 
 ## Files Changed
 
