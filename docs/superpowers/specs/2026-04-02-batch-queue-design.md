@@ -185,7 +185,7 @@ Ordered by `created_at DESC`, limit 20.
 
 ### New module: `api/lib/batchProcessor.js`
 
-Contains `processNextBatchJob(batchId, supabase, keys)`:
+Contains `processNextBatchJob(batchId, supabase)`:
 
 ```
 1. Query jobs WHERE batch_id = batchId AND status = 'pending' ORDER BY created_at LIMIT 1
@@ -207,24 +207,46 @@ At the end of `runShortsPipeline()`, after the existing job status update, add a
 // Batch completion hook
 const { data: job } = await supabase.from('jobs').select('batch_id').eq('id', jobId).single();
 if (job?.batch_id) {
-  const isSuccess = jobStatus === 'completed';
-  const field = isSuccess ? 'completed_items' : 'failed_items';
+  const field = jobStatus === 'completed' ? 'completed_items' : 'failed_items';
 
-  // Increment counter
-  await supabase.rpc('increment_batch_counter', { batch_id: job.batch_id, field_name: field });
+  // Atomic increment + completion check (single Postgres transaction, no race condition)
+  await supabase.rpc('batch_job_finished', {
+    p_batch_id: job.batch_id,
+    p_field: field,
+  });
 
-  // Check if batch is done
-  const { data: batch } = await supabase.from('batches').select('*').eq('id', job.batch_id).single();
-  if (batch && (batch.completed_items + batch.failed_items) >= batch.total_items) {
-    await supabase.from('batches').update({ status: 'completed', updated_at: new Date() }).eq('id', job.batch_id);
-  } else {
-    // Start next pending job
-    await processNextBatchJob(job.batch_id, supabase, keys);
-  }
+  // Start next pending job (fire-and-forget — pipeline is not awaited)
+  await processNextBatchJob(job.batch_id, supabase);
 }
 ```
 
-**Note:** `increment_batch_counter` is a Supabase RPC function to avoid race conditions on concurrent counter updates. Alternatively, use a raw SQL `UPDATE batches SET completed_items = completed_items + 1` which is atomic in Postgres.
+**Atomic `batch_job_finished` RPC** (defined in the migration):
+
+```sql
+CREATE OR REPLACE FUNCTION batch_job_finished(p_batch_id uuid, p_field text)
+RETURNS void AS $$
+BEGIN
+  IF p_field = 'completed_items' THEN
+    UPDATE batches SET completed_items = completed_items + 1, updated_at = now() WHERE id = p_batch_id;
+  ELSE
+    UPDATE batches SET failed_items = failed_items + 1, updated_at = now() WHERE id = p_batch_id;
+  END IF;
+
+  -- Atomically transition batch to completed if all items are done
+  UPDATE batches
+  SET status = 'completed', updated_at = now()
+  WHERE id = p_batch_id
+    AND status = 'running'
+    AND (completed_items + failed_items) >= total_items;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+The increment and completion check run in a single Postgres transaction. Two concurrent jobs finishing simultaneously will both increment correctly — only the one that tips the total triggers the status update.
+
+**`processNextBatchJob()` receives `(batchId, supabase)`.** API keys are resolved inside the pipeline via `getUserKeys()` from the job's `user_id`. The function sets the next pending job to `'running'` then calls `runShortsPipeline()` without `await` (fire-and-forget).
+
+**Batch creation error handling:** `POST /api/batch/create` wraps campaign + job creation in a try-catch. On failure, the batch row is deleted (cleanup) and 500 is returned. Partial failures are recoverable — orphaned campaigns with no jobs are harmless.
 
 ## Frontend
 
@@ -301,7 +323,7 @@ const [jobs, setJobs] = useState([]);
 
 **Individual job failure:** Pipeline catches errors and updates `jobs.status = 'failed'`. The batch completion hook increments `failed_items` and starts the next pending job. Failed items show in the results grid with an error message.
 
-**All jobs failed:** Batch status set to `'completed'` (not `'failed'`) — the batch finished processing even if everything failed. The UI shows the failure state per item.
+**All jobs failed:** Batch status set to `'completed'` (not `'failed'`) — the batch finished processing even if everything failed. Batch `status` reflects processing completion, not success. The UI shows per-item success/failure state. A batch with 8 successes and 2 failures is still `status: 'completed'`.
 
 **Network/API errors during batch creation:** Return 500. No partial batch created — the transaction rolls back. User can retry.
 
@@ -311,7 +333,7 @@ const [jobs, setJobs] = useState([]);
 
 | File | Change |
 |---|---|
-| New migration SQL | `batches` table, `batch_id` column on `jobs`, RLS policies |
+| `supabase-migration-batch.sql` | **New** — `batches` table, `batch_id` on `jobs`, `batch_job_finished` RPC, RLS policies |
 | `api/batch/create.js` | **New** — create batch, dispatch first jobs |
 | `api/batch/status.js` | **New** — poll batch progress with job details |
 | `api/batch/list.js` | **New** — list user's batches |
