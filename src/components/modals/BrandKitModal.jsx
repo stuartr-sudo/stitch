@@ -127,6 +127,7 @@ export default function BrandKitModal({ isOpen, onClose }) {
 
   // Current brand being edited
   const [form, setForm] = useState(emptyBrand());
+  const [extractUrl, setExtractUrl] = useState('');
   const [newColor, setNewColor] = useState('');
   const [newTagline, setNewTagline] = useState('');
 
@@ -390,6 +391,58 @@ export default function BrandKitModal({ isOpen, onClose }) {
     }
   };
 
+  // ── URL extraction ──────────────────────────────────────────────────────────
+  const handleUrlExtract = async () => {
+    const url = extractUrl.trim();
+    if (!url) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+
+    setIsExtracting(true);
+    try {
+      const res = await apiFetch('/api/brand/extract-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      const ex = data.extracted;
+      setForm(prev => ({
+        ...prev,
+        brand_name: ex.brand_name || prev.brand_name,
+        brand_username: ex.brand_username || prev.brand_username,
+        blurb: ex.blurb || prev.blurb,
+        website: ex.website || prev.website,
+        target_market: ex.target_market || prev.target_market,
+        brand_personality: ex.brand_personality || prev.brand_personality,
+        brand_voice_detail: ex.brand_voice_detail || prev.brand_voice_detail,
+        voice_style: ex.voice_style || prev.voice_style,
+        content_style_rules: ex.content_style_rules || prev.content_style_rules,
+        preferred_elements: ex.preferred_elements || prev.preferred_elements,
+        prohibited_elements: ex.prohibited_elements || prev.prohibited_elements,
+        taglines: ex.taglines?.length ? ex.taglines : prev.taglines,
+        colors: ex.colors?.length ? ex.colors : prev.colors,
+        style_preset: ex.style_preset || prev.style_preset,
+        visual_style_notes: ex.visual_style_notes || prev.visual_style_notes,
+        mood_atmosphere: ex.mood_atmosphere || prev.mood_atmosphere,
+        lighting_prefs: ex.lighting_prefs || prev.lighting_prefs,
+        composition_style: ex.composition_style || prev.composition_style,
+        ai_prompt_rules: ex.ai_prompt_rules || prev.ai_prompt_rules,
+        logo_url: ex.logo_url || prev.logo_url,
+      }));
+
+      setExtractUrl('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to extract from URL');
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   // ── Save ─────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.brand_name.trim()) { toast.error('Give your brand a name'); return; }
@@ -572,7 +625,7 @@ export default function BrandKitModal({ isOpen, onClose }) {
 
         {/* ── Right: editor ── */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-          {/* PDF upload bar */}
+          {/* Auto-fill bar: PDF upload + URL extraction */}
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/80 flex items-center gap-3">
             <input ref={pdfInputRef} type="file" accept=".pdf,application/pdf" onChange={handlePdfUpload} className="hidden" />
             <Button
@@ -580,13 +633,34 @@ export default function BrandKitModal({ isOpen, onClose }) {
               variant="outline"
               onClick={() => pdfInputRef.current?.click()}
               disabled={isExtracting}
-              className="border-[#2C666E]/40 text-[#2C666E] hover:bg-[#2C666E]/10"
+              className="border-[#2C666E]/40 text-[#2C666E] hover:bg-[#2C666E]/10 flex-shrink-0"
             >
               {isExtracting
                 ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Extracting...</>
-                : <><Upload className="w-3.5 h-3.5 mr-1.5" /> Upload PDF Guidelines</>}
+                : <><Upload className="w-3.5 h-3.5 mr-1.5" /> Upload PDF</>}
             </Button>
-            <span className="text-xs text-gray-500">Upload a brand guidelines PDF to auto-fill all fields</span>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <Input
+                value={extractUrl}
+                onChange={e => setExtractUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleUrlExtract()}
+                placeholder="https://example.com"
+                disabled={isExtracting}
+                className="h-8 text-xs bg-white border-gray-300 text-gray-900 flex-1 min-w-0"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleUrlExtract}
+                disabled={isExtracting || !extractUrl.trim()}
+                className="border-[#2C666E]/40 text-[#2C666E] hover:bg-[#2C666E]/10 flex-shrink-0"
+              >
+                {isExtracting
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : 'Extract'}
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
