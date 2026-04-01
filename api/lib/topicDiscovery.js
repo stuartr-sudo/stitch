@@ -1,8 +1,9 @@
 /**
- * Topic Discovery — research-powered hook suggestions.
+ * Topic Discovery — research-powered topic suggestions with dual-axis scoring.
  *
- * Input: niche + framework → Output: ranked hook suggestions with source URLs.
- * Process: web search for trending content → LLM synthesis with framework hook pattern.
+ * Input: niche + framework → Output: ranked topics with trending + competition scores.
+ * Process: SearchAPI web search (4 queries/niche) → LLM synthesis with scoring.
+ * Graceful fallback to GPT-only mode if no SearchAPI key or search fails.
  */
 
 import OpenAI from 'openai';
@@ -10,42 +11,112 @@ import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { logCost } from './costLogger.js';
 
-// Niche → search query mapping for web research
+// ── Niche → 4 search queries (breaking, viral, controversy, human impact) ────
+const currentYear = new Date().getFullYear();
 const NICHE_SEARCH_QUERIES = {
-  ai_tech_news: ['latest AI breakthroughs 2026', 'trending AI tools this week', 'AI news reddit'],
-  finance_money: ['personal finance trending topics', 'money mistakes reddit', 'stock market news today'],
-  motivation: ['motivational stories trending', 'self improvement reddit', 'life changing moments'],
-  horror_creepy: ['creepiest true stories', 'unexplained mysteries reddit', 'scariest places on earth'],
-  history_era: ['history facts nobody knows', 'forgotten history reddit', 'historical mysteries unsolved'],
-  crime_mystery: ['unsolved crimes trending', 'true crime stories reddit', 'cold case breakthroughs'],
-  science_nature: ['science discoveries this week', 'nature facts mind blowing', 'science reddit TIL'],
-  dating_relationships: ['dating advice trending', 'relationship psychology reddit', 'attachment theory'],
-  fitness_health: ['fitness myths debunked', 'health hacks reddit', 'workout science new research'],
-  gaming: ['gaming lore hidden details', 'easter eggs reddit gaming', 'game theory trending'],
-  conspiracy: ['conspiracy theories evidence', 'unexplained events reddit', 'government secrets declassified'],
-  business_startup: ['startup stories viral', 'business breakdown reddit', 'entrepreneur lessons'],
-  food_cooking: ['food science facts', 'cooking hacks trending', 'food history reddit'],
-  travel: ['hidden travel gems 2026', 'travel hacks reddit', 'most dangerous places to visit'],
-  psychology: ['psychology facts trending', 'social experiments reddit', 'cognitive biases'],
-  space_cosmos: ['space discoveries 2026', 'cosmic mysteries reddit', 'NASA news this week'],
-  animals_nature: ['animal superpowers facts', 'nature is metal reddit', 'animal intelligence research'],
-  sports: ['sports history greatest moments', 'athlete stories reddit', 'sports statistics mind blowing'],
-  education: ['things school never taught', 'education facts reddit', 'learning science research'],
-  paranormal_ufo: ['UFO sightings 2026', 'paranormal evidence reddit', 'unexplained phenomena'],
+  ai_tech_news: [`AI breakthrough news this week ${currentYear}`, 'AI surprising development most people don\'t know', `AI controversy debate ${currentYear}`, 'AI changing everyday life real story'],
+  finance_money: [`stock market news this week ${currentYear}`, 'money fact most people get wrong', `financial controversy scandal ${currentYear}`, 'money changing someone\'s life real story'],
+  motivation: [`motivational comeback story ${currentYear}`, 'self improvement secret most people miss', `motivation debate hustle culture ${currentYear}`, 'life transformation real story inspiring'],
+  horror_creepy: [`creepy unexplained event ${currentYear}`, 'scariest true story nobody talks about', `paranormal controversy evidence ${currentYear}`, 'terrifying experience real person story'],
+  history_era: [`history discovery new finding ${currentYear}`, 'bizarre history fact nobody knows', `historical controversy revisionist ${currentYear}`, 'history changed someone life real story'],
+  crime_mystery: [`unsolved crime breakthrough ${currentYear}`, 'true crime case most people never heard of', `criminal justice controversy ${currentYear}`, 'crime victim survivor real story'],
+  science_nature: [`science discovery breakthrough ${currentYear}`, 'science fact that sounds fake but is real', `scientific controversy debate ${currentYear}`, 'nature phenomenon affecting real people'],
+  dating_relationships: [`relationship trend ${currentYear}`, 'dating psychology fact most people get wrong', `relationship controversy debate ${currentYear}`, 'love story extraordinary real couple'],
+  fitness_health: [`health discovery study ${currentYear}`, 'fitness myth debunked surprising', `health controversy diet ${currentYear}`, 'health transformation real person story'],
+  gaming: [`gaming news this week ${currentYear}`, 'video game secret nobody found', `gaming controversy drama ${currentYear}`, 'gaming changed someone life real story'],
+  conspiracy: [`declassified government secret ${currentYear}`, 'conspiracy theory that turned out true', `conspiracy controversy evidence ${currentYear}`, 'unexplained event witnessed real people'],
+  business_startup: [`startup news funding ${currentYear}`, 'business strategy nobody talks about', `business scandal controversy ${currentYear}`, 'entrepreneur success story unexpected'],
+  food_cooking: [`food trend ${currentYear}`, 'food science fact most people don\'t know', `food industry controversy scandal ${currentYear}`, 'cooking changed someone life real story'],
+  travel: [`travel destination trending ${currentYear}`, 'travel secret hidden gem nobody visits', `tourism controversy overtourism ${currentYear}`, 'travel experience life changing real story'],
+  psychology: [`psychology study finding ${currentYear}`, 'human behavior fact most people get wrong', `psychology controversy debate ${currentYear}`, 'psychology insight changed real person life'],
+  space_cosmos: [`space discovery NASA ${currentYear}`, 'cosmic mystery scientists can\'t explain', `space exploration controversy ${currentYear}`, 'space event affecting earth real impact'],
+  animals_nature: [`animal discovery species ${currentYear}`, 'animal ability superpower nobody knows about', `wildlife conservation controversy ${currentYear}`, 'animal rescued saved real story'],
+  sports: [`sports news this week ${currentYear}`, 'sports record statistic most people don\'t know', `sports controversy scandal ${currentYear}`, 'athlete comeback against all odds real story'],
+  education: [`education change policy ${currentYear}`, 'school fact most people get wrong', `education system controversy ${currentYear}`, 'education changed someone life real story'],
+  paranormal_ufo: [`UFO sighting report ${currentYear}`, 'paranormal event documented evidence nobody talks about', `UFO disclosure controversy ${currentYear}`, 'paranormal experience real person testimony'],
 };
 
-const HookSuggestionSchema = z.object({
-  suggestions: z.array(z.object({
-    topic: z.string().describe('Specific, compelling topic (e.g., "Lake Natron — the lake that turns animals to stone")'),
-    hookLine: z.string().describe('Opening hook sentence that stops the scroll'),
-    angle: z.string().describe('Narrative angle (e.g., "mystery-reveal with scientific explanation")'),
-    whyItWorks: z.string().describe('Why this topic will perform well — engagement signals, emotional triggers'),
-    estimatedViralPotential: z.enum(['high', 'medium', 'low']).describe('Based on engagement signals from research'),
+// ── Schema ───────────────────────────────────────────────────────────────────
+const TopicDiscoverySchema = z.object({
+  topics: z.array(z.object({
+    title: z.string().describe('Compelling, click-worthy title for a 60-second short'),
+    summary: z.string().describe('1-2 sentence summary of the story'),
+    angle: z.string().describe('The specific hook or angle for a short-form video'),
+    why_viral: z.string().describe('Why this topic will perform well on shorts platforms'),
+    story_context: z.string().describe('Detailed paragraph with all key facts, names, dates — enough for a script writer to work from without additional research'),
+    trending_score: z.enum(['high', 'medium', 'low']).describe('How trending: high=last 48hrs major outlets, medium=this week, low=older/niche'),
+    competition_score: z.enum(['high', 'medium', 'low']).describe('Content saturation: high=widely covered on shorts, medium=some coverage, low=under-covered'),
   })),
 });
 
+// ── SearchAPI web search ─────────────────────────────────────────────────────
 /**
- * Discover trending topics and generate ranked hook suggestions.
+ * Fire all 4 SearchAPI queries for a niche in parallel.
+ * Returns condensed article snippets or null on failure.
+ */
+async function searchNicheArticles(niche) {
+  const apiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
+  if (!apiKey) {
+    console.log('[topicDiscovery] No SearchAPI key found, falling back to GPT-only');
+    return null;
+  }
+
+  const queries = NICHE_SEARCH_QUERIES[niche];
+  if (!queries) {
+    console.log(`[topicDiscovery] No search queries for niche "${niche}", falling back to GPT-only`);
+    return null;
+  }
+
+  const results = await Promise.allSettled(
+    queries.map(async (q) => {
+      const params = new URLSearchParams({
+        api_key: apiKey,
+        engine: 'google_news',
+        q,
+        num: '10',
+      });
+      const resp = await fetch(`https://www.searchapi.io/api/v1/search?${params}`);
+      if (!resp.ok) {
+        console.log(`[topicDiscovery] SearchAPI ${resp.status} for query: ${q}`);
+        return [];
+      }
+      const data = await resp.json();
+      // Extract organic/news results
+      const articles = (data.organic_results || data.news_results || []).slice(0, 10);
+      return articles.map(a => ({
+        title: a.title || '',
+        snippet: a.snippet || a.description || '',
+        source: a.source || a.displayed_link || '',
+        date: a.date || '',
+      }));
+    })
+  );
+
+  // Flatten fulfilled results
+  const allArticles = results
+    .filter(r => r.status === 'fulfilled')
+    .flatMap(r => r.value)
+    .filter(a => a.title); // skip empty
+
+  if (allArticles.length === 0) {
+    console.log('[topicDiscovery] SearchAPI returned no usable articles, falling back to GPT-only');
+    return null;
+  }
+
+  console.log(`[topicDiscovery] SearchAPI returned ${allArticles.length} articles across ${results.filter(r => r.status === 'fulfilled').length}/4 queries`);
+  return allArticles;
+}
+
+// ── Composite score for sorting ──────────────────────────────────────────────
+function compositeScore(topic) {
+  const trendingWeight = { high: 3, medium: 2, low: 1 };
+  const competitionWeight = { high: 1, medium: 2, low: 3 }; // low competition = better
+  return (trendingWeight[topic.trending_score] || 1) + (competitionWeight[topic.competition_score] || 1);
+}
+
+// ── Main function ────────────────────────────────────────────────────────────
+/**
+ * Discover trending topics and generate ranked suggestions with dual-axis scoring.
  *
  * @param {object} params
  * @param {string} params.niche - Niche key
@@ -54,7 +125,7 @@ const HookSuggestionSchema = z.object({
  * @param {string[]} [params.excludeTopics=[]] - Topics to avoid
  * @param {object} params.keys - { openaiKey }
  * @param {string} [params.brandUsername] - For cost logging
- * @returns {Promise<Array>} Ranked hook suggestions
+ * @returns {Promise<{ topics: Array, source: string, queryCount: number }>}
  */
 export async function discoverTopics({
   niche,
@@ -68,11 +139,12 @@ export async function discoverTopics({
 
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
-  // ── Step 1: Gather search context ──────────────────────────────────────
-  const searchQueries = NICHE_SEARCH_QUERIES[niche] || [`${niche} trending topics`, `${niche} reddit`];
-  const searchContext = searchQueries.join('; ');
+  // ── Step 1: Web search for real articles ─────────────────────────────────
+  const articles = await searchNicheArticles(niche);
+  const hasArticles = articles && articles.length > 0;
+  const queryCount = hasArticles ? (NICHE_SEARCH_QUERIES[niche]?.length || 0) : 0;
 
-  // ── Step 2: LLM synthesis ─────────────────────────────────────────────
+  // ── Step 2: Build prompt based on mode ───────────────────────────────────
   const hookPattern = framework?.narrative?.hookPattern || 'mystery-reveal';
   const hookExamples = framework?.narrative?.hookExamples || framework?.hookExamples || [];
 
@@ -80,34 +152,43 @@ export async function discoverTopics({
     ? `\nAVOID these already-used topics:\n${excludeTopics.map(t => `- ${t}`).join('\n')}`
     : '';
 
-  const systemPrompt = `You are a viral content researcher. Generate ${count} specific, research-backed topic suggestions for ${niche} short-form video content.
+  let articlesBlock = '';
+  if (hasArticles) {
+    // Condense articles into a reference block for the LLM
+    const articleSummaries = articles.slice(0, 30).map((a, i) =>
+      `${i + 1}. "${a.title}" — ${a.snippet}${a.source ? ` (${a.source})` : ''}${a.date ? ` [${a.date}]` : ''}`
+    ).join('\n');
+    articlesBlock = `\nREAL ARTICLES FROM WEB SEARCH (use these as source material — cite real facts, names, dates):\n${articleSummaries}\n\nYou MUST ground your topics in these real articles. Extract specific facts, names, and events. Do not invent stories.`;
+  }
+
+  const systemPrompt = `You are a viral content researcher specializing in short-form video. Generate ${count} specific, research-backed topic suggestions for ${niche} content.
 
 HOOK PATTERN: ${hookPattern}
 ${hookExamples.length > 0 ? `HOOK EXAMPLES (match this style):\n${hookExamples.map(h => `  - "${h}"`).join('\n')}` : ''}
+${articlesBlock}
 
-SEARCH CONTEXT (use these as starting points for topic ideas):
-${searchContext}
-
-Each suggestion must be:
+Each topic must be:
 1. SPECIFIC — not vague like "money tips". Instead: "Why keeping $1000 in savings is actually losing you $47/year to inflation"
-2. HOOK-FIRST — the hookLine must create an information gap that makes viewers NEED to know the answer
-3. VERIFIABLE — based on real facts, events, or phenomena (not made-up scenarios)
+2. HOOK-FIRST — the title must create an information gap that makes viewers NEED to know
+3. VERIFIABLE — based on real facts, events, or phenomena${hasArticles ? ' from the provided articles' : ''}
 4. STORY-CAPABLE — can be told in 30-90 seconds with a clear narrative arc
 5. FRESH — not the same overused topics everyone has already covered
 
-For estimatedViralPotential:
-- "high": Combines strong emotional trigger + surprising fact + broad appeal
-- "medium": Good topic but either niche or less surprising
-- "low": Decent content but predictable or hard to make visually interesting
+SCORING GUIDELINES:
+- trending_score: "high" = breaking in last 48 hours across major outlets, "medium" = trending this week or recurring interest, "low" = older, evergreen, or niche
+- competition_score: "high" = widely covered on TikTok/YouTube Shorts/Reels already, "medium" = some creators have covered it, "low" = under-covered opportunity
+
+story_context must contain ALL facts needed to write a script — names, dates, statistics, outcomes. A script writer should be able to work from this alone.
 ${excludeBlock}`;
 
+  // ── Step 3: LLM call ─────────────────────────────────────────────────────
   const completion = await openai.chat.completions.parse({
     model: 'gpt-4.1-mini-2025-04-14',
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Generate ${count} viral topic suggestions for ${niche} content.` },
+      { role: 'user', content: `Generate ${count} viral topic suggestions for ${niche} short-form video content.${hasArticles ? ' Base your suggestions on the real articles provided.' : ''}` },
     ],
-    response_format: zodResponseFormat(HookSuggestionSchema, 'hook_suggestions'),
+    response_format: zodResponseFormat(TopicDiscoverySchema, 'topic_discovery'),
     temperature: 1.0, // High creativity for diverse suggestions
   });
 
@@ -118,19 +199,19 @@ ${excludeBlock}`;
       username: brandUsername,
       category: 'openai',
       operation: 'shorts_topic_discovery',
-      model: 'gpt-4.1-mini',
+      model: 'gpt-4.1-mini-2025-04-14',
       input_tokens: completion.usage.prompt_tokens,
       output_tokens: completion.usage.completion_tokens,
     });
   }
 
-  // Sort by viral potential
-  const potentialOrder = { high: 0, medium: 1, low: 2 };
-  const sorted = result.suggestions.sort((a, b) =>
-    (potentialOrder[a.estimatedViralPotential] || 2) - (potentialOrder[b.estimatedViralPotential] || 2)
-  );
+  // ── Step 4: Sort by composite score (high trending + low competition first) ──
+  const sorted = result.topics.sort((a, b) => compositeScore(b) - compositeScore(a));
 
-  console.log(`[topicDiscovery] Generated ${sorted.length} suggestions for ${niche} (${sorted.filter(s => s.estimatedViralPotential === 'high').length} high potential)`);
+  const source = hasArticles ? 'searchapi_plus_gpt' : 'gpt_only';
+  const highTrending = sorted.filter(t => t.trending_score === 'high').length;
+  const lowComp = sorted.filter(t => t.competition_score === 'low').length;
+  console.log(`[topicDiscovery] Generated ${sorted.length} topics for ${niche} (${source}, ${highTrending} high-trending, ${lowComp} low-competition)`);
 
-  return sorted;
+  return { topics: sorted, source, queryCount };
 }
