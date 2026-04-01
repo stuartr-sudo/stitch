@@ -24,7 +24,7 @@ export async function processNextBatchJob(batchId, supabase) {
   // Count currently running jobs for this batch
   const { data: runningJobs, error: runningErr } = await supabase
     .from('jobs')
-    .select('id', { count: 'exact' })
+    .select('id')
     .eq('batch_id', batchId)
     .eq('status', 'running');
 
@@ -58,21 +58,8 @@ export async function processNextBatchJob(batchId, supabase) {
   }
 
   if (!pendingJobs || pendingJobs.length === 0) {
-    // No pending jobs — check if batch is fully complete
-    const { data: allJobs } = await supabase
-      .from('jobs')
-      .select('status')
-      .eq('batch_id', batchId);
-
-    const stillRunning = allJobs?.some(j => j.status === 'pending' || j.status === 'running');
-    if (!stillRunning) {
-      // All jobs done — ensure batch status is marked completed
-      await supabase
-        .from('batches')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
-        .eq('id', batchId)
-        .eq('status', 'running');
-    }
+    // No pending jobs to start — batch_job_finished RPC handles completion atomically
+    console.log(`[batchProcessor] Batch ${batchId} has no pending jobs, nothing to start`);
     return;
   }
 
@@ -96,11 +83,17 @@ export async function processNextBatchJob(batchId, supabase) {
 
     if (!campaignId || !userId) {
       console.error(`[batchProcessor] Job ${job.id} missing campaign_id or user_id`);
+      await supabase.from('jobs').update({ status: 'failed', error: 'Missing campaign_id or user_id in input_json', updated_at: new Date().toISOString() }).eq('id', job.id);
       continue;
     }
 
     // Resolve user email for getUserKeys
-    const { data: userData } = await supabase.auth.admin.getUserById(userId);
+    const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
+    if (userErr) {
+      console.error(`[batchProcessor] Failed to resolve user email for job ${job.id}:`, userErr.message);
+      await supabase.from('jobs').update({ status: 'failed', error: 'Failed to resolve user email', updated_at: new Date().toISOString() }).eq('id', job.id);
+      continue;
+    }
     const userEmail = userData?.user?.email || '';
 
     // Resolve API keys for this user
@@ -109,11 +102,16 @@ export async function processNextBatchJob(batchId, supabase) {
       keys = await getUserKeys(userId, userEmail);
     } catch (err) {
       console.error(`[batchProcessor] getUserKeys failed for job ${job.id}:`, err.message);
-      await supabase.from('jobs').update({ status: 'failed', error: 'Failed to resolve API keys' }).eq('id', job.id);
+      await supabase.from('jobs').update({ status: 'failed', error: 'Failed to resolve API keys', updated_at: new Date().toISOString() }).eq('id', job.id);
       continue;
     }
 
     const nicheTemplate = getShortsTemplate(input.niche);
+    if (!nicheTemplate) {
+      console.error(`[batchProcessor] Job ${job.id} has unknown niche "${input.niche}"`);
+      await supabase.from('jobs').update({ status: 'failed', error: `Unknown niche: ${input.niche}`, updated_at: new Date().toISOString() }).eq('id', job.id);
+      continue;
+    }
 
     console.log(`[batchProcessor] Starting batch job ${job.id} (topic: "${input.topic}")`);
 
