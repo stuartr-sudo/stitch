@@ -19,6 +19,67 @@ import { getPoseSetById, getPoseSetGrid } from '../lib/turnaroundPoseSets.js';
 import { createClient } from '@supabase/supabase-js';
 
 /**
+ * Upscale an image 2x using Topaz via FAL.
+ * Returns the upscaled image URL, or the original on error.
+ */
+const TOPAZ_ENDPOINT = 'fal-ai/topaz/upscale/image';
+
+async function upscaleImage(imageUrl, falKey) {
+  try {
+    console.log(`[Turnaround/Upscale] Upscaling: ${imageUrl.substring(0, 80)}...`);
+    const submitRes = await fetch(`https://queue.fal.run/${TOPAZ_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${falKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        model: 'Standard V2',
+        upscale_factor: 2,
+        output_format: 'png',
+        subject_detection: 'All',
+        face_enhancement: false,
+      }),
+    });
+
+    const data = await submitRes.json();
+
+    // Synchronous result
+    if (data.image?.url) {
+      console.log(`[Turnaround/Upscale] Done (sync): ${data.image.url.substring(0, 80)}`);
+      return data.image.url;
+    }
+
+    // Queued — poll
+    if (data.request_id) {
+      const statusUrl = data.status_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}/status`;
+      const responseUrl = data.response_url || `https://queue.fal.run/${TOPAZ_ENDPOINT}/requests/${data.request_id}`;
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+        const status = await statusRes.json();
+        if (status.status === 'COMPLETED') {
+          const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+          const result = await resultRes.json();
+          if (result.image?.url) {
+            console.log(`[Turnaround/Upscale] Done (queued): ${result.image.url.substring(0, 80)}`);
+            return result.image.url;
+          }
+        }
+        if (status.status !== 'IN_QUEUE' && status.status !== 'IN_PROGRESS') break;
+      }
+    }
+
+    console.warn('[Turnaround/Upscale] Timed out, using original');
+    return imageUrl;
+  } catch (err) {
+    console.warn('[Turnaround/Upscale] Error, using original:', err.message);
+    return imageUrl;
+  }
+}
+
+/**
  * Stitch multiple reference images into a single side-by-side grid image.
  * Arranges images in a row (up to 4), or a 2×N grid if >4 images.
  * Returns a Supabase public URL of the stitched image.
@@ -237,11 +298,24 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, mult
 // type: 'both' = can do either (like fal-flux)
 
 // Grid-aware aspect ratio & dimensions:
-// 4×6 grids → 2:3 portrait (1024×1536) — more rows than cols
-// 2×2 grids → 1:1 square (1536×1536) — equal rows and cols, maximize per-cell resolution
-function gridAspect(extras) { return extras?.gridSquare ? '1:1' : '2:3'; }
-function gridSeedreamDims(extras) { return extras?.gridSquare ? { width: 2048, height: 2048 } : { width: 1440, height: 2560 }; }
-function gridFluxDims(extras) { return extras?.gridSquare ? { width: 1536, height: 1536 } : { width: 1024, height: 1536 }; }
+// 2×2 grids → 1:1 square (maximize per-cell resolution)
+// 3×2 grids → 3:2 landscape (3 wide columns, 2 rows)
+// 4×6 grids → 2:3 portrait (more rows than cols)
+function gridAspect(extras) {
+  if (extras?.gridSquare) return '1:1';
+  if (extras?.gridLandscape) return '3:2';
+  return '2:3';
+}
+function gridSeedreamDims(extras) {
+  if (extras?.gridSquare) return { width: 2048, height: 2048 };
+  if (extras?.gridLandscape) return { width: 2560, height: 1440 };
+  return { width: 1440, height: 2560 };
+}
+function gridFluxDims(extras) {
+  if (extras?.gridSquare) return { width: 1536, height: 1536 };
+  if (extras?.gridLandscape) return { width: 1536, height: 1024 };
+  return { width: 1024, height: 1536 };
+}
 
 const MODELS = {
   'nano-banana-2-edit': {
@@ -417,21 +491,29 @@ export default async function handler(req, res) {
 
   try {
     let result;
-    const { cols: gridCols } = getPoseSetGrid(poseSet || 'standard-24');
-    const gridSquare = gridCols <= 2; // 2×2 grids get square output for max per-cell resolution
-    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null), negativePrompt: negPrompt, gridSquare };
+    const { cols: gridCols, rows: gridRows } = getPoseSetGrid(poseSet || 'standard-24');
+    const gridSquare = gridCols <= 2 && gridRows <= 2;
+    const gridLandscape = gridCols > gridRows && !gridSquare; // 3x2 = landscape
+    const extras = { loras: loras || (loraUrl ? [{ url: loraUrl, scale: 1 }] : null), negativePrompt: negPrompt, gridSquare, gridLandscape };
 
     if (modelDef.type === 'edit' || (modelDef.type === 'both' && hasRef)) {
       // Edit path — try with automatic fallback through available models
       result = await tryEditWithFallback(FAL_KEY, model, modelDef, prompt, resolvedRefUrl, extras);
+      // Auto-upscale completed turnaround sheets for higher quality cell extraction
+      if (result.imageUrl) {
+        result.imageUrl = await upscaleImage(result.imageUrl, FAL_KEY);
+        result.upscaled = true;
+      }
 
     } else if (modelDef.type === 'both' && !hasRef) {
-      // Flux without reference → generate endpoint, queue
+      // Queue-based models — upscale not applied automatically (image not available yet).
+      // Users can upscale individual cells via the cell editor after generation completes.
       const payload = modelDef.buildPayload(prompt, null, extras);
       result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
 
     } else {
-      // Pure generate → queue
+      // Queue-based models — upscale not applied automatically (image not available yet).
+      // Users can upscale individual cells via the cell editor after generation completes.
       const payload = modelDef.buildPayload(prompt, null, extras);
       result = await submitToQueue(FAL_KEY, modelDef.endpoint, model, payload);
     }
