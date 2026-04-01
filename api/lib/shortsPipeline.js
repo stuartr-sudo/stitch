@@ -36,6 +36,7 @@ import { withRetry } from './retryHelper.js';
 import { logCost } from './costLogger.js';
 import { saveToLibrary } from './librarySave.js';
 import { writeMediaMetadata } from './mediaMetadata.js';
+import { processNextBatchJob } from './batchProcessor.js';
 
 /**
  * Transform descriptive ttsPacing into imperative TTS style instructions.
@@ -892,6 +893,25 @@ export async function runShortsPipeline(opts) {
 
     console.log(`[shortsPipeline] Job ${jobId} complete — "${narrativeResult.title}" — ${captionedVideoUrl}`);
 
+    // ── Batch completion hook ───────────────────────────────────────────────────
+    const { data: completedJob } = await supabase
+      .from('jobs')
+      .select('batch_id')
+      .eq('id', jobId)
+      .single();
+
+    if (completedJob?.batch_id) {
+      // Atomic increment + completion check in one Postgres transaction
+      await supabase.rpc('batch_job_finished', {
+        p_batch_id: completedJob.batch_id,
+        p_field: 'completed_items',
+      });
+      // Start next pending job (fire-and-forget)
+      processNextBatchJob(completedJob.batch_id, supabase).catch(err =>
+        console.error('[shortsPipeline] processNextBatchJob error:', err.message)
+      );
+    }
+
   } catch (err) {
     console.error(`[shortsPipeline] Pipeline failed at step="${currentStep}" scene=${currentSceneIndex} model=${currentModel}:`, err);
 
@@ -911,6 +931,25 @@ export async function runShortsPipeline(opts) {
     await supabase.from('campaigns').update({
       status: 'failed',
     }).eq('id', campaignId);
+
+    // Batch hook — count as failed item, start next job
+    try {
+      const { data: failedJob } = await supabase
+        .from('jobs')
+        .select('batch_id')
+        .eq('id', jobId)
+        .single();
+
+      if (failedJob?.batch_id) {
+        await supabase.rpc('batch_job_finished', {
+          p_batch_id: failedJob.batch_id,
+          p_field: 'failed_items',
+        });
+        processNextBatchJob(failedJob.batch_id, supabase).catch(() => {});
+      }
+    } catch (batchHookErr) {
+      console.error('[shortsPipeline] Batch hook error in catch block:', batchHookErr.message);
+    }
 
     // Do NOT re-throw — the pipeline handles its own cleanup
   }
