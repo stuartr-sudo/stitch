@@ -130,12 +130,12 @@ export const POSE_SETS = [
         ],
       },
       {
-        label: 'Special Views & Details',
+        label: 'Portrait Close-ups (Per Angle)',
         cells: [
-          { prompt: 'face close-up head and shoulders', shortLabel: 'Face Detail' },
-          { prompt: 'hand and accessory detail close-up', shortLabel: 'Hand Detail' },
-          { prompt: 'bird\'s-eye view from above', shortLabel: 'Top-Down' },
-          { prompt: 'dramatic low angle from below', shortLabel: 'Low Angle' },
+          { prompt: 'front view portrait close-up, head and shoulders, facing camera directly, detailed facial features, matching the front turnaround pose', shortLabel: 'Face Front' },
+          { prompt: 'three-quarter portrait close-up, head and shoulders, at 45-degree angle, detailed facial features, matching the 3/4 front turnaround pose', shortLabel: 'Face 3/4' },
+          { prompt: 'side profile portrait close-up, head and shoulders, exact 90-degree profile, detailed facial features, matching the side turnaround pose', shortLabel: 'Face Side' },
+          { prompt: 'hand and accessory detail close-up, showing rings, gloves, weapons, or other held items', shortLabel: 'Hand Detail' },
         ],
       },
     ],
