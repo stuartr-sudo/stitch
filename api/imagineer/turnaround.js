@@ -160,37 +160,59 @@ function buildTurnaroundPrompt({ characterDescription, style, hasReference, mult
   // Derive grid dimensions from pose set structure
   const { cols: gridCols, rows: gridRows, total: gridTotal } = getPoseSetGrid(poseSet || 'standard-24');
 
-  // Background: white (default) or scene environment for R2V-compatible references
-  const backgroundText = backgroundMode === 'scene' && sceneEnvironment
-    ? `Professional character turnaround model sheet, organized grid layout with ${gridCols} columns and ${gridRows} rows (${gridTotal} poses total), each pose set in a ${sceneEnvironment.trim()} environment with contextual background, clear cell separation, each cell should be large and detailed`
-    : `Professional character turnaround model sheet, organized grid layout with ${gridCols} columns and ${gridRows} rows (${gridTotal} poses total), clean white background with clear cell separation, each cell should be large and detailed`;
+  // Background: white (default), gray, or scene environment for R2V-compatible references
+  const gridDesc = `Professional character turnaround model sheet, organized grid layout with ${gridCols} columns and ${gridRows} rows (${gridTotal} poses total)`;
+  const cellDesc = 'clear cell separation, each cell should be large and detailed';
+  let backgroundText;
+  if (backgroundMode === 'scene' && sceneEnvironment) {
+    backgroundText = `${gridDesc}, each pose set in a ${sceneEnvironment.trim()} environment with contextual background, ${cellDesc}`;
+  } else if (backgroundMode === 'gray') {
+    backgroundText = `${gridDesc}, clean neutral gray background with ${cellDesc}`;
+  } else {
+    backgroundText = `${gridDesc}, clean white background with ${cellDesc}`;
+  }
 
+  // 2. CHARACTER IDENTITY ANCHOR — face, hair, eyes, distinguishing marks, outfit
+  // This is the most important section for consistency
+  parts.push(`Character: ${characterDescription}`);
+
+  // 3. Reference image instructions — locks identity to visual anchor
+  parts.push(refNote);
+
+  // 4. Grid layout & background instructions
+  parts.push(backgroundText);
+
+  // 5. Consistency & alignment instructions (from best-practice research)
   parts.push(
-    `${stylePrompt}`,
-    backgroundText,
-    `Character: ${characterDescription}`,
-    propsNote,
-    // Dynamic rows from pose set
-    ...(() => {
-      const poseSetData = getPoseSetById(poseSet || 'standard-24');
-      return poseSetData.rows.map((row, i) => {
-        // For standard-24 Row 2, use expression-conflict-resolved cells
-        if ((poseSet || 'standard-24') === 'standard-24' && i === 1) {
-          const cells = row.cells.map((c, ci) => {
-            if (ci === 2) return expressionCells[0];
-            if (ci === 3) return expressionCells[1];
-            return c.prompt;
-          });
-          return `Row ${i + 1} — ${row.label}: ${cells.join(', ')}`;
-        }
-        return `Row ${i + 1} — ${row.label}: ${row.cells.map(c => c.prompt).join(', ')}`;
-      });
-    })(),
-    refNote,
-    `character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference`,
+    'Maintain perfect identity consistency across every cell. Consistent head height alignment across all full-body views. Even spacing, uniform framing, relaxed A-pose for standing views. Same character proportions, facial features, hair, outfit colors, and accessories in every cell'
   );
 
-  // Repeat avoidance at the end too for reinforcement
+  // 6. Style rendering
+  parts.push(stylePrompt);
+
+  // 7. Props integration
+  parts.push(propsNote);
+
+  // 8. Dynamic row definitions from pose set
+  const poseSetData = getPoseSetById(poseSet || 'standard-24');
+  poseSetData.rows.forEach((row, i) => {
+    // For standard-24 Row 2, use expression-conflict-resolved cells
+    if ((poseSet || 'standard-24') === 'standard-24' && i === 1) {
+      const cells = row.cells.map((c, ci) => {
+        if (ci === 2) return expressionCells[0];
+        if (ci === 3) return expressionCells[1];
+        return c.prompt;
+      });
+      parts.push(`Row ${i + 1} — ${row.label}: ${cells.join(', ')}`);
+    } else {
+      parts.push(`Row ${i + 1} — ${row.label}: ${row.cells.map(c => c.prompt).join(', ')}`);
+    }
+  });
+
+  // 9. Taxonomy tags for model understanding
+  parts.push('character reference sheet, model sheet, turnaround sheet, multiple poses and angles, animation reference');
+
+  // 10. Repeat avoidance at the end for reinforcement
   if (avoidNote) parts.push(avoidNote);
 
   // Brand style guide context
@@ -337,7 +359,7 @@ export default async function handler(req, res) {
     brandStyleGuide,
     poseSet,
     characterName,
-    backgroundMode,    // 'white' (default) or 'scene'
+    backgroundMode,    // 'white' (default), 'gray', or 'scene'
     sceneEnvironment,  // e.g. 'Meadow', 'Forest', etc.
   } = req.body;
 

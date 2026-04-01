@@ -1427,6 +1427,15 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                         White Background
                       </button>
                       <button type="button"
+                        onClick={() => { setBackgroundMode('gray'); setSceneEnvironment(''); }}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                          backgroundMode === 'gray'
+                            ? 'bg-[#07393C] text-white border-[#07393C]'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                        }`}>
+                        Gray Background
+                      </button>
+                      <button type="button"
                         onClick={() => setBackgroundMode('scene')}
                         className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
                           backgroundMode === 'scene'
