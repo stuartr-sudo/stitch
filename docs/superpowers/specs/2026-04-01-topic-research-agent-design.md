@@ -89,6 +89,8 @@ User selects topic -> story_context flows into script generation
 
 **Route registration:** Already registered in `server.js` at `/api/shorts/discover-topics`.
 
+**Response format change:** Current endpoint returns `{ success, suggestions }`. Update to `{ topics, niche, query_count, source }` to match the spec schema. The `topics` array uses field name `title` (matching `research.js` convention) instead of the current `topic` field name.
+
 ### Search Query Templates
 
 Each niche gets 4 query templates targeting different content angles:
@@ -217,9 +219,7 @@ These follow the existing pattern of scene-level state in the workbench.
 
 ### Narrative Generator Changes
 
-`api/lib/narrativeGenerator.js` — `generateOutline()` accepts an optional `story_context` parameter.
-
-When present, it's injected into the system prompt:
+`api/lib/narrativeGenerator.js` — `generateNarrative()` already accepts an optional `storyContext` parameter (verified in existing code). When present, it's injected into the system prompt:
 
 ```
 RESEARCH CONTEXT (use these real facts in the script):
@@ -231,9 +231,11 @@ statistics, names, or dates — use what's provided.
 
 When absent (manual topic or free-text), the generator works exactly as it does today.
 
-### Workbench Voiceover Action
+### Script Generation Integration Point
 
-`api/workbench/workbench.js` — the `voiceover` action passes `story_context` through the request body to the script generator when present.
+The frontend calls `/api/campaigns/preview-script` (not the workbench voiceover action) to generate scripts. The `preview-script` endpoint already feeds into `generateNarrative()`, which already accepts `storyContext`. The frontend simply needs to pass `storyContext` in the request body alongside the existing `topic` field. No backend endpoint changes needed for this integration — `generateNarrative()` already handles it.
+
+The workbench `voiceover` action handles TTS generation only (after script is already written) and does not need `story_context`.
 
 ### Draft Persistence
 
@@ -243,7 +245,7 @@ When absent (manual topic or free-text), the generator works exactly as it does 
 
 **SearchAPI failure:** If SearchAPI is unavailable or returns no results, fall back to GPT-only mode (same as current behavior). The response includes a `source` field: `"searchapi_plus_gpt"` when real articles are used, `"gpt_only"` when falling back. Frontend can optionally show a subtle indicator.
 
-**GPT failure:** Return 500 with error message. No fallback — the feature requires GPT.
+**GPT failure:** Return 500 with error message. No fallback — the feature requires GPT. If GPT fails after SearchAPI has already returned results, still return 500 (no partial results).
 
 **Partial query failure:** `Promise.allSettled` means if 1-2 of 4 queries fail, the remaining results still process. Only a total failure triggers the GPT-only fallback.
 
@@ -254,9 +256,8 @@ When absent (manual topic or free-text), the generator works exactly as it does 
 | File | Change |
 |---|---|
 | `api/lib/topicDiscovery.js` | **Upgrade** — add SearchAPI calls, dual scoring, `story_context` field, new Zod schema |
-| `api/shorts/discover-topics.js` | **Minor update** — pass response metadata (`source`, `query_count`) |
-| `api/lib/narrativeGenerator.js` | Accept optional `story_context` param, inject into prompt |
-| `api/workbench/workbench.js` | Pass `story_context` through `voiceover` action |
+| `api/shorts/discover-topics.js` | **Update** — restructure response to `{ topics, niche, query_count, source }` format |
+| `api/lib/narrativeGenerator.js` | No changes needed — already accepts `storyContext` param |
 | `src/pages/ShortsWorkbenchPage.jsx` | Replace topic funnel primary path with discovery UI |
 
 ## Backward Compatibility
