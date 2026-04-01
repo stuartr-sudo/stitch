@@ -28,6 +28,7 @@ import StoryboardWorkspace from './pages/StoryboardWorkspace';
 import SettingsAccountsPage from './pages/SettingsAccountsPage';
 import AdsManagerPage from './pages/AdsManagerPage';
 import AdCampaignEditor from './pages/AdCampaignEditor';
+import LoraGuidePage from './pages/LoraGuidePage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -263,6 +264,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdCampaignEditor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/lora"
+            element={
+              <ProtectedRoute>
+                <LoraGuidePage />
               </ProtectedRoute>
             }
           />
