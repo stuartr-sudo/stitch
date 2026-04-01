@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { RefreshCw, Loader2, ChevronDown, Palette } from 'lucide-react';
+import { RefreshCw, Loader2, ChevronDown, Palette, Eye, EyeOff } from 'lucide-react';
 import StyleGrid from '@/components/ui/StyleGrid';
 
 /**
  * Shared ad image section with style picker for regeneration.
  * Used by LinkedIn, Meta, and Google editors.
  */
-export default function AdImageSection({ imageUrl, onRegenerate, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
+export default function AdImageSection({ imageUrl, imagePrompt, onRegenerate, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
   const [showStyles, setShowStyles] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('');
 
   const handleRegenWithStyle = () => {
@@ -48,6 +49,22 @@ export default function AdImageSection({ imageUrl, onRegenerate, regenerating, a
       ) : (
         <div className={`w-full ${aspectClass} bg-gray-100 rounded-lg border flex items-center justify-center mb-3`}>
           <span className="text-gray-400 text-sm">No image yet</span>
+        </div>
+      )}
+
+      {/* Image prompt (collapsible) */}
+      {imagePrompt && (
+        <div className="mt-1">
+          <button
+            onClick={() => setShowPrompt(!showPrompt)}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+          >
+            {showPrompt ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            {showPrompt ? 'Hide prompt' : 'View image prompt'}
+          </button>
+          {showPrompt && (
+            <p className="mt-1 text-xs text-gray-500 bg-gray-50 rounded p-2 leading-relaxed border">{imagePrompt}</p>
+          )}
         </div>
       )}
 

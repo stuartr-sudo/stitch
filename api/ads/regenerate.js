@@ -1,6 +1,8 @@
 /**
  * POST /api/ads/variations/:id/regenerate
  * Regenerate copy and/or image for a single variation.
+ * Image regeneration uses GPT to build a rich prompt informed by brand kit,
+ * and aims to IMPROVE on the previous prompt if one exists.
  */
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -122,18 +124,101 @@ export default async function handler(req, res) {
     }
   }
 
-  // Regenerate image
+  // Regenerate image with smart prompt building
   if (regenerate_image && keys.falKey) {
     const aspectMap = { linkedin: { width: 1200, height: 627 }, google: { width: 1200, height: 628 }, meta: { width: 1080, height: 1080 } };
     const aspect = aspectMap[variation.platform] || { width: 1080, height: 1080 };
-    const styleText = style_preset ? ` Visual style: ${style_preset}.` : '';
-    const prompt = `${campaign.product_description || campaign.name}. Professional, high quality.${styleText} No text, no logos.`;
+    const platformContextMap = {
+      linkedin: 'Professional LinkedIn ad — business context, polished, trustworthy',
+      google: 'Google display ad — clean, commercial quality, attention-grabbing',
+      meta: 'Meta/Instagram feed ad — eye-catching, vibrant, scroll-stopping',
+    };
+
+    // Fetch brand kit for image prompt (richer fields than copy needs)
+    let brandKit = null;
+    try {
+      const { data: bk } = await supabase
+        .from('brand_kit')
+        .select('brand_name, industry, visual_style_notes, mood_atmosphere, lighting_prefs, composition_style, ai_prompt_rules, preferred_elements, prohibited_elements, colors')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+      brandKit = bk;
+    } catch {}
+
+    // Build a rich prompt via GPT, referencing previous prompt for improvement
+    let imagePrompt = '';
+    try {
+      const sections = [];
+      sections.push('PURPOSE: Generate an improved advertising image for a paid ad campaign.');
+      sections.push(`PLATFORM: ${variation.platform} — ${platformContextMap[variation.platform] || 'advertising'}`);
+      sections.push(`PRODUCT/SERVICE: ${campaign.product_description || campaign.name}`);
+      if (campaign.objective) sections.push(`CAMPAIGN OBJECTIVE: ${campaign.objective}`);
+      if (campaign.target_audience) sections.push(`TARGET AUDIENCE: ${campaign.target_audience}`);
+      if (style_preset) sections.push(`REQUESTED VISUAL STYLE: ${style_preset}`);
+
+      // Previous prompt context — tell GPT to improve on it
+      const previousPrompt = variation.image_prompt;
+      if (previousPrompt) {
+        sections.push(`PREVIOUS IMAGE PROMPT (improve on this — make it more specific, vivid, and on-brand):\n${previousPrompt}`);
+      }
+
+      // Brand style guide context
+      if (brandKit) {
+        const bsg = [];
+        if (brandKit.brand_name) bsg.push(`Brand: ${brandKit.brand_name}`);
+        if (brandKit.industry) bsg.push(`Industry: ${brandKit.industry}`);
+        if (brandKit.visual_style_notes) bsg.push(`Visual Style: ${brandKit.visual_style_notes}`);
+        if (brandKit.mood_atmosphere) bsg.push(`Mood/Atmosphere: ${brandKit.mood_atmosphere}`);
+        if (brandKit.lighting_prefs) bsg.push(`Lighting: ${brandKit.lighting_prefs}`);
+        if (brandKit.composition_style) bsg.push(`Composition: ${brandKit.composition_style}`);
+        if (brandKit.preferred_elements) bsg.push(`Preferred Elements: ${brandKit.preferred_elements}`);
+        if (brandKit.prohibited_elements) bsg.push(`Prohibited Elements: ${brandKit.prohibited_elements}`);
+        if (brandKit.ai_prompt_rules) bsg.push(`AI Prompt Rules: ${brandKit.ai_prompt_rules}`);
+        if (brandKit.colors?.length > 0) bsg.push(`Brand Colors: ${JSON.stringify(brandKit.colors)}`);
+        if (bsg.length > 0) sections.push(`BRAND STYLE GUIDE:\n${bsg.join('\n')}`);
+      }
+
+      if (!keys.openaiKey) throw new Error('No OpenAI key');
+      const client = new OpenAI({ apiKey: keys.openaiKey });
+
+      const systemPrompt = `You are an expert AI advertising image prompt engineer. Your job is to produce a single, detailed, visually rich prompt for an AI image generator (Nano Banana 2).
+
+Rules:
+- Output ONLY the prompt text — no preamble, no explanation, no quotes
+- Create a scene that visually represents the product/service and appeals to the target audience
+- Be extremely specific with visual details: setting, lighting, colors, composition, materials, mood
+- If a brand style guide is provided, align the visual style with it
+- If a visual style is requested, apply that aesthetic throughout
+- If a previous prompt is provided, IMPROVE on it — make the scene more compelling, more specific, more on-brand. Take a different creative angle while keeping the core concept.
+- The image must work as an ad — eye-catching and conveying value visually
+- NEVER include text, words, logos, watermarks, or UI elements in the image
+- NEVER use copyrighted brand names — describe visual characteristics instead
+- Keep the prompt under 150 words
+- End with "AVOID: text, words, logos, watermarks, letters, typography" as the final line`;
+
+      const response = await client.chat.completions.create({
+        model: 'gpt-4.1-mini-2025-04-14',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: sections.join('\n\n') },
+        ],
+        max_tokens: 400,
+      });
+
+      imagePrompt = (response.choices[0]?.message?.content || '').trim();
+      logCost({ username: req.user.email, category: 'openai', operation: `ads_regen_prompt_${variation.platform}`, model: 'gpt-4.1-mini' }).catch(() => {});
+      console.log(`[ads/regenerate] ${variation.platform} image prompt: ${imagePrompt.slice(0, 120)}...`);
+    } catch (err) {
+      console.warn('[ads/regenerate] Prompt build failed, using fallback:', err.message);
+      const styleText = style_preset ? ` Visual style: ${style_preset}.` : '';
+      imagePrompt = `${campaign.product_description || campaign.name}. Professional, high quality advertising image.${styleText} No text, no logos.`;
+    }
 
     try {
       const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
         method: 'POST',
         headers: { Authorization: `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, image_size: aspect.width === aspect.height ? 'square_hd' : aspect, num_images: 1 }),
+        body: JSON.stringify({ prompt: imagePrompt, image_size: aspect.width === aspect.height ? 'square_hd' : aspect, num_images: 1 }),
       });
 
       if (falRes.ok) {
@@ -159,6 +244,7 @@ export default async function handler(req, res) {
         if (imageUrl) {
           const stored = await uploadUrlToSupabase(imageUrl, supabase, 'ads').catch(() => imageUrl);
           updates.image_urls = [stored];
+          updates.image_prompt = imagePrompt;
           logCost({ username: req.user.email, category: 'fal', operation: `ads_regen_image_${variation.platform}`, model: 'nano-banana-2' }).catch(() => {});
         }
       }

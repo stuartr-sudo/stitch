@@ -1,7 +1,7 @@
 /**
  * POST /api/ads/campaigns/:id/generate
  * Generate ad variations for selected platforms using AI.
- * Currently supports: linkedin (google + meta coming soon).
+ * Currently supports: linkedin, google, meta.
  */
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -64,19 +64,72 @@ const PLATFORM_CONFIGS = {
   linkedin: {
     system: LINKEDIN_SYSTEM,
     imageAspect: { width: 1200, height: 627 },
-    imagePromptSuffix: 'Professional, modern, business context. No text, no logos, no words.',
+    platformContext: 'Professional LinkedIn ad — business context, polished, trustworthy',
   },
   google: {
     system: GOOGLE_RSA_SYSTEM,
     imageAspect: { width: 1200, height: 628 },
-    imagePromptSuffix: 'Clean, professional, commercial quality. No text, no logos.',
+    platformContext: 'Google display ad — clean, commercial quality, attention-grabbing',
   },
   meta: {
     system: META_SYSTEM,
     imageAspect: { width: 1080, height: 1080 },
-    imagePromptSuffix: 'Eye-catching, vibrant, scroll-stopping. No text, no logos.',
+    platformContext: 'Meta/Instagram feed ad — eye-catching, vibrant, scroll-stopping',
   },
 };
+
+/**
+ * Build a rich image prompt using GPT (same pattern as Cohesive Prompt Builder).
+ */
+async function buildAdImagePrompt(openai, { productDescription, platform, platformContext, brandKit, objective, targetAudience }) {
+  const sections = [];
+  sections.push('PURPOSE: Generate a compelling advertising image for a paid ad campaign.');
+  sections.push(`PLATFORM: ${platform} — ${platformContext}`);
+  sections.push(`PRODUCT/SERVICE: ${productDescription}`);
+  if (objective) sections.push(`CAMPAIGN OBJECTIVE: ${objective}`);
+  if (targetAudience) sections.push(`TARGET AUDIENCE: ${targetAudience}`);
+
+  // Brand style guide context
+  if (brandKit) {
+    const bsg = [];
+    if (brandKit.brand_name) bsg.push(`Brand: ${brandKit.brand_name}`);
+    if (brandKit.industry) bsg.push(`Industry: ${brandKit.industry}`);
+    if (brandKit.visual_style_notes) bsg.push(`Visual Style: ${brandKit.visual_style_notes}`);
+    if (brandKit.mood_atmosphere) bsg.push(`Mood/Atmosphere: ${brandKit.mood_atmosphere}`);
+    if (brandKit.lighting_prefs) bsg.push(`Lighting: ${brandKit.lighting_prefs}`);
+    if (brandKit.composition_style) bsg.push(`Composition: ${brandKit.composition_style}`);
+    if (brandKit.preferred_elements) bsg.push(`Preferred Elements: ${brandKit.preferred_elements}`);
+    if (brandKit.prohibited_elements) bsg.push(`Prohibited Elements: ${brandKit.prohibited_elements}`);
+    if (brandKit.ai_prompt_rules) bsg.push(`AI Prompt Rules: ${brandKit.ai_prompt_rules}`);
+    if (brandKit.colors?.length > 0) bsg.push(`Brand Colors: ${JSON.stringify(brandKit.colors)}`);
+    if (bsg.length > 0) sections.push(`BRAND STYLE GUIDE:\n${bsg.join('\n')}`);
+  }
+
+  const systemPrompt = `You are an expert AI advertising image prompt engineer. Your job is to take campaign details and produce a single, detailed, visually rich prompt for an AI image generator (Nano Banana 2).
+
+Rules:
+- Output ONLY the prompt text — no preamble, no explanation, no quotes
+- Create a scene that visually represents the product/service and appeals to the target audience
+- Be extremely specific with visual details: setting, lighting, colors, composition, materials, mood
+- If a brand style guide is provided, align the visual style with it
+- The image must work as an ad — it should be eye-catching and convey the value proposition visually
+- Adapt the visual style to the platform (LinkedIn = professional/polished, Meta = vibrant/scroll-stopping, Google = clean/commercial)
+- NEVER include text, words, logos, watermarks, or UI elements in the image
+- NEVER use copyrighted brand names — describe visual characteristics instead
+- Keep the prompt under 150 words — concise but vivid
+- End with "AVOID: text, words, logos, watermarks, letters, typography" as the final line`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4.1-mini-2025-04-14',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: sections.join('\n\n') },
+    ],
+    max_tokens: 400,
+  });
+
+  return (response.choices[0]?.message?.content || '').trim();
+}
 
 async function generateImage(prompt, falKey, supabase, aspect) {
   try {
@@ -155,10 +208,10 @@ export default async function handler(req, res) {
 
   const client = new OpenAI({ apiKey: keys.openaiKey });
 
-  // Fetch brand context
+  // Fetch brand kit (full visual fields for image prompt + basic fields for copy)
   const { data: brand } = await supabase
     .from('brand_kit')
-    .select('brand_name, tagline, industry, target_audience')
+    .select('brand_name, tagline, industry, target_audience, visual_style_notes, mood_atmosphere, lighting_prefs, composition_style, ai_prompt_rules, preferred_elements, prohibited_elements, colors')
     .eq('user_id', req.user.id)
     .maybeSingle();
 
@@ -220,10 +273,31 @@ export default async function handler(req, res) {
           return { platform, variations: [] };
         }
 
-        // Generate image for this platform
-        const imagePrompt = `${campaign.product_description || campaign.name}. ${config.imagePromptSuffix}`;
+        // Build a rich image prompt via GPT then generate
         let imageUrl = null;
+        let imagePrompt = '';
         if (keys.falKey) {
+          try {
+            imagePrompt = await buildAdImagePrompt(client, {
+              productDescription: campaign.product_description || campaign.name,
+              platform,
+              platformContext: config.platformContext,
+              brandKit: brand,
+              objective: campaign.objective,
+              targetAudience: campaign.target_audience,
+            });
+            logCost({
+              username: req.user.email,
+              category: 'openai',
+              operation: `ads_image_prompt_${platform}`,
+              model: 'gpt-4.1-mini',
+            }).catch(() => {});
+            console.log(`[ads/generate] ${platform} image prompt: ${imagePrompt.slice(0, 120)}...`);
+          } catch (err) {
+            console.warn(`[ads/generate] Prompt build failed for ${platform}, using fallback:`, err.message);
+            imagePrompt = `${campaign.product_description || campaign.name}. Professional, high quality advertising image. No text, no logos.`;
+          }
+
           imageUrl = await generateImage(imagePrompt, keys.falKey, supabase, config.imageAspect);
           if (imageUrl) {
             logCost({
@@ -248,6 +322,7 @@ export default async function handler(req, res) {
                 pinned: {},
               },
               image_urls: imageUrl ? [imageUrl] : [],
+              image_prompt: imagePrompt || null,
             }],
           };
         }
@@ -257,6 +332,7 @@ export default async function handler(req, res) {
           ad_format: 'single_image',
           copy_data: v,
           image_urls: imageUrl ? [imageUrl] : [],
+          image_prompt: imagePrompt || null,
         }));
 
         return { platform, variations };
@@ -278,6 +354,7 @@ export default async function handler(req, res) {
             ad_format: v.ad_format,
             copy_data: v.copy_data,
             image_urls: v.image_urls,
+            image_prompt: v.image_prompt || null,
           })
           .select()
           .single();

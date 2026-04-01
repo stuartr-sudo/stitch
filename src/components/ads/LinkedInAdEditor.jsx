@@ -117,6 +117,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
       {/* Image with style picker */}
       <AdImageSection
         imageUrl={variation?.image_urls?.[0]}
+        imagePrompt={variation?.image_prompt}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
         regenerating={regenerating}
         aspectClass="aspect-[1.91/1]"

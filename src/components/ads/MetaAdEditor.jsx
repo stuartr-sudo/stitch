@@ -117,6 +117,7 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
       {/* Image with style picker */}
       <AdImageSection
         imageUrl={variation?.image_urls?.[0]}
+        imagePrompt={variation?.image_prompt}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
         regenerating={regenerating}
         aspectClass="aspect-square"
