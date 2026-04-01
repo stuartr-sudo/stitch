@@ -131,7 +131,7 @@ function getTextContainerStyle(layout, canvasW, canvasH) {
 
 // ── Build Satori JSX tree ────────────────────────────────────────────────────
 
-function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss }) {
+function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss, textColor }) {
   const headSize = Math.round(canvasH * layout.headlineSizeRatio);
   const bodySize = Math.round(canvasH * layout.bodySizeRatio);
   const marginPx = Math.round(canvasW * layout.margin);
@@ -165,7 +165,7 @@ function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataU
           fontSize: headSize,
           fontWeight: layout.headlineWeight === 'bold' ? 700 : 400,
           fontStyle: layout.headlineStyle || 'normal',
-          color: 'white',
+          color: textColor || 'white',
           lineHeight: 1.25,
           maxWidth: '100%',
         },
@@ -182,7 +182,7 @@ function buildSlideJsx({ canvasW, canvasH, headline, bodyText, layout, logoDataU
           display: 'flex',
           fontSize: bodySize,
           fontWeight: layout.bodyWeight === 'bold' ? 700 : 400,
-          color: 'rgba(255,255,255,0.9)',
+          color: textColor ? hexToRgba(textColor, 0.9) : 'rgba(255,255,255,0.9)',
           lineHeight: 1.5,
           marginTop: 12,
           maxWidth: '100%',
@@ -257,6 +257,9 @@ export async function composeSlideSatori({
     if (styleOverrides.gradient_color) {
       brandColors = [styleOverrides.gradient_color, ...(brandColors || []).slice(1)];
     }
+    if (styleOverrides.gradient_opacity != null) {
+      layout.scrimOpacity = layout.scrimOpacity * styleOverrides.gradient_opacity;
+    }
     if (styleOverrides.headline_scale) {
       layout.headlineSizeRatio = layout.headlineSizeRatio * styleOverrides.headline_scale;
     }
@@ -300,9 +303,10 @@ export async function composeSlideSatori({
   const fontFamilyCss = getFontFamilyCss(fontKey);
 
   // Build JSX tree for Satori
+  const textColor = styleOverrides?.text_color || null;
   const jsx = buildSlideJsx({
     canvasW, canvasH, headline, bodyText: effectiveBody,
-    layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss,
+    layout, logoDataUri, logoW, logoH, brandColors, fontFamilyCss, textColor,
   });
 
   const overlaySvg = await satori(jsx, {

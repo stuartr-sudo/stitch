@@ -43,6 +43,8 @@ export default function CarouselEditor({ carouselId }) {
   const [compositor, setCompositor] = useState('satori');
   const [showStyleControls, setShowStyleControls] = useState(false);
   const [gradientColor, setGradientColor] = useState('');
+  const [gradientOpacity, setGradientOpacity] = useState(100);
+  const [textColor, setTextColor] = useState('');
   const [headlineScale, setHeadlineScale] = useState(100);
   const [bodyScale, setBodyScale] = useState(100);
   const [fontFamily, setFontFamily] = useState('inter');
@@ -135,6 +137,8 @@ export default function CarouselEditor({ carouselId }) {
       const stylePrompt = getStylePrompt(carousel.style_preset);
       const styleOverrides = {};
       if (gradientColor) styleOverrides.gradient_color = gradientColor;
+      if (gradientOpacity !== 100) styleOverrides.gradient_opacity = gradientOpacity / 100;
+      if (textColor) styleOverrides.text_color = textColor;
       if (headlineScale !== 100) styleOverrides.headline_scale = headlineScale / 100;
       if (bodyScale !== 100) styleOverrides.body_scale = bodyScale / 100;
       if (fontFamily !== 'inter') styleOverrides.font_family = fontFamily;
@@ -173,6 +177,8 @@ export default function CarouselEditor({ carouselId }) {
     try {
       const regenOverrides = {};
       if (gradientColor) regenOverrides.gradient_color = gradientColor;
+      if (gradientOpacity !== 100) regenOverrides.gradient_opacity = gradientOpacity / 100;
+      if (textColor) regenOverrides.text_color = textColor;
       if (headlineScale !== 100) regenOverrides.headline_scale = headlineScale / 100;
       if (bodyScale !== 100) regenOverrides.body_scale = bodyScale / 100;
       if (fontFamily !== 'inter') regenOverrides.font_family = fontFamily;
@@ -485,6 +491,39 @@ export default function CarouselEditor({ carouselId }) {
             </div>
 
             <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Gradient Density</label>
+              <input
+                type="range"
+                min={20}
+                max={100}
+                value={gradientOpacity}
+                onChange={e => setGradientOpacity(Number(e.target.value))}
+                className="w-24 h-1.5 accent-blue-500"
+              />
+              <span className="text-xs text-gray-400 w-8">{gradientOpacity}%</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Text Color</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={textColor || '#ffffff'}
+                  onChange={e => setTextColor(e.target.value)}
+                  className="w-7 h-7 rounded border border-gray-200 cursor-pointer"
+                />
+                {textColor && (
+                  <button
+                    onClick={() => setTextColor('')}
+                    className="text-[10px] text-gray-400 hover:text-gray-600 px-1"
+                  >
+                    reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Headline Size</label>
               <input
                 type="range"
@@ -524,9 +563,9 @@ export default function CarouselEditor({ carouselId }) {
               </select>
             </div>
 
-            {(gradientColor || headlineScale !== 100 || bodyScale !== 100 || fontFamily !== 'inter') && (
+            {(gradientColor || gradientOpacity !== 100 || textColor || headlineScale !== 100 || bodyScale !== 100 || fontFamily !== 'inter') && (
               <button
-                onClick={() => { setGradientColor(''); setHeadlineScale(100); setBodyScale(100); setFontFamily('inter'); }}
+                onClick={() => { setGradientColor(''); setGradientOpacity(100); setTextColor(''); setHeadlineScale(100); setBodyScale(100); setFontFamily('inter'); }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline"
               >
                 Reset all

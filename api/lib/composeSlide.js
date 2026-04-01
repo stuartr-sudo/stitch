@@ -116,7 +116,7 @@ function logoWatermark(logoDataUri, canvasW, canvasH, logoW, logoH) {
 
 // ─── Unified SVG builder ─────────────────────────────────────────────────────
 
-function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors }) {
+function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDataUri, logoW, logoH, brandColors, textColor }) {
   const {
     textAlign, textPosition, scrimType, scrimOpacity, scrimCoverage,
     headlineSizeRatio, bodySizeRatio, headlineWeight, bodyWeight,
@@ -169,13 +169,17 @@ function buildUnifiedSvg({ canvasW, canvasH, headline, bodyText, layout, logoDat
   }
 
   // Build SVG elements
+  const headFill = textColor || 'white';
+  const bodyFill = textColor || 'white';
+  const bodyOpacity = textColor ? '0.9' : '0.9';
+
   const headEls = headLines.map((line, i) =>
-    `<text x="${textX}" y="${headStartY + i * headLH}" text-anchor="${anchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${headSize}" font-weight="${headlineWeight}" font-style="${headlineStyle}" fill="white" filter="url(#shadow)">${xmlEscape(line)}</text>`
+    `<text x="${textX}" y="${headStartY + i * headLH}" text-anchor="${anchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${headSize}" font-weight="${headlineWeight}" font-style="${headlineStyle}" fill="${headFill}" filter="url(#shadow)">${xmlEscape(line)}</text>`
   ).join('\n    ');
 
   const bodyStartY = headStartY + headLines.length * headLH + gap;
   const bodyEls = bodyLines.map((line, i) =>
-    `<text x="${textX}" y="${bodyStartY + i * bodyLH}" text-anchor="${anchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${bodySize}" font-weight="${bodyWeight}" fill="white" opacity="0.9">${xmlEscape(line)}</text>`
+    `<text x="${textX}" y="${bodyStartY + i * bodyLH}" text-anchor="${anchor}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${bodySize}" font-weight="${bodyWeight}" fill="${bodyFill}" opacity="${bodyOpacity}">${xmlEscape(line)}</text>`
   ).join('\n    ');
 
   const scrimColor = brandColors?.[0] || 'black';
@@ -237,6 +241,9 @@ export async function composeSlide({
       // Override brand colors so scrim uses this color
       brandColors = [styleOverrides.gradient_color, ...(brandColors || []).slice(1)];
     }
+    if (styleOverrides.gradient_opacity != null) {
+      layout.scrimOpacity = layout.scrimOpacity * styleOverrides.gradient_opacity;
+    }
     if (styleOverrides.headline_scale) {
       layout.headlineSizeRatio = layout.headlineSizeRatio * styleOverrides.headline_scale;
     }
@@ -275,9 +282,10 @@ export async function composeSlide({
   }
 
   // Build SVG overlay
+  const textColor = styleOverrides?.text_color || null;
   const svgString = buildUnifiedSvg({
     canvasW, canvasH, headline, bodyText: effectiveBody,
-    layout, logoDataUri, logoW, logoH, brandColors,
+    layout, logoDataUri, logoW, logoH, brandColors, textColor,
   });
   const svgBuffer = Buffer.from(svgString, 'utf-8');
 
