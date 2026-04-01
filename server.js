@@ -371,6 +371,13 @@ app.post('/api/brand/extract-pdf', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// URL brand extraction (with auth)
+app.post('/api/brand/extract-url', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/extract-url.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Background removal (with auth)
 app.post('/api/brand/remove-bg', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('brand/remove-bg.js');
