@@ -16,6 +16,7 @@ import CostDashboardPage from './pages/CostDashboardPage';
 import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
 import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
+import BatchQueuePage from './pages/BatchQueuePage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
@@ -157,6 +158,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ShortsWorkbenchPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shorts/batch"
+            element={
+              <ProtectedRoute>
+                <BatchQueuePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shorts/batch/:batchId"
+            element={
+              <ProtectedRoute>
+                <BatchQueuePage />
               </ProtectedRoute>
             }
           />
