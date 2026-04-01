@@ -623,6 +623,7 @@ app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import(
 app.post('/api/ads/variations/:id/split-test', authenticateToken, (await import('./api/ads/split-test.js')).default);
 app.get('/api/ads/google/auth', authenticateToken, (await import('./api/ads/google-auth.js')).default);
 app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js')).default);
+app.post('/api/ads/synthesize-description', authenticateToken, (await import('./api/ads/synthesize-description.js')).default);
 
 // ─── Connected Accounts routes ────────────────────────────────────────────
 app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);
