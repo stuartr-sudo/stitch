@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
-
-const LORA_ENDPOINT = 'fal-ai/flux-lora-fast-training';
+import { getTrainingModel } from '../lib/trainingModelRegistry.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { requestId, loraId, statusUrl, responseUrl } = req.body;
+  const { requestId, loraId, statusUrl, responseUrl, endpoint, model: modelId } = req.body;
   if (!requestId) return res.status(400).json({ error: 'Missing requestId' });
+
+  const activeEndpoint = endpoint || 'fal-ai/flux-lora-fast-training';
 
   const { falKey } = await getUserKeys(req.user.id, req.user.email);
   if (!falKey) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
 
   const checkUrl = statusUrl
     ? `${statusUrl}?logs=1`
-    : `https://queue.fal.run/${LORA_ENDPOINT}/requests/${requestId}/status?logs=1`;
+    : `https://queue.fal.run/${activeEndpoint}/requests/${requestId}/status?logs=1`;
 
   const statusResponse = await fetch(checkUrl, { headers });
   if (!statusResponse.ok) {
@@ -26,19 +27,22 @@ export default async function handler(req, res) {
   const statusData = await statusResponse.json();
 
   if (statusData.status === 'COMPLETED') {
-    const resultUrl = responseUrl || `https://queue.fal.run/${LORA_ENDPOINT}/requests/${requestId}`;
+    const resultUrl = responseUrl || `https://queue.fal.run/${activeEndpoint}/requests/${requestId}`;
     const resultResponse = await fetch(resultUrl, { headers });
     const resultData = await resultResponse.json();
 
     console.log('[LoRA Result] Full fal.ai response keys:', Object.keys(resultData));
     console.log('[LoRA Result] Full fal.ai response:', JSON.stringify(resultData).substring(0, 1000));
 
-    // Check multiple possible field names for the LoRA model file
-    const modelUrl = resultData.diffusers_lora_file?.url
-      || resultData.lora_file?.url
-      || resultData.config_file?.url
-      || resultData.output?.url
-      || null;
+    // Use registry's parseResult if modelId provided, otherwise fall back to generic extraction
+    const registryModel = modelId ? getTrainingModel(modelId) : null;
+    const modelUrl = registryModel
+      ? registryModel.parseResult(resultData)
+      : (resultData.diffusers_lora_file?.url
+          || resultData.lora_file?.url
+          || resultData.config_file?.url
+          || resultData.output?.url
+          || null);
 
     if (loraId) {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
