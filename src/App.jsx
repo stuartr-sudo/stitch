@@ -29,6 +29,7 @@ import SettingsAccountsPage from './pages/SettingsAccountsPage';
 import AdsManagerPage from './pages/AdsManagerPage';
 import AdCampaignEditor from './pages/AdCampaignEditor';
 import LoraGuidePage from './pages/LoraGuidePage';
+import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
 import { Loader2 } from 'lucide-react';
 
@@ -276,6 +277,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CarouselGuidePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/turnaround-educate"
+            element={
+              <ProtectedRoute>
+                <TurnaroundGuidePage />
               </ProtectedRoute>
             }
           />
