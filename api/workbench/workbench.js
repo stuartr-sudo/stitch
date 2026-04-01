@@ -23,6 +23,7 @@ import { VIDEO_MODELS, veoDuration } from '../lib/modelRegistry.js';
 import {
   generateMusic as genMusic, assembleShort, buildMusicPrompt,
   uploadUrlToSupabase, pollFalQueue, extractLastFrame, analyzeFrameContinuity,
+  buildSfxPrompt, generateSoundEffect,
 } from '../lib/pipelineHelpers.js';
 import { getFramework } from '../lib/videoStyleFrameworks.js';
 import { SHORTS_TEMPLATES } from '../lib/shortsTemplates.js';
@@ -130,6 +131,19 @@ export default async function handler(req, res) {
         if (!audioUrl) return res.status(500).json({ error: 'Music generation failed' });
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: 'beatoven', metadata: { track_count: 1 } });
         return res.json({ audio_url: audioUrl });
+      }
+
+      // ─── Sound Effects ─────────────────────────────────────────────
+      case 'sfx': {
+        const { niche, duration = 65 } = req.body;
+        const prompt = buildSfxPrompt(niche);
+        try {
+          const sfxUrl = await generateSoundEffect(prompt, duration, keys.falKey, supabase);
+          return res.json({ sfx_url: sfxUrl });
+        } catch (err) {
+          console.warn('[workbench/sfx] SFX generation failed (non-blocking):', err.message);
+          return res.json({ sfx_url: null });
+        }
       }
 
       // ─── Generate Frame ───────────────────────────────────────────
@@ -349,6 +363,7 @@ Rules:
         const {
           clips, voiceover_url, music_url, music_volume = 0.15,
           tts_duration, voice_speed = 1.0, caption_config,
+          sfx_url, sfx_volume = 0.3,
         } = req.body;
 
         if (!clips?.length) return res.status(400).json({ error: 'clips required' });
@@ -367,6 +382,7 @@ Rules:
           keys.falKey, supabase,
           clipDurations, music_volume,
           effectiveTtsDuration,
+          sfx_url, sfx_volume,
         );
 
         // Burn captions
