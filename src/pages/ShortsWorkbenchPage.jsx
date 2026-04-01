@@ -436,6 +436,10 @@ export default function ShortsWorkbenchPage() {
   const [musicApproved, setMusicApproved] = useState(false);
   const [musicVolume, setMusicVolume] = useState(0.2);
   const [enableMusic, setEnableMusic] = useState(true);
+  const [sfxUrl, setSfxUrl] = useState(null);
+  const [sfxLoading, setSfxLoading] = useState(false);
+  const [sfxVolume, setSfxVolume] = useState(0.3);
+  const [enableSfx, setEnableSfx] = useState(true);
 
   // ── Step 3: Frames ──────────────────────────────────────────────
   const [visualStyle, setVisualStyle] = useState('');
@@ -470,6 +474,7 @@ export default function ShortsWorkbenchPage() {
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
+    sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
     frames, scenePrompts, sceneRefs, clips, finalVideoUrl: finalUrl,
   });
@@ -512,6 +517,7 @@ export default function ShortsWorkbenchPage() {
       setBlocks(s.blocks || []); setTtsDuration(s.rawTtsDuration || s.ttsDuration || null); setRawTtsDuration(s.rawTtsDuration || s.ttsDuration || null);
       setMusicUrl(s.musicUrl || null); setMusicApproved(s.musicApproved || false);
       setMusicVolume(s.musicVolume ?? 0.2); setEnableMusic(s.enableMusic ?? true);
+      setSfxUrl(s.sfxUrl || null); setSfxVolume(s.sfxVolume ?? 0.3); setEnableSfx(s.enableSfx ?? true);
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
       setAspectRatio(s.aspectRatio || '9:16');
@@ -652,6 +658,20 @@ export default function ShortsWorkbenchPage() {
     finally { setTimingLoading(false); }
   };
 
+  const generateSfx = async () => {
+    setSfxLoading(true);
+    try {
+      const res = await apiFetch('/api/workbench/sfx', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, duration: Math.ceil(effectiveDuration) + 3 }),
+      });
+      const data = await parseApiResponse(res);
+      if (data.sfx_url) { setSfxUrl(data.sfx_url); }
+      else { toast.warning('SFX generation unavailable'); }
+    } catch (err) { toast.warning(err.message || 'SFX generation failed'); }
+    finally { setSfxLoading(false); }
+  };
+
   const generateMusic = async () => {
     setMusicLoading(true);
     setMusicApproved(false);
@@ -786,6 +806,8 @@ export default function ShortsWorkbenchPage() {
           voiceover_url: voiceoverUrl,
           music_url: enableMusic ? musicUrl : null,
           music_volume: musicVolume,
+          sfx_url: enableSfx ? sfxUrl : null,
+          sfx_volume: sfxVolume,
           tts_duration: effectiveDuration,
           voice_speed: voiceSpeed,
           caption_config: { font_name: 'Montserrat', font_size: 100, font_weight: 'bold', font_color: 'white', highlight_color: 'purple', stroke_width: 3, stroke_color: 'black', words_per_subtitle: 1, enable_animation: true },
@@ -1267,6 +1289,43 @@ export default function ShortsWorkbenchPage() {
                           <Check className="w-3 h-3 inline mr-1" />{musicApproved ? 'Approved' : 'Approve'}
                         </button>
                         <button onClick={generateMusic} className="px-3 py-2 rounded-lg text-xs text-slate-500 border border-slate-200">
+                          <RotateCcw className="w-3 h-3 inline mr-1" />Redo
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </Panel>
+
+            {/* Sound Effects */}
+            <Panel title="Sound Effects" right={<CostBadge amount="0.05" />}>
+              <div className="flex items-center gap-3 mb-3">
+                <button onClick={() => setEnableSfx(!enableSfx)}
+                  className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', enableSfx ? 'bg-[#2C666E]' : 'bg-slate-300')}>
+                  <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', enableSfx ? 'translate-x-6' : 'translate-x-1')} />
+                </button>
+                <span className="text-sm text-slate-700 font-medium">Enable sound effects</span>
+              </div>
+
+              {enableSfx && (
+                <>
+                  <button onClick={generateSfx} disabled={sfxLoading || !niche}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 disabled:opacity-50 mb-3">
+                    {sfxLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-1.5" /> : <Volume2 className="w-3.5 h-3.5 inline mr-1.5" />}
+                    Generate Sound Effects ($0.05)
+                  </button>
+
+                  {sfxUrl && (
+                    <>
+                      <AudioPlayer url={sfxUrl} speed={1.0} />
+                      <div className="flex items-center gap-3 mt-3">
+                        <span className="text-[10px] text-slate-500 font-semibold">Volume: {Math.round(sfxVolume * 100)}%</span>
+                        <input type="range" min={0} max={100} value={sfxVolume * 100} onChange={e => setSfxVolume(e.target.value / 100)}
+                          className="flex-1 accent-purple-600" />
+                      </div>
+                      <div className="mt-3">
+                        <button onClick={generateSfx} className="px-3 py-2 rounded-lg text-xs text-slate-500 border border-slate-200">
                           <RotateCcw className="w-3 h-3 inline mr-1" />Redo
                         </button>
                       </div>
