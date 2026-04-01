@@ -29,6 +29,7 @@ import SettingsAccountsPage from './pages/SettingsAccountsPage';
 import AdsManagerPage from './pages/AdsManagerPage';
 import AdCampaignEditor from './pages/AdCampaignEditor';
 import LoraGuidePage from './pages/LoraGuidePage';
+import CarouselGuidePage from './pages/CarouselGuidePage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -270,6 +271,14 @@ function App() {
 
           {/* Admin guide — password-gated internally, no Supabase auth needed */}
           <Route path="/lora" element={<LoraGuidePage />} />
+          <Route
+            path="/carousel-educate"
+            element={
+              <ProtectedRoute>
+                <CarouselGuidePage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/settings/accounts"
