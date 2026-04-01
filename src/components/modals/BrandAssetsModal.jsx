@@ -373,6 +373,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             body: JSON.stringify({
               image_urls: publicUrls,
               trigger_word: triggerWord.trim(),
+              training_type: trainingType,
             }),
           });
           const captionData = await captionRes.json();
