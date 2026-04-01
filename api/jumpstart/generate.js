@@ -242,6 +242,20 @@ export default async function handler(req, res) {
         negativePrompt,
         FAL_KEY
       });
+    } else if (model === 'veo3-lite') {
+      return await handleVeo3Lite(req, res, {
+        imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt, FAL_KEY
+      });
+    } else if (model === 'veo3-lite-first-last') {
+      return await handleVeo3LiteFirstLast(req, res, {
+        firstFrameUrl: imageUrl,
+        lastFrameUrl: endImageUrl,
+        prompt, duration, aspectRatio, resolution, negativePrompt, FAL_KEY
+      });
+    } else if (model === 'pixverse-v6') {
+      return await handlePixVerseV6(req, res, {
+        imageUrl, prompt, duration, resolution, enableAudio, FAL_KEY
+      });
     } else if (model === 'ltx-audio-video') {
       return await handleLtxAudioVideo(req, res, {
         imageUrl, prompt, audioUrl: fields.audioUrl?.[0], FAL_KEY
@@ -913,6 +927,240 @@ async function handleVeo3FirstLast(req, res, params) {
   }
 
   return res.status(500).json({ error: 'Unexpected response from Veo 3.1 First-Last API' });
+}
+
+/**
+ * Handle Google Veo 3.1 Lite Image-to-Video (FAL.ai)
+ * Same as Fast but ~60% cheaper
+ */
+async function handleVeo3Lite(req, res, params) {
+  const { imageUrl, prompt, duration, aspectRatio, resolution, enableAudio, negativePrompt, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  console.log('[JumpStart/Veo3Lite] Submitting to Veo 3.1 Lite...');
+  console.log('[JumpStart/Veo3Lite] Settings:', { duration, aspectRatio, resolution, enableAudio });
+
+  const veoAspect = aspectRatio === '9:16' ? '9:16' : aspectRatio === 'auto' ? 'auto' : '16:9';
+
+  const requestBody = {
+    prompt,
+    image_url: imageUrl,
+    aspect_ratio: veoAspect,
+    duration: duration <= 4 ? '4s' : duration <= 6 ? '6s' : '8s',
+    resolution: resolution || '720p',
+    generate_audio: enableAudio === true,
+    auto_fix: true,
+    safety_tolerance: '6',
+  };
+
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
+  }
+
+  console.log('[JumpStart/Veo3Lite] Request:', {
+    ...requestBody,
+    image_url: '[image]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+
+  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/lite/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Veo3Lite] Error:', errorText);
+    return res.status(500).json({ error: 'Veo 3.1 Lite API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Veo3Lite] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/Veo3Lite] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'veo3-lite' });
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'veo3-lite',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Lite API' });
+}
+
+/**
+ * Handle Google Veo 3.1 Lite First-Last-Frame-to-Video (FAL.ai)
+ */
+async function handleVeo3LiteFirstLast(req, res, params) {
+  const { firstFrameUrl, lastFrameUrl, prompt, duration, aspectRatio, resolution, negativePrompt, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  if (!firstFrameUrl || !lastFrameUrl) {
+    return res.status(400).json({ error: 'Both first and last frame images are required' });
+  }
+
+  console.log('[JumpStart/Veo3LiteFLF] Submitting to Veo 3.1 Lite First-Last-Frame...');
+
+  const veoAspect = aspectRatio === '9:16' ? '9:16' : aspectRatio === 'auto' ? 'auto' : '16:9';
+
+  const requestBody = {
+    prompt,
+    first_frame_url: firstFrameUrl,
+    last_frame_url: lastFrameUrl,
+    aspect_ratio: veoAspect,
+    duration: duration <= 4 ? '4s' : duration <= 6 ? '6s' : '8s',
+    resolution: resolution || '720p',
+    auto_fix: true,
+    safety_tolerance: '6',
+  };
+
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
+  }
+
+  console.log('[JumpStart/Veo3LiteFLF] Request:', {
+    ...requestBody,
+    first_frame_url: '[first frame]',
+    last_frame_url: '[last frame]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+
+  const submitResponse = await fetch('https://fal.run/fal-ai/veo3.1/lite/first-last-frame-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/Veo3LiteFLF] Error:', errorText);
+    return res.status(500).json({ error: 'Veo 3.1 Lite First-Last API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/Veo3LiteFLF] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/Veo3LiteFLF] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'veo3-lite-first-last' });
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'veo3-lite-first-last',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from Veo 3.1 Lite First-Last API' });
+}
+
+/**
+ * Handle PixVerse V6 Image-to-Video (FAL.ai)
+ */
+async function handlePixVerseV6(req, res, params) {
+  const { imageUrl, prompt, duration, resolution, enableAudio, FAL_KEY } = params;
+
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  console.log('[JumpStart/PixVerseV6] Submitting to PixVerse V6...');
+  console.log('[JumpStart/PixVerseV6] Settings:', { duration, resolution, enableAudio });
+
+  const requestBody = {
+    prompt,
+    image_url: imageUrl,
+    duration: String(duration <= 6 ? 5 : 8),
+    resolution: resolution || '720p',
+  };
+
+  // PixVerse V6 uses generate_audio_switch (NOT generate_audio)
+  if (enableAudio === true) {
+    requestBody.generate_audio_switch = true;
+  }
+
+  console.log('[JumpStart/PixVerseV6] Request:', {
+    ...requestBody,
+    image_url: '[image]',
+    prompt: requestBody.prompt.substring(0, 100) + '...'
+  });
+
+  const submitResponse = await fetch('https://fal.run/fal-ai/pixverse/v6/image-to-video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    console.error('[JumpStart/PixVerseV6] Error:', errorText);
+    return res.status(500).json({ error: 'PixVerse V6 API error: ' + errorText.substring(0, 200) });
+  }
+
+  const data = await submitResponse.json();
+  console.log('[JumpStart/PixVerseV6] Response:', JSON.stringify(data).substring(0, 500));
+
+  if (data.video?.url) {
+    console.log('[JumpStart/PixVerseV6] Video ready:', data.video.url);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, data.video.url, { model_name: 'pixverse-v6' });
+    return res.status(200).json({
+      success: true,
+      videoUrl: data.video.url,
+      status: 'completed',
+    });
+  }
+
+  const requestId = data.request_id || data.requestId;
+  if (requestId) {
+    return res.status(200).json({
+      success: true,
+      requestId: requestId,
+      model: 'pixverse-v6',
+      status: 'processing',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected response from PixVerse V6 API' });
 }
 
 /**

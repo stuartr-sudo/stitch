@@ -212,6 +212,35 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 150, delayMs: 4000 },
   },
+  // Veo 3.1 Lite — same as Fast but cheaper (~60% less), adds 'auto' aspect_ratio
+  fal_veo3_lite: {
+    provider: 'fal',
+    label: 'Veo 3.1 Lite (Google)',
+    endpoint: 'fal-ai/veo3.1/lite/image-to-video',
+    r2vEndpoint: 'fal-ai/veo3.1/reference-to-video',
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
+      image_url: imageUrl, prompt, duration: veoDuration(duration),
+      aspect_ratio: aspectRatio === '9:16' ? '9:16' : aspectRatio === 'auto' ? 'auto' : '16:9',
+      generate_audio: opts.generate_audio === true,
+      resolution: '720p',
+      safety_tolerance: '6',
+      auto_fix: true,
+    }),
+    parseResult: (output) => output?.video?.url,
+    pollConfig: { maxRetries: 150, delayMs: 4000 },
+  },
+  // PixVerse V6: duration "5"/"8", has generate_audio_switch (NOT generate_audio), has style param
+  fal_pixverse_v6: {
+    provider: 'fal',
+    label: 'PixVerse V6',
+    endpoint: 'fal-ai/pixverse/v6/image-to-video',
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
+      image_url: imageUrl, prompt, duration: pixverseDuration(duration),
+      ...(opts.generate_audio === true && { generate_audio_switch: true }),
+    }),
+    parseResult: (output) => output?.video?.url,
+    pollConfig: { maxRetries: 120, delayMs: 4000 },
+  },
   // Wan 2.5: duration "5"/"10", no generate_audio, has resolution/negative_prompt
   fal_wan25: {
     provider: 'fal',

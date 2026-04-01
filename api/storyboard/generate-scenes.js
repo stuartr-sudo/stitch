@@ -285,6 +285,9 @@ function getDurationConstraints(modelId) {
     'grok-imagine': { min: 5, max: 15, allowed: [5, 8, 10, 15] },
     'grok-r2v': { min: 1, max: 10, allowed: [4, 6, 8, 10] },
     'wavespeed-wan': { min: 5, max: 8, allowed: [5, 8] },
+    'veo3-lite': { min: 4, max: 8, allowed: [4, 6, 8] },
+    'veo3-lite-first-last': { min: 4, max: 8, allowed: [4, 6, 8] },
+    'pixverse-v6': { min: 5, max: 8, allowed: [5, 8] },
   };
   return constraints[modelId] || { min: 5, max: 8, allowed: [5, 8] };
 }

@@ -47,6 +47,12 @@ export default async function handler(req, res) {
       return await checkVeo3FastResult(req, res, requestId, FAL_KEY);
     } else if (model === 'veo3-first-last') {
       return await checkVeo3FirstLastResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'veo3-lite') {
+      return await checkVeo3LiteResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'veo3-lite-first-last') {
+      return await checkVeo3LiteFirstLastResult(req, res, requestId, FAL_KEY);
+    } else if (model === 'pixverse-v6') {
+      return await checkFalResult(req, res, requestId, FAL_KEY, 'fal-ai/pixverse/v6/image-to-video', model);
     } else if (model === 'veo3-fast-extend') {
       return await checkVeo3FastExtendResult(req, res, requestId, FAL_KEY);
     } else if (model === 'ltx-audio-video') {
@@ -761,6 +767,126 @@ async function getVeo3FirstLastResult(req, res, requestId, FAL_KEY) {
     requestId,
     model: 'veo3-first-last',
   });
+}
+
+/**
+ * Check Veo 3.1 Lite I2V result — same queue base as Fast (fal-ai/veo3.1)
+ */
+async function checkVeo3LiteResult(req, res, requestId, FAL_KEY) {
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Veo3Lite] Poll error:', errorText);
+    if (pollResponse.status === 404) {
+      return await getVeo3LiteResult(req, res, requestId, FAL_KEY);
+    }
+    return res.status(pollResponse.status).json({ error: 'Failed to check status', details: errorText });
+  }
+
+  const data = await pollResponse.json();
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getVeo3LiteResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'veo3-lite',
+    queuePosition: data.queue_position,
+  });
+}
+
+async function getVeo3LiteResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Veo3Lite] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true, status: 'completed', requestId, videoUrl: data.video.url, model: 'veo3-lite',
+    });
+  }
+
+  return res.status(200).json({ success: true, status: 'processing', requestId, model: 'veo3-lite' });
+}
+
+/**
+ * Check Veo 3.1 Lite First-Last-Frame result
+ */
+async function checkVeo3LiteFirstLastResult(req, res, requestId, FAL_KEY) {
+  if (!FAL_KEY) {
+    return res.status(400).json({ error: 'FAL API key not configured. Please add it in API Keys settings.' });
+  }
+
+  const pollResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}/status`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!pollResponse.ok) {
+    const errorText = await pollResponse.text();
+    console.error('[JumpStart/Veo3LiteFLF] Poll error:', errorText);
+    if (pollResponse.status === 404) {
+      return await getVeo3LiteFirstLastResult(req, res, requestId, FAL_KEY);
+    }
+    return res.status(pollResponse.status).json({ error: 'Failed to check status', details: errorText });
+  }
+
+  const data = await pollResponse.json();
+  const status = data.status?.toLowerCase() || 'processing';
+
+  if (status === 'completed') {
+    return await getVeo3LiteFirstLastResult(req, res, requestId, FAL_KEY);
+  }
+
+  return res.status(200).json({
+    success: true,
+    status: status === 'in_queue' ? 'queued' : status,
+    requestId,
+    model: 'veo3-lite-first-last',
+    queuePosition: data.queue_position,
+  });
+}
+
+async function getVeo3LiteFirstLastResult(req, res, requestId, FAL_KEY) {
+  const resultResponse = await fetch(
+    `https://queue.fal.run/fal-ai/veo3.1/requests/${requestId}`,
+    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+  );
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    console.error('[JumpStart/Veo3LiteFLF] Result fetch error:', errorText);
+    return res.status(500).json({ error: 'Failed to get result' });
+  }
+
+  const data = await resultResponse.json();
+  if (data.video?.url) {
+    return res.status(200).json({
+      success: true, status: 'completed', requestId, videoUrl: data.video.url, model: 'veo3-lite-first-last',
+    });
+  }
+
+  return res.status(200).json({ success: true, status: 'processing', requestId, model: 'veo3-lite-first-last' });
 }
 
 /**

@@ -57,6 +57,8 @@ function getSupabase() {
 function getModelStrategy(modelId) {
   const strategies = {
     'veo3-fast': 'i2v',
+    'veo3-lite': 'i2v',
+    'pixverse-v6': 'i2v',
     'seedance-pro': 'i2v',
     'kling-video': 'i2v',
     'grok-imagine': 'i2v',
@@ -66,6 +68,7 @@ function getModelStrategy(modelId) {
     'veo3': 'r2v-flat',
     'grok-r2v': 'r2v-grok',
     'veo3-first-last': 'flf',
+    'veo3-lite-first-last': 'flf',
   };
   return strategies[modelId] || 'i2v';
 }
@@ -76,6 +79,8 @@ function getModelStrategy(modelId) {
 function getRegistryKey(modelId) {
   const map = {
     'veo3-fast': 'fal_veo3',
+    'veo3-lite': 'fal_veo3_lite',
+    'pixverse-v6': 'fal_pixverse_v6',
     'seedance-pro': null, // Not in registry — use direct FAL call
     'kling-video': 'fal_kling',
     'grok-imagine': 'fal_grok_video',
@@ -85,6 +90,7 @@ function getRegistryKey(modelId) {
     'veo3': 'fal_veo3',
     'grok-r2v': 'fal_grok_video',
     'veo3-first-last': 'fal_veo3',
+    'veo3-lite-first-last': 'fal_veo3_lite',
   };
   return map[modelId];
 }

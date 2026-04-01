@@ -9,6 +9,8 @@ export const SCENE_MODELS = [
 
   // Image-to-Video
   { id: 'veo3-fast', label: 'Veo 3.1 Fast', description: 'Google — flexible duration, audio', mode: 'image-to-video', supportsAudio: true, supportsResolution: true },
+  { id: 'veo3-lite', label: 'Veo 3.1 Lite', description: 'Google — 60% cheaper, same quality', mode: 'image-to-video', supportsAudio: true, supportsResolution: true },
+  { id: 'pixverse-v6', label: 'PixVerse V6', description: 'Audio, styles, multi-resolution', mode: 'image-to-video', supportsAudio: true },
   { id: 'seedance-pro', label: 'Seedance 1.5 Pro', description: 'High quality with audio support', mode: 'image-to-video', supportsAudio: true },
   { id: 'kling-video', label: 'Kling 2.5 Turbo Pro', description: 'Cinematic motion', mode: 'image-to-video' },
   { id: 'grok-imagine', label: 'Grok Imagine (xAI)', description: 'Good quality with audio', mode: 'image-to-video', supportsAudio: true },
@@ -16,6 +18,7 @@ export const SCENE_MODELS = [
 
   // First-Last Frame
   { id: 'veo3-first-last', label: 'Veo 3.1 First-Last Frame', description: 'Google — specify start and end frames', mode: 'first-last-frame', supportsAudio: true, supportsResolution: true },
+  { id: 'veo3-lite-first-last', label: 'Veo 3.1 Lite First-Last', description: 'Google — 60% cheaper FLF', mode: 'first-last-frame', supportsResolution: true },
 
   // Video-to-Video
   { id: 'kling-o3-v2v-pro', label: 'Kling O3 Pro (V2V)', description: 'Refine existing video — pro quality', mode: 'video-to-video', supportsAudio: true },

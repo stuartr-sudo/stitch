@@ -16,7 +16,7 @@ import LibraryModal from '@/components/modals/LibraryModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
+const FLF_MODELS = ['fal_veo3', 'fal_veo3_lite', 'fal_kling_v3', 'fal_kling_o3'];
 const SPEED_OPTIONS = [0.75, 0.85, 0.9, 1.0, 1.1, 1.25, 1.3, 1.4];
 
 const NICHE_VISUAL_MOODS = {
