@@ -540,6 +540,20 @@ app.post('/api/storyboard/projects/:id/generate-previews', authenticateToken, as
   return handler(req, res);
 });
 
+app.post('/api/storyboard/projects/:id/generate-grid', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/generate-grid';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/interpolate-grid', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/interpolate-grid';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
 // Storyboard production (must be BEFORE projects catch-all)
 app.post('/api/storyboard/projects/:id/produce', authenticateToken, async (req, res) => {
   (await import('./api/storyboard/produce.js')).default(req, res);

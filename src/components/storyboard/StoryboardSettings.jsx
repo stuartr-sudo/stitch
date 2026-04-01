@@ -17,7 +17,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronDown, ChevronRight, Film, Palette, Cpu, Users, MapPin,
   Volume2, Save, Loader2, Check, Sparkles, Upload, ImageIcon,
-  FolderOpen, X, Music, Type, MessageSquare,
+  FolderOpen, X, Music, Type, MessageSquare, Anchor, Package,
+  AlertTriangle, CheckCircle2, Plus, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -159,7 +160,10 @@ export default function StoryboardSettings({ storyboard, onUpdate, isProducing =
   const [expanded, setExpanded] = useState(null);
   const [saving, setSaving] = useState(false);
   const [videoStyles, setVideoStyles] = useState([]);
+  const [diffCheck, setDiffCheck] = useState(null); // { passed, warnings, suggestions }
+  const [checkingDiff, setCheckingDiff] = useState(false);
   const saveTimerRef = useRef(null);
+  const anchorFileRef = useRef(null);
 
   // Local copy of storyboard fields for editing
   const [local, setLocal] = useState({});
@@ -298,6 +302,61 @@ export default function StoryboardSettings({ storyboard, onUpdate, isProducing =
               </div>
             </div>
           )}
+
+          {/* ── Anchor Image / Style Lock ── */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Anchor size={11} /> Anchor Image
+              </label>
+              {!s.anchor_image_url && (
+                <button
+                  onClick={() => anchorFileRef.current?.click()}
+                  className="flex items-center gap-1 text-xs text-[#2C666E] hover:text-[#1e4d54] font-medium"
+                >
+                  <Upload size={11} /> Upload
+                </button>
+              )}
+            </div>
+            <input
+              ref={anchorFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => save({ anchor_image_url: reader.result });
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }}
+            />
+            {s.anchor_image_url ? (
+              <div className="space-y-2">
+                <div className="flex items-start gap-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <img src={s.anchor_image_url} alt="Anchor" className="w-20 h-20 object-cover rounded-md flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-semibold text-amber-700 flex items-center gap-1 mb-1">
+                      <Anchor size={9} /> Style Locked
+                    </span>
+                    <p className="text-[10px] text-amber-600">All preview generations will match this visual style.</p>
+                    <button onClick={() => save({ anchor_image_url: null, anchor_image_description: null })}
+                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700">Remove anchor</button>
+                  </div>
+                </div>
+                <textarea
+                  value={s.anchor_image_description || ''}
+                  onChange={e => save({ anchor_image_description: e.target.value })}
+                  rows={2}
+                  placeholder="Describe the visual style of this anchor image (lighting, color palette, rendering style)..."
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 resize-y"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">Upload a reference image to lock visual style across all scenes. Every preview image will match its look.</p>
+            )}
+          </div>
         </div>
       </Section>
 
@@ -383,6 +442,123 @@ export default function StoryboardSettings({ storyboard, onUpdate, isProducing =
               {selectedModel?.label || 'Selected model'} uses Image-to-Video — no character references needed. The starting image defines the visual.
             </p>
           )}
+
+          {/* ── Character Differentiation Check ── */}
+          {(s.elements?.length >= 2 || s.veo_reference_images?.length >= 2) && (
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Visual Differentiation</label>
+                <button
+                  onClick={async () => {
+                    setCheckingDiff(true);
+                    try {
+                      const res = await apiFetch(`/api/storyboard/projects/${storyboard.id}/check-characters`, { method: 'POST' });
+                      const data = await res.json();
+                      if (data.success) setDiffCheck(data.result);
+                      else toast.error('Check failed: ' + data.error);
+                    } catch (err) {
+                      toast.error('Check failed: ' + err.message);
+                    } finally {
+                      setCheckingDiff(false);
+                    }
+                  }}
+                  disabled={checkingDiff}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+                >
+                  {checkingDiff ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                  Check Differentiation
+                </button>
+              </div>
+              {diffCheck && (
+                <div className={`p-2.5 rounded-lg border text-xs ${diffCheck.passed ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-1.5 font-medium mb-1.5">
+                    {diffCheck.passed
+                      ? <><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-emerald-700">Characters are visually distinct</span></>
+                      : <><AlertTriangle size={12} className="text-amber-600" /><span className="text-amber-700">Differentiation issues found</span></>
+                    }
+                  </div>
+                  {diffCheck.warnings?.map((w, i) => (
+                    <p key={i} className="text-amber-700 mb-0.5">⚠ {w}</p>
+                  ))}
+                  {diffCheck.suggestions?.map((sg, i) => (
+                    <p key={i} className="text-gray-600 mb-0.5">💡 {sg}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* ── Ingredient Palette ── */}
+      <Section id="ingredients" label="Ingredient Palette" icon={Package} expanded={expanded} onToggle={toggle} locked={isProducing}
+        summary={`${(s.ingredients?.characters || []).length} chars · ${(s.ingredients?.props || []).length} props · ${(s.ingredients?.environments || []).length} envs`}>
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500">Define named characters, props, and environments. When their names appear in scene descriptions, their details are automatically injected into generation prompts.</p>
+          {['characters', 'props', 'environments'].map(category => {
+            const items = s.ingredients?.[category] || [];
+            const label = category.charAt(0).toUpperCase() + category.slice(1);
+            return (
+              <div key={category}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</label>
+                  <button
+                    onClick={() => {
+                      const updated = { ...(s.ingredients || {}), [category]: [...items, { name: '', description: '' }] };
+                      save({ ingredients: updated });
+                    }}
+                    className="flex items-center gap-1 text-xs text-[#2C666E] hover:text-[#1e4d54] font-medium"
+                  >
+                    <Plus size={11} /> Add
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="flex-1 space-y-1">
+                        <input
+                          type="text"
+                          value={item.name || ''}
+                          onChange={e => {
+                            const updated = { ...(s.ingredients || {}) };
+                            updated[category] = [...items];
+                            updated[category][idx] = { ...item, name: e.target.value };
+                            save({ ingredients: updated });
+                          }}
+                          placeholder="Name (e.g. Maya, Red Bicycle)"
+                          className="w-full text-xs rounded border border-gray-200 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2C666E]/30"
+                        />
+                        <textarea
+                          value={item.description || ''}
+                          onChange={e => {
+                            const updated = { ...(s.ingredients || {}) };
+                            updated[category] = [...items];
+                            updated[category][idx] = { ...item, description: e.target.value };
+                            save({ ingredients: updated });
+                          }}
+                          rows={2}
+                          placeholder="Visual description — color, features, style..."
+                          className="w-full text-xs rounded border border-gray-200 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2C666E]/30 resize-none"
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updated = { ...(s.ingredients || {}), [category]: items.filter((_, i) => i !== idx) };
+                          save({ ingredients: updated });
+                        }}
+                        className="p-1 text-gray-300 hover:text-red-400 mt-1"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {items.length === 0 && (
+                    <p className="text-xs text-gray-300 italic">No {category} added yet</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Section>
 

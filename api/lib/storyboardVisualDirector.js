@@ -20,6 +20,7 @@
 
 import { z } from 'zod';
 import { getModelTemplate, usesElementSyntax, sanitizePromptForModel, buildNegativePrompt } from './storyboardModelTemplates.js';
+import { buildCameraRecommendations } from './cameraCinematography.js';
 
 // ── Zod Schema for Visual Director Output ───────────────────────────────────
 
@@ -64,6 +65,8 @@ export function buildVisualDirectorSystemPrompt(inputs) {
     aspectRatio,
     sceneDirection,       // Lighting and camera pills from scene direction
     previousSceneContinuity, // Vision analysis of previous scene's last frame (for regeneration)
+    anchorImageDescription, // Enhancement 3: anchor image style lock description
+    ingredients,          // Enhancement 4: { characters: [], props: [], environments: [] }
   } = inputs;
 
   const template = getModelTemplate(modelId);
@@ -134,6 +137,40 @@ Target prompt length: ${template.promptLength.target} words per scene (min ${tem
     }
   }
 
+  // ── Anchor Image Style Lock (Enhancement 3) ──
+  if (anchorImageDescription) {
+    sections.push(`ANCHOR IMAGE STYLE LOCK — This is the highest-priority visual reference. Every single scene MUST match this exact visual style. Overrides other style guidance where there is conflict:
+${anchorImageDescription}
+
+This means: color palette, rendering style, lighting quality, and overall aesthetic MUST be consistent with the above description across ALL scenes.`);
+  }
+
+  // ── Named Ingredients (Enhancement 4) ──
+  if (ingredients) {
+    const ingredientParts = [];
+    if (ingredients.characters?.length > 0) {
+      const charLines = ingredients.characters
+        .filter(c => c.name && c.description)
+        .map(c => `  "${c.name}": ${c.description}`);
+      if (charLines.length > 0) ingredientParts.push(`CHARACTERS:\n${charLines.join('\n')}`);
+    }
+    if (ingredients.props?.length > 0) {
+      const propLines = ingredients.props
+        .filter(p => p.name && p.description)
+        .map(p => `  "${p.name}": ${p.description}`);
+      if (propLines.length > 0) ingredientParts.push(`PROPS:\n${propLines.join('\n')}`);
+    }
+    if (ingredients.environments?.length > 0) {
+      const envLines = ingredients.environments
+        .filter(e => e.name && e.description)
+        .map(e => `  "${e.name}": ${e.description}`);
+      if (envLines.length > 0) ingredientParts.push(`ENVIRONMENTS:\n${envLines.join('\n')}`);
+    }
+    if (ingredientParts.length > 0) {
+      sections.push(`NAMED INGREDIENTS — When any of these names appear in scene narratives, expand with their full descriptions in your prompts. Maintain exact consistency with these descriptions across all scenes:\n${ingredientParts.join('\n\n')}`);
+    }
+  }
+
   // ── Start Frame Context ──
   if (startFrameDescription) {
     sections.push(`START FRAME ANALYSIS — Scene 1 must match this environment exactly. Subsequent scenes should maintain visual continuity with this foundation:\n${startFrameDescription}`);
@@ -170,8 +207,16 @@ Target prompt length: ${template.promptLength.target} words per scene (min ${tem
     sections.push(`CONTINUITY FROM PREVIOUS SCENE — the previous scene ended with this visual state. Scene 1 must continue from this exact state:\n${previousSceneContinuity}`);
   }
 
+  // ── Camera Recommendations (from cinematography framework) ──
+  const beatsWithCameraRecs = buildCameraRecommendations(narrativeBeats);
+  const cameraRecsText = beatsWithCameraRecs.map(beat => {
+    const rec = beat.cameraRec;
+    return `Scene ${beat.sceneNumber}: ${rec.framingLabel} + ${rec.angleLabel} → ${rec.reasoning}`;
+  }).join('\n');
+  sections.push(`CAMERA RECOMMENDATIONS — AI-suggested cinematography per scene (use as guidance, override when the narrative calls for it):\n${cameraRecsText}`);
+
   // ── Narrative Beats (from Stage 1) ──
-  const beatsText = narrativeBeats.map(beat => {
+  const beatsText = beatsWithCameraRecs.map(beat => {
     const parts = [`Scene ${beat.sceneNumber} [${beat.beatType}]:`,
       `Story: ${beat.narrativeMoment}`,
       `Setting: ${beat.setting}`,
@@ -180,6 +225,7 @@ Target prompt length: ${template.promptLength.target} words per scene (min ${tem
       `Pacing: ${beat.pacingNote}`,
       `Duration: ${beat.durationSeconds}s`,
       `Transition to next: ${beat.transitionNote}`,
+      `Suggested camera: ${beat.cameraRec.promptSnippet}`,
     ];
     if (beat.dialogue) parts.push(`Dialogue: "${beat.dialogue}"`);
     return parts.join('\n  ');

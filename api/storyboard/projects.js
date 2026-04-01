@@ -18,6 +18,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import OpenAI from 'openai';
+import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import { getUserKeys } from '../lib/getUserKeys.js';
 
 function getSupabase() {
   return createClient(
@@ -53,6 +57,18 @@ export default async function handler(req, res) {
   // Route: /api/storyboard/projects/:id/share
   if (pathParts[1] === 'share') {
     if (req.method === 'POST') return createShareLink(req, res, supabase, userId, storyboardId);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Route: /api/storyboard/projects/:id/reorder-frames
+  if (pathParts[1] === 'reorder-frames') {
+    if (req.method === 'POST') return reorderFrames(req, res, supabase, userId, storyboardId);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Route: /api/storyboard/projects/:id/check-characters
+  if (pathParts[1] === 'check-characters') {
+    if (req.method === 'POST') return checkCharacters(req, res, supabase, userId, storyboardId);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -416,6 +432,78 @@ async function deleteFrame(req, res, supabase, userId, storyboardId, frameId) {
   return res.json({ success: true, frames: remaining });
 }
 
+// ── REORDER FRAMES ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/storyboard/projects/:id/reorder-frames
+ * Body: { frameOrder: [id1, id2, ...] }  — ordered array of all frame IDs
+ *
+ * Re-assigns frame_number and recalculates timestamp_seconds for every frame.
+ */
+async function reorderFrames(req, res, supabase, userId, storyboardId) {
+  const { frameOrder } = req.body;
+  if (!Array.isArray(frameOrder) || frameOrder.length === 0) {
+    return res.status(400).json({ error: 'frameOrder array required' });
+  }
+
+  // Verify ownership
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  // Load all frames to get their durations
+  const { data: allFrames, error: fetchError } = await supabase
+    .from('storyboard_frames')
+    .select('id, duration_seconds, locked')
+    .eq('storyboard_id', storyboardId);
+
+  if (fetchError) return res.status(500).json({ error: fetchError.message });
+
+  // Build lookup map
+  const frameMap = {};
+  for (const f of allFrames) frameMap[f.id] = f;
+
+  // Validate all provided IDs exist
+  for (const id of frameOrder) {
+    if (!frameMap[id]) return res.status(400).json({ error: `Frame ${id} not found` });
+  }
+
+  // Apply new order — update each frame's number and timestamp
+  let runningTime = 0;
+  for (let i = 0; i < frameOrder.length; i++) {
+    const frameId = frameOrder[i];
+    const frame = frameMap[frameId];
+    const newNumber = i + 1;
+    const newTimestamp = runningTime;
+
+    const { error: updateError } = await supabase
+      .from('storyboard_frames')
+      .update({ frame_number: newNumber, timestamp_seconds: newTimestamp })
+      .eq('id', frameId);
+
+    if (updateError) return res.status(500).json({ error: updateError.message });
+
+    runningTime += frame.duration_seconds || 4;
+  }
+
+  // Return updated frames
+  const { data: updated, error: refetchError } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true });
+
+  if (refetchError) return res.status(500).json({ error: refetchError.message });
+
+  console.log(`[Storyboard CRUD] Reordered ${frameOrder.length} frames for storyboard ${storyboardId}`);
+  return res.json({ success: true, frames: updated });
+}
+
 // ── SPLIT FRAME ──────────────────────────────────────────────────────────────
 
 async function splitFrame(req, res, supabase, userId, storyboardId, frameId) {
@@ -519,6 +607,74 @@ async function createShareLink(req, res, supabase, userId, storyboardId) {
   const shareUrl = `${process.env.VITE_APP_URL || 'https://app.stitchstudios.com'}/review/${data.share_token}`;
 
   return res.json({ success: true, shareUrl, token: data.share_token });
+}
+
+// ── CHARACTER DIFFERENTIATION CHECK ─────────────────────────────────────────
+
+const DifferentiationResultSchema = z.object({
+  passed: z.boolean().describe('true if all characters are visually distinct enough'),
+  warnings: z.array(z.string()).describe('Specific differentiation issues found'),
+  suggestions: z.array(z.string()).describe('Actionable suggestions to improve differentiation'),
+});
+
+async function checkCharacters(req, res, supabase, userId, storyboardId) {
+  // Verify ownership
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id, elements, brand_data')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  const characters = (sb.elements || []).filter(el => el.description);
+  if (characters.length < 2) {
+    return res.json({
+      success: true,
+      result: {
+        passed: true,
+        warnings: [],
+        suggestions: ['Add at least 2 characters with descriptions to check differentiation.'],
+      },
+    });
+  }
+
+  const { openaiKey } = await getUserKeys(userId, req.user?.email);
+  if (!openaiKey) return res.status(400).json({ error: 'OpenAI API key required' });
+
+  const openai = new OpenAI({ apiKey: openaiKey });
+
+  const characterList = characters.map((c, i) =>
+    `Character ${i + 1}${c.name ? ` (${c.name})` : ''}: ${c.description}`
+  ).join('\n\n');
+
+  const completion = await openai.chat.completions.parse({
+    model: 'gpt-4.1-mini-2025-04-14',
+    messages: [
+      {
+        role: 'system',
+        content: `You are a visual development expert. Analyze character descriptions for visual distinctiveness in animated/video content.
+
+Check three dimensions of visual differentiation:
+1. SILHOUETTE CONTRAST — Do the characters have clearly different body shapes, heights, proportions, or distinctive outlines that are recognizable even in shadow?
+2. COLOR CONTRAST — Are the primary colors of clothing, hair, or skin sufficiently different so characters can be told apart at a glance?
+3. FEATURE CONTRAST — Do the characters have distinctly different facial features, hairstyles, accessories, or other key visual identifiers?
+
+A pair of characters passes if they have STRONG contrast in at least 2 of the 3 dimensions.`,
+      },
+      {
+        role: 'user',
+        content: `Analyze the visual differentiation between these characters:\n\n${characterList}\n\nAre they visually distinct enough to be immediately recognizable in video content?`,
+      },
+    ],
+    response_format: zodResponseFormat(DifferentiationResultSchema, 'differentiation_result'),
+  });
+
+  const result = completion.choices[0].message.parsed;
+  console.log(`[Storyboard] Character diff check for ${storyboardId}: passed=${result.passed}, warnings=${result.warnings.length}`);
+
+  return res.json({ success: true, result });
 }
 
 // ── PUBLIC REVIEW (no auth) ─────────────────────────────────────────────────

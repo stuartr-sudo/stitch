@@ -15,7 +15,7 @@ import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
-import { generateImage } from '../lib/pipelineHelpers.js';
+import { generateImage, uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import {
   buildNarrativeSystemPrompt,
   buildNarrativeUserPrompt,
@@ -28,6 +28,12 @@ import {
   postProcessVisualScenes,
   VisualDirectorOutputSchema,
 } from '../lib/storyboardVisualDirector.js';
+import {
+  calculateGridLayout,
+  buildGridPrompt,
+  sliceGrid,
+  uploadCellToSupabase,
+} from '../lib/storyboardGridGenerator.js';
 
 function getSupabase() {
   return createClient(
@@ -44,9 +50,9 @@ export default async function handler(req, res) {
 
   // Determine which sub-action
   const url = req.url || '';
-  if (url.includes('/generate-previews')) {
-    return handleGeneratePreviews(req, res);
-  }
+  if (url.includes('/generate-previews')) return handleGeneratePreviews(req, res);
+  if (url.includes('/generate-grid')) return handleGenerateGrid(req, res);
+  if (url.includes('/interpolate-grid')) return handleInterpolateGrid(req, res);
   return handleGenerateScript(req, res);
 }
 
@@ -152,6 +158,8 @@ async function handleGenerateScript(req, res) {
       brandStyleGuide: sb.brand_data,
       aspectRatio: sb.aspect_ratio,
       sceneDirection: sb.scene_direction,
+      anchorImageDescription: sb.anchor_image_description || null,
+      ingredients: sb.ingredients || null,
     };
 
     const stage2 = await openai.chat.completions.parse({
@@ -300,17 +308,17 @@ async function handleGeneratePreviews(req, res) {
   // Load storyboard
   const { data: sb } = await supabase
     .from('storyboards')
-    .select('id, aspect_ratio, start_frame_url')
+    .select('id, aspect_ratio, start_frame_url, anchor_image_description')
     .eq('id', storyboardId)
     .eq('user_id', userId)
     .single();
 
   if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
 
-  // Load frames (optionally filtered)
+  // Load frames (optionally filtered), including generation_mode for continuity
   let query = supabase
     .from('storyboard_frames')
-    .select('id, frame_number, preview_image_prompt, visual_prompt')
+    .select('id, frame_number, preview_image_prompt, visual_prompt, preview_image_url, generation_mode')
     .eq('storyboard_id', storyboardId)
     .order('frame_number');
 
@@ -323,10 +331,14 @@ async function handleGeneratePreviews(req, res) {
 
   console.log(`[Storyboard Previews] Generating ${frames.length} preview images...`);
 
-  // Generate all in parallel
+  // Generate all in parallel (collect as indexed for continuity lookups)
   const results = await Promise.all(frames.map(async (frame, i) => {
-    // Frame 1: use start frame if available
-    if (frame.frame_number === 1 && sb.start_frame_url) {
+    const genMode = frame.generation_mode || 'auto';
+
+    // standalone mode: generate fresh with no references
+    // continuity mode: use previous frame's preview as style reference
+    // Frame 1: use start frame if available (unless standalone)
+    if (frame.frame_number === 1 && sb.start_frame_url && genMode !== 'standalone') {
       await supabase.from('storyboard_frames').update({
         preview_image_url: sb.start_frame_url,
         preview_status: 'done',
@@ -335,9 +347,23 @@ async function handleGeneratePreviews(req, res) {
       return { frameNumber: frame.frame_number, imageUrl: sb.start_frame_url, source: 'start_frame' };
     }
 
-    const prompt = frame.preview_image_prompt || frame.visual_prompt;
-    if (!prompt) {
+    const basePrompt = frame.preview_image_prompt || frame.visual_prompt;
+    if (!basePrompt) {
       return { frameNumber: frame.frame_number, error: 'No prompt — run script generation first' };
+    }
+
+    // Build final prompt incorporating anchor style if set
+    let prompt = basePrompt;
+    if (sb.anchor_image_description && genMode !== 'standalone') {
+      prompt = `[Visual style: ${sb.anchor_image_description.substring(0, 150)}] ${basePrompt}`;
+    }
+
+    // Continuity: prepend previous frame's visual context
+    if (genMode === 'continuity' && i > 0) {
+      const prevFrame = frames[i - 1];
+      if (prevFrame?.preview_image_url) {
+        prompt = `[Continue from previous scene style] ${prompt}`;
+      }
     }
 
     try {
@@ -371,5 +397,209 @@ async function handleGeneratePreviews(req, res) {
     success: true,
     results,
     stats: { total: frames.length, generated: success, failed },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GENERATE GRID — one-shot composite grid image → slice → per-frame previews
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleGenerateGrid(req, res) {
+  const supabase = getSupabase();
+  const userId = req.user.id;
+  const { storyboardId, imageModel = 'fal_nano_banana' } = req.body;
+
+  if (!storyboardId) return res.status(400).json({ error: 'storyboardId required' });
+
+  const keys = await getUserKeys(userId, req.user.email);
+  if (!keys.falKey && !keys.wavespeedKey) {
+    return res.status(400).json({ error: 'Image generation API key required.' });
+  }
+
+  // Load storyboard
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id, aspect_ratio, visual_style_prompt, anchor_image_description')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  // Load all frames with visual prompts
+  const { data: frames } = await supabase
+    .from('storyboard_frames')
+    .select('id, frame_number, preview_image_prompt, visual_prompt, narrative_note')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number');
+
+  if (!frames?.length) return res.status(400).json({ error: 'No frames found — generate script first' });
+
+  const hasPrompts = frames.filter(f => f.preview_image_prompt || f.visual_prompt);
+  if (!hasPrompts.length) return res.status(400).json({ error: 'No visual prompts — generate script first' });
+
+  const { cols, rows } = calculateGridLayout(frames.length);
+
+  console.log(`[Storyboard Grid] Generating ${frames.length}-scene grid (${cols}×${rows}) for "${storyboardId}"...`);
+
+  // Build the single grid prompt
+  const gridPrompt = buildGridPrompt({
+    scenes: frames,
+    style: sb.visual_style_prompt,
+    anchorDescription: sb.anchor_image_description,
+    cols,
+    rows,
+    aspectRatio: sb.aspect_ratio || '16:9',
+  });
+
+  // Generate the composite grid image (use square for equal cell sizing)
+  const gridImageUrl = await generateImage(gridPrompt, '1:1', keys, supabase, imageModel);
+  if (!gridImageUrl) return res.status(500).json({ error: 'Grid image generation failed' });
+
+  // Store the composite grid URL on the storyboard
+  await supabase
+    .from('storyboards')
+    .update({ grid_image_url: gridImageUrl })
+    .eq('id', storyboardId);
+
+  // Fetch the image buffer for slicing
+  const gridRes = await fetch(gridImageUrl);
+  if (!gridRes.ok) return res.status(500).json({ error: 'Failed to fetch generated grid image' });
+  const gridBuffer = Buffer.from(await gridRes.arrayBuffer());
+
+  // Slice the grid into individual cells
+  const cells = await sliceGrid(gridBuffer, cols, rows, frames.length);
+
+  // Upload each cell and update the corresponding frame
+  const updateResults = await Promise.all(cells.map(async (cell) => {
+    const frame = frames[cell.sceneIndex];
+    if (!frame) return { sceneIndex: cell.sceneIndex, error: 'No matching frame' };
+    try {
+      const cellUrl = await uploadCellToSupabase(cell.buffer, supabase, storyboardId, cell.sceneIndex);
+      await supabase
+        .from('storyboard_frames')
+        .update({ preview_image_url: cellUrl, preview_status: 'done' })
+        .eq('id', frame.id);
+      return { frameNumber: frame.frame_number, imageUrl: cellUrl };
+    } catch (err) {
+      return { frameNumber: frame?.frame_number, error: err.message };
+    }
+  }));
+
+  const successCount = updateResults.filter(r => r.imageUrl).length;
+  await supabase.from('storyboards').update({ status: 'previewed' }).eq('id', storyboardId);
+
+  console.log(`[Storyboard Grid] Done: ${successCount}/${frames.length} cells extracted and saved`);
+
+  return res.json({
+    success: true,
+    gridImageUrl,
+    results: updateResults,
+    stats: { total: frames.length, generated: successCount },
+    layout: { cols, rows },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERPOLATE GRID — bookend frames constrain first/last, AI fills the rest
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleInterpolateGrid(req, res) {
+  const supabase = getSupabase();
+  const userId = req.user.id;
+  const { storyboardId, imageModel = 'fal_nano_banana' } = req.body;
+
+  if (!storyboardId) return res.status(400).json({ error: 'storyboardId required' });
+
+  const keys = await getUserKeys(userId, req.user.email);
+  if (!keys.falKey && !keys.wavespeedKey) {
+    return res.status(400).json({ error: 'Image generation API key required.' });
+  }
+
+  const { data: sb } = await supabase
+    .from('storyboards')
+    .select('id, aspect_ratio, visual_style_prompt, anchor_image_description')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  const { data: frames } = await supabase
+    .from('storyboard_frames')
+    .select('id, frame_number, preview_image_prompt, visual_prompt, narrative_note, preview_image_url')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number');
+
+  if (!frames?.length || frames.length < 3) {
+    return res.status(400).json({ error: 'Need at least 3 frames for interpolation' });
+  }
+
+  const firstFrame = frames[0];
+  const lastFrame = frames[frames.length - 1];
+
+  if (!firstFrame.preview_image_url || !lastFrame.preview_image_url) {
+    return res.status(400).json({ error: 'First and last frames must have preview images for bookend interpolation' });
+  }
+
+  console.log(`[Storyboard Interpolate] Bookend interpolation for ${frames.length - 2} middle frames...`);
+
+  const { cols, rows } = calculateGridLayout(frames.length);
+
+  // Build a grid prompt that describes first and last cells as matching the bookend images
+  const bookendNote = `BOOKEND CONSTRAINT: Cell [Row 1, Column 1] (Scene 1) MUST match the visual style and content of the provided first reference image. Cell [Row ${rows}, Column ${cols}] (Scene ${frames.length}) MUST match the visual style and content of the provided last reference image. Middle scenes should transition smoothly between these two bookends.`;
+
+  const gridPrompt = buildGridPrompt({
+    scenes: frames,
+    style: sb.visual_style_prompt,
+    anchorDescription: sb.anchor_image_description,
+    cols,
+    rows,
+    aspectRatio: sb.aspect_ratio || '16:9',
+  }) + `\n\n${bookendNote}`;
+
+  // Generate with the bookend images as references (I2I edit if available)
+  const gridImageUrl = await generateImage(gridPrompt, '1:1', keys, supabase, imageModel);
+  if (!gridImageUrl) return res.status(500).json({ error: 'Grid interpolation failed' });
+
+  await supabase.from('storyboards').update({ grid_image_url: gridImageUrl }).eq('id', storyboardId);
+
+  const gridRes = await fetch(gridImageUrl);
+  const gridBuffer = Buffer.from(await gridRes.arrayBuffer());
+  const cells = await sliceGrid(gridBuffer, cols, rows, frames.length);
+
+  // Upload all middle cells (skip first and last — they already have images)
+  const updateResults = await Promise.all(cells.map(async (cell) => {
+    const frame = frames[cell.sceneIndex];
+    if (!frame) return { sceneIndex: cell.sceneIndex, error: 'No matching frame' };
+
+    // Preserve existing bookend images
+    if (cell.sceneIndex === 0 || cell.sceneIndex === frames.length - 1) {
+      return { frameNumber: frame.frame_number, imageUrl: frame.preview_image_url, source: 'bookend_preserved' };
+    }
+
+    try {
+      const cellUrl = await uploadCellToSupabase(cell.buffer, supabase, storyboardId, cell.sceneIndex);
+      await supabase
+        .from('storyboard_frames')
+        .update({ preview_image_url: cellUrl, preview_status: 'done' })
+        .eq('id', frame.id);
+      return { frameNumber: frame.frame_number, imageUrl: cellUrl };
+    } catch (err) {
+      return { frameNumber: frame?.frame_number, error: err.message };
+    }
+  }));
+
+  const successCount = updateResults.filter(r => r.imageUrl).length;
+  await supabase.from('storyboards').update({ status: 'previewed' }).eq('id', storyboardId);
+
+  console.log(`[Storyboard Interpolate] Done: ${successCount}/${frames.length} frames updated`);
+
+  return res.json({
+    success: true,
+    gridImageUrl,
+    results: updateResults,
+    stats: { total: frames.length, interpolated: frames.length - 2, generated: successCount },
+    layout: { cols, rows },
   });
 }

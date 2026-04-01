@@ -25,8 +25,10 @@ import {
   Film, Eye, Share2, ExternalLink, Copy, ArrowLeft, RotateCcw,
   Image as ImageIcon, AlertTriangle, CheckCircle2, Zap, Settings,
   Volume2, Music, Type, Pause, RefreshCw, Send, Video, Scissors, Trash2,
+  LayoutGrid, GitBranch,
 } from 'lucide-react';
 import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
+import StoryboardAnimatic from '@/components/storyboard/StoryboardAnimatic';
 
 // ── Beat colors for narrative arc visualization ──
 
@@ -136,7 +138,7 @@ function Timeline({ frames, selectedId, onSelect }) {
 // Frame Card (in grid)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function FrameCard({ frame, isSelected, onClick }) {
+function FrameCard({ frame, isSelected, onClick, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const color = getBeatColor(frame.beat_type);
   const hasPreview = !!frame.preview_image_url;
   const genStatus = GEN_STATUS[frame.generation_status] || GEN_STATUS.pending;
@@ -144,10 +146,17 @@ function FrameCard({ frame, isSelected, onClick }) {
   return (
     <button
       onClick={onClick}
+      draggable={!frame.locked}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.(frame.id); }}
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver?.(frame.id); }}
+      onDrop={(e) => { e.preventDefault(); onDrop?.(frame.id); }}
+      onDragEnd={onDragEnd}
       className={`group relative rounded-lg overflow-hidden text-left transition-all duration-150 border ${
+        isDragOver ? 'ring-2 ring-blue-400 border-blue-300' :
+        isDragging ? 'opacity-40 border-dashed border-gray-400' :
         isSelected ? 'ring-2 ring-offset-1 shadow-md border-gray-300' : 'border-gray-200 hover:shadow-sm hover:border-gray-300'
       }`}
-      style={{ '--ring-color': isSelected ? color : undefined }}
+      style={{ '--ring-color': isSelected ? color : undefined, cursor: frame.locked ? 'default' : 'grab' }}
     >
       {/* Image */}
       <div className="aspect-video bg-gray-50 relative">
@@ -322,9 +331,45 @@ function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
         <Field label="Story" field="narrative_note" icon={Film} multiline />
         <Field label="Setting" field="setting" icon={Eye} />
         <Field label="Dialogue" field="dialogue" icon={MessageSquare} accent multiline />
+        {/* Generation Mode */}
+        <div className="mb-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Generation Mode</span>
+          <div className="flex gap-1">
+            {[
+              { key: 'auto', label: 'Auto', desc: 'System decides' },
+              { key: 'standalone', label: 'Fresh', desc: 'No references' },
+              { key: 'continuity', label: 'Continuity', desc: 'Use prev frame' },
+            ].map(({ key, label, desc }) => (
+              <button
+                key={key}
+                onClick={() => !frame.locked && onUpdate(frame.id, { generation_mode: key })}
+                title={desc}
+                className={`flex-1 text-[10px] font-medium py-1 rounded-md border transition-colors ${
+                  (frame.generation_mode || 'auto') === key
+                    ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                } ${frame.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Field label="Action" field="character_action" icon={Zap} />
         <Field label="Emotion" field="emotional_tone" icon={Sparkles} />
-        <Field label="Camera" field="motion_prompt" icon={Camera} />
+        {/* Camera angle suggestion badge */}
+        {frame.camera_angle && (
+          <div className="mb-3 flex items-center gap-1.5">
+            <Camera size={10} className="text-gray-400" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Suggested</span>
+            <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[#2C666E]/10 text-[#2C666E]">
+              {frame.camera_angle.replace(/_/g, ' ')}
+            </span>
+          </div>
+        )}
+        <Field label="Image Direction" field="preview_image_prompt" icon={ImageIcon} multiline />
+        <Field label="Motion Direction" field="motion_prompt" icon={Camera} />
 
         {/* Visual prompt (collapsed) */}
         {frame.visual_prompt && (
@@ -551,9 +596,17 @@ export default function StoryboardWorkspace() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [shareUrl, setShareUrl] = useState(null);
   const [productionJob, setProductionJob] = useState(null);
+  const [showAnimatic, setShowAnimatic] = useState(false);
+  const [generatingGrid, setGeneratingGrid] = useState(false);
+  const [interpolatingGrid, setInterpolatingGrid] = useState(false);
+  const [gridImageUrl, setGridImageUrl] = useState(null);
 
   // Debounced save
   const saveTimerRef = useRef(null);
+
+  // Drag & drop state
+  const [dragFrameId, setDragFrameId] = useState(null);
+  const [dragOverFrameId, setDragOverFrameId] = useState(null);
 
   // ── Load data ──
   const loadStoryboard = useCallback(async () => {
@@ -655,6 +708,52 @@ export default function StoryboardWorkspace() {
     }
   };
 
+  // ── Generate Grid (one-shot) ──
+  const handleGenerateGrid = async () => {
+    setGeneratingGrid(true);
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/generate-grid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyboardId, imageModel: storyboard?.image_model || 'fal_nano_banana' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.gridImageUrl) setGridImageUrl(data.gridImageUrl);
+        await loadStoryboard();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      toast.error('Grid generation failed: ' + err.message);
+    } finally {
+      setGeneratingGrid(false);
+    }
+  };
+
+  // ── Interpolate Grid (bookend) ──
+  const handleInterpolateGrid = async () => {
+    setInterpolatingGrid(true);
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/interpolate-grid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyboardId, imageModel: storyboard?.image_model || 'fal_nano_banana' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.gridImageUrl) setGridImageUrl(data.gridImageUrl);
+        await loadStoryboard();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      toast.error('Interpolation failed: ' + err.message);
+    } finally {
+      setInterpolatingGrid(false);
+    }
+  };
+
   // ── Export PDF ──
   const handleExportPdf = async () => {
     setExportingPdf(true);
@@ -742,6 +841,68 @@ export default function StoryboardWorkspace() {
       toast.error('Delete failed: ' + err.message);
     }
   };
+
+  // ── Reorder Frames (drag & drop) ──
+  const handleDragStart = useCallback((frameId) => {
+    setDragFrameId(frameId);
+  }, []);
+
+  const handleDragOver = useCallback((frameId) => {
+    if (dragFrameId && frameId !== dragFrameId) {
+      setDragOverFrameId(frameId);
+    }
+  }, [dragFrameId]);
+
+  const handleDrop = useCallback(async (targetFrameId) => {
+    if (!dragFrameId || dragFrameId === targetFrameId) {
+      setDragFrameId(null);
+      setDragOverFrameId(null);
+      return;
+    }
+
+    // Optimistic reorder
+    const newOrder = [...frames];
+    const fromIdx = newOrder.findIndex(f => f.id === dragFrameId);
+    const toIdx = newOrder.findIndex(f => f.id === targetFrameId);
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+
+    // Recalculate frame numbers and timestamps locally
+    let runningTime = 0;
+    const reordered = newOrder.map((f, i) => {
+      const ts = runningTime;
+      runningTime += f.duration_seconds || 4;
+      return { ...f, frame_number: i + 1, timestamp_seconds: ts };
+    });
+    setFrames(reordered);
+
+    setDragFrameId(null);
+    setDragOverFrameId(null);
+
+    // Persist to backend
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/reorder-frames`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frameOrder: reordered.map(f => f.id) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFrames(data.frames);
+      } else {
+        toast.error('Reorder failed: ' + data.error);
+        await loadStoryboard(); // rollback
+      }
+    } catch (err) {
+      toast.error('Reorder failed: ' + err.message);
+      await loadStoryboard();
+    }
+  }, [dragFrameId, frames, storyboardId, loadStoryboard]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragFrameId(null);
+    setDragOverFrameId(null);
+  }, []);
 
   // ── Start Production (placeholder — will call new endpoint) ──
   const handleStartProduction = async () => {
@@ -845,6 +1006,25 @@ export default function StoryboardWorkspace() {
           </div>
 
           <div className="flex items-center gap-2">
+            {previewCount > 0 && (
+              <Button onClick={() => setShowAnimatic(true)} variant="outline" size="sm" title="Play animatic preview">
+                <Play size={14} className="mr-1" /> Animatic
+              </Button>
+            )}
+            {/* Bookend interpolation: requires first AND last frames to have images */}
+            {frames.length >= 3 && frames[0]?.preview_image_url && frames[frames.length - 1]?.preview_image_url && (
+              <Button onClick={handleInterpolateGrid} disabled={interpolatingGrid || generatingGrid} variant="outline" size="sm" title="Generate middle scenes from bookend frames">
+                {interpolatingGrid ? <Loader2 size={14} className="animate-spin mr-1" /> : <GitBranch size={14} className="mr-1" />}
+                Interpolate
+              </Button>
+            )}
+            {/* One-shot grid: requires visual prompts */}
+            {hasScript && (
+              <Button onClick={handleGenerateGrid} disabled={generatingGrid || interpolatingGrid} variant="outline" size="sm" title="Generate all scenes as a single coherent grid">
+                {generatingGrid ? <Loader2 size={14} className="animate-spin mr-1" /> : <LayoutGrid size={14} className="mr-1" />}
+                Grid
+              </Button>
+            )}
             {hasScript && (
               <Button onClick={() => handleGeneratePreviews()} disabled={generatingPreviews} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white text-xs">
                 {generatingPreviews ? <><Loader2 size={14} className="animate-spin mr-1" /> Previews...</> : <><ImageIcon size={14} className="mr-1" /> Previews ({previewCount}/{frames.length})</>}
@@ -925,6 +1105,12 @@ export default function StoryboardWorkspace() {
                           frame={frame}
                           isSelected={frame.id === selectedFrameId}
                           onClick={() => setSelectedFrameId(frame.id)}
+                          isDragging={dragFrameId === frame.id}
+                          isDragOver={dragOverFrameId === frame.id}
+                          onDragStart={!isProducing ? handleDragStart : undefined}
+                          onDragOver={!isProducing ? handleDragOver : undefined}
+                          onDrop={!isProducing ? handleDrop : undefined}
+                          onDragEnd={handleDragEnd}
                         />
                       ))}
                     </div>
@@ -982,6 +1168,41 @@ export default function StoryboardWorkspace() {
           </div>
         )}
       </div>
+
+      {/* Animatic overlay */}
+      {showAnimatic && (
+        <StoryboardAnimatic frames={frames} onClose={() => setShowAnimatic(false)} />
+      )}
+
+      {/* Grid composite preview overlay */}
+      {gridImageUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-full overflow-auto">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <LayoutGrid size={16} className="text-[#2C666E]" /> Generated Grid
+              </h3>
+              <button onClick={() => setGridImageUrl(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4">
+              <img src={gridImageUrl} alt="Storyboard grid" className="w-full rounded-lg border border-gray-200" />
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Individual scene previews have been extracted and saved to each frame.
+              </p>
+              <div className="flex gap-2 justify-center mt-3">
+                <Button onClick={() => setGridImageUrl(null)} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white">
+                  <Check size={14} className="mr-1" /> Accept
+                </Button>
+                <Button onClick={() => { setGridImageUrl(null); handleGenerateGrid(); }} variant="outline">
+                  <RotateCcw size={14} className="mr-1" /> Regenerate
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
