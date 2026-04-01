@@ -72,7 +72,7 @@ function ConfigurePhase({ onBatchCreated }) {
     voiceSpeed: 1.15,
     visualStyle: 'cinematic_realism',
     duration: '30s',
-    videoModel: 'veo-31-fast',
+    videoModel: 'fal_veo3',
     framework: null,
     captionConfig: { preset: 'word_pop' },
   });

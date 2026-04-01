@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         voice_speed: voiceSpeed,
         visual_style: config.visualStyle || 'cinematic_realism',
         video_length_preset: parseInt(config.duration) || 30,
-        video_model: config.videoModel || 'veo-31-fast',
+        video_model: config.videoModel || 'fal_veo3',
         framework: config.framework || null,
         caption_config: config.captionConfig || { preset: 'word_pop' },
         enable_background_music: true,
