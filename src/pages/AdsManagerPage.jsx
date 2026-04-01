@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Megaphone, Loader2, Trash2, ArrowLeft, LayoutGrid, List, Check, X, Clock, Eye } from 'lucide-react';
+import { Plus, Megaphone, Loader2, Trash2, ArrowLeft, LayoutGrid, List, Check, X, Clock, Eye, ChevronDown, ChevronUp, Sparkles, Link, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -117,6 +117,17 @@ export default function AdsManagerPage() {
     target_audience: '',
   });
 
+  // Auto-fill panel state
+  const [autoFillOpen, setAutoFillOpen] = useState(false);
+  const [useUrl, setUseUrl] = useState(false);
+  const [useBrandKit, setUseBrandKit] = useState(false);
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [brandKits, setBrandKits] = useState([]);
+  const [selectedBrandKitId, setSelectedBrandKitId] = useState('');
+  const [synthesizing, setSynthesizing] = useState(false);
+  const [synthesizeStatus, setSynthesizeStatus] = useState('');
+  const [synthesizeError, setSynthesizeError] = useState('');
+
   const loadCampaigns = useCallback(async () => {
     try {
       const res = await apiFetch('/api/ads/campaigns');
@@ -130,6 +141,61 @@ export default function AdsManagerPage() {
   }, []);
 
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  // Load brand kits for Auto-fill dropdown
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiFetch('/api/brand/kit');
+        const data = await res.json();
+        if (data.brands) {
+          setBrandKits(data.brands);
+          if (data.brands.length === 1) setSelectedBrandKitId(data.brands[0].id);
+        }
+      } catch (err) {
+        console.error('[AdsManager] brand kits load error', err);
+      }
+    })();
+  }, []);
+
+  const handleSynthesize = async () => {
+    const payload = {};
+    if (useUrl && scrapeUrl.trim()) payload.url = scrapeUrl.trim();
+    if (useBrandKit && selectedBrandKitId) payload.brand_kit_id = selectedBrandKitId;
+
+    if (!payload.url && !payload.brand_kit_id) return;
+
+    setSynthesizing(true);
+    setSynthesizeError('');
+    setSynthesizeStatus(payload.url ? 'scraping' : 'generating');
+
+    try {
+      if (payload.url) {
+        setTimeout(() => setSynthesizeStatus(prev => prev === 'scraping' ? 'generating' : prev), 5000);
+      }
+
+      const res = await apiFetch('/api/ads/synthesize-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.success && data.description) {
+        if (form.product_description.trim() && !confirm('Replace existing description?')) {
+          return;
+        }
+        setForm(prev => ({ ...prev, product_description: data.description }));
+      } else {
+        setSynthesizeError(data.error || 'Failed to generate description');
+      }
+    } catch (err) {
+      setSynthesizeError('Network error — please try again');
+    } finally {
+      setSynthesizing(false);
+      setSynthesizeStatus('');
+    }
+  };
 
   // Flatten all variations across all campaigns for canvas view
   const allVariations = useMemo(() => {
@@ -263,6 +329,110 @@ export default function AdsManagerPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Product / Service Description</label>
+
+              {/* Auto-fill with AI panel */}
+              <div className="mb-2 border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAutoFillOpen(!autoFillOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
+                >
+                  <span className="flex items-center gap-2 text-gray-700 font-medium">
+                    <Sparkles className="w-4 h-4 text-[#2C666E]" />
+                    Auto-fill with AI
+                  </span>
+                  {autoFillOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                </button>
+
+                {autoFillOpen && (
+                  <div className="px-3 py-3 space-y-3 bg-white border-t">
+                    {/* URL source */}
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={useUrl}
+                        onChange={e => setUseUrl(e.target.checked)}
+                        className="mt-1 rounded border-gray-300 text-[#2C666E] focus:ring-[#2C666E]"
+                      />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                          <Link className="w-3.5 h-3.5" />
+                          Import from URL
+                        </label>
+                        <input
+                          type="url"
+                          value={scrapeUrl}
+                          onChange={e => setScrapeUrl(e.target.value)}
+                          placeholder="https://example.com/product"
+                          disabled={!useUrl}
+                          className={`mt-1 w-full border rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E] ${!useUrl ? 'bg-gray-100 text-gray-400' : ''}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Brand Kit source */}
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={useBrandKit}
+                        onChange={e => setUseBrandKit(e.target.checked)}
+                        className="mt-1 rounded border-gray-300 text-[#2C666E] focus:ring-[#2C666E]"
+                      />
+                      <div className="flex-1">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          Import from Brand Kit
+                        </label>
+                        {brandKits.length > 0 ? (
+                          <select
+                            value={selectedBrandKitId}
+                            onChange={e => setSelectedBrandKitId(e.target.value)}
+                            disabled={!useBrandKit}
+                            className={`mt-1 w-full border rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E] ${!useBrandKit ? 'bg-gray-100 text-gray-400' : ''}`}
+                          >
+                            <option value="">Select a brand kit...</option>
+                            {brandKits.map(bk => (
+                              <option key={bk.id} value={bk.id}>{bk.brand_name || 'Unnamed Brand'}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="mt-1 text-xs text-gray-500">
+                            No brand kits found.{' '}
+                            <button type="button" onClick={() => navigate('/studio')} className="text-[#2C666E] hover:underline">Create one in Studio</button>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Generate button + error */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleSynthesize}
+                        disabled={synthesizing || ((!useUrl || !scrapeUrl.trim()) && (!useBrandKit || !selectedBrandKitId))}
+                        className="px-4 py-1.5 bg-[#2C666E] text-white rounded-md text-sm font-medium hover:bg-[#1f4f55] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                      >
+                        {synthesizing ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            {synthesizeStatus === 'scraping' ? 'Scraping URL...' : 'Generating description...'}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Generate Description
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {synthesizeError && (
+                      <p className="text-xs text-red-600">{synthesizeError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <textarea
                 value={form.product_description}
                 onChange={e => setForm(prev => ({ ...prev, product_description: e.target.value }))}
