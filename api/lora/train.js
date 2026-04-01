@@ -1,23 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
+import { getTrainingModel } from '../lib/trainingModelRegistry.js';
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 
-// Smart defaults per training type
-const TRAINING_DEFAULTS = {
-  product:   { rank: 16, steps: 1000, learning_rate: 0.0004, caption: (tw) => `a photo of ${tw}` },
-  style:     { rank: 32, steps: 1500, learning_rate: 0.0002, caption: (tw) => `an image in ${tw} style` },
-  character: { rank: 16, steps: 1200, learning_rate: 0.0003, caption: (tw) => `a portrait of ${tw}, face visible` },
+// Caption templates per training type
+const CAPTION_TEMPLATES = {
+  subject:   (tw) => `a photo of ${tw}`,
+  style:     (tw) => `an image in ${tw} style`,
+  character: (tw) => `a portrait of ${tw}, face visible`,
 };
-
-const VALID_RANKS = [4, 8, 16, 32, 64];
-const VALID_TYPES = ['product', 'style', 'character'];
 
 /**
  * Download images, zip them with caption files, upload zip to Supabase storage,
  * and return a public URL that fal.ai can access.
+ *
+ * @param {string[]} imageUrls
+ * @param {string} defaultCaption - used when no per-image caption is provided
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string[]} [captions] - optional per-image captions (indexed by position)
  */
-async function createTrainingZip(imageUrls, caption, supabase) {
+async function createTrainingZip(imageUrls, defaultCaption, supabase, captions) {
   return new Promise(async (resolve, reject) => {
     try {
       const chunks = [];
@@ -76,6 +79,9 @@ async function createTrainingZip(imageUrls, caption, supabase) {
         const imageBuffer = Buffer.from(await response.arrayBuffer());
         const baseName = `image_${String(i).padStart(3, '0')}`;
 
+        // Use per-image caption if provided, otherwise fall back to template caption
+        const caption = (captions && captions[i]) ? captions[i] : defaultCaption;
+
         // Add image file
         archive.append(imageBuffer, { name: `${baseName}.${ext}` });
         // Add caption file (same name, .txt extension)
@@ -93,9 +99,14 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const {
-    name, trigger_word, image_urls,
-    training_type = 'product',
-    rank: rankOverride,
+    name,
+    trigger_word,
+    image_urls,
+    model: modelId = 'flux-lora-fast',
+    training_type = 'subject',
+    is_style = false,
+    create_masks = true,
+    captions,
     steps: stepsOverride,
     learning_rate: lrOverride,
     brand_username,
@@ -106,45 +117,57 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing name, trigger_word, or image_urls' });
   }
 
-  if (!VALID_TYPES.includes(training_type)) {
-    return res.status(400).json({ error: `Invalid training_type. Must be one of: ${VALID_TYPES.join(', ')}` });
+  // Resolve training model from registry
+  const model = getTrainingModel(modelId);
+  if (!model) {
+    return res.status(400).json({ error: `Unknown training model: ${modelId}` });
   }
 
-  const defaults = TRAINING_DEFAULTS[training_type];
-  const rank = rankOverride && VALID_RANKS.includes(rankOverride) ? rankOverride : defaults.rank;
-  const steps = stepsOverride ? Math.max(500, Math.min(2000, stepsOverride)) : defaults.steps;
-  const learning_rate = lrOverride ? Math.max(0.0001, Math.min(0.001, lrOverride)) : defaults.learning_rate;
+  // Clamp steps and learning_rate using model's range and defaults
+  const steps = stepsOverride
+    ? Math.max(model.stepRange[0], Math.min(model.stepRange[1], stepsOverride))
+    : model.defaults.steps;
+  const learning_rate = lrOverride || model.defaults.learning_rate;
 
   const { falKey } = await getUserKeys(req.user.id, req.user.email);
   if (!falKey) return res.status(400).json({ error: 'Fal.ai API key not configured.' });
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+  // Determine caption template for this training type
+  const captionTemplate = CAPTION_TEMPLATES[training_type] || CAPTION_TEMPLATES.subject;
+  const defaultCaption = captionTemplate(trigger_word);
+
   // Create zip archive of training images with captions
   let zipUrl;
   try {
-    const caption = defaults.caption(trigger_word);
-    zipUrl = await createTrainingZip(image_urls, caption, supabase);
+    zipUrl = await createTrainingZip(image_urls, defaultCaption, supabase, captions);
   } catch (err) {
     console.error('[LoRA Train] Failed to create training zip:', err);
     return res.status(500).json({ error: 'Failed to prepare training images', details: err.message });
   }
 
-  console.log(`[LoRA Train] Submitting to fal.ai with zip: ${zipUrl}`);
+  console.log(`[LoRA Train] Submitting to ${model.endpoint} with zip: ${zipUrl}`);
 
-  const response = await fetch('https://queue.fal.run/fal-ai/flux-lora-fast-training', {
+  // Build request body via model registry
+  const body = model.buildBody({
+    zipUrl,
+    trigger_word,
+    steps,
+    learning_rate,
+    is_style,
+    create_masks,
+    default_caption: defaultCaption,
+    auto_caption: !captions?.length, // use auto-caption only if no manual captions provided
+  });
+
+  const response = await fetch(`https://queue.fal.run/${model.endpoint}`, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${falKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      images_data_url: zipUrl,
-      trigger_word,
-      steps,
-      rank,
-      learning_rate,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -165,12 +188,13 @@ export default async function handler(req, res) {
       status: 'training',
       training_images_count: image_urls.length,
       training_type,
-      rank,
+      rank: null,
       steps,
       learning_rate,
       brand_username: brand_username || null,
       visual_subject_id: visual_subject_id || null,
       lora_type: 'custom',
+      training_model: modelId,
     })
     .select()
     .single();
@@ -192,5 +216,7 @@ export default async function handler(req, res) {
     status: 'training',
     statusUrl: data.status_url || null,
     responseUrl: data.response_url || null,
+    model: modelId,
+    endpoint: model.endpoint,
   });
 }
