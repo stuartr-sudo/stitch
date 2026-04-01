@@ -397,6 +397,12 @@ app.post('/api/lora/caption', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.get('/api/lora/models', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/models.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Webhook - Blog to Ad (NO auth - uses webhook secret)
 app.post('/api/webhooks/content', async (req, res) => {
   const handler = await loadApiRoute('webhooks/content.js');
