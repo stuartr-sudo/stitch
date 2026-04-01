@@ -23,6 +23,7 @@ import LinkedInPage from './pages/LinkedInPage';
 import LinkedInPostEditor from './components/linkedin/LinkedInPostEditor';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
+import StoryboardGuidePage from './pages/StoryboardGuidePage';
 import StoryboardWorkspace from './pages/StoryboardWorkspace';
 import SettingsAccountsPage from './pages/SettingsAccountsPage';
 import AdsManagerPage from './pages/AdsManagerPage';
@@ -224,6 +225,14 @@ function App() {
             }
           />
 
+          <Route
+            path="/storyboards/guide"
+            element={
+              <ProtectedRoute>
+                <StoryboardGuidePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/storyboards/:id"
             element={

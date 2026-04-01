@@ -206,9 +206,18 @@ export default function StoryboardList({ onOpenStoryboard }) {
           <h1 className="text-2xl font-bold text-gray-900">Storyboards</h1>
           <p className="text-sm text-gray-500 mt-1">Plan and preview your videos frame by frame before production</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white">
-          <Plus size={16} className="mr-2" /> New Storyboard
-        </Button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/storyboards/guide')}
+            className="text-sm text-gray-400 hover:text-[#2C666E] transition-colors flex items-center gap-1"
+          >
+            <ExternalLink size={14} />
+            Guide
+          </button>
+          <Button onClick={() => setShowCreate(true)} className="bg-[#2C666E] hover:bg-[#1e4d54] text-white">
+            <Plus size={16} className="mr-2" /> New Storyboard
+          </Button>
+        </div>
       </div>
 
       {/* Inline Create Panel */}
