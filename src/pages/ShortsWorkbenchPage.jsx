@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Check, ChevronDown, ChevronUp,
-  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen,
+  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen, Search, RefreshCw,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
@@ -416,6 +416,7 @@ export default function ShortsWorkbenchPage() {
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchedStories, setResearchedStories] = useState([]);
   const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
@@ -575,6 +576,24 @@ export default function ShortsWorkbenchPage() {
       }
     } catch (err) { toast.error(err.message || 'Research failed'); }
     finally { setResearchLoading(false); }
+  };
+
+  const handleDiscoverTopics = async () => {
+    if (!niche) { toast.error('Select a niche first'); return; }
+    setIsDiscovering(true);
+    setResearchedStories([]);
+    setSelectedStoryIdx(null);
+    try {
+      const res = await apiFetch('/api/shorts/discover-topics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, count: 8 }),
+      });
+      const data = await parseApiResponse(res);
+      if (data.topics) {
+        setResearchedStories(data.topics);
+      }
+    } catch (err) { toast.error(err.message || 'Topic discovery failed'); }
+    finally { setIsDiscovering(false); }
   };
 
   const generateScript = async () => {
@@ -923,8 +942,31 @@ export default function ShortsWorkbenchPage() {
                   <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Type a topic or pick from suggestions below..."
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3" />
 
-                  {/* 3-level topic funnel */}
-                  {niche && TOPIC_SUGGESTIONS[niche] && (() => {
+                  {/* Discover Trending Topics — primary path */}
+                  {niche && (
+                    <div className="mb-3">
+                      <button
+                        onClick={handleDiscoverTopics}
+                        disabled={isDiscovering}
+                        className="w-full bg-[#2C666E] hover:bg-[#235258] text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isDiscovering ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Researching trending topics...</>
+                        ) : (
+                          <><Search className="w-4 h-4" /> Find Trending Topics</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Manual topic funnel — secondary path */}
+                  {niche && TOPIC_SUGGESTIONS[niche] && (
+                    <details className="mb-3">
+                      <summary className="text-[10px] text-slate-400 uppercase font-medium cursor-pointer hover:text-slate-600 select-none">
+                        Or choose a topic manually
+                      </summary>
+                      <div className="mt-2">
+                        {(() => {
                     const nicheData = TOPIC_SUGGESTIONS[niche];
                     const l1Items = nicheData.topics || [];
                     const l1Match = l1Items.find(t => t.label === topicL1);
@@ -987,11 +1029,25 @@ export default function ShortsWorkbenchPage() {
                       </div>
                     );
                   })()}
+                      </div>
+                    </details>
+                  )}
 
                   {/* Research results */}
                   {researchedStories.length > 0 && (
                     <div className="space-y-2 mb-3">
-                      <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">Trending Stories — click to use</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">
+                          Trending Topics
+                        </label>
+                        <button
+                          onClick={handleDiscoverTopics}
+                          disabled={isDiscovering}
+                          className="text-[10px] text-slate-400 hover:text-[#2C666E] flex items-center gap-1"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Refresh
+                        </button>
+                      </div>
                       {researchedStories.map((s, i) => (
                         <button key={i} onClick={() => {
                           setSelectedStoryIdx(i);
@@ -1000,8 +1056,31 @@ export default function ShortsWorkbenchPage() {
                         }}
                           className={cn('w-full text-left p-3 border-2 rounded-xl text-xs transition-all',
                             selectedStoryIdx === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
-                          <div className="font-semibold text-slate-800">{s.title}</div>
-                          <div className="text-slate-500 mt-0.5 leading-relaxed">{s.angle || s.summary}</div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-semibold text-slate-800">{s.title}</div>
+                            <div className="flex gap-1 shrink-0">
+                              {s.trending_score && (
+                                <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium',
+                                  s.trending_score === 'high' ? 'bg-green-100 text-green-700' :
+                                  s.trending_score === 'medium' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-slate-100 text-slate-500')}>
+                                  {s.trending_score === 'high' ? 'Trending' : s.trending_score === 'medium' ? 'Warm' : 'Steady'}
+                                </span>
+                              )}
+                              {s.competition_score && (
+                                <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium',
+                                  s.competition_score === 'low' ? 'bg-green-100 text-green-700' :
+                                  s.competition_score === 'medium' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-red-100 text-red-700')}>
+                                  {s.competition_score === 'low' ? 'Low comp' : s.competition_score === 'medium' ? 'Med comp' : 'High comp'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-slate-500 mt-1 leading-relaxed">{s.summary || s.angle}</div>
+                          {selectedStoryIdx === i && (
+                            <div className="mt-1.5 text-[9px] text-[#2C666E] font-medium">Selected</div>
+                          )}
                         </button>
                       ))}
                     </div>
