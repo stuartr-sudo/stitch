@@ -684,6 +684,25 @@ app.post('/api/shorts/discover-topics', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Batch Queue routes
+app.post('/api/batch/create', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/create.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/batch/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/batch/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Template routes (with auth)
 app.get('/api/templates/list', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('templates/list.js');
