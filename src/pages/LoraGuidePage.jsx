@@ -4,8 +4,60 @@ import {
   ArrowLeft, BookOpen, Upload, Sparkles, Zap, Settings, Image, Video,
   ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Info, Lightbulb,
   Layers, Palette, User, Camera, Clock, DollarSign, HelpCircle, FileText,
-  Brain, Target, Wand2, FolderOpen, Repeat, Shield,
+  Brain, Target, Wand2, FolderOpen, Repeat, Shield, Lock,
 } from 'lucide-react';
+
+function PasswordGate({ children }) {
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('lora_guide_unlocked') === '1');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === 'StitchAdmin') {
+      sessionStorage.setItem('lora_guide_unlocked', '1');
+      setUnlocked(true);
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  if (unlocked) return children;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 w-full max-w-sm space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2.5 bg-[#2C666E]/10 rounded-lg">
+            <Lock className="w-5 h-5 text-[#2C666E]" />
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900">Admin Access</h2>
+            <p className="text-xs text-gray-500">LoRA Training Studio Guide</p>
+          </div>
+        </div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter admin password"
+          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors ${
+            error ? 'border-red-400 bg-red-50' : 'border-gray-300 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]'
+          }`}
+          autoFocus
+        />
+        {error && <p className="text-xs text-red-600">Incorrect password</p>}
+        <button
+          type="submit"
+          className="w-full bg-[#2C666E] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#235058] transition-colors"
+        >
+          Unlock Guide
+        </button>
+      </form>
+    </div>
+  );
+}
 
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -97,6 +149,7 @@ export default function LoraGuidePage() {
   const navigate = useNavigate();
 
   return (
+    <PasswordGate>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30">
@@ -885,5 +938,6 @@ Trigger word field:
         </div>
       </main>
     </div>
+    </PasswordGate>
   );
 }

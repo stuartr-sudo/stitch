@@ -268,14 +268,8 @@ function App() {
             }
           />
 
-          <Route
-            path="/lora"
-            element={
-              <ProtectedRoute>
-                <LoraGuidePage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Admin guide — password-gated internally, no Supabase auth needed */}
+          <Route path="/lora" element={<LoraGuidePage />} />
 
           <Route
             path="/settings/accounts"
