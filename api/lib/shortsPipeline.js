@@ -945,7 +945,9 @@ export async function runShortsPipeline(opts) {
           p_batch_id: failedJob.batch_id,
           p_field: 'failed_items',
         });
-        processNextBatchJob(failedJob.batch_id, supabase).catch(() => {});
+        processNextBatchJob(failedJob.batch_id, supabase).catch(err =>
+          console.error('[shortsPipeline] processNextBatchJob error in failure path:', err.message)
+        );
       }
     } catch (batchHookErr) {
       console.error('[shortsPipeline] Batch hook error in catch block:', batchHookErr.message);
