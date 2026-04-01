@@ -110,47 +110,52 @@ export const FRAMING_TYPES = {
 
 // ── Scoring Weights ───────────────────────────────────────────────────────────
 
+// NOTE: Only CAMERA_ANGLES keys are valid here (low_angle, high_angle, eye_level,
+// dutch_angle, birds_eye, over_the_shoulder, worms_eye). Framing keys (wide, medium,
+// close_up, etc.) belong in BEAT_TYPE_FRAMING_WEIGHTS below.
 const BEAT_TYPE_ANGLE_WEIGHTS = {
   hook:             { low_angle: 2, birds_eye: 3, eye_level: 1 },
-  cold_open:        { birds_eye: 3, extreme_wide: 2, low_angle: 1 },
-  setup:            { eye_level: 3, high_angle: 1, wide: 2 },
-  introduce_topic:  { eye_level: 3, medium: 2 },
+  cold_open:        { birds_eye: 3, low_angle: 1 },
+  setup:            { eye_level: 3, high_angle: 1 },
+  introduce_topic:  { eye_level: 3 },
   problem:          { high_angle: 3, dutch_angle: 2, eye_level: 1 },
-  rising_action:    { low_angle: 2, over_the_shoulder: 2, medium: 1 },
-  escalation:       { dutch_angle: 3, low_angle: 2, close_up: 1 },
-  climax:           { low_angle: 3, dutch_angle: 2, close_up: 3 },
-  turning_point:    { dutch_angle: 3, close_up: 2, low_angle: 1 },
-  resolution:       { eye_level: 3, wide: 2 },
+  rising_action:    { low_angle: 2, over_the_shoulder: 2 },
+  escalation:       { dutch_angle: 3, low_angle: 2 },
+  climax:           { low_angle: 3, dutch_angle: 2 },
+  turning_point:    { dutch_angle: 3, low_angle: 1 },
+  resolution:       { eye_level: 3 },
   aftermath:        { high_angle: 2, birds_eye: 2, eye_level: 1 },
-  call_to_action:   { low_angle: 3, close_up: 2 },
-  reflection:       { profile: 3, high_angle: 1, eye_level: 2 },
-  insight:          { close_up: 2, eye_level: 2 },
-  demonstrate:      { medium: 3, over_the_shoulder: 2, close_up: 1 },
-  step_by_step:     { medium: 3, close_up: 2, extreme_close_up: 1 },
-  conclusion:       { eye_level: 3, wide: 1 },
-  proof:            { extreme_close_up: 3, close_up: 2 },
-  final_result:     { wide: 2, medium: 2, low_angle: 1 },
+  call_to_action:   { low_angle: 3 },
+  reflection:       { high_angle: 1, eye_level: 2 },
+  insight:          { eye_level: 2 },
+  demonstrate:      { over_the_shoulder: 2 },
+  step_by_step:     { eye_level: 1 },
+  conclusion:       { eye_level: 3 },
+  proof:            { eye_level: 1 },
+  final_result:     { low_angle: 1 },
 };
 
+// NOTE: Only CAMERA_ANGLES keys are valid here. Framing keys (close_up, medium, etc.)
+// are scored separately via FRAMING_TYPES keyword matching.
 const EMOTION_ANGLE_WEIGHTS = {
   // Positive/empowered
   confident:    { low_angle: 3, eye_level: 2 },
-  triumphant:   { low_angle: 3, extreme_wide: 1 },
-  joyful:       { eye_level: 2, close_up: 2 },
+  triumphant:   { low_angle: 3, birds_eye: 1 },
+  joyful:       { eye_level: 2 },
   hopeful:      { eye_level: 2, low_angle: 1 },
-  excited:      { low_angle: 2, medium: 2 },
+  excited:      { low_angle: 2, eye_level: 1 },
   // Negative/vulnerable
   fearful:      { high_angle: 3, dutch_angle: 2 },
-  anxious:      { high_angle: 2, dutch_angle: 2, close_up: 1 },
+  anxious:      { high_angle: 2, dutch_angle: 2 },
   overwhelmed:  { high_angle: 3, birds_eye: 2 },
-  sad:          { high_angle: 2, close_up: 2 },
+  sad:          { high_angle: 2 },
   uncertain:    { high_angle: 2, eye_level: 1 },
   // Neutral/contemplative
-  curious:      { medium: 2, eye_level: 2 },
-  focused:      { close_up: 2, medium: 2 },
-  determined:   { low_angle: 2, eye_level: 2, close_up: 1 },
-  reflective:   { profile: 3, high_angle: 1 },
-  pensive:      { profile: 2, close_up: 2 },
+  curious:      { eye_level: 2 },
+  focused:      { eye_level: 1 },
+  determined:   { low_angle: 2, eye_level: 2 },
+  reflective:   { high_angle: 1, eye_level: 1 },
+  pensive:      { eye_level: 1 },
 };
 
 const BEAT_TYPE_FRAMING_WEIGHTS = {

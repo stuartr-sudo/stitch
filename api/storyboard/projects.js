@@ -269,6 +269,7 @@ async function updateStoryboard(req, res, supabase, userId, storyboardId) {
     'elements', 'veo_reference_images', 'start_frame_url', 'start_frame_description',
     'scene_direction', 'props', 'negative_prompt', 'assembled_url', 'captioned_url',
     'pdf_url', 'client_brief', 'location_description', 'image_model', 'production_status',
+    'anchor_image_url', 'anchor_image_description', 'ingredients', 'grid_image_url',
   ];
 
   const updates = {};
@@ -468,7 +469,10 @@ async function reorderFrames(req, res, supabase, userId, storyboardId) {
   const frameMap = {};
   for (const f of allFrames) frameMap[f.id] = f;
 
-  // Validate all provided IDs exist
+  // Validate all provided IDs exist and array covers all frames
+  if (frameOrder.length !== allFrames.length) {
+    return res.status(400).json({ error: `frameOrder has ${frameOrder.length} items but storyboard has ${allFrames.length} frames` });
+  }
   for (const id of frameOrder) {
     if (!frameMap[id]) return res.status(400).json({ error: `Frame ${id} not found` });
   }
@@ -643,18 +647,19 @@ async function checkCharacters(req, res, supabase, userId, storyboardId) {
   const { openaiKey } = await getUserKeys(userId, req.user?.email);
   if (!openaiKey) return res.status(400).json({ error: 'OpenAI API key required' });
 
-  const openai = new OpenAI({ apiKey: openaiKey });
+  try {
+    const openai = new OpenAI({ apiKey: openaiKey });
 
-  const characterList = characters.map((c, i) =>
-    `Character ${i + 1}${c.name ? ` (${c.name})` : ''}: ${c.description}`
-  ).join('\n\n');
+    const characterList = characters.map((c, i) =>
+      `Character ${i + 1}${c.name ? ` (${c.name})` : ''}: ${c.description}`
+    ).join('\n\n');
 
-  const completion = await openai.chat.completions.parse({
-    model: 'gpt-4.1-mini-2025-04-14',
-    messages: [
-      {
-        role: 'system',
-        content: `You are a visual development expert. Analyze character descriptions for visual distinctiveness in animated/video content.
+    const completion = await openai.chat.completions.parse({
+      model: 'gpt-4.1-mini-2025-04-14',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a visual development expert. Analyze character descriptions for visual distinctiveness in animated/video content.
 
 Check three dimensions of visual differentiation:
 1. SILHOUETTE CONTRAST — Do the characters have clearly different body shapes, heights, proportions, or distinctive outlines that are recognizable even in shadow?
@@ -662,19 +667,23 @@ Check three dimensions of visual differentiation:
 3. FEATURE CONTRAST — Do the characters have distinctly different facial features, hairstyles, accessories, or other key visual identifiers?
 
 A pair of characters passes if they have STRONG contrast in at least 2 of the 3 dimensions.`,
-      },
-      {
-        role: 'user',
-        content: `Analyze the visual differentiation between these characters:\n\n${characterList}\n\nAre they visually distinct enough to be immediately recognizable in video content?`,
-      },
-    ],
-    response_format: zodResponseFormat(DifferentiationResultSchema, 'differentiation_result'),
-  });
+        },
+        {
+          role: 'user',
+          content: `Analyze the visual differentiation between these characters:\n\n${characterList}\n\nAre they visually distinct enough to be immediately recognizable in video content?`,
+        },
+      ],
+      response_format: zodResponseFormat(DifferentiationResultSchema, 'differentiation_result'),
+    });
 
-  const result = completion.choices[0].message.parsed;
-  console.log(`[Storyboard] Character diff check for ${storyboardId}: passed=${result.passed}, warnings=${result.warnings.length}`);
+    const result = completion.choices[0].message.parsed;
+    console.log(`[Storyboard] Character diff check for ${storyboardId}: passed=${result.passed}, warnings=${result.warnings.length}`);
 
-  return res.json({ success: true, result });
+    return res.json({ success: true, result });
+  } catch (err) {
+    console.error('[Storyboard] Character diff check error:', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 // ── PUBLIC REVIEW (no auth) ─────────────────────────────────────────────────
