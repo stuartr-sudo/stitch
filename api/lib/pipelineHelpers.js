@@ -477,7 +477,7 @@ export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, sli
   const totalDurationSec = runningTimestamp / 1000;
 
   const tracks = [
-    { id: 'video', type: 'video', keyframes: videoKeyframes },
+    { id: 'images', type: 'image', keyframes: videoKeyframes },
   ];
 
   console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)`);

@@ -95,6 +95,7 @@ export default function CarouselEditor({ carouselId }) {
               setGeneratingImages(false);
               setGeneratingVideos(false);
               setAssembling(false);
+              setCreatingSlideshow(false);
             }
           }
         } catch {}
@@ -257,6 +258,9 @@ export default function CarouselEditor({ carouselId }) {
       if (data.error) {
         toast.error(data.error);
         setCreatingSlideshow(false);
+      } else {
+        // Trigger polling by setting status to 'assembling'
+        setCarousel(prev => ({ ...prev, status: 'assembling' }));
       }
     } catch (err) {
       toast.error('Failed to create slideshow');
@@ -433,7 +437,7 @@ export default function CarouselEditor({ carouselId }) {
               Assemble Video
             </Button>
           )}
-          {!isVideoCarousel && allDone && hasImages && !carousel.assembled_video_url && (
+          {!isVideoCarousel && allDone && hasImages && (
             <>
               <select
                 value={slideshowDuration}
@@ -577,22 +581,25 @@ export default function CarouselEditor({ carouselId }) {
 
       {/* Assembled video player */}
       {carousel?.assembled_video_url && (
-        <div className="bg-gray-50 border-b px-4 py-3">
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-medium text-gray-500">Assembled Video</span>
+        <div className="bg-black/95 border-b px-6 py-6">
+          <div className="max-w-lg mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-gray-400">Assembled Video</span>
+              <a
+                href={carousel.assembled_video_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:underline"
+              >
+                Download
+              </a>
+            </div>
             <video
               src={carousel.assembled_video_url}
               controls
-              className="h-20 rounded border"
+              className="w-full rounded-lg"
+              style={{ maxHeight: '360px' }}
             />
-            <a
-              href={carousel.assembled_video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-500 hover:underline"
-            >
-              Download
-            </a>
           </div>
         </div>
       )}
