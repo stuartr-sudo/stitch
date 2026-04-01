@@ -63,9 +63,9 @@ export default async function handler(req, res) {
   const batchId = batch.id;
 
   // ── Create campaign + job for each topic ─────────────────────────────────────
+  const createdCampaignIds = [];
   try {
     for (const topic of topics) {
-      // Create campaign
       const { data: campaign, error: campaignError } = await supabase
         .from('campaigns')
         .insert({
@@ -80,6 +80,7 @@ export default async function handler(req, res) {
       if (campaignError || !campaign) {
         throw new Error(`Failed to create campaign for topic "${topic.title}": ${campaignError?.message}`);
       }
+      createdCampaignIds.push(campaign.id);
 
       // Build job input — mirrors what shortsPipeline expects
       const voiceSpeed = config.voiceSpeed || 1.15;
@@ -89,10 +90,9 @@ export default async function handler(req, res) {
         topic: topic.title,
         story_context: topic.story_context || '',
         brand_username: userEmail,
-        // Shared config fields
         gemini_voice: config.voice || 'Kore',
-        // Pipeline uses style_instructions (pre-built string), not a raw speed value
         style_instructions: buildStyleInstructions(voiceSpeed),
+        voice_speed: voiceSpeed,
         visual_style: config.visualStyle || 'cinematic_realism',
         video_length_preset: config.duration || '30s',
         video_model: config.videoModel || 'veo-31-fast',
@@ -101,7 +101,6 @@ export default async function handler(req, res) {
         enable_background_music: true,
       };
 
-      // Create job — type is NOT NULL in schema, use 'shorts_batch' to identify batch jobs
       const { error: jobError } = await supabase
         .from('jobs')
         .insert({
@@ -120,8 +119,13 @@ export default async function handler(req, res) {
       }
     }
   } catch (err) {
-    // Cleanup: delete the batch row (campaigns without jobs are harmless orphans)
-    await supabase.from('batches').delete().eq('id', batchId);
+    // Cleanup: delete batch and any campaigns created so far
+    await Promise.all([
+      supabase.from('batches').delete().eq('id', batchId),
+      createdCampaignIds.length > 0
+        ? supabase.from('campaigns').delete().in('id', createdCampaignIds)
+        : Promise.resolve(),
+    ]);
     console.error('[batch/create] Cleanup after error:', err.message);
     return res.status(500).json({ error: err.message });
   }

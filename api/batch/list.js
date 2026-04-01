@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     .limit(20);
 
   if (error) {
+    console.error('[batch/list] Failed to fetch batches:', error.message);
     return res.status(500).json({ error: 'Failed to fetch batches' });
   }
 

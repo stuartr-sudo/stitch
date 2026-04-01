@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // ── Fetch all jobs for this batch ─────────────────────────────────────────────
   const { data: jobs, error: jobsError } = await supabase
     .from('jobs')
-    .select('id, status, current_step, completed_steps, total_steps, input_json, output_json, error')
+    .select('id, status, current_step, completed_steps, total_steps, input_json, error')
     .eq('batch_id', batchId)
     .order('created_at', { ascending: true });
 
@@ -43,20 +43,35 @@ export default async function handler(req, res) {
   }
 
   // ── Enrich each job with draft_id + final_video_url ───────────────────────────
-  const enrichedJobs = await Promise.all((jobs || []).map(async (job) => {
+
+  // Collect campaign IDs from completed jobs for a single batch draft lookup
+  const completedJobs = (jobs || []).filter(j => j.status === 'completed');
+  const campaignIds = completedJobs.map(j => j.input_json?.campaign_id).filter(Boolean);
+
+  // Single query for all drafts at once
+  const draftsByCampaign = {};
+  if (campaignIds.length > 0) {
+    const { data: drafts } = await supabase
+      .from('ad_drafts')
+      .select('id, campaign_id, captioned_video_url, assets_json')
+      .in('campaign_id', campaignIds)
+      .order('created_at', { ascending: false });
+
+    // Keep only the most recent draft per campaign
+    for (const draft of (drafts || [])) {
+      if (!draftsByCampaign[draft.campaign_id]) {
+        draftsByCampaign[draft.campaign_id] = draft;
+      }
+    }
+  }
+
+  const enrichedJobs = (jobs || []).map((job) => {
     const campaignId = job.input_json?.campaign_id;
     let draftId = null;
     let finalVideoUrl = null;
 
     if (campaignId && job.status === 'completed') {
-      const { data: draft } = await supabase
-        .from('ad_drafts')
-        .select('id, captioned_video_url, assets_json')
-        .eq('campaign_id', campaignId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
+      const draft = draftsByCampaign[campaignId];
       if (draft) {
         draftId = draft.id;
         finalVideoUrl = draft.captioned_video_url || draft.assets_json?.final_video_url || null;
@@ -75,7 +90,7 @@ export default async function handler(req, res) {
       final_video_url: finalVideoUrl,
       error: job.error || null,
     };
-  }));
+  });
 
   return res.json({ batch, jobs: enrichedJobs });
 }
