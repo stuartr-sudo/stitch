@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
-import { assembleCarouselSlideshow } from '../lib/pipelineHelpers.js';
+import { assembleCarouselSlideshow, generateMusic } from '../lib/pipelineHelpers.js';
 import { generateVoiceover } from '../lib/voiceoverGenerator.js';
 
 export default async function handler(req, res) {
@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   const slideDuration = req.body?.slide_duration || 3;
   const voiceover = req.body?.voiceover || false;
   const voice = req.body?.voice || 'Rachel';
+  const music = req.body?.music || false;
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -36,14 +37,18 @@ export default async function handler(req, res) {
   // Mark as assembling
   await supabase.from('carousels').update({ status: 'assembling' }).eq('id', id);
 
-  // Return immediately — assemble in background
-  res.json({ success: true, message: `Creating slideshow from ${slides.length} slides (${slideDuration}s each)${voiceover ? ' with voiceover' : ''}` });
+  const extras = [voiceover && 'voiceover', music && 'music'].filter(Boolean).join(' + ');
+  res.json({ success: true, message: `Creating slideshow from ${slides.length} slides (${slideDuration}s each)${extras ? ` with ${extras}` : ''}` });
 
   try {
     const imageUrls = slides.map(s => s.composed_image_url);
+    const totalDuration = slides.length * slideDuration;
     let audioUrl = null;
+    let musicUrl = null;
 
-    // Generate voiceover from slide text if requested
+    // Generate voiceover and music in parallel if both requested
+    const audioTasks = [];
+
     if (voiceover) {
       const script = slides.map(s => {
         const parts = [];
@@ -55,12 +60,28 @@ export default async function handler(req, res) {
       }).filter(Boolean).join(' ... ');
 
       console.log(`[carousel/create-slideshow] Generating voiceover: ${script.length} chars, voice=${voice}`);
-      audioUrl = await generateVoiceover(script, keys, supabase, { voiceId: voice });
-      console.log(`[carousel/create-slideshow] Voiceover ready: ${audioUrl?.slice(0, 80)}...`);
+      audioTasks.push(
+        generateVoiceover(script, keys, supabase, { voiceId: voice })
+          .then(url => { audioUrl = url; console.log(`[carousel/create-slideshow] Voiceover ready`); })
+      );
+    }
+
+    if (music) {
+      const topic = carousel.topic || carousel.name || 'background music';
+      const moodPrompt = `Calm, uplifting instrumental background music for a social media carousel about: ${topic}. Subtle, modern, not distracting.`;
+      console.log(`[carousel/create-slideshow] Generating music: ${totalDuration}s`);
+      audioTasks.push(
+        generateMusic(moodPrompt, totalDuration, keys, supabase)
+          .then(url => { musicUrl = url; console.log(`[carousel/create-slideshow] Music ready`); })
+      );
+    }
+
+    if (audioTasks.length > 0) {
+      await Promise.all(audioTasks);
     }
 
     console.log(`[carousel/create-slideshow] Assembling ${imageUrls.length} images for carousel ${id}`);
-    const assembledUrl = await assembleCarouselSlideshow(imageUrls, keys.falKey, supabase, slideDuration, audioUrl);
+    const assembledUrl = await assembleCarouselSlideshow(imageUrls, keys.falKey, supabase, slideDuration, audioUrl, musicUrl);
 
     await supabase.from('carousels')
       .update({

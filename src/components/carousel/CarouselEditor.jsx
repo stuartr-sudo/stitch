@@ -56,6 +56,7 @@ export default function CarouselEditor({ carouselId }) {
   const [slideshowDuration, setSlideshowDuration] = useState(3);
   const [slideshowVoiceover, setSlideshowVoiceover] = useState(false);
   const [slideshowVoice, setSlideshowVoice] = useState('Rachel');
+  const [slideshowMusic, setSlideshowMusic] = useState(false);
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -258,6 +259,7 @@ export default function CarouselEditor({ carouselId }) {
           slide_duration: slideshowDuration,
           voiceover: slideshowVoiceover,
           voice: slideshowVoice,
+          music: slideshowMusic,
         }),
       });
       const data = await res.json();
@@ -483,6 +485,15 @@ export default function CarouselEditor({ carouselId }) {
                   <option value="Daniel">Daniel</option>
                 </select>
               )}
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={slideshowMusic}
+                  onChange={e => setSlideshowMusic(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                Music
+              </label>
               <Button
                 variant="outline"
                 onClick={handleCreateSlideshow}

@@ -463,7 +463,7 @@ export async function assembleCarouselVideo(videoUrls, falKey, supabase, clipDur
 // Assemble a slideshow from static images (no AI video generation)
 // ---------------------------------------------------------------------------
 
-export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, slideDuration = 3, audioUrl = null) {
+export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, slideDuration = 3, audioUrl = null, musicUrl = null) {
   if (!falKey) throw new Error('falKey required for slideshow assembly');
   if (!imageUrls?.length) throw new Error('No images for slideshow');
 
@@ -475,6 +475,7 @@ export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, sli
     return kf;
   });
   const totalDurationSec = runningTimestamp / 1000;
+  const totalDurationMs = runningTimestamp;
 
   const tracks = [
     { id: 'images', type: 'image', keyframes: videoKeyframes },
@@ -482,12 +483,19 @@ export async function assembleCarouselSlideshow(imageUrls, falKey, supabase, sli
 
   // Add voiceover audio track if provided
   if (audioUrl) {
-    const totalDurationMs = totalDurationSec * 1000;
     tracks.push({ id: 'voiceover', type: 'audio', keyframes: [{ url: audioUrl, timestamp: 0, duration: totalDurationMs }] });
     console.log(`[assembleCarouselSlideshow] Adding voiceover audio track`);
   }
 
-  console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)${audioUrl ? ' + voiceover' : ''}`);
+  // Add background music track if provided (reduced volume when voiceover is present)
+  if (musicUrl) {
+    const musicVolume = audioUrl ? 0.15 : 0.5;
+    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume }] });
+    console.log(`[assembleCarouselSlideshow] Adding music track (volume=${musicVolume})`);
+  }
+
+  const audioInfo = [audioUrl && 'voiceover', musicUrl && 'music'].filter(Boolean).join(' + ');
+  console.log(`[assembleCarouselSlideshow] Assembling ${imageUrls.length} images (${slideDuration}s each, total ${totalDurationSec}s)${audioInfo ? ` + ${audioInfo}` : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
