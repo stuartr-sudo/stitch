@@ -44,9 +44,9 @@ const VOICES = [
 
 const DURATION_OPTIONS = ['15s', '30s', '45s', '60s'];
 const VIDEO_MODELS = [
-  { key: 'veo-31-fast', label: 'Veo 3.1 Fast' },
+  { key: 'fal_veo3', label: 'Veo 3.1 Fast' },
   { key: 'fal_kling', label: 'Kling 2.0' },
-  { key: 'wan25', label: 'Wan 2.5' },
+  { key: 'fal_wan25', label: 'Wan 2.5' },
 ];
 const CAPTION_PRESETS = ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker'];
 

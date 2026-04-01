@@ -74,6 +74,10 @@ export async function processNextBatchJob(batchId, supabase) {
 
     if (updateErr) {
       console.error(`[batchProcessor] Failed to mark job ${job.id} as running:`, updateErr.message);
+      await supabase.rpc('batch_job_finished', { p_batch_id: batchId, p_field: 'failed_items' });
+      processNextBatchJob(batchId, supabase).catch(err =>
+        console.error('[batchProcessor] processNextBatchJob error after pre-pipeline failure:', err.message)
+      );
       continue;
     }
 
@@ -84,6 +88,10 @@ export async function processNextBatchJob(batchId, supabase) {
     if (!campaignId || !userId) {
       console.error(`[batchProcessor] Job ${job.id} missing campaign_id or user_id`);
       await supabase.from('jobs').update({ status: 'failed', error: 'Missing campaign_id or user_id in input_json', updated_at: new Date().toISOString() }).eq('id', job.id);
+      await supabase.rpc('batch_job_finished', { p_batch_id: batchId, p_field: 'failed_items' });
+      processNextBatchJob(batchId, supabase).catch(err =>
+        console.error('[batchProcessor] processNextBatchJob error after pre-pipeline failure:', err.message)
+      );
       continue;
     }
 
@@ -92,6 +100,10 @@ export async function processNextBatchJob(batchId, supabase) {
     if (userErr) {
       console.error(`[batchProcessor] Failed to resolve user email for job ${job.id}:`, userErr.message);
       await supabase.from('jobs').update({ status: 'failed', error: 'Failed to resolve user email', updated_at: new Date().toISOString() }).eq('id', job.id);
+      await supabase.rpc('batch_job_finished', { p_batch_id: batchId, p_field: 'failed_items' });
+      processNextBatchJob(batchId, supabase).catch(err =>
+        console.error('[batchProcessor] processNextBatchJob error after pre-pipeline failure:', err.message)
+      );
       continue;
     }
     const userEmail = userData?.user?.email || '';
@@ -103,6 +115,10 @@ export async function processNextBatchJob(batchId, supabase) {
     } catch (err) {
       console.error(`[batchProcessor] getUserKeys failed for job ${job.id}:`, err.message);
       await supabase.from('jobs').update({ status: 'failed', error: 'Failed to resolve API keys', updated_at: new Date().toISOString() }).eq('id', job.id);
+      await supabase.rpc('batch_job_finished', { p_batch_id: batchId, p_field: 'failed_items' });
+      processNextBatchJob(batchId, supabase).catch(err =>
+        console.error('[batchProcessor] processNextBatchJob error after pre-pipeline failure:', err.message)
+      );
       continue;
     }
 
@@ -110,6 +126,10 @@ export async function processNextBatchJob(batchId, supabase) {
     if (!nicheTemplate) {
       console.error(`[batchProcessor] Job ${job.id} has unknown niche "${input.niche}"`);
       await supabase.from('jobs').update({ status: 'failed', error: `Unknown niche: ${input.niche}`, updated_at: new Date().toISOString() }).eq('id', job.id);
+      await supabase.rpc('batch_job_finished', { p_batch_id: batchId, p_field: 'failed_items' });
+      processNextBatchJob(batchId, supabase).catch(err =>
+        console.error('[batchProcessor] processNextBatchJob error after pre-pipeline failure:', err.message)
+      );
       continue;
     }
 
