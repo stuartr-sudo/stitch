@@ -8,6 +8,37 @@ import { generateImageV2, animateImageV2 } from './mediaGenerator.js';
 const WAVESPEED_BASE = 'https://api.wavespeed.ai/api/v3';
 const FAL_BASE = 'https://queue.fal.run';
 
+// ---------------------------------------------------------------------------
+// Niche-aware SFX ambient prompts
+// ---------------------------------------------------------------------------
+
+const NICHE_SFX_PROMPTS = {
+  ai_tech_news: 'subtle digital ambiance, soft electronic hum, futuristic data center atmosphere',
+  finance_money: 'soft professional office ambiance, muted urban background, subtle corporate atmosphere',
+  motivation: 'gentle inspirational ambiance, soft uplifting tones, warm atmospheric pad',
+  horror_creepy: 'eerie ambient tension, low rumble, distant unsettling creaks',
+  history_era: 'soft historical ambiance, gentle wind, subtle old-world atmosphere',
+  crime_mystery: 'tense investigative ambiance, subtle suspense tones, muted city night sounds',
+  science_nature: 'gentle nature ambiance, soft lab environment, subtle wonder tones',
+  dating_relationships: 'warm intimate ambiance, soft cafe atmosphere, gentle romantic tones',
+  fitness_health: 'energetic gym ambiance, soft motivational pulse, active environment sounds',
+  gaming: 'retro digital ambiance, soft arcade tones, electronic game atmosphere',
+  conspiracy: 'dark mysterious ambiance, low tension hum, unsettling surveillance tones',
+  business_startup: 'modern workspace ambiance, soft startup energy, professional focus tones',
+  food_cooking: 'warm kitchen ambiance, gentle sizzle, cozy culinary atmosphere',
+  travel: 'ambient world sounds, soft airport atmosphere, gentle exotic tones',
+  psychology: 'calm analytical ambiance, soft thoughtful tones, subtle clinical atmosphere',
+  space_cosmos: 'deep space ambiance, cosmic hum, vast ethereal atmosphere',
+  animals_nature: 'natural wildlife ambiance, gentle forest sounds, outdoor atmosphere',
+  sports: 'stadium crowd ambiance, athletic energy, competitive atmosphere tones',
+  education: 'soft academic ambiance, quiet library atmosphere, gentle study tones',
+  paranormal_ufo: 'eerie otherworldly ambiance, strange frequencies, unsettling extraterrestrial atmosphere',
+};
+
+export function buildSfxPrompt(niche) {
+  return NICHE_SFX_PROMPTS[niche] || 'subtle cinematic ambiance, gentle atmospheric background';
+}
+
 // Default negative prompt for image generation (models that support it)
 const DEFAULT_NEGATIVE_PROMPT = 'blurry, distorted, low quality, watermark, text artifacts, extra limbs, deformed, duplicate, cropped';
 
@@ -365,7 +396,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {number[]} [clipDurations] - Actual duration of each clip in seconds
  * @returns {Promise<string>} Public URL of the assembled video
  */
-export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null) {
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null, sfxUrl = null, sfxVolume = 0.3) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
@@ -392,8 +423,12 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
     tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume }] });
   }
 
+  if (sfxUrl) {
+    tracks.push({ id: 'sfx', type: 'audio', keyframes: [{ url: sfxUrl, timestamp: 0, duration: totalDurationMs, volume: sfxVolume }] });
+  }
+
   const totalDurationSec = totalDurationMs / 1000;
-  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s) + voiceover${musicUrl ? ` + music (vol=${musicVolume})` : ''}`);
+  console.log(`[assembleShort] Assembling ${videoUrls.length} clips (total ${totalDurationSec}s) + voiceover${musicUrl ? ` + music (vol=${musicVolume})` : ''}${sfxUrl ? ` + sfx (vol=${sfxVolume})` : ''}`);
 
   const res = await fetch(`${FAL_BASE}/fal-ai/ffmpeg-api/compose`, {
     method: 'POST',
@@ -682,6 +717,46 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
     console.warn('[pipelineHelpers] Music poll failed, skipping:', err.message);
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Sound effect generation (ElevenLabs SFX V2 via FAL)
+// ---------------------------------------------------------------------------
+
+export async function generateSoundEffect(prompt, durationSeconds, falKey, supabase) {
+  const clampedDuration = Math.max(1, Math.min(22, durationSeconds));
+
+  console.log(`[generateSoundEffect] Generating SFX: "${prompt.slice(0, 80)}..." (${clampedDuration}s)`);
+
+  const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/sound-effects/v2`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${falKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: prompt.slice(0, 300),
+      duration_seconds: clampedDuration,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`SFX submit failed (${res.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const queueData = await res.json();
+  const requestIdOrUrl = queueData.response_url || queueData.request_id;
+  if (!requestIdOrUrl) throw new Error('SFX submit returned no request_id');
+
+  const result = await pollFalQueue(requestIdOrUrl, 'fal-ai/elevenlabs/sound-effects/v2', falKey, 30, 3000);
+
+  const audioUrl = result?.audio?.url || result?.output?.url || result?.url;
+  if (!audioUrl) throw new Error('SFX result has no audio URL');
+
+  const permanentUrl = await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+  console.log(`[generateSoundEffect] SFX uploaded: ${permanentUrl}`);
+  return permanentUrl;
 }
 
 // ---------------------------------------------------------------------------
