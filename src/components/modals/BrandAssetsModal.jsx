@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Upload, Zap, Trash2, ImagePlus, Sparkles, CheckCircle2,
-  ArrowRight, Info, Clock, Layers, FolderOpen, Check, Library,
+  ArrowRight, Info, Clock, Layers, FolderOpen, Check, Library, ChevronDown,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -70,6 +70,14 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   // Config state
   const [loraName, setLoraName] = useState('');
   const [triggerWord, setTriggerWord] = useState('');
+  const [trainingModels, setTrainingModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState('flux-lora-fast');
+  const [trainingType, setTrainingType] = useState('subject');
+  const [createMasks, setCreateMasks] = useState(true);
+  const [autoCaption, setAutoCaption] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [steps, setSteps] = useState(1000);
+  const [learningRate, setLearningRate] = useState(null);
 
   // Training state
   const [isTraining, setIsTraining] = useState(false);
@@ -100,8 +108,49 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
       setTrainingProgress(null);
       setTrainingStage('');
       setTrainingResult(null);
+      setTrainingModels([]);
+      setSelectedModel('flux-lora-fast');
+      setTrainingType('subject');
+      setCreateMasks(true);
+      setAutoCaption(true);
+      setShowAdvanced(false);
+      setSteps(1000);
+      setLearningRate(null);
     }
   }, [isOpen]);
+
+  // Fetch available training models when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      (async () => {
+        try {
+          const res = await apiFetch('/api/lora/models');
+          const data = await res.json();
+          if (data.success && data.models?.length) {
+            setTrainingModels(data.models);
+            const defaultModel = data.models.find(m => m.id === 'flux-lora-fast') || data.models[0];
+            if (defaultModel) {
+              setSteps(defaultModel.defaultSteps);
+              setLearningRate(defaultModel.defaultLearningRate || null);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch training models:', err);
+        }
+      })();
+    }
+  }, [isOpen]);
+
+  const handleModelChange = (modelId) => {
+    setSelectedModel(modelId);
+    const model = trainingModels.find(m => m.id === modelId);
+    if (model) {
+      setSteps(model.defaultSteps);
+      setLearningRate(model.defaultLearningRate || null);
+      setCreateMasks(model.supportsMasks);
+    }
+  };
+  const selectedModelInfo = trainingModels.find(m => m.id === selectedModel);
 
   const handleFileUpload = async (files) => {
     const newImages = [];
@@ -313,6 +362,28 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
         throw new Error('No images could be uploaded');
       }
 
+      // Stage 1.5: Auto-caption if enabled
+      let captions = null;
+      if (autoCaption && publicUrls.length > 0) {
+        setTrainingStage('captioning');
+        try {
+          const captionRes = await apiFetch('/api/lora/caption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_urls: publicUrls,
+              trigger_word: triggerWord.trim(),
+            }),
+          });
+          const captionData = await captionRes.json();
+          if (captionData.success && captionData.captions?.length) {
+            captions = captionData.captions;
+          }
+        } catch (err) {
+          console.warn('Auto-captioning failed, using template captions:', err);
+        }
+      }
+
       // Stage 2: Start training
       setTrainingStage('queued');
       setTrainingProgress(null);
@@ -324,6 +395,13 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
           name: loraName.trim(),
           trigger_word: triggerWord.trim(),
           image_urls: publicUrls,
+          model: selectedModel,
+          training_type: trainingType,
+          is_style: trainingType === 'style',
+          create_masks: createMasks,
+          steps,
+          learning_rate: learningRate,
+          captions,
         }),
       });
 
@@ -334,7 +412,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
       toast.success('LoRA training started');
 
       // Stage 3: Poll for completion
-      await pollLoraTraining(data.requestId, data.loraId, data.statusUrl, data.responseUrl);
+      await pollLoraTraining(data.requestId, data.loraId, data.statusUrl, data.responseUrl, data.endpoint, data.model);
     } catch (error) {
       console.error('LoRA training error:', error);
       toast.error(error.message || 'Error starting LoRA training');
@@ -343,7 +421,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     }
   };
 
-  const pollLoraTraining = async (requestId, loraId, statusUrl, responseUrl) => {
+  const pollLoraTraining = async (requestId, loraId, statusUrl, responseUrl, endpoint, model) => {
     let attempts = 0;
     const maxAttempts = 120;
 
@@ -354,7 +432,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
         const response = await apiFetch('/api/lora/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId, loraId, statusUrl, responseUrl }),
+          body: JSON.stringify({ requestId, loraId, statusUrl, responseUrl, endpoint, model }),
         });
         const result = await response.json();
 
@@ -626,9 +704,178 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   <code className="bg-gray-100 px-1 rounded text-[#2C666E]">sks person</code>.
                 </p>
               </div>
+
+              {/* Training Type */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Training Type</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTrainingType('subject')}
+                    className={`rounded-lg border-2 p-3 text-left transition-all ${
+                      trainingType === 'subject'
+                        ? 'border-[#2C666E] bg-[#2C666E]/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${trainingType === 'subject' ? 'text-[#2C666E]' : 'text-gray-700'}`}>Subject / Character</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Product, person, mascot, or object</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrainingType('style')}
+                    className={`rounded-lg border-2 p-3 text-left transition-all ${
+                      trainingType === 'style'
+                        ? 'border-[#2C666E] bg-[#2C666E]/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${trainingType === 'style' ? 'text-[#2C666E]' : 'text-gray-700'}`}>Visual Style</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Art style, aesthetic, or brand look</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Model Selector */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Training Model</Label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none"
+                >
+                  {trainingModels.filter(m => m.type === 'image').length > 0 && (
+                    <optgroup label="Image Models">
+                      {trainingModels.filter(m => m.type === 'image').map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} — {m.baseModel} ({m.pricing})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {trainingModels.filter(m => m.type === 'video').length > 0 && (
+                    <optgroup label="Video Models">
+                      {trainingModels.filter(m => m.type === 'video').map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} — {m.baseModel} ({m.pricing})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {trainingModels.length === 0 && (
+                    <option value="flux-lora-fast">Loading models...</option>
+                  )}
+                </select>
+                {selectedModelInfo?.pricingNote && (
+                  <p className="text-[10px] text-gray-400">{selectedModelInfo.pricingNote}</p>
+                )}
+              </div>
+
+              {/* Auto-Caption Toggle */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex-1 mr-4">
+                  <p className="text-sm font-medium text-gray-700">AI Auto-Captioning</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Uses GPT-4o to describe each image — produces better LoRAs than generic captions</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoCaption}
+                  onClick={() => setAutoCaption(!autoCaption)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    autoCaption ? 'bg-[#2C666E]' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    autoCaption ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+
+              {/* Advanced Settings */}
+              <div className="border-t border-gray-200 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  Advanced Settings
+                </button>
+                {showAdvanced && (
+                  <div className="mt-3 space-y-4 pl-1">
+                    {/* Steps slider */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium text-gray-700">Training Steps</Label>
+                        <span className="text-sm font-mono text-[#2C666E] font-medium">{steps.toLocaleString()}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={selectedModelInfo?.stepRange?.[0] || 100}
+                        max={selectedModelInfo?.stepRange?.[1] || 4000}
+                        step={100}
+                        value={steps}
+                        onChange={(e) => setSteps(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2C666E]"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-400">
+                        <span>{(selectedModelInfo?.stepRange?.[0] || 100).toLocaleString()}</span>
+                        <span>{(selectedModelInfo?.stepRange?.[1] || 4000).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Learning Rate slider */}
+                    {selectedModelInfo?.defaultLearningRate && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium text-gray-700">Learning Rate</Label>
+                          <span className="text-sm font-mono text-[#2C666E] font-medium">{learningRate ?? selectedModelInfo.defaultLearningRate}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.00001}
+                          max={0.001}
+                          step={0.00001}
+                          value={learningRate ?? selectedModelInfo.defaultLearningRate}
+                          onChange={(e) => setLearningRate(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2C666E]"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-400">
+                          <span>0.00001</span>
+                          <span>0.001</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Create Masks toggle */}
+                    {selectedModelInfo?.supportsMasks && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 mr-4">
+                          <p className="text-sm font-medium text-gray-700">Create Masks</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Uses segmentation to focus training on the subject. Best for people.</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={createMasks}
+                          onClick={() => setCreateMasks(!createMasks)}
+                          className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            createMasks ? 'bg-[#2C666E]' : 'bg-gray-200'
+                          }`}
+                        >
+                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            createMasks ? 'translate-x-4' : 'translate-x-0'
+                          }`} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Preview of what will be trained */}
+            {/* Training Summary */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h4 className="text-xs font-semibold text-gray-700 mb-2">Training Summary</h4>
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -641,15 +888,23 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                 </div>
                 <div>
                   <span className="text-gray-500">Model:</span>{' '}
-                  <span className="font-medium text-gray-900">FLUX LoRA (fast training)</span>
+                  <span className="font-medium text-gray-900">{selectedModelInfo?.name || 'FLUX LoRA'}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Steps:</span>{' '}
-                  <span className="font-medium text-gray-900">1,000 iterations</span>
+                  <span className="font-medium text-gray-900">{steps.toLocaleString()} iterations</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Est. time:</span>{' '}
-                  <span className="font-medium text-gray-900">5-10 minutes</span>
+                  <span className="text-gray-500">Type:</span>{' '}
+                  <span className="font-medium text-gray-900">{trainingType === 'subject' ? 'Subject' : 'Style'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Pricing:</span>{' '}
+                  <span className="font-medium text-gray-900">{selectedModelInfo?.pricing || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Captions:</span>{' '}
+                  <span className="font-medium text-gray-900">{autoCaption ? 'AI (GPT-4o)' : 'Template'}</span>
                 </div>
               </div>
 
@@ -714,6 +969,19 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       />
                     </div>
                   )}
+                </>
+              )}
+
+              {/* Stage: Captioning */}
+              {trainingStage === 'captioning' && (
+                <>
+                  <div className="w-16 h-16 mx-auto rounded-full bg-purple-100 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-purple-600 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Captioning Images...</h3>
+                    <p className="text-sm text-gray-500 mt-1">AI is describing each image for better training quality</p>
+                  </div>
                 </>
               )}
 
