@@ -84,6 +84,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   const [trainingProgress, setTrainingProgress] = useState(null);
   const [trainingStage, setTrainingStage] = useState(''); // uploading, queued, training, complete
   const [trainingResult, setTrainingResult] = useState(null);
+  const [trainingError, setTrainingError] = useState(null);
 
   // Reset all state when the modal closes so user can train again
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
       setTrainingProgress(null);
       setTrainingStage('');
       setTrainingResult(null);
+      setTrainingError(null);
       setTrainingModels([]);
       setSelectedModel('flux-lora-fast');
       setTrainingType('subject');
@@ -406,6 +408,12 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
         }),
       });
 
+      if (!response.ok) {
+        const errText = await response.text();
+        let errMsg;
+        try { errMsg = JSON.parse(errText).error; } catch { errMsg = errText; }
+        throw new Error(errMsg || `Server error ${response.status}`);
+      }
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Failed to start training');
 
@@ -417,6 +425,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     } catch (error) {
       console.error('LoRA training error:', error);
       toast.error(error.message || 'Error starting LoRA training');
+      setTrainingError(error.message || 'Unknown error');
       setTrainingStage('');
       setIsTraining(false);
     }
@@ -1102,11 +1111,17 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">Training could not start</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    {trainingError && (
+                      <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 max-w-sm mx-auto text-left break-words">
+                        <p className="font-medium text-red-800 mb-0.5">Error details:</p>
+                        {trainingError}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
                       Go back and check your settings, then try again.
                     </p>
                   </div>
-                  <Button variant="outline" onClick={() => setCurrentStep('configure')} className="border-gray-300">
+                  <Button variant="outline" onClick={() => { setCurrentStep('configure'); setTrainingError(null); }} className="border-gray-300">
                     Back to Configuration
                   </Button>
                 </>
