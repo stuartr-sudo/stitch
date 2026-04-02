@@ -6,7 +6,17 @@ Enable users to schedule completed Shorts (and other video drafts) for publishin
 
 ## Context
 
-The infrastructure for platform publishing exists: platform publishers for all 5 platforms, OAuth token management via `tokenManager.js`, connected accounts settings UI, and a 30-second poller in `scheduledPublisher.js`. However, the current scheduler only flips `ad_drafts.publish_status` without calling any platform publisher, there is no scheduling UI, and there is no queue management view. This feature closes those gaps.
+The infrastructure for platform publishing partially exists: OAuth token management via `tokenManager.js`, connected accounts settings UI, and a 30-second poller in `scheduledPublisher.js`. However, the current scheduler only flips `ad_drafts.publish_status` without calling any platform publisher, and the existing platform publishers are image/text-oriented — video publishing functions need to be built or extracted for most platforms. There is no scheduling UI and no queue management view. This feature closes those gaps.
+
+### Publisher Readiness
+
+| Platform | Existing Publisher | Video Support | Work Needed |
+|---|---|---|---|
+| YouTube | `api/youtube/upload.js` (Express handler) | Yes (resumable upload) | Extract upload logic into reusable `publishVideoToYouTube()` function in `api/lib/youtubePublisher.js`. Current handler uses legacy `youtubeTokens.js` — new function uses `tokenManager.loadTokens()`. |
+| TikTok | `tiktokPublisher.publishVideoToTikTok()` | Yes | None — ready to use |
+| Instagram | `instagramPublisher.js` | No (image/carousel only) | Add `publishReelToInstagram()` using Meta Graph API Reels endpoint (`/me/media` with `media_type=REELS`, `video_url`) |
+| Facebook | `facebookPublisher.js` | No (image posts only) | Add `publishVideoToFacebookPage()` using Graph API video upload (`/{page-id}/videos`) |
+| LinkedIn | `linkedinPublisher.js` | No (image posts only) | Add `publishVideoToLinkedIn()` using LinkedIn video upload API (initialize upload → PUT binary → create post with video URN) |
 
 ## Architecture
 
@@ -94,14 +104,14 @@ Schedule a draft for publishing to one or more platforms.
 ```
 
 **Validation:**
-- Draft exists, belongs to user, and has a final video URL (`captioned_video_url` or `assets_json.final_video_url`)
+- Draft exists, belongs to user, and has a final video URL (precedence: `captioned_video_url` → `assets_json.final_video_url` → `assets_json.video_url`)
 - All specified platforms are connected (check `platform_connections` for user)
 - `scheduled_for` is in the future, or omitted/null for publish-now
 - At least one platform specified
 
 **Behavior:**
 - Inserts one `publish_queue` row per platform
-- If `scheduled_for` is omitted or null: sets `scheduled_for` to `now()` — the poller picks it up within 30 seconds
+- If `scheduled_for` is omitted or null (publish now): sets `scheduled_for` to `now()` — the poller picks it up within 30 seconds. The frontend shows a "Publishing..." state and polls the queue item status every 5 seconds until all items transition to `published` or `failed`.
 
 **Response:** `{ queue_ids: ["uuid", ...], scheduled_for: "ISO" }`
 
@@ -138,7 +148,7 @@ List the user's publish queue.
 }
 ```
 
-Joins with `ad_drafts` to include draft title and video URL for display.
+Joins `ad_drafts` → `campaigns` to get `draft_title` (from `campaigns.name`) and `draft_video_url` (from `ad_drafts.captioned_video_url` or `assets_json.final_video_url`).
 
 ### `POST /api/publish/retry`
 
@@ -146,13 +156,13 @@ Retry a failed publish.
 
 **Request body:** `{ "queue_id": "uuid" }`
 
-**Validation:** Item belongs to user, status is `'failed'`, attempts < 3.
+**Validation:** Item belongs to user, status is `'failed'`.
 
-**Behavior:** Resets status to `'scheduled'`, sets `scheduled_for` to `now()`, clears `error`.
+**Behavior:** Resets status to `'scheduled'`, sets `scheduled_for` to `now()`, resets `attempts` to 0, clears `error`.
 
 **Response:** `{ success: true }`
 
-### `DELETE /api/publish/cancel`
+### `POST /api/publish/cancel`
 
 Cancel a scheduled publish.
 
@@ -185,25 +195,34 @@ LIMIT 5
 2. Load the draft's final video URL from `ad_drafts`
 3. Load platform tokens via `tokenManager.loadTokens(userId, platform, supabase)`
 4. Call the appropriate publisher:
-   - YouTube: `api/youtube/upload.js` logic (resumable upload, `#Shorts` detection)
+   - YouTube: `youtubePublisher.publishVideoToYouTube()` (new reusable function, resumable upload, auto-appends `#Shorts` for vertical video < 60s, sets `containsSyntheticMedia: true`)
    - TikTok: `tiktokPublisher.publishVideoToTikTok()`
-   - Instagram: `instagramPublisher.publishVideoToInstagram()` (Reels)
-   - Facebook: `facebookPublisher.publishToFacebookPage()` (video post)
-   - LinkedIn: `linkedinPublisher.publishToLinkedIn()` (video post)
+   - Instagram: `instagramPublisher.publishReelToInstagram()` (new function, Meta Graph API Reels)
+   - Facebook: `facebookPublisher.publishVideoToFacebookPage()` (new function, Graph API video upload)
+   - LinkedIn: `linkedinPublisher.publishVideoToLinkedIn()` (new function, LinkedIn video upload API)
 5. On success: set status to `'published'`, store `published_id` and `published_url`, set `updated_at`
 6. On failure: set status to `'failed'`, store error message, set `updated_at`
 
 Each item is processed independently — one failure does not block others.
 
-**Max 3 attempts:** After 3 failed attempts, the item stays as `'failed'` and is no longer picked up by the poller. User must manually retry (which resets `attempts` to 0 — no, actually we just reset status; attempts stays for history. The retry endpoint resets status to `'scheduled'` and `scheduled_for` to now, but does NOT reset attempts. This means a user gets 3 auto-retries total across all manual retries. Actually — simpler: retry resets both status and sets `scheduled_for` to now. The poller's `attempts < 3` filter prevents infinite loops within a single scheduling cycle. Each manual retry is a fresh user action, so we should reset `attempts` to 0 on manual retry.)
+**Max 3 attempts:** After 3 failed attempts, the item stays as `'failed'` and is no longer picked up by the poller. `POST /api/publish/retry` resets `attempts` to 0, status to `'scheduled'`, and `scheduled_for` to now. This gives 3 fresh auto-attempts per manual retry.
 
-**Correction:** `POST /api/publish/retry` resets `attempts` to 0 in addition to resetting status and `scheduled_for`. This gives 3 fresh auto-attempts per manual retry.
+**Stale publishing recovery:** On each poll cycle, before processing new items, reset any items stuck in `'publishing'` status for more than 10 minutes back to `'scheduled'` (without incrementing attempts). This handles server restarts or crashes mid-publish.
+
+```sql
+UPDATE publish_queue
+SET status = 'scheduled', updated_at = now()
+WHERE status = 'publishing'
+  AND updated_at < NOW() - INTERVAL '10 minutes';
+```
 
 ## Frontend: Draft Page Schedule Entry Point
 
 **File:** `src/pages/ShortsDraftPage.jsx`
 
 A "Publish" section appears below the video preview when the draft has a final video (`captioned_video_url` or `assets_json.final_video_url`).
+
+**"Publish Now" UX flow:** After clicking "Publish Now", the button transitions to a spinner with "Publishing..." text. The frontend polls `GET /api/publish/queue?status=publishing,published,failed` every 5 seconds, showing per-platform status chips (spinner → checkmark → error icon). Once all items have resolved, the section shows the final results with "View on [Platform]" links for successes and "Retry" for failures.
 
 **Components:**
 1. **Platform checkboxes** — one per platform. Connected platforms are selectable; unconnected ones show greyed out with "Connect" link to `/settings/accounts`. Fetches connections via `GET /api/accounts/connections`.
@@ -274,7 +293,7 @@ When a batch is completed (`batch.status === 'completed'`), a "Schedule All" sec
 3. **Shared description** — text field, applied to all
 4. **Shared privacy** — dropdown, applied to all
 5. **Schedule options** — "Publish Now" or date/time picker
-6. **Stagger toggle** — checkbox: "Space publishes 1 hour apart". When enabled, each draft's `scheduled_for` is offset by 1 hour from the previous (first draft at selected time, second at +1h, third at +2h, etc.)
+6. **Stagger toggle** — checkbox: "Space publishes 1 hour apart". When enabled, each *draft's* `scheduled_for` is offset by 1 hour from the previous (first draft at selected time, second at +1h, third at +2h, etc.). All platforms for a single draft share the same time — stagger is per-draft, not per-platform.
 7. **"Schedule N Videos" button** — calls `POST /api/publish/schedule` once per completed draft
 
 Individual completed jobs in the batch results also get a small "Schedule" link that navigates to `/shorts/draft/:draftId`.
@@ -286,11 +305,15 @@ Individual completed jobs in the batch results also get a small "Schedule" link 
 - `api/publish/schedule.js` — POST /api/publish/schedule
 - `api/publish/queue.js` — GET /api/publish/queue
 - `api/publish/retry.js` — POST /api/publish/retry
-- `api/publish/cancel.js` — DELETE /api/publish/cancel
+- `api/publish/cancel.js` — POST /api/publish/cancel
+- `api/lib/youtubePublisher.js` — reusable `publishVideoToYouTube()` extracted from `api/youtube/upload.js`
 - `src/pages/PublishQueuePage.jsx` — Publish Queue page
 
 **Modified files:**
 - `api/lib/scheduledPublisher.js` — rewire to poll `publish_queue`, call platform publishers
+- `api/lib/instagramPublisher.js` — add `publishReelToInstagram()`
+- `api/lib/facebookPublisher.js` — add `publishVideoToFacebookPage()`
+- `api/lib/linkedinPublisher.js` — add `publishVideoToLinkedIn()`
 - `src/pages/ShortsDraftPage.jsx` — add Publish section
 - `src/pages/BatchQueuePage.jsx` — add Schedule All section
 - `src/pages/VideoAdvertCreator.jsx` — add Publish Queue nav card
