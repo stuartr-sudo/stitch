@@ -2,7 +2,7 @@
 
 ## Goal
 
-After assembly, automatically extract one frame per scene and use GPT-4.1-mini vision to check whether each frame's visuals match its corresponding narration. Flag mismatches with one-click repair buttons wired to the existing `repair-scene.js` infrastructure.
+After assembly, automatically extract one frame per scene and use GPT-4.1-mini vision to check whether each frame's visuals match its corresponding narration. Flag mismatches with one-click repair buttons that regenerate the scene clip via the workbench's existing `generate-clip` action.
 
 ## Context
 
@@ -18,7 +18,7 @@ The codebase already has the repair half of the loop: `repair-scene.js` regenera
 | GPT-4.1-mini vision analysis | Ready | `analyzeFrameContinuity()` in `pipelineHelpers.js` (continuity, not QA) |
 | Scene repair (single scene) | Ready | `api/shorts/repair-scene.js` |
 | Video reassembly | Ready | `api/shorts/reassemble.js` |
-| FAL extract-frame API | Ready | `fal-ai/ffmpeg-api/extract-frame` — supports `frame_type` and `frame_time` |
+| FAL extract-frame API | Ready | `fal-ai/ffmpeg-api/extract-frame` — supports `frame_type: 'first' \| 'middle' \| 'last'` |
 | Quality reviewer module | **New** | `api/lib/qualityReviewer.js` |
 | Review-quality workbench action | **New** | Addition to `api/workbench/workbench.js` |
 | Review results UI | **New** | Addition to `src/pages/ShortsWorkbenchPage.jsx` |
@@ -31,7 +31,7 @@ Non-blocking post-assembly flow. Assembly completes and returns the video URL im
 
 1. Assembly completes → frontend receives `video_url`
 2. Frontend fires `POST /api/workbench/review-quality` in the background (non-blocking)
-3. Backend extracts one frame per scene at each scene's midpoint timestamp
+3. Backend extracts one frame per scene clip using `frame_type: 'middle'`
 4. Each frame is sent to GPT-4.1-mini vision with the corresponding narration text
 5. Backend returns per-scene pass/fail results with reasoning
 6. Frontend renders results inline in Step 5
@@ -47,24 +47,26 @@ Non-blocking post-assembly flow. Assembly completes and returns the video URL im
 Single exported function that handles frame extraction, vision analysis, and result parsing. Isolated from the workbench action handler for testability and reuse.
 
 ```
-reviewSceneAlignment({ videoUrl, clips, scenes, falKey, openaiKey })
+reviewSceneAlignment({ clips, scenes, falKey, openaiKey })
 → { results: [{ scene_index, match, confidence, reason, frame_url }] }
 ```
 
 ### Parameters
 
-- `videoUrl` — the assembled (pre-caption) video URL. Uses the uncaptioned video to avoid caption text interfering with vision analysis.
-- `clips` — array of `{ url, duration }` objects for each scene. Durations are used to calculate midpoint timestamps.
+- `clips` — array of `{ url, duration }` objects for each scene. Each clip URL is an individual scene video — frames are extracted from these directly (not from the assembled video) to avoid caption/composite interference.
 - `scenes` — array of `{ narration }` objects. The narration text is what each frame is compared against.
 - `falKey` — for FAL extract-frame API calls.
 - `openaiKey` — for GPT-4.1-mini vision calls.
 
 ### Process Per Scene
 
-1. **Calculate midpoint timestamp:** Sum of all prior clip durations plus half the current clip's duration. For example, if scenes are [4s, 5s, 3s], midpoints are [2.0, 6.5, 9.5] seconds.
-2. **Extract frame:** Call `fal-ai/ffmpeg-api/extract-frame` with `{ video_url, frame_time: midpointSeconds }`. This extracts a single frame at the exact timestamp from the assembled video.
-3. **Vision analysis:** Send the extracted frame image URL and narration text to GPT-4.1-mini vision. The prompt asks for structured JSON output: `{ match: true/false, confidence: 0-1, reason: "..." }`.
-4. **Parse response:** Extract the JSON from the model's response. If parsing fails, default to `{ match: true, confidence: 0, reason: "Review inconclusive" }` — fail open, don't block the user.
+1. **Extract frame:** Call `fal-ai/ffmpeg-api/extract-frame` with `{ video_url: clip.url, frame_type: 'middle' }` on the individual scene clip. This extracts a single frame from the temporal midpoint of each scene's video clip. No timestamp math needed — FAL handles midpoint calculation internally.
+2. **Vision analysis:** Send the extracted frame image URL and narration text to GPT-4.1-mini vision. The prompt asks for structured JSON output: `{ match: true/false, confidence: 0-1, reason: "..." }`.
+3. **Parse response:** Extract the JSON from the model's response. If parsing fails, default to `{ match: true, confidence: 0, reason: "Review inconclusive" }` — fail open, don't block the user.
+
+### Pass/Fail Determination
+
+A scene is flagged when `match === false`, regardless of confidence score. Confidence is displayed in the UI for informational purposes but is not used for thresholding in v1.
 
 ### Vision Prompt
 
@@ -86,7 +88,7 @@ Respond with ONLY valid JSON (no markdown fencing):
 
 ### Parallelism
 
-Frame extraction calls are fired sequentially (each depends on the assembled video, but they're independent). Vision analysis calls for all scenes are fired in parallel via `Promise.all` — GPT-4.1-mini handles concurrent requests well and this cuts total time from O(n) to O(1) for the vision step.
+Frame extraction and vision analysis are both parallelized. Each scene's clip is independent, so all frame extractions fire concurrently via `Promise.all`. Once all frames are extracted, all vision calls fire concurrently via `Promise.all`. This two-phase parallel approach keeps total review time to ~10-15 seconds regardless of scene count.
 
 ### Error Handling
 
@@ -104,20 +106,18 @@ Added to `api/workbench/workbench.js` as a new case in the action switch.
 ```json
 {
   "clips": [{ "url": "https://...", "duration": 5 }, { "url": "https://...", "duration": 4 }],
-  "scenes": [{ "narration": "The ocean waves crash against..." }, { "narration": "Deep beneath the surface..." }],
-  "video_url": "https://... (assembled uncaptioned video)"
+  "scenes": [{ "narration": "The ocean waves crash against..." }, { "narration": "Deep beneath the surface..." }]
 }
 ```
 
-- `clips` — same clip array used for assembly
+- `clips` — same clip array used for assembly. Each `url` is an individual scene's video clip.
 - `scenes` — must include `narration` text for each scene (from the workbench script/timing state)
-- `video_url` — the uncaptioned assembled video URL (returned alongside the captioned URL from the `assemble` action)
 
 ### Behavior
 
 1. Validate input: clips and scenes arrays must exist and have matching lengths.
 2. Resolve API keys via `getUserKeys()`.
-3. Call `reviewSceneAlignment()` with the video URL, clips, scenes, and API keys.
+3. Call `reviewSceneAlignment()` with clips, scenes, and API keys.
 4. Log cost: `{ category: 'openai', operation: 'quality_review', model: 'gpt-4.1-mini' }`.
 5. Return the results array.
 
@@ -136,7 +136,7 @@ Added to `api/workbench/workbench.js` as a new case in the action switch.
 
 ### Trigger
 
-After assembly completes and `finalUrl` is set, the frontend fires the `review-quality` request in the background. The request uses the `uncaptioned_url` returned by the assemble action (to avoid caption text interfering with frame analysis).
+After assembly completes and `finalUrl` is set, the frontend fires the `review-quality` request in the background. The request sends the individual scene clip URLs (not the assembled video), so frame extraction happens on the raw clips before captioning or compositing.
 
 ### State
 
@@ -170,12 +170,13 @@ Passing scenes are listed below the flagged ones, collapsed, with green checkmar
 When the user clicks "Repair Scene" on a flagged scene:
 
 1. The button enters a loading state.
-2. Frontend calls `POST /api/shorts/repair-scene` with `{ draft_id, scene_index, prompt: narration_text }`.
-3. On success, the scene card updates to show "Repaired ✓" with the new clip URL.
-4. A notice appears: "Scene repaired. Click Re-assemble to update the final video."
-5. The existing "Re-assemble" button in Step 5 rebuilds the video with the repaired clip.
+2. Frontend calls the workbench's existing `generate-clip` action (`POST /api/workbench/generate-clip`) with the scene's keyframe image, narration-informed motion prompt, and scene index. This is the same flow used in Step 4 to generate clips — repair is just regeneration.
+3. On success, the frontend updates the scene's clip URL in workbench state (same as normal clip generation in Step 4).
+4. The scene card updates to show "Repaired ✓".
+5. A notice appears: "Scene repaired. Click Re-assemble to update the final video."
+6. The existing "Re-assemble" button in Step 5 rebuilds the video with the repaired clip.
 
-Note: The repair endpoint (`repair-scene.js`) currently looks up scenes via `jobs` table `step_results`. For workbench-originated Shorts, the scene data is in `storyboard_json` on `ad_drafts`, not in `jobs`. The repair button will call the workbench's existing clip regeneration flow (`generate-clip` action) rather than `repair-scene.js` directly, since the workbench manages its own scene state.
+Note: `repair-scene.js` is NOT used here. That endpoint looks up scenes via `jobs` table `step_results`, which workbench-originated Shorts don't populate. The workbench manages its own scene state in component state and `storyboard_json`, so repair uses the workbench's own `generate-clip` action.
 
 ### Re-review After Repair
 
