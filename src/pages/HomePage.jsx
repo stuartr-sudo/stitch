@@ -143,6 +143,7 @@ export default function HomePage() {
             <a href="#styles">Styles</a>
             <a href="#showcase">Work</a>
             <a href="#shorts">Shorts</a>
+            <a href="/login" className="nav-cta" style={{ marginLeft: '0.5rem' }}>Client Login</a>
             <a href="#project" className="nav-cta">Apply to Work With Us</a>
           </div>
         </div>

@@ -31,10 +31,11 @@ import AdCampaignEditor from './pages/AdCampaignEditor';
 import LoraGuidePage from './pages/LoraGuidePage';
 import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
+import SetupKeys from './pages/SetupKeys';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, hasKeys } = useAuth();
 
   if (loading) {
     return (
@@ -45,14 +46,18 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
+  }
+
+  if (hasKeys === false) {
+    return <Navigate to="/login" replace />;
   }
 
   return children;
 }
 
 function GuestRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, hasKeys } = useAuth();
 
   if (loading) {
     return (
@@ -62,7 +67,7 @@ function GuestRoute({ children }) {
     );
   }
 
-  if (user) {
+  if (user && hasKeys) {
     return <Navigate to="/studio" replace />;
   }
 
@@ -103,8 +108,9 @@ function App() {
             }
           />
 
-          {/* Legacy /setup alias */}
-          <Route path="/setup" element={<Navigate to="/" replace />} />
+          {/* Login / signup + API key setup */}
+          <Route path="/login" element={<SetupKeys />} />
+          <Route path="/setup" element={<Navigate to="/login" replace />} />
 
           {/* Public proposal pages — no auth, isolated from app */}
           <Route path="/proposal" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
