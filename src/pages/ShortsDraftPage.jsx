@@ -1,15 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
-  ArrowLeft, Loader2, Download, Play, Youtube, Send,
+  ArrowLeft, Loader2, Download, Play,
   Calendar, Hash, Palette, Film, Volume2, Music,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
-import YouTubePublishModal from '@/components/modals/YouTubePublishModal';
+import { cn } from '@/lib/utils';
+
+const PLATFORM_COLORS = {
+  youtube: '#FF0000',
+  tiktok: '#010101',
+  instagram: '#E1306C',
+  facebook: '#1877F2',
+  linkedin: '#0A66C2',
+};
+
+const PLATFORM_LABELS = {
+  youtube: 'YouTube',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+};
+
+const PRIVACY_OPTIONS = {
+  youtube: [
+    { value: 'public', label: 'Public' },
+    { value: 'unlisted', label: 'Unlisted' },
+    { value: 'private', label: 'Private' },
+  ],
+  tiktok: [
+    { value: 'public', label: 'Public' },
+    { value: 'friends', label: 'Friends' },
+    { value: 'private', label: 'Private' },
+  ],
+  instagram: [{ value: 'public', label: 'Public' }],
+  facebook: [
+    { value: 'public', label: 'Public' },
+    { value: 'friends', label: 'Friends' },
+    { value: 'only_me', label: 'Only Me' },
+  ],
+  linkedin: [{ value: 'public', label: 'Public' }],
+};
 
 export default function ShortsDraftPage() {
   const { draftId } = useParams(); // may be a draft ID or campaign ID
@@ -19,8 +55,6 @@ export default function ShortsDraftPage() {
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showYouTubePublish, setShowYouTubePublish] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
   const [playingClip, setPlayingClip] = useState(null);
   const [jobStatus, setJobStatus] = useState(null); // track pipeline progress
   const [jobStep, setJobStep] = useState(null);
@@ -128,27 +162,6 @@ export default function ShortsDraftPage() {
     fetchDraft();
     return () => { cancelled = true; if (pollTimer) clearInterval(pollTimer); };
   }, [draftId, user]);
-
-  // ── Publish handler ──────────────────────────────────────────────────────────
-  const handlePublishNow = async () => {
-    if (!confirm('Publish this draft now?')) return;
-    setIsPublishing(true);
-    try {
-      const res = await apiFetch('/api/campaigns/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft_id: draft.id, action: 'publish_now' }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      toast.success('Published!');
-      setDraft(prev => ({ ...prev, ...data.draft }));
-    } catch (err) {
-      toast.error(err.message || 'Failed to publish');
-    } finally {
-      setIsPublishing(false);
-    }
-  };
 
   // ── Download handler ─────────────────────────────────────────────────────────
   const handleDownload = () => {
@@ -461,32 +474,6 @@ export default function ShortsDraftPage() {
               <Download className="w-4 h-4 mr-2" /> Download Video
             </Button>
           )}
-
-          {isReady && !isPublished && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => setShowYouTubePublish(true)}
-                className="text-sm"
-              >
-                <Youtube className="w-4 h-4 mr-2 text-red-600" /> YouTube
-              </Button>
-
-              <Button
-                onClick={handlePublishNow}
-                disabled={isPublishing}
-                className="bg-[#2C666E] hover:bg-[#07393C] text-white text-sm"
-              >
-                {isPublishing ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Publish
-              </Button>
-            </>
-          )}
-
           <Button
             variant="ghost"
             onClick={() => navigate('/campaigns')}
@@ -495,27 +482,332 @@ export default function ShortsDraftPage() {
             Back to Campaigns
           </Button>
         </section>
-      </main>
 
-      {/* ── YouTube Publish Modal ──────────────────────────────────────────── */}
-      {showYouTubePublish && (
-        <YouTubePublishModal
-          draftId={draft.id}
-          brandUsername={draft.brand_username}
-          campaignName={meta.script?.title || 'Short'}
-          scriptText={meta.script?.narration_full || ''}
-          onClose={() => setShowYouTubePublish(false)}
-          onPublished={(updated) => {
-            setDraft(prev => ({ ...prev, ...updated }));
-            setShowYouTubePublish(false);
-          }}
-        />
-      )}
+        {/* ── Publish Section ────────────────────────────────────────────── */}
+        {isReady && !isPublished && videoUrl && (
+          <PublishSection
+            draftId={draft.id}
+            defaultTitle={meta.script?.title || 'Short'}
+          />
+        )}
+      </main>
     </div>
   );
 }
 
 // ── Helper Components ────────────────────────────────────────────────────────
+
+function PublishSection({ draftId, defaultTitle }) {
+  const [connections, setConnections] = useState([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+  const [title, setTitle] = useState(defaultTitle);
+  const [description, setDescription] = useState('');
+  const [privacy, setPrivacy] = useState('public');
+  const [showOverrides, setShowOverrides] = useState(false);
+  const [overrides, setOverrides] = useState({});
+  const [scheduleMode, setScheduleMode] = useState('now'); // 'now' | 'schedule'
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publishResult, setPublishResult] = useState(null); // { queueIds, items } after submission
+  const [loadingConnections, setLoadingConnections] = useState(true);
+  const pollRef = useRef(null);
+
+  // Fetch connected platforms
+  useEffect(() => {
+    async function fetchConnections() {
+      try {
+        const res = await apiFetch('/api/accounts/connections');
+        const data = await res.json();
+        if (data.platforms) setConnections(data.platforms);
+        else if (Array.isArray(data)) setConnections(data);
+      } catch (err) {
+        console.error('[PublishSection] Failed to load connections:', err.message);
+      } finally {
+        setLoadingConnections(false);
+      }
+    }
+    fetchConnections();
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const connectedPlatforms = connections.filter(c => c.connected || c.platform_username);
+  const connectedSet = new Set(connectedPlatforms.map(c => c.platform));
+
+  const allPlatforms = ['youtube', 'tiktok', 'instagram', 'facebook', 'linkedin'];
+
+  const togglePlatform = (p) => {
+    setSelectedPlatforms(prev =>
+      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (selectedPlatforms.length === 0) return;
+    setIsSubmitting(true);
+
+    const platforms = selectedPlatforms.map(p => ({
+      platform: p,
+      title: overrides[p]?.title || title,
+      description: overrides[p]?.description || description,
+      privacy: overrides[p]?.privacy || privacy,
+    }));
+
+    try {
+      const res = await apiFetch('/api/publish/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          draft_id: draftId,
+          platforms,
+          scheduled_for: scheduleMode === 'schedule' ? scheduledFor : null,
+        }),
+      });
+      const data = await res.json();
+      if (data.queue_ids) {
+        setPublishResult({ queueIds: data.queue_ids, items: [] });
+        if (scheduleMode === 'now') {
+          // Poll for publish status
+          pollRef.current = setInterval(async () => {
+            try {
+              const qRes = await apiFetch('/api/publish/queue');
+              const qData = await qRes.json();
+              const relevant = (qData.items || []).filter(i => data.queue_ids.includes(i.id));
+              setPublishResult(prev => ({ ...prev, items: relevant }));
+              const allDone = relevant.every(i => i.status === 'published' || i.status === 'failed');
+              if (allDone && relevant.length === data.queue_ids.length) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
+              }
+            } catch (err) {
+              console.error('[PublishSection] Poll error:', err.message);
+            }
+          }, 5000);
+        }
+      } else {
+        toast.error(data.error || 'Failed to schedule');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to schedule');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Show post-submit results
+  if (publishResult) {
+    const { queueIds, items } = publishResult;
+    const allResolved = items.length === queueIds.length && items.every(i => i.status === 'published' || i.status === 'failed');
+
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-slate-700">
+          {scheduleMode === 'schedule' ? 'Scheduled!' : allResolved ? 'Publishing Complete' : 'Publishing...'}
+        </h3>
+        {scheduleMode === 'schedule' ? (
+          <p className="text-sm text-slate-500">
+            Scheduled for {new Date(scheduledFor).toLocaleString()}.{' '}
+            <Link to="/publish" className="text-[#2C666E] hover:underline">View Publish Queue</Link>
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {items.length === 0 && (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Loader2 className="w-4 h-4 animate-spin" /> Waiting for publisher...
+              </div>
+            )}
+            {items.map(item => (
+              <div key={item.id} className="flex items-center gap-2">
+                <span
+                  className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: PLATFORM_COLORS[item.platform] }}
+                >
+                  {PLATFORM_LABELS[item.platform]}
+                </span>
+                {item.status === 'publishing' && <Loader2 className="w-3 h-3 animate-spin text-amber-500" />}
+                {item.status === 'published' && <span className="text-green-600 text-xs">Published</span>}
+                {item.status === 'failed' && <span className="text-red-500 text-xs">Failed: {item.error?.slice(0, 80)}</span>}
+                {item.status === 'scheduled' && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+              </div>
+            ))}
+            {allResolved && (
+              <Link to="/publish" className="text-xs text-[#2C666E] hover:underline">View Publish Queue</Link>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (loadingConnections) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        <span className="text-sm text-slate-500">Loading platforms...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <h3 className="text-sm font-semibold text-slate-700">Publish</h3>
+
+      {/* Platform checkboxes */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Platforms</label>
+        <div className="flex flex-wrap gap-2">
+          {allPlatforms.map(p => {
+            const connected = connectedSet.has(p);
+            return (
+              <button
+                key={p}
+                onClick={() => connected && togglePlatform(p)}
+                disabled={!connected}
+                className={cn(
+                  'text-xs py-1.5 px-3 rounded-lg border transition-colors',
+                  !connected
+                    ? 'border-slate-100 text-slate-300 cursor-not-allowed'
+                    : selectedPlatforms.includes(p)
+                      ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E] font-medium'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                )}
+              >
+                {PLATFORM_LABELS[p]}
+                {!connected && (
+                  <Link to="/settings/accounts" className="text-[10px] text-blue-500 ml-1" onClick={e => e.stopPropagation()}>
+                    Connect
+                  </Link>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Default metadata */}
+      {selectedPlatforms.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                maxLength={100}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Description</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={2}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Privacy</label>
+              <select
+                value={privacy}
+                onChange={e => setPrivacy(e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+              >
+                <option value="public">Public</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Per-platform overrides toggle */}
+          <button
+            onClick={() => setShowOverrides(!showOverrides)}
+            className="text-xs text-[#2C666E] hover:underline"
+          >
+            {showOverrides ? 'Hide per-platform overrides' : 'Customize per platform'}
+          </button>
+
+          {showOverrides && (
+            <div className="space-y-3 pl-3 border-l-2 border-slate-100">
+              {selectedPlatforms.map(p => (
+                <div key={p} className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-600">{PLATFORM_LABELS[p]}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder={title}
+                      value={overrides[p]?.title || ''}
+                      onChange={e => setOverrides(prev => ({ ...prev, [p]: { ...prev[p], title: e.target.value } }))}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1.5"
+                    />
+                    <select
+                      value={overrides[p]?.privacy || privacy}
+                      onChange={e => setOverrides(prev => ({ ...prev, [p]: { ...prev[p], privacy: e.target.value } }))}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1.5"
+                    >
+                      {(PRIVACY_OPTIONS[p] || [{ value: 'public', label: 'Public' }]).map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Schedule picker */}
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="scheduleMode"
+                checked={scheduleMode === 'now'}
+                onChange={() => setScheduleMode('now')}
+                className="accent-[#2C666E]"
+              />
+              Publish Now
+            </label>
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="scheduleMode"
+                checked={scheduleMode === 'schedule'}
+                onChange={() => setScheduleMode('schedule')}
+                className="accent-[#2C666E]"
+              />
+              Schedule
+            </label>
+            {scheduleMode === 'schedule' && (
+              <input
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={e => setScheduledFor(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+                className="text-xs border border-slate-200 rounded-lg px-2 py-1.5"
+              />
+            )}
+          </div>
+
+          {/* Action button */}
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || selectedPlatforms.length === 0 || (scheduleMode === 'schedule' && !scheduledFor)}
+            className="w-full bg-[#2C666E] hover:bg-[#2C666E]/90 text-white font-semibold py-2.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+          >
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+            ) : scheduleMode === 'schedule' ? (
+              `Schedule to ${selectedPlatforms.length} platform${selectedPlatforms.length > 1 ? 's' : ''}`
+            ) : (
+              `Publish Now to ${selectedPlatforms.length} platform${selectedPlatforms.length > 1 ? 's' : ''}`
+            )}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 function StatusPill({ status }) {
   const colors = {
