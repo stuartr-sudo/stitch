@@ -779,6 +779,15 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                 {selectedModelInfo?.pricingNote && (
                   <p className="text-[10px] text-gray-400">{selectedModelInfo.pricingNote}</p>
                 )}
+                {selectedModelInfo?.category === 'video' && (
+                  <div className="flex gap-1.5 items-start bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mt-1.5">
+                    <span className="text-amber-600 text-xs mt-0.5">⚠</span>
+                    <p className="text-[11px] text-amber-800">
+                      <strong>Video models require video clips</strong> as training data, not still images.
+                      If you only have images, use an <strong>Image Model</strong> instead (e.g. FLUX LoRA Fast).
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Auto-Caption Toggle */}

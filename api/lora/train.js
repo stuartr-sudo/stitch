@@ -123,6 +123,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `Unknown training model: ${modelId}` });
   }
 
+  // Validate: video training models (I2V) require video files, not images
+  if (model.category === 'video' && model.id !== 'hunyuan-video') {
+    const hasVideoFiles = image_urls.some(url => /\.(mp4|mov|webm|avi)(\?|$)/i.test(url));
+    if (!hasVideoFiles) {
+      return res.status(400).json({
+        error: `${model.name} requires video clips as training data, not still images. Use an Image Model (e.g. FLUX LoRA Fast) for image-only datasets.`,
+      });
+    }
+  }
+
   // Clamp steps and learning_rate using model's range and defaults
   const steps = stepsOverride
     ? Math.max(model.stepRange[0], Math.min(model.stepRange[1], stepsOverride))
@@ -172,7 +182,13 @@ export default async function handler(req, res) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    return res.status(response.status).json({ error: 'LoRA training submission failed', details: errorText });
+    let errorMsg = 'LoRA training submission failed';
+    try {
+      const parsed = JSON.parse(errorText);
+      errorMsg = parsed.detail || parsed.message || parsed.error || errorMsg;
+    } catch {}
+    console.error(`[LoRA Train] FAL error ${response.status}:`, errorText.substring(0, 500));
+    return res.status(response.status).json({ error: errorMsg, details: errorText });
   }
 
   const data = await response.json();
