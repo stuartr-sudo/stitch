@@ -109,6 +109,50 @@ export async function publishCarouselToInstagram({ accessToken, igAccountId, ima
 }
 
 /**
+ * Publish a video as an Instagram Reel.
+ * Uses the same container → poll → publish pattern as images.
+ *
+ * @param {Object} params
+ * @param {string} params.accessToken - Page-scoped token from Meta OAuth
+ * @param {string} params.igAccountId - Instagram Business account ID
+ * @param {string} params.videoUrl - Public URL of the video file
+ * @param {string} [params.caption] - Reel caption text
+ * @returns {Promise<{success: boolean, mediaId?: string, error?: string}>}
+ */
+export async function publishReelToInstagram({ accessToken, igAccountId, videoUrl, caption }) {
+  try {
+    // Step 1: Create Reel media container
+    const containerRes = await fetch(
+      `https://graph.facebook.com/v21.0/${igAccountId}/media`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          media_type: 'REELS',
+          video_url: videoUrl,
+          caption: caption || '',
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    if (!containerRes.ok) {
+      const err = await containerRes.text();
+      return { success: false, error: `Reel container creation failed: ${err}` };
+    }
+
+    const container = await containerRes.json();
+    const containerId = container.id;
+
+    // Step 2: Wait for container to finish processing, then publish
+    const mediaId = await pollAndPublish(accessToken, igAccountId, containerId);
+    return { success: true, mediaId };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Poll container status until FINISHED, then publish.
  */
 async function pollAndPublish(accessToken, igAccountId, containerId) {
