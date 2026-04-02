@@ -12,15 +12,16 @@ const CAPTION_TEMPLATES = {
 };
 
 /**
- * Download images, zip them with caption files, upload zip to Supabase storage,
- * and return a public URL that fal.ai can access.
+ * Download images, zip them with caption files, upload zip to FAL storage,
+ * and return a URL that fal.ai can access directly.
+ * Uses FAL storage instead of Supabase to bypass the 50MB upload limit.
  *
  * @param {string[]} imageUrls
  * @param {string} defaultCaption - used when no per-image caption is provided
- * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} falKey - FAL API key for storage upload
  * @param {string[]} [captions] - optional per-image captions (indexed by position)
  */
-async function createTrainingZip(imageUrls, defaultCaption, supabase, captions) {
+async function createTrainingZip(imageUrls, defaultCaption, falKey, captions) {
   return new Promise(async (resolve, reject) => {
     try {
       const chunks = [];
@@ -29,29 +30,35 @@ async function createTrainingZip(imageUrls, defaultCaption, supabase, captions) 
       passthrough.on('end', async () => {
         try {
           const zipBuffer = Buffer.concat(chunks);
-          console.log(`[LoRA Train] Zip created: ${zipBuffer.length} bytes`);
+          const sizeMB = (zipBuffer.length / 1024 / 1024).toFixed(1);
+          console.log(`[LoRA Train] Zip created: ${zipBuffer.length} bytes (${sizeMB} MB)`);
 
-          const fileName = `lora-training-${Date.now()}-${Math.random().toString(36).substring(7)}.zip`;
-          const filePath = `training/${fileName}`;
+          // Upload to FAL storage (no size limit, FAL can access directly)
+          const fileName = `lora-training-${Date.now()}.zip`;
+          const uploadRes = await fetch(`https://rest.alpha.fal.ai/storage/upload/${fileName}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Key ${falKey}`,
+              'Content-Type': 'application/zip',
+            },
+            body: zipBuffer,
+          });
 
-          const { error: uploadError } = await supabase.storage
-            .from('media')
-            .upload(filePath, zipBuffer, {
-              contentType: 'application/zip',
-              upsert: false,
-            });
-
-          if (uploadError) {
-            reject(new Error(`Failed to upload zip: ${uploadError.message}`));
+          if (!uploadRes.ok) {
+            const errText = await uploadRes.text();
+            reject(new Error(`Failed to upload zip to FAL storage (${uploadRes.status}): ${errText.substring(0, 200)}`));
             return;
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('media')
-            .getPublicUrl(filePath);
+          const uploadData = await uploadRes.json();
+          const zipUrl = uploadData.url || uploadData.file_url || uploadData.access_url;
+          if (!zipUrl) {
+            reject(new Error(`FAL storage upload returned no URL: ${JSON.stringify(uploadData).substring(0, 200)}`));
+            return;
+          }
 
-          console.log(`[LoRA Train] Zip uploaded: ${publicUrl}`);
-          resolve(publicUrl);
+          console.log(`[LoRA Train] Zip uploaded to FAL storage: ${zipUrl}`);
+          resolve(zipUrl);
         } catch (err) {
           reject(err);
         }
@@ -165,30 +172,16 @@ export default async function handler(req, res) {
   const captionTemplate = CAPTION_TEMPLATES[training_type] || CAPTION_TEMPLATES.subject;
   const defaultCaption = captionTemplate(trigger_word);
 
-  // Create zip archive of training images with captions
+  // Create zip archive of training images with captions (uploaded to FAL storage)
   let zipUrl;
   try {
-    zipUrl = await createTrainingZip(image_urls, defaultCaption, supabase, captions);
+    zipUrl = await createTrainingZip(image_urls, defaultCaption, falKey, captions);
   } catch (err) {
     console.error('[LoRA Train] Failed to create training zip:', err);
     return res.status(500).json({ error: 'Failed to prepare training images', details: err.message });
   }
 
   console.log(`[LoRA Train] Submitting to ${model.endpoint} with zip: ${zipUrl}`);
-
-  // Verify the zip URL is accessible before sending to FAL
-  try {
-    const checkRes = await fetch(zipUrl, { method: 'HEAD' });
-    if (!checkRes.ok) {
-      console.error(`[LoRA Train] Zip URL not accessible: ${checkRes.status} ${checkRes.statusText}`);
-      return res.status(500).json({ error: `Training zip file is not accessible (${checkRes.status}). Please try again.` });
-    }
-    const size = checkRes.headers.get('content-length');
-    console.log(`[LoRA Train] Zip verified: ${size} bytes, status ${checkRes.status}`);
-  } catch (checkErr) {
-    console.error(`[LoRA Train] Zip URL check failed:`, checkErr.message);
-    return res.status(500).json({ error: `Cannot verify training zip: ${checkErr.message}` });
-  }
 
   // Build request body via model registry
   const body = model.buildBody({
