@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronDown, ChevronRight, Megaphone, Plus, Wand2,
+  ArrowLeft, ChevronDown, ChevronRight, Megaphone, Plus, Wand2, Sparkles,
   LayoutGrid, Sliders, Image as ImageIcon, Copy, BarChart2, Link2,
   Globe, Monitor, Smartphone, AlertTriangle, Lightbulb, Lock,
   Settings, CheckCircle2, Repeat, Target, FileText, Layers,
