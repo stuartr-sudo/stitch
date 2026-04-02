@@ -32,6 +32,8 @@ import { solveDurations } from '../lib/durationSolver.js';
 import { composeVideoPrompt } from '../lib/visualPromptComposer.js';
 import { logCost } from '../lib/costLogger.js';
 import OpenAI from 'openai';
+import { loopVideo, composeSplitScreen } from '../lib/splitScreenCompositor.js';
+import { recommendLipsyncModel, applyLipsync } from '../lib/storyboardLipsync.js';
 
 const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
 
@@ -364,6 +366,7 @@ Rules:
           clips, voiceover_url, music_url, music_volume = 0.15,
           tts_duration, voice_speed = 1.0, caption_config,
           sfx_url, sfx_volume = 0.3,
+          avatar_mode, avatar_lipsync_url,
         } = req.body;
 
         if (!clips?.length) return res.status(400).json({ error: 'clips required' });
@@ -376,7 +379,7 @@ Rules:
         // Don't divide by voice_speed again — that was causing a double-division bug.
         const effectiveTtsDuration = tts_duration || null;
 
-        // Assemble with audio stripping on video tracks (Bug 3 fix)
+        // Assemble B-roll with voiceover + music (same as before)
         const assembledUrl = await assembleShort(
           videoUrls, voiceover_url, music_url,
           keys.falKey, supabase,
@@ -385,19 +388,143 @@ Rules:
           sfx_url, sfx_volume,
         );
 
-        // Burn captions
         let finalUrl = assembledUrl;
+
+        // Split-screen composite if avatar mode is active
+        if (avatar_mode && avatar_lipsync_url) {
+          const compositeDuration = effectiveTtsDuration
+            || clipDurations.reduce((sum, d) => sum + d, 0);
+
+          const { videoUrl: compositeUrl } = await composeSplitScreen({
+            brollVideoUrl: assembledUrl,
+            avatarVideoUrl: avatar_lipsync_url,
+            duration: compositeDuration,
+            falKey: keys.falKey,
+            supabase,
+          });
+
+          finalUrl = compositeUrl;
+          logCost({ username: req.user.email, category: 'fal', operation: 'avatar_split_screen', model: 'ffmpeg-compose' });
+        }
+
+        // Burn captions
+        const uncaptionedUrl = finalUrl;
         if (caption_config) {
           try {
-            finalUrl = await burnCaptions(assembledUrl, caption_config, keys.falKey, supabase);
+            finalUrl = await burnCaptions(finalUrl, caption_config, keys.falKey, supabase);
           } catch (err) {
             console.warn(`[workbench] Caption burn failed, using uncaptioned: ${err.message}`);
           }
         }
 
-        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_assemble', model: 'ffmpeg-compose', metadata: { clip_count: clips.length } });
+        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_assemble', model: 'ffmpeg-compose', metadata: { clip_count: clips.length, avatar_mode: !!avatar_mode } });
 
-        return res.json({ video_url: finalUrl, uncaptioned_url: assembledUrl });
+        return res.json({ video_url: finalUrl, uncaptioned_url: uncaptionedUrl });
+      }
+
+      // ─── Avatar: Generate Portrait ────────────────────────────────
+      case 'generate-avatar-portrait': {
+        const { visual_subject_id } = req.body;
+        if (!visual_subject_id) return res.status(400).json({ error: 'visual_subject_id required' });
+
+        // Load Visual Subject (verify ownership)
+        const { data: subject, error: subjectErr } = await supabase
+          .from('visual_subjects')
+          .select('id, name, lora_url, lora_trigger_word, reference_image_url')
+          .eq('id', visual_subject_id)
+          .eq('user_id', req.user.id)
+          .single();
+        if (subjectErr || !subject) return res.status(404).json({ error: 'Visual Subject not found' });
+        if (!subject.lora_url) return res.status(400).json({ error: 'Visual Subject has no trained LoRA' });
+
+        // Build presenter portrait prompt
+        const triggerWord = subject.lora_trigger_word || 'person';
+        const prompt = `${triggerWord} person speaking to camera, shoulders up, direct eye contact, neutral solid background, portrait photography, soft studio lighting`;
+
+        // Generate portrait with LoRA
+        const portraitUrl = await generateImageV2(
+          'fal_nano_banana',
+          prompt,
+          'landscape_16_9', // 1344×768 — close to 1080×768 target, will be cropped
+          keys,
+          supabase,
+          {
+            loras: [{ path: subject.lora_url, scale: 0.85 }],
+          },
+        );
+
+        logCost({ username: req.user.email, category: 'fal', operation: 'avatar_portrait', model: 'nano-banana-2', metadata: { visual_subject_id } });
+
+        return res.json({ portrait_url: portraitUrl, subject_name: subject.name });
+      }
+
+      // ─── Avatar: Animate Portrait ─────────────────────────────────
+      case 'animate-avatar': {
+        const { portrait_url, duration: targetDuration } = req.body;
+        if (!portrait_url) return res.status(400).json({ error: 'portrait_url required' });
+        if (!targetDuration) return res.status(400).json({ error: 'duration required (voiceover length in seconds)' });
+
+        // Hardcoded face-animation model — best for talking heads
+        const AVATAR_VIDEO_MODEL = 'fal_wan25';
+        const AVATAR_MOTION_PROMPT = 'person speaking naturally to camera, subtle head movement, gentle gestures, blinking, conversational body language';
+
+        // Generate at model's max duration (Wan 2.5 supports up to 10s)
+        const modelMaxDuration = 10;
+        const clipDuration = Math.min(modelMaxDuration, targetDuration);
+
+        const rawClipUrl = await animateImageV2(
+          AVATAR_VIDEO_MODEL,
+          portrait_url,
+          AVATAR_MOTION_PROMPT,
+          'landscape_16_9',
+          clipDuration,
+          keys,
+          supabase,
+          { generate_audio: false },
+        );
+
+        logCost({ username: req.user.email, category: 'fal', operation: 'avatar_animate', model: AVATAR_VIDEO_MODEL, metadata: { clip_duration: clipDuration, target_duration: targetDuration } });
+
+        // Loop the clip to match voiceover duration if needed
+        let avatarVideoUrl = rawClipUrl;
+        if (targetDuration > clipDuration) {
+          avatarVideoUrl = await loopVideo({
+            videoUrl: rawClipUrl,
+            clipDuration,
+            targetDuration,
+            falKey: keys.falKey,
+            supabase,
+          });
+          logCost({ username: req.user.email, category: 'fal', operation: 'avatar_loop', model: 'ffmpeg-compose', metadata: { clip_duration: clipDuration, target_duration: targetDuration } });
+        }
+
+        return res.json({ avatar_video_url: avatarVideoUrl });
+      }
+
+      // ─── Avatar: Lip-sync ─────────────────────────────────────────
+      case 'lipsync-avatar': {
+        const { avatar_video_url, voiceover_url } = req.body;
+        if (!avatar_video_url) return res.status(400).json({ error: 'avatar_video_url required' });
+        if (!voiceover_url) return res.status(400).json({ error: 'voiceover_url required' });
+
+        // Recommend best model for realistic close-up talking head
+        const model = recommendLipsyncModel({
+          contentType: 'realistic',
+          isCloseUp: true,
+          hasVideoAlready: true,
+        });
+
+        const result = await applyLipsync({
+          videoUrl: avatar_video_url,
+          audioUrl: voiceover_url,
+          model,
+          falKey: keys.falKey,
+          supabase,
+        });
+
+        logCost({ username: req.user.email, category: 'fal', operation: 'avatar_lipsync', model, metadata: { processing_time: result.processingTime } });
+
+        return res.json({ lipsync_video_url: result.videoUrl, model_used: result.model });
       }
 
       // ─── Save Draft ──────────────────────────────────────────────
