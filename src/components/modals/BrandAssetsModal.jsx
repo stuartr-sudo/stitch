@@ -154,10 +154,18 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
   };
   const selectedModelInfo = trainingModels.find(m => m.id === selectedModel);
 
+  const MAX_TRAINING_IMAGES = 25;
+
   const handleFileUpload = async (files) => {
+    const remaining = MAX_TRAINING_IMAGES - uploadedImages.length;
+    if (remaining <= 0) {
+      toast.warning(`Maximum ${MAX_TRAINING_IMAGES} images allowed. Remove some images to add new ones.`);
+      return;
+    }
     const newImages = [];
     for (const file of files) {
       if (!file.type.startsWith('image/')) continue;
+      if (newImages.length >= remaining) break;
       const dataUrl = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);
@@ -169,6 +177,9 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
         fileName: file.name,
         size: file.size,
       });
+    }
+    if (newImages.length < files.filter(f => f.type.startsWith('image/')).length) {
+      toast.warning(`Only ${newImages.length} image${newImages.length !== 1 ? 's' : ''} added — maximum ${MAX_TRAINING_IMAGES} images allowed.`);
     }
     setUploadedImages(prev => [...prev, ...newImages]);
   };
@@ -312,13 +323,24 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
     const selected = libraryItems.filter(item => selectedLibraryIds.has(item.id));
     if (selected.length === 0) { toast.error('No images selected'); return; }
 
-    const imported = selected.map(item => ({
+    const remaining = MAX_TRAINING_IMAGES - uploadedImages.length;
+    if (remaining <= 0) {
+      toast.warning(`Maximum ${MAX_TRAINING_IMAGES} images allowed. Remove some images to add new ones.`);
+      return;
+    }
+
+    const toImport = selected.slice(0, remaining);
+    const imported = toImport.map(item => ({
       id: Date.now() + Math.random(),
       dataUrl: item.url,
       fileName: item.title || 'Library image',
       size: 0,
       fromLibrary: true,
     }));
+
+    if (toImport.length < selected.length) {
+      toast.warning(`Only ${toImport.length} of ${selected.length} images imported — maximum ${MAX_TRAINING_IMAGES} images allowed.`);
+    }
 
     setUploadedImages(prev => [...prev, ...imported]);
     setShowLibraryBrowser(false);
@@ -546,7 +568,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-sm font-medium text-gray-700">
-                  Training Photos <span className="text-gray-400">({uploadedImages.length} uploaded)</span>
+                  Training Photos <span className="text-gray-400">({uploadedImages.length}/{MAX_TRAINING_IMAGES} uploaded)</span>
                 </Label>
                 {uploadedImages.length > 0 && processedCount < uploadedImages.length && (
                   <Button size="sm" variant="outline" onClick={handleRemoveAllBackgrounds} disabled={isProcessing}
@@ -574,7 +596,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   >
                     <Upload className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-[#2C666E] transition-colors" />
                     <p className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Click to upload photos</p>
-                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, or WebP. 5-15 images recommended.</p>
+                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, or WebP. 5–25 images (15–20 recommended).</p>
                   </button>
                   <div className="text-center">
                     <span className="text-xs text-gray-400">or</span>
@@ -638,31 +660,35 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       );
                     })}
 
-                    {/* Add more button */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
-                    >
-                      <ImagePlus className="w-6 h-6 text-gray-400" />
-                      <span className="text-xs text-gray-400 mt-1">Upload</span>
-                    </button>
-                    {/* Import from library */}
-                    <button
-                      type="button"
-                      onClick={handleOpenLibrary}
-                      className="aspect-square rounded-lg border-2 border-dashed border-[#2C666E]/30 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
-                    >
-                      <FolderOpen className="w-6 h-6 text-[#2C666E]/40" />
-                      <span className="text-xs text-[#2C666E]/60 mt-1">Library</span>
-                    </button>
+                    {/* Add more button — hidden at max */}
+                    {uploadedImages.length < MAX_TRAINING_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
+                      >
+                        <ImagePlus className="w-6 h-6 text-gray-400" />
+                        <span className="text-xs text-gray-400 mt-1">Upload</span>
+                      </button>
+                    )}
+                    {/* Import from library — hidden at max */}
+                    {uploadedImages.length < MAX_TRAINING_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={handleOpenLibrary}
+                        className="aspect-square rounded-lg border-2 border-dashed border-[#2C666E]/30 flex flex-col items-center justify-center hover:border-[#2C666E] hover:bg-[#2C666E]/5 transition-all cursor-pointer"
+                      >
+                        <FolderOpen className="w-6 h-6 text-[#2C666E]/40" />
+                        <span className="text-xs text-[#2C666E]/60 mt-1">Library</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Tips */}
                   <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
                     <p className="text-xs font-medium text-gray-700 mb-1">Tips for best results:</p>
                     <ul className="text-xs text-gray-500 space-y-0.5 list-disc list-inside">
-                      <li>Use 5-15 high-quality photos from different angles</li>
+                      <li>Use 5–25 high-quality photos from different angles (15–20 is ideal)</li>
                       <li>Keep consistent lighting across images</li>
                       <li>Removing backgrounds helps the AI focus on your subject</li>
                       <li>Avoid busy backgrounds or other prominent objects</li>
@@ -671,7 +697,12 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
 
                   {uploadedImages.length < 3 && (
                     <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      Upload at least 3 images to proceed (5-15 recommended for best quality)
+                      Upload at least 3 images to proceed (15–20 recommended, 25 max)
+                    </p>
+                  )}
+                  {uploadedImages.length >= MAX_TRAINING_IMAGES && (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      Maximum {MAX_TRAINING_IMAGES} images reached. Remove images to add different ones.
                     </p>
                   )}
                 </div>
@@ -1166,7 +1197,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
             {currentStep === 'upload' ? (
               <>
                 <span className="text-xs text-gray-500">
-                  {uploadedImages.length} of 5-15 images uploaded
+                  {uploadedImages.length} of {MAX_TRAINING_IMAGES} max images uploaded
                 </span>
                 <Button
                   onClick={() => setCurrentStep('configure')}

@@ -113,8 +113,14 @@ export default async function handler(req, res) {
     visual_subject_id,
   } = req.body;
 
+  const MAX_TRAINING_IMAGES = 25;
+
   if (!name || !trigger_word || !image_urls?.length) {
     return res.status(400).json({ error: 'Missing name, trigger_word, or image_urls' });
+  }
+
+  if (image_urls.length > MAX_TRAINING_IMAGES) {
+    return res.status(400).json({ error: `Maximum ${MAX_TRAINING_IMAGES} training images allowed. You uploaded ${image_urls.length}.` });
   }
 
   // Resolve training model from registry
