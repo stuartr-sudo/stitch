@@ -81,6 +81,13 @@ const loadApiRoute = async (routePath) => {
   }
 };
 
+// Auth check route
+app.get('/api/auth/check-keys', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('auth/check-keys.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // JumpStart routes (with auth)
 app.post('/api/jumpstart/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('jumpstart/generate.js');

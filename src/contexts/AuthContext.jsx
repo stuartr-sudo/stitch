@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
 
 const AuthContext = createContext(null);
 
@@ -12,14 +13,22 @@ export function AuthProvider({ children }) {
   const checkUserKeys = async (userId) => {
     if (!userId || !supabase) { setHasKeys(false); return; }
     try {
-      const { data } = await supabase
-        .from('user_api_keys')
-        .select('fal_key, openai_key')
-        .eq('user_id', userId)
-        .maybeSingle();
-      setHasKeys(!!(data?.fal_key && data?.openai_key));
+      // Use server endpoint which accounts for owner env-var fallback
+      const resp = await apiFetch('/api/auth/check-keys');
+      const data = await resp.json();
+      setHasKeys(!!data?.hasKeys);
     } catch {
-      setHasKeys(false);
+      // Fallback to direct DB check if API unavailable (dev startup race)
+      try {
+        const { data } = await supabase
+          .from('user_api_keys')
+          .select('fal_key, openai_key')
+          .eq('user_id', userId)
+          .maybeSingle();
+        setHasKeys(!!(data?.fal_key && data?.openai_key));
+      } catch {
+        setHasKeys(false);
+      }
     }
   };
 
