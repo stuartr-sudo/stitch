@@ -127,9 +127,9 @@ export default async function handler(req, res) {
         // Use framework music config first, then fall back to niche-specific music mood
         const nicheMood = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche].music_mood : null;
         const prompt = buildMusicPrompt(framework?.music || framework?.musicMood || nicheMood || 'cinematic background', framework?.category);
-        const audioUrl = await genMusic(prompt, duration, keys, supabase, 'beatoven');
+        const audioUrl = await genMusic(prompt, duration, keys, supabase, 'elevenlabs');
         if (!audioUrl) return res.status(500).json({ error: 'Music generation failed' });
-        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: 'beatoven', metadata: { track_count: 1 } });
+        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: 'elevenlabs', metadata: { track_count: 1 } });
         return res.json({ audio_url: audioUrl });
       }
 

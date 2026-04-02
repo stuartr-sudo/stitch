@@ -323,7 +323,7 @@ export async function runShortsPipeline(opts) {
     );
     const musicPromise = enableBackgroundMusic
       ? withRetry(
-          () => generateMusic(musicMoodPrompt, Math.ceil(ttsDuration) + 3, keys, supabase, 'beatoven'),
+          () => generateMusic(musicMoodPrompt, Math.ceil(ttsDuration) + 3, keys, supabase, 'elevenlabs'),
           { maxAttempts: 2, baseDelayMs: 5000 }
         ).catch(err => { console.warn('[shortsPipeline] Music failed:', err.message); return null; })
       : Promise.resolve(null);
@@ -739,14 +739,14 @@ export async function runShortsPipeline(opts) {
         username: brand_username,
         category: 'fal',
         operation: 'shorts_music',
-        model: 'beatoven',
+        model: 'elevenlabs',
         metadata: { track_count: 1 },
       });
       autoSave(supabase, userId, userEmail, {
         url: musicUrl, type: 'video',
         title: `[Short] ${topic} - Music`,
         source: 'shorts',
-        model_name: 'Beatoven',
+        model_name: 'ElevenLabs Music',
         short_name: topic || null,
       });
     }

@@ -525,7 +525,7 @@ async function runProductionPipeline(jobId, storyboard, frames, keys) {
           totalDuration,
           keys,
           supabase,
-          'beatoven'
+          'elevenlabs'
         );
         if (musicUrl) {
           await updateStoryboard({ music_url: musicUrl });

@@ -590,7 +590,7 @@ export async function extractFirstFrame(videoUrl, falKey) {
 
 /**
  * Build a rich music prompt from a framework's music config or mood label.
- * Beatoven handles detailed descriptions well — give it genre, instruments, feel.
+ * ElevenLabs handles detailed descriptions well — give it genre, instruments, feel.
  *
  * @param {object|string} musicConfig - framework.music object or a mood string
  * @param {string} [category] - framework category ('story' | 'fast_paced')
@@ -618,17 +618,17 @@ export function buildMusicPrompt(musicConfig, category = 'story') {
  * @param {number} durationSeconds
  * @param {object} keys - { falKey }
  * @param {object} supabase
- * @param {string} [model] - 'beatoven' | 'minimax' | 'fal_elevenlabs' | 'fal_lyria2'
+ * @param {string} [model] - 'elevenlabs' | 'minimax' | 'fal_lyria2'
  * @returns {Promise<string>} public audio URL
  */
-export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'beatoven') {
+export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'elevenlabs') {
   if (!keys.falKey) return null; // music is optional — don't block pipeline
 
   const clampedDuration = Math.max(5, Math.min(150, durationSeconds));
 
   try {
     // --- ElevenLabs Music (duration-aware via music_length_ms) ---
-    if (model === 'beatoven') {
+    if (model === 'elevenlabs') {
       const musicLengthMs = Math.max(3000, Math.min(600000, Math.round(clampedDuration * 1000)));
       console.log(`[generateMusic] ElevenLabs Music: ${musicLengthMs}ms, prompt: ${moodPrompt.slice(0, 80)}...`);
       const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/music`, {
@@ -642,8 +642,8 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
         }),
       });
       if (!res.ok) {
-        console.warn('[pipelineHelpers] ElevenLabs Music gen failed, falling back to Lyria 2:', await res.text());
-        return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'fal_lyria2');
+        console.warn('[pipelineHelpers] ElevenLabs Music gen failed, skipping:', await res.text());
+        return null;
       }
       const queueData = await res.json();
       if (!queueData.request_id && !queueData.response_url) return null;
@@ -673,22 +673,6 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       const queueData = await res.json();
       if (!queueData.request_id) return null;
       const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/minimax-music/v2', keys.falKey, 120, 3000);
-      const audioUrl = output?.audio?.url;
-      if (!audioUrl) return null;
-      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
-    }
-
-    // --- ElevenLabs Music via FAL ---
-    if (model === 'fal_elevenlabs') {
-      const res = await fetch(`${FAL_BASE}/fal-ai/elevenlabs/music`, {
-        method: 'POST',
-        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: moodPrompt, duration_seconds: clampedDuration }),
-      });
-      if (!res.ok) { console.warn('[pipelineHelpers] ElevenLabs Music gen failed, skipping:', await res.text()); return null; }
-      const queueData = await res.json();
-      if (!queueData.request_id) return null;
-      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/elevenlabs/music', keys.falKey, 120, 3000);
       const audioUrl = output?.audio?.url;
       if (!audioUrl) return null;
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
