@@ -467,11 +467,11 @@ export function LoraGuideContent() {
         <Section icon={Layers} title="Training Models — Complete Reference">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
-              10 training models are available across 2 categories. Each produces a LoRA compatible with its base model family.
+              16 training models are available across 2 categories. Each produces a LoRA compatible with its base model family.
             </p>
 
             <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-              <Image className="w-4 h-4 text-purple-600" /> Image Models (7)
+              <Image className="w-4 h-4 text-purple-600" /> Image Models (12)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -544,10 +544,60 @@ export function LoraGuideContent() {
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
+              <ModelCard
+                name="Turbo FLUX Trainer"
+                base="FLUX.1 [dev]"
+                category="image"
+                pricing="$0.0024/step"
+                features={['Style', 'Face crop']}
+                bestFor="Blazing fast FLUX trainer. Face cropping + style/subject modes."
+                stepRange={[1, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="FLUX.2 Dev Trainer V2"
+                base="FLUX.2 [dev]"
+                category="image"
+                pricing="$0.0255/step"
+                features={['Edit pairs']}
+                bestFor="Premium FLUX.2 trainer. Highest quality, most expensive."
+                stepRange={[100, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="Z-Image Turbo V2"
+                base="Z-Image Turbo (6B)"
+                category="image"
+                pricing="$0.0008/step"
+                features={[]}
+                bestFor="Cheaper V2 Z-Image trainer. Supports up to 40K steps."
+                stepRange={[10, 40000]}
+                defaultSteps={2000}
+              />
+              <ModelCard
+                name="Qwen Image 2512"
+                base="Qwen Image 2512"
+                category="image"
+                pricing="$0.0015/step"
+                features={[]}
+                bestFor="Newer Qwen 2512 model. Better quality than original Qwen."
+                stepRange={[100, 30000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="Qwen Image 2512 V2"
+                base="Qwen Image 2512"
+                category="image"
+                pricing="$0.0009/step"
+                features={[]}
+                bestFor="Cheapest Qwen option. V2 with up to 40K steps."
+                stepRange={[10, 40000]}
+                defaultSteps={2000}
+              />
             </div>
 
             <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2 mt-6">
-              <Video className="w-4 h-4 text-blue-600" /> Video Models (3)
+              <Video className="w-4 h-4 text-blue-600" /> Video Models (4)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -580,12 +630,23 @@ export function LoraGuideContent() {
                 stepRange={[1, 5000]}
                 defaultSteps={1000}
               />
+              <ModelCard
+                name="LTX-2 Video Trainer"
+                base="LTX-2 Video"
+                category="video"
+                pricing="$0.0048/step"
+                features={['Audio', 'Auto-scale']}
+                bestFor="LTX-2 video with audio training support. Good for styles and effects."
+                stepRange={[100, 20000]}
+                defaultSteps={2000}
+              />
             </div>
 
             <InfoBox>
               <strong>Which model should I choose?</strong> For most character/subject LoRAs, start with <strong>FLUX LoRA Fast</strong> ($2 flat,
-              quick training). For video character consistency, use <strong>Wan 2.2 I2V</strong>. For style LoRAs,
-              <strong> Z-Image Turbo</strong> or <strong>FLUX LoRA Fast</strong> are good choices.
+              quick training) or <strong>Turbo FLUX</strong> ($0.0024/step). For video character consistency, use <strong>Wan 2.2 I2V</strong>.
+              For style LoRAs, <strong>Z-Image Turbo</strong> or <strong>FLUX LoRA Fast</strong> are good choices.
+              For the cheapest per-step training, try <strong>Z-Image V2</strong> ($0.0008/step) or <strong>Qwen 2512 V2</strong> ($0.0009/step).
             </InfoBox>
           </div>
         </Section>
@@ -822,7 +883,7 @@ export function LoraGuideContent() {
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <h5 className="font-medium text-sm text-gray-900 mb-2">Supported Models</h5>
                 <p className="text-xs text-gray-600 mb-2">
-                  Only 2 of our 10 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
+                  Only 2 of our 16 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 text-xs">
@@ -1611,11 +1672,11 @@ export default function LoraGuidePage() {
         <Section icon={Layers} title="Training Models — Complete Reference">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
-              10 training models are available across 2 categories. Each produces a LoRA compatible with its base model family.
+              16 training models are available across 2 categories. Each produces a LoRA compatible with its base model family.
             </p>
 
             <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-              <Image className="w-4 h-4 text-purple-600" /> Image Models (7)
+              <Image className="w-4 h-4 text-purple-600" /> Image Models (12)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -1688,10 +1749,60 @@ export default function LoraGuidePage() {
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
+              <ModelCard
+                name="Turbo FLUX Trainer"
+                base="FLUX.1 [dev]"
+                category="image"
+                pricing="$0.0024/step"
+                features={['Style', 'Face crop']}
+                bestFor="Blazing fast FLUX trainer. Face cropping + style/subject modes."
+                stepRange={[1, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="FLUX.2 Dev Trainer V2"
+                base="FLUX.2 [dev]"
+                category="image"
+                pricing="$0.0255/step"
+                features={['Edit pairs']}
+                bestFor="Premium FLUX.2 trainer. Highest quality, most expensive."
+                stepRange={[100, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="Z-Image Turbo V2"
+                base="Z-Image Turbo (6B)"
+                category="image"
+                pricing="$0.0008/step"
+                features={[]}
+                bestFor="Cheaper V2 Z-Image trainer. Supports up to 40K steps."
+                stepRange={[10, 40000]}
+                defaultSteps={2000}
+              />
+              <ModelCard
+                name="Qwen Image 2512"
+                base="Qwen Image 2512"
+                category="image"
+                pricing="$0.0015/step"
+                features={[]}
+                bestFor="Newer Qwen 2512 model. Better quality than original Qwen."
+                stepRange={[100, 30000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="Qwen Image 2512 V2"
+                base="Qwen Image 2512"
+                category="image"
+                pricing="$0.0009/step"
+                features={[]}
+                bestFor="Cheapest Qwen option. V2 with up to 40K steps."
+                stepRange={[10, 40000]}
+                defaultSteps={2000}
+              />
             </div>
 
             <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2 mt-6">
-              <Video className="w-4 h-4 text-blue-600" /> Video Models (3)
+              <Video className="w-4 h-4 text-blue-600" /> Video Models (4)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -1724,12 +1835,23 @@ export default function LoraGuidePage() {
                 stepRange={[1, 5000]}
                 defaultSteps={1000}
               />
+              <ModelCard
+                name="LTX-2 Video Trainer"
+                base="LTX-2 Video"
+                category="video"
+                pricing="$0.0048/step"
+                features={['Audio', 'Auto-scale']}
+                bestFor="LTX-2 video with audio training support. Good for styles and effects."
+                stepRange={[100, 20000]}
+                defaultSteps={2000}
+              />
             </div>
 
             <InfoBox>
               <strong>Which model should I choose?</strong> For most character/subject LoRAs, start with <strong>FLUX LoRA Fast</strong> ($2 flat,
-              quick training). For video character consistency, use <strong>Wan 2.2 I2V</strong>. For style LoRAs,
-              <strong> Z-Image Turbo</strong> or <strong>FLUX LoRA Fast</strong> are good choices.
+              quick training) or <strong>Turbo FLUX</strong> ($0.0024/step). For video character consistency, use <strong>Wan 2.2 I2V</strong>.
+              For style LoRAs, <strong>Z-Image Turbo</strong> or <strong>FLUX LoRA Fast</strong> are good choices.
+              For the cheapest per-step training, try <strong>Z-Image V2</strong> ($0.0008/step) or <strong>Qwen 2512 V2</strong> ($0.0009/step).
             </InfoBox>
           </div>
         </Section>
@@ -1966,7 +2088,7 @@ export default function LoraGuidePage() {
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <h5 className="font-medium text-sm text-gray-900 mb-2">Supported Models</h5>
                 <p className="text-xs text-gray-600 mb-2">
-                  Only 2 of our 10 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
+                  Only 2 of our 16 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 text-xs">

@@ -313,6 +313,184 @@ export const TRAINING_MODELS = {
       return data?.diffusers_lora_file?.url ?? data?.lora_file?.url ?? null;
     },
   },
+
+  'turbo-flux': {
+    id: 'turbo-flux',
+    name: 'Turbo FLUX Trainer',
+    endpoint: 'fal-ai/turbo-flux-trainer',
+    baseModel: 'FLUX.1 [dev]',
+    category: 'image',
+    pricing: '$0.0024/step',
+    supportsStyle: true,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 1000,
+      learning_rate: 0.00115,
+    },
+    stepRange: [1, 10000],
+    buildBody(params) {
+      const { zipUrl, trigger_word, steps, learning_rate, is_style } = params;
+      return {
+        images_data_url: zipUrl,
+        trigger_phrase: trigger_word,
+        steps,
+        learning_rate,
+        training_style: is_style ? 'style' : 'subject',
+        face_crop: !is_style,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'flux-2-v2': {
+    id: 'flux-2-v2',
+    name: 'FLUX.2 Dev Trainer V2',
+    endpoint: 'fal-ai/flux-2-trainer-v2',
+    baseModel: 'FLUX.2 [dev]',
+    category: 'image',
+    pricing: '$0.0255/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 1000,
+      learning_rate: 0.00005,
+    },
+    stepRange: [100, 10000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'z-image-v2': {
+    id: 'z-image-v2',
+    name: 'Z-Image Turbo V2 Trainer',
+    endpoint: 'fal-ai/z-image-turbo-trainer-v2',
+    baseModel: 'Z-Image Turbo (6B)',
+    category: 'image',
+    pricing: '$0.0008/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 2000,
+      learning_rate: 0.0005,
+    },
+    stepRange: [10, 40000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'qwen-2512': {
+    id: 'qwen-2512',
+    name: 'Qwen Image 2512 Trainer',
+    endpoint: 'fal-ai/qwen-image-2512-trainer',
+    baseModel: 'Qwen Image 2512',
+    category: 'image',
+    pricing: '$0.0015/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 1000,
+      learning_rate: 0.0005,
+    },
+    stepRange: [100, 30000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'qwen-2512-v2': {
+    id: 'qwen-2512-v2',
+    name: 'Qwen Image 2512 V2 Trainer',
+    endpoint: 'fal-ai/qwen-image-2512-trainer-v2',
+    baseModel: 'Qwen Image 2512',
+    category: 'image',
+    pricing: '$0.0009/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 2000,
+      learning_rate: 0.0005,
+    },
+    stepRange: [10, 40000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'ltx2-video': {
+    id: 'ltx2-video',
+    name: 'LTX-2 Video Trainer',
+    endpoint: 'fal-ai/ltx2-video-trainer',
+    baseModel: 'LTX-2 Video',
+    category: 'video',
+    pricing: '$0.0048/step',
+    requiresVideo: true,
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 2000,
+      learning_rate: 0.0002,
+    },
+    stepRange: [100, 20000],
+    buildBody(params) {
+      const { zipUrl, trigger_word, steps, learning_rate } = params;
+      return {
+        training_data_url: zipUrl,
+        trigger_phrase: trigger_word,
+        number_of_steps: steps,
+        learning_rate,
+        auto_scale_input: true,
+      };
+    },
+    parseResult(data) {
+      return data?.lora_file?.url ?? null;
+    },
+  },
 };
 
 /**

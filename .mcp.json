@@ -3,9 +3,22 @@
     "firecrawl": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
       "env": {
         "FIRECRAWL_API_KEY": "fc-3b1881296f19467aabbc188e69f4b50c"
+      }
+    },
+    "fal-ai": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "fal-ai-mcp"
+      ],
+      "env": {
+        "FAL_KEY": "7b56ac73-698b-44d5-b7e3-3f71d5ffa453:90e3332b84b6d03b5ebbf227b2365fcc"
       }
     }
   }

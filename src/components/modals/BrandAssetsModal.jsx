@@ -821,6 +821,12 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       {selectedModelInfo.id === 'qwen-image' && 'For Qwen image generation. Use if you primarily generate with Qwen models.'}
                       {selectedModelInfo.id === 'qwen-edit-2511' && 'For Qwen image editing. Train LoRAs compatible with the Qwen edit pipeline.'}
                       {selectedModelInfo.id === 'z-image' && 'Fast, lightweight model. Good for styles on Z-Image Turbo. Supports style training.'}
+                      {selectedModelInfo.id === 'turbo-flux' && 'Blazing fast FLUX trainer with face cropping. Great alternative to FLUX LoRA Fast.'}
+                      {selectedModelInfo.id === 'flux-2-v2' && 'FLUX.2 dev model trainer. Highest quality but expensive ($25.50/1K steps). For premium results.'}
+                      {selectedModelInfo.id === 'z-image-v2' && 'V2 Z-Image trainer — cheaper ($0.0008/step) with higher step range. Good for longer training runs.'}
+                      {selectedModelInfo.id === 'qwen-2512' && 'Newer Qwen 2512 image model trainer. Better quality than original Qwen at similar price.'}
+                      {selectedModelInfo.id === 'qwen-2512-v2' && 'V2 Qwen 2512 trainer — cheapest Qwen option ($0.0009/step). Supports up to 40K steps.'}
+                      {selectedModelInfo.id === 'ltx2-video' && 'LTX-2 video model. Supports audio training. Good for video styles and effects.'}
                       {selectedModelInfo.id === 'hunyuan-video' && 'Tencent Hunyuan video model. Accepts images as training data. $5 flat rate.'}
                     </p>
                   </div>
