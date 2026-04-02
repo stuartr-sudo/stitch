@@ -101,29 +101,9 @@ function KV({ label, children }) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 
-export default function CarouselGuidePage() {
-  const navigate = useNavigate();
-
+export function CarouselGuideContent() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => navigate('/carousels')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Carousel Builder Guide</h1>
-            <p className="text-xs text-gray-500">Complete reference for every feature and workflow</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
 
         {/* ── Overview ── */}
         <Section icon={LayoutGrid} title="Overview — What Is the Carousel Builder?" defaultOpen={true}>
@@ -789,6 +769,31 @@ export default function CarouselGuidePage() {
           Carousel Builder Guide — Stitch Studios
         </div>
       </div>
+  );
+}
+
+export default function CarouselGuidePage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => navigate('/carousels')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Carousel Builder Guide</h1>
+            <p className="text-xs text-gray-500">Complete reference for every feature and workflow</p>
+          </div>
+        </div>
+      </div>
+
+      <CarouselGuideContent />
     </div>
   );
 }

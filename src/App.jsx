@@ -35,6 +35,7 @@ import CarouselGuidePage from './pages/CarouselGuidePage';
 import AdsManagerGuidePage from './pages/AdsManagerGuidePage';
 import SetupKeys from './pages/SetupKeys';
 import EducatePage from './pages/EducatePage';
+import LearnPage from './pages/LearnPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -245,14 +246,7 @@ function App() {
             }
           />
 
-          <Route
-            path="/storyboards/guide"
-            element={
-              <ProtectedRoute>
-                <StoryboardGuidePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/storyboards/guide" element={<Navigate to="/learn?tab=storyboards" replace />} />
           <Route
             path="/storyboards/:id"
             element={
@@ -287,47 +281,28 @@ function App() {
             }
           />
 
-          {/* Admin guide — password-gated internally, no Supabase auth needed */}
-          <Route path="/lora" element={<LoraGuidePage />} />
+          {/* Unified learn page */}
           <Route
-            path="/carousel-educate"
+            path="/learn"
             element={
               <ProtectedRoute>
-                <CarouselGuidePage />
+                <LearnPage />
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/turnaround-educate"
-            element={
-              <ProtectedRoute>
-                <TurnaroundGuidePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/adsmanager-educate"
-            element={
-              <ProtectedRoute>
-                <AdsManagerGuidePage />
-              </ProtectedRoute>
-            }
-          />
+
+          {/* Redirects from old guide routes to /learn */}
+          <Route path="/lora" element={<Navigate to="/learn?tab=lora" replace />} />
+          <Route path="/carousel-educate" element={<Navigate to="/learn?tab=carousels" replace />} />
+          <Route path="/turnaround-educate" element={<Navigate to="/learn?tab=turnaround" replace />} />
+          <Route path="/adsmanager-educate" element={<Navigate to="/learn?tab=ads" replace />} />
+          <Route path="/educate" element={<Navigate to="/learn" replace />} />
 
           <Route
             path="/settings/accounts"
             element={
               <ProtectedRoute>
                 <SettingsAccountsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/educate"
-            element={
-              <ProtectedRoute>
-                <EducatePage />
               </ProtectedRoute>
             }
           />
