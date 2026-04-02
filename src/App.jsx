@@ -32,6 +32,7 @@ import AdCampaignEditor from './pages/AdCampaignEditor';
 import LoraGuidePage from './pages/LoraGuidePage';
 import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
+import AdsManagerGuidePage from './pages/AdsManagerGuidePage';
 import SetupKeys from './pages/SetupKeys';
 import { Loader2 } from 'lucide-react';
 
@@ -300,6 +301,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TurnaroundGuidePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/adsmanager-educate"
+            element={
+              <ProtectedRoute>
+                <AdsManagerGuidePage />
               </ProtectedRoute>
             }
           />
