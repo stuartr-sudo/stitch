@@ -213,7 +213,7 @@ export default function LoraGuidePage() {
                     <p>e) <strong>Auto-Caption</strong> — ON by default, recommended. AI writes individual captions per image.</p>
                     <p className="mt-1"><strong>Advanced (optional — expand to see):</strong></p>
                     <p>f) <strong>Steps</strong> — training iterations (default is per-model, usually 400-1000)</p>
-                    <p>g) <strong>Learning Rate</strong> — how fast the model learns (default is fine for most cases)</p>
+                    <p>g) <strong>Learning Rate</strong> — how fast the model learns (hidden for FLUX LoRA Fast which is internally calibrated; default is fine for other models)</p>
                     <p>h) <strong>Face Masks</strong> — extra focus on faces during training (only for character/face LoRAs)</p>
                   </div>
                 </div>
@@ -747,7 +747,7 @@ export default function LoraGuidePage() {
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green-600 font-bold shrink-0">0.0004&nbsp;</span>
-                    <span>= Moving 6 inches at a time. Efficient — you park accurately in a reasonable time. <strong>This is the FLUX default.</strong></span>
+                    <span>= Moving 6 inches at a time. Efficient — you park accurately in a reasonable time. <strong>This is a typical default (e.g. Qwen Image, Wan T2I).</strong></span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-red-500 font-bold shrink-0">0.01&nbsp;&nbsp;&nbsp;</span>
@@ -769,7 +769,7 @@ export default function LoraGuidePage() {
                       </tr>
                     </thead>
                     <tbody className="text-gray-600">
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono">0.0004</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.001</td><td className="py-1.5">Good default for most cases</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono text-gray-400">N/A</td><td className="py-1.5 pr-3 font-mono text-gray-400">—</td><td className="py-1.5">Internally calibrated. Not adjustable.</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3 font-mono">0.00009</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0002</td><td className="py-1.5">Lower — portrait is more sensitive</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3 font-mono">0.0002</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.0005</td><td className="py-1.5">Video models need lower LR</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3 font-mono">0.0007</td><td className="py-1.5 pr-3 font-mono">0.0003 - 0.001</td><td className="py-1.5">Image variant tolerates higher LR</td></tr>
@@ -788,7 +788,7 @@ export default function LoraGuidePage() {
                     <li>Training completed but LoRA has very weak effect</li>
                     <li>Trigger word barely changes the output</li>
                     <li>You've already tried increasing steps with no improvement</li>
-                    <li>Increase by 1.5-2x, not more (e.g. 0.0004 to 0.0006)</li>
+                    <li>Increase by 1.5-2x, not more (e.g. 0.0005 to 0.00075)</li>
                   </ul>
                 </div>
                 <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
@@ -797,7 +797,7 @@ export default function LoraGuidePage() {
                     <li>Outputs look distorted, warped, or glitchy</li>
                     <li>Faces have artifacts or wrong proportions</li>
                     <li>Colors look oversaturated or wrong</li>
-                    <li>Decrease by 50% (e.g. 0.0004 to 0.0002)</li>
+                    <li>Decrease by 50% (e.g. 0.0005 to 0.00025)</li>
                   </ul>
                 </div>
               </div>
@@ -846,7 +846,7 @@ export default function LoraGuidePage() {
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <h5 className="font-medium text-sm text-gray-900 mb-2">Supported Models</h5>
                 <p className="text-xs text-gray-600 mb-2">
-                  Only 2 of our 10 training models support masks. The toggle is automatically hidden for models that don't support it.
+                  Only 2 of our 10 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 text-xs">
@@ -915,7 +915,7 @@ export default function LoraGuidePage() {
                     <p><strong>Trigger Word:</strong> <CodeBlock>soph_x7</CodeBlock></p>
                     <p><strong>Dataset:</strong> 22 images</p>
                     <p><strong>Steps:</strong> 1000</p>
-                    <p><strong>Learning Rate:</strong> 0.0004 (default)</p>
+                    <p><strong>Learning Rate:</strong> N/A (internally calibrated)</p>
                     <p><strong>Masks:</strong> ON</p>
                     <p><strong>Auto-Caption:</strong> ON</p>
                     <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>
@@ -975,7 +975,7 @@ export default function LoraGuidePage() {
                     <p><strong>Trigger Word:</strong> <CodeBlock>rxsnkr_v1</CodeBlock></p>
                     <p><strong>Dataset:</strong> 15 images</p>
                     <p><strong>Steps:</strong> 800</p>
-                    <p><strong>Learning Rate:</strong> 0.0004 (default)</p>
+                    <p><strong>Learning Rate:</strong> N/A (internally calibrated)</p>
                     <p><strong>Masks:</strong> OFF (no faces)</p>
                     <p><strong>Auto-Caption:</strong> ON</p>
                     <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>

@@ -14,9 +14,9 @@ export const TRAINING_MODELS = {
     pricing: '$2 flat',
     supportsStyle: true,
     supportsMasks: true,
+    hasLearningRate: false, // API does not accept learning_rate
     defaults: {
       steps: 1000,
-      learning_rate: 0.0004,
     },
     stepRange: [1, 10000],
     buildBody(params) {
@@ -44,6 +44,7 @@ export const TRAINING_MODELS = {
     pricing: '$0.0024/step',
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 2500,
       learning_rate: 0.00009,
@@ -74,6 +75,7 @@ export const TRAINING_MODELS = {
     pricing: '$2.50/1000 steps',
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0001,
@@ -107,6 +109,7 @@ export const TRAINING_MODELS = {
     hidden: true,
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 400,
       learning_rate: 0.0002,
@@ -138,6 +141,7 @@ export const TRAINING_MODELS = {
     hidden: true,
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 400,
       learning_rate: 0.0002,
@@ -167,22 +171,24 @@ export const TRAINING_MODELS = {
     pricing: '$0.0045/step',
     supportsStyle: true,
     supportsMasks: true,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0007,
     },
     stepRange: [10, 6000],
     buildBody(params) {
-      const { zipUrl, trigger_word, steps, learning_rate, is_style, create_masks } = params;
+      const { zipUrl, trigger_word, steps, learning_rate, is_style, create_masks, auto_caption } = params;
       return {
         training_data_url: zipUrl,
         trigger_phrase: trigger_word,
         steps,
         learning_rate,
         is_style: is_style ?? false,
-        use_face_detection: false,
-        use_masks: create_masks ?? false,
+        use_face_detection: true,
+        use_masks: create_masks ?? true,
         use_face_cropping: false,
+        include_synthetic_captions: auto_caption ?? false,
       };
     },
     parseResult(data) {
@@ -199,6 +205,7 @@ export const TRAINING_MODELS = {
     pricing: '$0.002/step',
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0005,
@@ -227,6 +234,7 @@ export const TRAINING_MODELS = {
     pricing: '$0.004/step',
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0001,
@@ -255,6 +263,7 @@ export const TRAINING_MODELS = {
     pricing: '$0.00226/step',
     supportsStyle: true,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0001,
@@ -267,7 +276,7 @@ export const TRAINING_MODELS = {
         steps,
         learning_rate,
         default_caption,
-        training_type: is_style ? 'style' : 'content',
+        training_type: is_style ? 'style' : 'balanced',
       };
     },
     parseResult(data) {
@@ -284,6 +293,7 @@ export const TRAINING_MODELS = {
     pricing: '$5 flat',
     supportsStyle: false,
     supportsMasks: false,
+    hasLearningRate: true,
     defaults: {
       steps: 1000,
       learning_rate: 0.0001,
@@ -300,7 +310,7 @@ export const TRAINING_MODELS = {
       };
     },
     parseResult(data) {
-      return data?.diffusers_lora_file?.url ?? null;
+      return data?.diffusers_lora_file?.url ?? data?.lora_file?.url ?? null;
     },
   },
 };

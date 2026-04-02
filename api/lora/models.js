@@ -19,9 +19,10 @@ export default async function handler(req, res) {
     pricingNote: m.pricingNote || null,
     supportsStyle: m.supportsStyle,
     supportsMasks: m.supportsMasks,
+    hasLearningRate: m.hasLearningRate ?? true,
     defaultSteps: m.defaults.steps,
     stepRange: m.stepRange,
-    defaultLearningRate: m.defaults.learning_rate,
+    defaultLearningRate: m.hasLearningRate !== false ? (m.defaults.learning_rate ?? null) : null,
   }));
 
   return res.json({ success: true, models: clientModels });
