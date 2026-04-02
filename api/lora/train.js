@@ -61,33 +61,44 @@ async function createTrainingZip(imageUrls, defaultCaption, supabase, captions) 
       archive.on('error', (err) => reject(err));
       archive.pipe(passthrough);
 
+      let downloadedCount = 0;
       for (let i = 0; i < imageUrls.length; i++) {
         const url = imageUrls[i];
         console.log(`[LoRA Train] Downloading image ${i + 1}/${imageUrls.length}: ${url.substring(0, 80)}...`);
 
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn(`[LoRA Train] Failed to download image ${i + 1}: ${response.status}`);
-          continue;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            console.warn(`[LoRA Train] Failed to download image ${i + 1}: ${response.status}`);
+            continue;
+          }
+
+          const contentType = response.headers.get('content-type') || 'image/png';
+          const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
+            : contentType.includes('webp') ? 'webp'
+            : 'png';
+
+          const baseName = `image_${String(i).padStart(3, '0')}`;
+
+          // Use per-image caption if provided, otherwise fall back to template caption
+          const caption = (captions && captions[i]) ? captions[i] : defaultCaption;
+
+          // Stream image body directly into archiver to avoid holding all images in memory
+          const bodyStream = Readable.fromWeb(response.body);
+          archive.append(bodyStream, { name: `${baseName}.${ext}` });
+          // Add caption file (same name, .txt extension)
+          archive.append(caption, { name: `${baseName}.txt` });
+          downloadedCount++;
+        } catch (dlErr) {
+          console.warn(`[LoRA Train] Error downloading image ${i + 1}:`, dlErr.message);
         }
-
-        const contentType = response.headers.get('content-type') || 'image/png';
-        const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
-          : contentType.includes('webp') ? 'webp'
-          : 'png';
-
-        const baseName = `image_${String(i).padStart(3, '0')}`;
-
-        // Use per-image caption if provided, otherwise fall back to template caption
-        const caption = (captions && captions[i]) ? captions[i] : defaultCaption;
-
-        // Stream image body directly into archiver to avoid holding all images in memory
-        const bodyStream = Readable.fromWeb(response.body);
-        archive.append(bodyStream, { name: `${baseName}.${ext}` });
-        // Add caption file (same name, .txt extension)
-        archive.append(caption, { name: `${baseName}.txt` });
       }
 
+      if (downloadedCount === 0) {
+        reject(new Error(`No images could be downloaded (0/${imageUrls.length} succeeded)`));
+        return;
+      }
+      console.log(`[LoRA Train] ${downloadedCount}/${imageUrls.length} images included in zip`);
       archive.finalize();
     } catch (err) {
       reject(err);
@@ -165,6 +176,20 @@ export default async function handler(req, res) {
 
   console.log(`[LoRA Train] Submitting to ${model.endpoint} with zip: ${zipUrl}`);
 
+  // Verify the zip URL is accessible before sending to FAL
+  try {
+    const checkRes = await fetch(zipUrl, { method: 'HEAD' });
+    if (!checkRes.ok) {
+      console.error(`[LoRA Train] Zip URL not accessible: ${checkRes.status} ${checkRes.statusText}`);
+      return res.status(500).json({ error: `Training zip file is not accessible (${checkRes.status}). Please try again.` });
+    }
+    const size = checkRes.headers.get('content-length');
+    console.log(`[LoRA Train] Zip verified: ${size} bytes, status ${checkRes.status}`);
+  } catch (checkErr) {
+    console.error(`[LoRA Train] Zip URL check failed:`, checkErr.message);
+    return res.status(500).json({ error: `Cannot verify training zip: ${checkErr.message}` });
+  }
+
   // Build request body via model registry
   const body = model.buildBody({
     zipUrl,
@@ -177,14 +202,22 @@ export default async function handler(req, res) {
     auto_caption: !captions?.length, // use auto-caption only if no manual captions provided
   });
 
-  const response = await fetch(`https://queue.fal.run/${model.endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${falKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  console.log(`[LoRA Train] Model: ${modelId}, Steps: ${steps}, LR: ${learning_rate}, Body keys: ${Object.keys(body).join(', ')}`);
+
+  let response;
+  try {
+    response = await fetch(`https://queue.fal.run/${model.endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${falKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (fetchErr) {
+    console.error('[LoRA Train] FAL request network error:', fetchErr.message);
+    return res.status(502).json({ error: `Failed to reach training API: ${fetchErr.message}` });
+  }
 
   if (!response.ok) {
     const errorText = await response.text();

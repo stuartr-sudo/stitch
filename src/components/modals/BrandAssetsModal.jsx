@@ -1173,16 +1173,21 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     {trainingError && (
                       <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 max-w-sm mx-auto text-left break-words">
                         <p className="font-medium text-red-800 mb-0.5">Error details:</p>
-                        {trainingError}
+                        {trainingError.length > 300 ? trainingError.substring(0, 300) + '…' : trainingError}
                       </div>
                     )}
                     <p className="text-xs text-gray-500 mt-2">
                       Go back and check your settings, then try again.
                     </p>
                   </div>
-                  <Button variant="outline" onClick={() => { setCurrentStep('configure'); setTrainingError(null); }} className="border-gray-300">
-                    Back to Configuration
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => { setCurrentStep('configure'); setTrainingError(null); }} className="border-gray-300">
+                      Back to Configuration
+                    </Button>
+                    <Button onClick={() => { setTrainingError(null); setTrainingStage(''); handleStartTraining(); }} className="bg-primary text-white">
+                      Retry
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
