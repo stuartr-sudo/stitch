@@ -50,9 +50,10 @@ Animate the portrait into a talking-head video using a dedicated "best for faces
 
 - Model: hardcoded to whichever model performs best for face animation. Initial default: Wan 2.5 (`fal_wan25`). This can be tuned without changing the spec.
 - Prompt: `"person speaking naturally to camera, subtle head movement, gentle gestures, blinking, conversational body language"`
-- Duration: match the voiceover TTS duration from Step 2 of the workbench
+- Duration: generate at the model's maximum supported duration (e.g., 10s for Wan 2.5). Video models have fixed duration limits (5s/10s for most models), which is shorter than a typical 30-60s voiceover.
 - `generate_audio: false` — audio comes from TTS, not the video model
-- Output: animated talking-head video (no audio)
+- Output: short animated talking-head video (no audio)
+- **Looping to voiceover length:** After I2V, loop the animated clip using FFmpeg to match the full voiceover duration. A looped talking-head with subtle natural movements (head bobs, blinks, gestures) loops seamlessly enough — the lip-sync step (Step 3) then overwrites the mouth movements to match the voiceover, masking any loop seam.
 
 ### Step 3: Lip-sync to Voiceover
 
@@ -94,9 +95,9 @@ composeSplitScreen({ brollVideoUrl, avatarVideoUrl, splitRatio, falKey, supabase
 1. Scale B-roll to 1080x1152 (top 60%)
 2. Scale avatar to 1080x768 (bottom 40%)
 3. Vertically stack (`vstack`) into 1080x1920
-4. Mix audio from avatar video (which has the lip-synced voiceover) with the B-roll video (which has voiceover + music)
+4. Use only the B-roll audio track (voiceover + music); discard the avatar video's audio track entirely
 
-**Audio handling:** The B-roll video from `assembleShort()` already has voiceover + music mixed in. The lip-synced avatar video also has voiceover baked in. The compositor uses only the B-roll audio track (voiceover + music) and strips the avatar's audio to avoid double-voiceover. This means the final composite has: voiceover + music from the B-roll assembly, and the avatar provides visual-only lip movements.
+**Audio handling:** The B-roll video from `assembleShort()` already has voiceover + music mixed in. The lip-synced avatar video also has voiceover baked in. The compositor discards the avatar's audio track and uses only the B-roll audio to avoid double-voiceover. The final composite has: voiceover + music from B-roll, avatar provides visual-only lip movements.
 
 ## Modified Assembly Flow
 
@@ -131,10 +132,10 @@ Three new actions added to `api/workbench/workbench.js`:
 **Input:** `{ portrait_url, duration }`
 
 **Behavior:**
-1. Animate via `animateImageV2()` using the hardcoded face-animation model
+1. Animate via `animateImageV2()` using the hardcoded face-animation model at max model duration (e.g., 10s)
 2. Talking-head prompt, `generate_audio: false`
-3. Duration matches the voiceover length
-4. Upload to Supabase storage
+3. Loop the resulting clip via FFmpeg to match the full voiceover `duration`
+4. Upload looped video to Supabase storage
 5. Return `{ avatar_video_url }`
 
 ### `lipsync-avatar`
