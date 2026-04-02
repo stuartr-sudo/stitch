@@ -32,17 +32,39 @@ export default async function handler(req, res) {
     const resultData = await resultResponse.json();
 
     console.log('[LoRA Result] Full fal.ai response keys:', Object.keys(resultData));
-    console.log('[LoRA Result] Full fal.ai response:', JSON.stringify(resultData).substring(0, 1000));
+    console.log('[LoRA Result] Full fal.ai response:', JSON.stringify(resultData).substring(0, 2000));
 
     // Use registry's parseResult if modelId provided, otherwise fall back to generic extraction
     const registryModel = modelId ? getTrainingModel(modelId) : null;
-    const modelUrl = registryModel
+    let modelUrl = registryModel
       ? registryModel.parseResult(resultData)
-      : (resultData.diffusers_lora_file?.url
-          || resultData.lora_file?.url
-          || resultData.config_file?.url
-          || resultData.output?.url
-          || null);
+      : null;
+
+    // Broad fallback: try every known result field pattern across all FAL training endpoints
+    if (!modelUrl) {
+      modelUrl = resultData.diffusers_lora_file?.url
+        || resultData.lora_file?.url
+        || resultData.config_file?.url
+        || resultData.output?.url
+        || resultData.lora_url
+        || resultData.model_url
+        || resultData.weights_url
+        || null;
+
+      // Deep scan: search for any .safetensors URL in the entire response
+      if (!modelUrl) {
+        const responseStr = JSON.stringify(resultData);
+        const safetensorsMatch = responseStr.match(/https?:\/\/[^"]+\.safetensors[^"]*/);
+        if (safetensorsMatch) {
+          modelUrl = safetensorsMatch[0];
+          console.log('[LoRA Result] Found model URL via deep scan:', modelUrl);
+        }
+      }
+    }
+
+    if (!modelUrl) {
+      console.error('[LoRA Result] Could not extract model URL from response. Model:', modelId, 'Keys:', Object.keys(resultData));
+    }
 
     if (loraId) {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
