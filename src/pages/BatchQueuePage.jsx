@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Loader2, Play, ExternalLink, ChevronLeft } from 'lucide-react';
+import { Loader2, Play, ExternalLink, ChevronLeft, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,14 @@ const CAPTION_PRESETS = ['word_pop', 'karaoke_glow', 'word_highlight', 'news_tic
 
 const TRENDING_COLOR = { high: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-slate-100 text-slate-500' };
 const COMPETITION_COLOR = { high: 'bg-red-100 text-red-600', medium: 'bg-orange-100 text-orange-600', low: 'bg-blue-100 text-blue-700' };
+
+const PLATFORM_LABELS = {
+  youtube: 'YouTube',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+};
 
 const STATUS_BADGE = {
   pending: 'bg-slate-100 text-slate-500',
@@ -301,6 +309,206 @@ function ConfigurePhase({ onBatchCreated }) {
   );
 }
 
+// ── Schedule All Section ───────────────────────────────────────────────────────
+function ScheduleAllSection({ jobs }) {
+  const [connections, setConnections] = useState([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+  const [titleTemplate, setTitleTemplate] = useState('{topic}');
+  const [description, setDescription] = useState('');
+  const [privacy, setPrivacy] = useState('public');
+  const [scheduleMode, setScheduleMode] = useState('now');
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [stagger, setStagger] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [loadingConnections, setLoadingConnections] = useState(true);
+
+  useEffect(() => {
+    async function fetchConnections() {
+      try {
+        const res = await apiFetch('/api/accounts/connections');
+        const data = await res.json();
+        if (data.platforms) setConnections(data.platforms);
+        else if (Array.isArray(data)) setConnections(data);
+      } catch (err) {
+        console.error('[ScheduleAll] Failed to load connections:', err.message);
+      } finally {
+        setLoadingConnections(false);
+      }
+    }
+    fetchConnections();
+  }, []);
+
+  const connectedSet = new Set(connections.filter(c => c.connected || c.platform_username).map(c => c.platform));
+  const allPlatforms = ['youtube', 'tiktok', 'instagram', 'facebook', 'linkedin'];
+  const completedJobs = jobs.filter(j => j.status === 'completed' && j.draft_id);
+
+  const togglePlatform = (p) => {
+    setSelectedPlatforms(prev =>
+      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    );
+  };
+
+  const handleScheduleAll = async () => {
+    if (selectedPlatforms.length === 0 || completedJobs.length === 0) return;
+    setIsSubmitting(true);
+
+    const baseTime = scheduleMode === 'schedule' ? new Date(scheduledFor) : new Date();
+    let successCount = 0;
+
+    for (let i = 0; i < completedJobs.length; i++) {
+      const job = completedJobs[i];
+      const jobTitle = titleTemplate.replace(/\{topic\}/g, job.topic || 'Untitled');
+      const publishTime = stagger
+        ? new Date(baseTime.getTime() + i * 60 * 60 * 1000) // +1 hour per draft
+        : baseTime;
+
+      const platforms = selectedPlatforms.map(p => ({
+        platform: p,
+        title: jobTitle,
+        description,
+        privacy,
+      }));
+
+      try {
+        const res = await apiFetch('/api/publish/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            draft_id: job.draft_id,
+            platforms,
+            scheduled_for: scheduleMode === 'schedule' || stagger ? publishTime.toISOString() : null,
+          }),
+        });
+        const data = await res.json();
+        if (data.queue_ids) successCount++;
+      } catch (err) {
+        console.error(`[ScheduleAll] Failed for draft ${job.draft_id}:`, err.message);
+      }
+    }
+
+    setIsSubmitting(false);
+    setSubmitted(true);
+    if (successCount < completedJobs.length) {
+      toast.error(`Scheduled ${successCount} of ${completedJobs.length} — some failed`);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+        All videos scheduled!{' '}
+        <Link to="/publish" className="text-[#2C666E] hover:underline font-medium">View Publish Queue</Link>
+      </div>
+    );
+  }
+
+  if (loadingConnections) return null;
+  if (completedJobs.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-[#2C666E]" />
+        <h3 className="text-sm font-semibold text-slate-700">Schedule All</h3>
+      </div>
+
+      {/* Platform checkboxes */}
+      <div className="flex flex-wrap gap-2">
+        {allPlatforms.map(p => {
+          const connected = connectedSet.has(p);
+          return (
+            <button
+              key={p}
+              onClick={() => connected && togglePlatform(p)}
+              disabled={!connected}
+              className={cn(
+                'text-xs py-1.5 px-3 rounded-lg border transition-colors',
+                !connected ? 'border-slate-100 text-slate-300 cursor-not-allowed'
+                  : selectedPlatforms.includes(p)
+                    ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E] font-medium'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              )}
+            >
+              {PLATFORM_LABELS[p]}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedPlatforms.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Title Template</label>
+              <input
+                type="text"
+                value={titleTemplate}
+                onChange={e => setTitleTemplate(e.target.value)}
+                placeholder="{topic}"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Use {'{topic}'} for each video's topic</p>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Privacy</label>
+              <select
+                value={privacy}
+                onChange={e => setPrivacy(e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+              >
+                <option value="public">Public</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={2}
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"
+            />
+          </div>
+
+          {/* Schedule + stagger */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input type="radio" name="batchSchedule" checked={scheduleMode === 'now'} onChange={() => setScheduleMode('now')} className="accent-[#2C666E]" />
+              Publish Now
+            </label>
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input type="radio" name="batchSchedule" checked={scheduleMode === 'schedule'} onChange={() => setScheduleMode('schedule')} className="accent-[#2C666E]" />
+              Schedule
+            </label>
+            {scheduleMode === 'schedule' && (
+              <input type="datetime-local" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} min={new Date().toISOString().slice(0, 16)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5" />
+            )}
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer ml-auto">
+              <input type="checkbox" checked={stagger} onChange={e => setStagger(e.target.checked)} className="accent-[#2C666E]" />
+              Space 1 hour apart
+            </label>
+          </div>
+
+          <button
+            onClick={handleScheduleAll}
+            disabled={isSubmitting || selectedPlatforms.length === 0}
+            className="w-full bg-[#2C666E] hover:bg-[#2C666E]/90 text-white font-semibold py-2.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+          >
+            {isSubmitting
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Scheduling...</>
+              : `Schedule ${completedJobs.length} Video${completedJobs.length > 1 ? 's' : ''}`
+            }
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Phase 2+3: Progress / Results ─────────────────────────────────────────────
 function ProgressPhase({ batchId }) {
   const [batch, setBatch] = useState(null);
@@ -452,6 +660,14 @@ function ProgressPhase({ batchId }) {
                         <Play className="w-3 h-3" /> Preview
                       </a>
                     )}
+                    {job.draft_id && (
+                      <Link
+                        to={`/shorts/draft/${job.draft_id}`}
+                        className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                      >
+                        <Calendar className="w-3 h-3" /> Schedule
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
@@ -462,10 +678,13 @@ function ProgressPhase({ batchId }) {
 
       {/* Summary when done */}
       {isDone && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
-          Batch complete — {batch.completed_items} succeeded, {batch.failed_items} failed.
-          {batch.failed_items > 0 && ' Failed items can be retried individually in the Workbench.'}
-        </div>
+        <>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+            Batch complete — {batch.completed_items} succeeded, {batch.failed_items} failed.
+            {batch.failed_items > 0 && ' Failed items can be retried individually in the Workbench.'}
+          </div>
+          <ScheduleAllSection jobs={jobs} />
+        </>
       )}
     </div>
   );
