@@ -34,6 +34,7 @@ import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
 import AdsManagerGuidePage from './pages/AdsManagerGuidePage';
 import SetupKeys from './pages/SetupKeys';
+import EducatePage from './pages/EducatePage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -318,6 +319,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <SettingsAccountsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/educate"
+            element={
+              <ProtectedRoute>
+                <EducatePage />
               </ProtectedRoute>
             }
           />
