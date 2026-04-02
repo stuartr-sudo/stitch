@@ -60,7 +60,7 @@ export async function loopVideo({ videoUrl, clipDuration, targetDuration, falKey
   if (!res.ok) throw new Error(`FAL ffmpeg loop failed: ${await res.text()}`);
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 120, 3000);
   const resultUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!resultUrl) throw new Error('No video URL from FFmpeg loop');
 
@@ -124,7 +124,7 @@ async function scaleVideo(videoUrl, width, height, falKey) {
   const queueData = await res.json();
 
   // merge-videos is also a queue endpoint
-  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/merge-videos', falKey, 120, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/merge-videos', falKey, 120, 3000);
   const url = output?.video_url || output?.video?.url || output?.output_url;
   if (!url) throw new Error(`No video URL from FAL scale (${width}x${height})`);
   return url;
@@ -223,7 +223,7 @@ export async function composeSplitScreen({ brollVideoUrl, avatarVideoUrl, durati
   }
   const queueData = await res.json();
 
-  const output = await pollFalQueue(queueData.response_url, 'fal-ai/ffmpeg-api/compose', falKey, 180, 3000);
+  const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/ffmpeg-api/compose', falKey, 180, 3000);
   const resultUrl = output?.video_url || output?.video?.url || output?.output_url;
   if (!resultUrl) throw new Error('No video URL from split-screen compose');
 

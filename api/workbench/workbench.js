@@ -392,19 +392,24 @@ Rules:
 
         // Split-screen composite if avatar mode is active
         if (avatar_mode && avatar_lipsync_url) {
-          const compositeDuration = effectiveTtsDuration
-            || clipDurations.reduce((sum, d) => sum + d, 0);
+          try {
+            const compositeDuration = effectiveTtsDuration
+              || clipDurations.reduce((sum, d) => sum + d, 0);
 
-          const { videoUrl: compositeUrl } = await composeSplitScreen({
-            brollVideoUrl: assembledUrl,
-            avatarVideoUrl: avatar_lipsync_url,
-            duration: compositeDuration,
-            falKey: keys.falKey,
-            supabase,
-          });
+            const { videoUrl: compositeUrl } = await composeSplitScreen({
+              brollVideoUrl: assembledUrl,
+              avatarVideoUrl: avatar_lipsync_url,
+              duration: compositeDuration,
+              falKey: keys.falKey,
+              supabase,
+            });
 
-          finalUrl = compositeUrl;
-          logCost({ username: req.user.email, category: 'fal', operation: 'avatar_split_screen', model: 'ffmpeg-compose' });
+            finalUrl = compositeUrl;
+            logCost({ username: req.user.email, category: 'fal', operation: 'avatar_split_screen', model: 'ffmpeg-compose', metadata: { duration: compositeDuration } });
+          } catch (err) {
+            console.error(`[workbench] Split-screen composite failed, using B-roll only: ${err.message}`);
+            // finalUrl remains as assembledUrl (B-roll only) — user still gets a video
+          }
         }
 
         // Burn captions
@@ -445,7 +450,7 @@ Rules:
         const portraitUrl = await generateImageV2(
           'fal_nano_banana',
           prompt,
-          'landscape_16_9', // 1344×768 — close to 1080×768 target, will be cropped
+          'landscape_4_3', // 4:3 landscape — closest standard ratio to 1080×768 (1.4:1) target
           keys,
           supabase,
           {
@@ -476,7 +481,7 @@ Rules:
           AVATAR_VIDEO_MODEL,
           portrait_url,
           AVATAR_MOTION_PROMPT,
-          'landscape_16_9',
+          'landscape_4_3',
           clipDuration,
           keys,
           supabase,
