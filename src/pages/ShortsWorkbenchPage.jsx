@@ -472,6 +472,9 @@ export default function ShortsWorkbenchPage() {
   const [finalUrl, setFinalUrl] = useState(null);
   const [assembleLoading, setAssembleLoading] = useState(false);
   const [totalCost, setTotalCost] = useState(0);
+  const [reviewResults, setReviewResults] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
 
   // ── Draft persistence ──────────────────────────────────────────
   const [draftId, setDraftId] = useState(null);
@@ -895,6 +898,8 @@ export default function ShortsWorkbenchPage() {
     const validClips = blocks.map((_, i) => clips[i]).filter(c => c?.url);
     if (validClips.length === 0) { toast.error('No video clips to assemble'); return; }
     setAssembleLoading(true);
+    setReviewResults(null);
+    setReviewError(null);
     try {
       const res = await apiFetch('/api/workbench/assemble', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -915,9 +920,38 @@ export default function ShortsWorkbenchPage() {
       });
       const data = await parseApiResponse(res);
       setFinalUrl(data.video_url);
+      // Auto-trigger quality review in background (non-blocking)
+      const validClipsForReview = blocks.map((b, i) => clips[i]).filter(c => c?.url);
+      runQualityReview(validClipsForReview);
       toast.success('Video assembled!');
     } catch (err) { toast.error(err.message || 'Assembly failed'); }
     finally { setAssembleLoading(false); }
+  };
+
+  const runQualityReview = async (clipsForReview) => {
+    if (!clipsForReview?.length || !blocks?.length) return;
+    setReviewLoading(true);
+    setReviewResults(null);
+    setReviewError(null);
+    try {
+      const scenesPayload = blocks.map(b => ({ narration: b.narration || '' }));
+      const clipsPayload = clipsForReview.map((c, i) => ({
+        url: c.url,
+        duration: c.actualDuration || blocks[i]?.clipDuration || c.duration,
+      }));
+      const res = await apiFetch('/api/workbench/review-quality', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clips: clipsPayload, scenes: scenesPayload }),
+      });
+      const data = await parseApiResponse(res);
+      setReviewResults(data.results || []);
+    } catch (err) {
+      console.error('[qualityReview] Review failed:', err.message);
+      setReviewError(err.message || 'Quality review failed');
+    } finally {
+      setReviewLoading(false);
+    }
   };
 
   // ── Sorted voices ───────────────────────────────────────────────
@@ -1882,6 +1916,97 @@ export default function ShortsWorkbenchPage() {
                       <span className="text-sm">Assemble to preview</span>
                     </div>
                   )}
+
+                  {/* Quality Review Gate */}
+                  {reviewLoading && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                      Reviewing scenes for visual-narration alignment...
+                    </div>
+                  )}
+
+                  {reviewError && !reviewLoading && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      Quality review failed: {reviewError}
+                      <button onClick={() => setReviewError(null)} className="ml-2 underline text-red-600">Dismiss</button>
+                    </div>
+                  )}
+
+                  {reviewResults && !reviewLoading && (() => {
+                    const flagged = reviewResults.filter(r => !r.match);
+                    const passed = reviewResults.filter(r => r.match);
+                    const allPass = flagged.length === 0;
+
+                    return (
+                      <div className="mt-4">
+                        {/* Summary banner */}
+                        <div className={`p-3 rounded-lg border text-sm font-medium ${allPass ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                          {allPass
+                            ? `All ${reviewResults.length} scenes match narration ✓`
+                            : `${flagged.length} of ${reviewResults.length} scenes flagged for review`}
+                        </div>
+
+                        {/* Flagged scenes (expanded) */}
+                        {flagged.map(r => (
+                          <div key={r.scene_index} className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              {r.frame_url && (
+                                <img src={r.frame_url} alt={`Scene ${r.scene_index + 1}`} className="w-24 h-16 object-cover rounded border border-amber-300" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-amber-800">Scene {r.scene_index + 1} &mdash; Mismatch</div>
+                                <div className="text-xs text-amber-700 mt-1">{r.reason}</div>
+                                <div className="text-[11px] text-amber-600 mt-1 italic truncate">
+                                  Narration: &quot;{blocks[r.scene_index]?.narration?.slice(0, 120)}&quot;
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await generateClip(r.scene_index);
+                                setReviewResults(prev => prev?.map(pr =>
+                                  pr.scene_index === r.scene_index
+                                    ? { ...pr, match: true, reason: 'Repaired — re-assemble to update final video' }
+                                    : pr
+                                ));
+                                toast.warning('Scene repaired. Click Re-assemble to update the final video.');
+                              }}
+                              disabled={clipLoading !== null}
+                              className="mt-2 px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded hover:bg-amber-700 transition-colors disabled:opacity-50"
+                            >
+                              {clipLoading === r.scene_index ? 'Repairing...' : `Repair Scene ${r.scene_index + 1}`}
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Passing scenes (collapsed) */}
+                        {passed.length > 0 && !allPass && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-green-600 cursor-pointer">{passed.length} scenes passed ✓</summary>
+                            {passed.map(r => (
+                              <div key={r.scene_index} className="mt-1 p-2 bg-green-50 border border-green-100 rounded text-xs text-green-700 flex items-center gap-2">
+                                {r.frame_url && <img src={r.frame_url} alt="" className="w-12 h-8 object-cover rounded" />}
+                                <span>Scene {r.scene_index + 1}: {r.reason}</span>
+                              </div>
+                            ))}
+                          </details>
+                        )}
+
+                        {/* All-pass expandable detail */}
+                        {allPass && reviewResults.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-green-600 cursor-pointer">View scene details</summary>
+                            {reviewResults.map(r => (
+                              <div key={r.scene_index} className="mt-1 p-2 bg-green-50 border border-green-100 rounded text-xs text-green-700 flex items-center gap-2">
+                                {r.frame_url && <img src={r.frame_url} alt="" className="w-12 h-8 object-cover rounded" />}
+                                <span>Scene {r.scene_index + 1}: {r.reason} ({Math.round(r.confidence * 100)}%)</span>
+                              </div>
+                            ))}
+                          </details>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </Panel>
