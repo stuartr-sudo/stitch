@@ -755,7 +755,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none"
                 >
                   {trainingModels.filter(m => m.category === 'image').length > 0 && (
-                    <optgroup label="Image Models">
+                    <optgroup label="Image Models (train with photos)">
                       {trainingModels.filter(m => m.category === 'image').map(m => (
                         <option key={m.id} value={m.id}>
                           {m.name} — {m.baseModel} ({m.pricing})
@@ -764,7 +764,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     </optgroup>
                   )}
                   {trainingModels.filter(m => m.category === 'video').length > 0 && (
-                    <optgroup label="Video Models">
+                    <optgroup label="Video Models (train with video clips)">
                       {trainingModels.filter(m => m.category === 'video').map(m => (
                         <option key={m.id} value={m.id}>
                           {m.name} — {m.baseModel} ({m.pricing})
@@ -776,15 +776,21 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                     <option value="flux-lora-fast">Loading models...</option>
                   )}
                 </select>
-                {selectedModelInfo?.pricingNote && (
-                  <p className="text-[10px] text-gray-400">{selectedModelInfo.pricingNote}</p>
-                )}
-                {selectedModelInfo?.category === 'video' && (
-                  <div className="flex gap-1.5 items-start bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mt-1.5">
-                    <span className="text-amber-600 text-xs mt-0.5">⚠</span>
-                    <p className="text-[11px] text-amber-800">
-                      <strong>Video models require video clips</strong> as training data, not still images.
-                      If you only have images, use an <strong>Image Model</strong> instead (e.g. FLUX LoRA Fast).
+                {selectedModelInfo && (
+                  <div className="bg-gray-50 rounded-md px-3 py-2 mt-1.5 space-y-0.5">
+                    <p className="text-[11px] text-gray-600">
+                      <strong>Price:</strong> {selectedModelInfo.pricing}
+                      {selectedModelInfo.id === 'flux-lora-fast' && <span className="ml-1 text-green-600 font-medium">Recommended — fastest & cheapest</span>}
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      {selectedModelInfo.id === 'flux-lora-fast' && 'Best all-round choice. Flat rate, fast training (~8 min). Great for characters, products, and styles.'}
+                      {selectedModelInfo.id === 'flux-portrait' && 'Specialized for portraits/faces. Auto-crops to subject. Higher quality faces but slower (~25 min).'}
+                      {selectedModelInfo.id === 'flux-kontext' && 'For FLUX Kontext editing model. Use if you plan to edit/remix images with Kontext.'}
+                      {selectedModelInfo.id === 'wan-22-image' && 'Wan 2.2 text-to-image. Good if you generate with Wan T2I. Supports style training + masks.'}
+                      {selectedModelInfo.id === 'qwen-image' && 'For Qwen image generation. Use if you primarily generate with Qwen models.'}
+                      {selectedModelInfo.id === 'qwen-edit-2511' && 'For Qwen image editing. Train LoRAs compatible with the Qwen edit pipeline.'}
+                      {selectedModelInfo.id === 'z-image' && 'Fast, lightweight model. Good for styles on Z-Image Turbo. Supports style training.'}
+                      {selectedModelInfo.id === 'hunyuan-video' && 'Tencent Hunyuan video model. Accepts images as training data. $5 flat rate.'}
                     </p>
                   </div>
                 )}
@@ -820,9 +826,10 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                 >
                   <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                   Advanced Settings
+                  <span className="text-[10px] text-gray-400 font-normal ml-1">(defaults work well — only adjust if needed)</span>
                 </button>
                 {showAdvanced && (
-                  <div className="mt-3 space-y-4 pl-1">
+                  <div className="mt-3 space-y-5 pl-1">
                     {/* Steps slider */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -832,7 +839,7 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       <input
                         type="range"
                         min={selectedModelInfo?.stepRange?.[0] || 100}
-                        max={selectedModelInfo?.stepRange?.[1] || 4000}
+                        max={Math.min(selectedModelInfo?.stepRange?.[1] || 4000, 5000)}
                         step={100}
                         value={steps}
                         onChange={(e) => setSteps(Number(e.target.value))}
@@ -840,8 +847,12 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                       />
                       <div className="flex justify-between text-[10px] text-gray-400">
                         <span>{(selectedModelInfo?.stepRange?.[0] || 100).toLocaleString()}</span>
-                        <span>{(selectedModelInfo?.stepRange?.[1] || 4000).toLocaleString()}</span>
+                        <span>{Math.min(selectedModelInfo?.stepRange?.[1] || 4000, 5000).toLocaleString()}</span>
                       </div>
+                      <p className="text-[10px] text-gray-500">
+                        More steps = more learning, but too many causes overfitting (model can only reproduce training images).
+                        {' '}<strong>For ~20 images:</strong> {selectedModelInfo?.id?.startsWith('wan') ? '300-500 steps' : '800-1200 steps'} is usually ideal.
+                      </p>
                     </div>
 
                     {/* Learning Rate slider */}
@@ -861,18 +872,26 @@ export default function BrandAssetsModal({ isOpen, onClose }) {
                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2C666E]"
                         />
                         <div className="flex justify-between text-[10px] text-gray-400">
-                          <span>0.00001</span>
-                          <span>0.001</span>
+                          <span>Slower (more stable)</span>
+                          <span>Faster (riskier)</span>
                         </div>
+                        <p className="text-[10px] text-gray-500">
+                          Controls how aggressively the model learns per step. The default ({selectedModelInfo.defaultLearningRate}) is calibrated for this model.
+                          {' '}Only increase if results are too weak; decrease if distorted.
+                        </p>
                       </div>
                     )}
 
                     {/* Create Masks toggle */}
                     {selectedModelInfo?.supportsMasks && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5">
                         <div className="flex-1 mr-4">
-                          <p className="text-sm font-medium text-gray-700">Create Masks</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Uses segmentation to focus training on the subject. Best for people.</p>
+                          <p className="text-sm font-medium text-gray-700">Face Masks</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {trainingType === 'style'
+                              ? 'Not recommended for style training — the model needs to learn the full image aesthetic, not just faces.'
+                              : 'Detects faces and gives them extra training weight. Produces more accurate facial features for characters/people.'}
+                          </p>
                         </div>
                         <button
                           type="button"

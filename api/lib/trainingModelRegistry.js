@@ -93,6 +93,9 @@ export const TRAINING_MODELS = {
     },
   },
 
+  // Wan I2V models require VIDEO CLIPS as training data (not images).
+  // Hidden from frontend UI since we only support image uploads currently.
+  // To re-enable: add video upload support, then set hidden: false.
   'wan-21-i2v': {
     id: 'wan-21-i2v',
     name: 'Wan 2.1 I2V Trainer',
@@ -100,6 +103,8 @@ export const TRAINING_MODELS = {
     baseModel: 'Wan 2.1 I2V 14B',
     category: 'video',
     pricing: '5 credits/run',
+    requiresVideo: true,
+    hidden: true,
     supportsStyle: false,
     supportsMasks: false,
     defaults: {
@@ -129,6 +134,8 @@ export const TRAINING_MODELS = {
     baseModel: 'Wan 2.2 I2V-A14B',
     category: 'video',
     pricing: '$0.005/step',
+    requiresVideo: true,
+    hidden: true,
     supportsStyle: false,
     supportsMasks: false,
     defaults: {
@@ -313,7 +320,7 @@ export function getTrainingModel(modelId) {
  * @returns {object[]}
  */
 export function listTrainingModels(category) {
-  const all = Object.values(TRAINING_MODELS);
+  const all = Object.values(TRAINING_MODELS).filter((m) => !m.hidden);
   if (!category) return all;
   return all.filter((m) => m.category === category);
 }
