@@ -10,7 +10,8 @@
  *   music      — Generate background music
  *   generate-frame — Generate a single image (T2I or I2I)
  *   generate-clip  — Generate a single video clip (FLF or I2V)
- *   assemble   — Stitch clips + voiceover + music + captions
+ *   assemble       — Stitch clips + voiceover + music + captions
+ *   review-quality — Visual QA: extract frames, compare to narration via GPT vision
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -34,6 +35,7 @@ import { logCost } from '../lib/costLogger.js';
 import OpenAI from 'openai';
 import { loopVideo, composeSplitScreen } from '../lib/splitScreenCompositor.js';
 import { recommendLipsyncModel, applyLipsync } from '../lib/storyboardLipsync.js';
+import { reviewSceneAlignment } from '../lib/qualityReviewer.js';
 
 const FLF_MODELS = ['fal_veo3', 'fal_kling_v3', 'fal_kling_o3'];
 
@@ -425,6 +427,28 @@ Rules:
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_assemble', model: 'ffmpeg-compose', metadata: { clip_count: clips.length, avatar_mode: !!avatar_mode } });
 
         return res.json({ video_url: finalUrl, uncaptioned_url: uncaptionedUrl });
+      }
+
+      // ─── Quality Review Gate ─────────────────────────────────────
+      case 'review-quality': {
+        const { clips, scenes } = req.body;
+        if (!clips?.length) return res.status(400).json({ error: 'clips array required' });
+        if (!scenes?.length) return res.status(400).json({ error: 'scenes array required' });
+        if (clips.length !== scenes.length) {
+          return res.status(400).json({ error: `clips (${clips.length}) and scenes (${scenes.length}) must have matching lengths` });
+        }
+
+        const result = await reviewSceneAlignment({
+          clips,
+          scenes,
+          falKey: keys.falKey,
+          openaiKey: keys.openaiKey,
+        });
+
+        const sceneCount = clips.length;
+        logCost({ username: req.user.email, category: 'openai', operation: 'quality_review', model: 'gpt-4.1-mini', metadata: { scene_count: sceneCount } });
+
+        return res.json(result);
       }
 
       // ─── Avatar: Generate Portrait ────────────────────────────────
