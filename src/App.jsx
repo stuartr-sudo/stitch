@@ -17,6 +17,7 @@ import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
 import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
 import BatchQueuePage from './pages/BatchQueuePage';
+import PublishQueuePage from './pages/PublishQueuePage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import LinkedInPage from './pages/LinkedInPage';
@@ -184,6 +185,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <BatchQueuePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/publish"
+            element={
+              <ProtectedRoute>
+                <PublishQueuePage />
               </ProtectedRoute>
             }
           />
