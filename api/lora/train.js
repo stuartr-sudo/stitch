@@ -33,32 +33,45 @@ async function createTrainingZip(imageUrls, defaultCaption, falKey, captions) {
           const sizeMB = (zipBuffer.length / 1024 / 1024).toFixed(1);
           console.log(`[LoRA Train] Zip created: ${zipBuffer.length} bytes (${sizeMB} MB)`);
 
-          // Upload to FAL storage (no size limit, FAL can access directly)
+          // Upload to FAL storage via two-step initiate + PUT flow
           const fileName = `lora-training-${Date.now()}.zip`;
-          const uploadRes = await fetch(`https://rest.alpha.fal.ai/storage/upload/${fileName}`, {
-            method: 'PUT',
+
+          // Step 1: Initiate — register the upload, get pre-signed URL + final CDN URL
+          const initiateRes = await fetch('https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3', {
+            method: 'POST',
             headers: {
               'Authorization': `Key ${falKey}`,
-              'Content-Type': 'application/zip',
+              'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+              content_type: 'application/zip',
+              file_name: fileName,
+            }),
+          });
+
+          if (!initiateRes.ok) {
+            const errText = await initiateRes.text();
+            reject(new Error(`FAL upload initiate failed (${initiateRes.status}): ${errText.substring(0, 200)}`));
+            return;
+          }
+
+          const { upload_url: uploadUrl, file_url: fileUrl } = await initiateRes.json();
+
+          // Step 2: PUT the zip bytes to the pre-signed upload URL
+          const putRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/zip' },
             body: zipBuffer,
           });
 
-          if (!uploadRes.ok) {
-            const errText = await uploadRes.text();
-            reject(new Error(`Failed to upload zip to FAL storage (${uploadRes.status}): ${errText.substring(0, 200)}`));
+          if (!putRes.ok) {
+            const errText = await putRes.text();
+            reject(new Error(`FAL upload PUT failed (${putRes.status}): ${errText.substring(0, 200)}`));
             return;
           }
 
-          const uploadData = await uploadRes.json();
-          const zipUrl = uploadData.url || uploadData.file_url || uploadData.access_url;
-          if (!zipUrl) {
-            reject(new Error(`FAL storage upload returned no URL: ${JSON.stringify(uploadData).substring(0, 200)}`));
-            return;
-          }
-
-          console.log(`[LoRA Train] Zip uploaded to FAL storage: ${zipUrl}`);
-          resolve(zipUrl);
+          console.log(`[LoRA Train] Zip uploaded to FAL storage: ${fileUrl}`);
+          resolve(fileUrl);
         } catch (err) {
           reject(err);
         }

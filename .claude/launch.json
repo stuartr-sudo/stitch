@@ -3,13 +3,13 @@
   "configurations": [
     {
       "name": "api",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": ["server.js"],
       "port": 3003
     },
     {
       "name": "frontend",
-      "runtimeExecutable": "npx",
+      "runtimeExecutable": "/opt/homebrew/bin/npx",
       "runtimeArgs": ["vite", "--port", "4390"],
       "port": 4390
     }
