@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { getTrainingModel } from '../lib/trainingModelRegistry.js';
 import archiver from 'archiver';
-import { PassThrough } from 'stream';
+import { PassThrough, Readable } from 'stream';
 
 // Caption templates per training type
 const CAPTION_TEMPLATES = {
@@ -76,14 +76,14 @@ async function createTrainingZip(imageUrls, defaultCaption, supabase, captions) 
           : contentType.includes('webp') ? 'webp'
           : 'png';
 
-        const imageBuffer = Buffer.from(await response.arrayBuffer());
         const baseName = `image_${String(i).padStart(3, '0')}`;
 
         // Use per-image caption if provided, otherwise fall back to template caption
         const caption = (captions && captions[i]) ? captions[i] : defaultCaption;
 
-        // Add image file
-        archive.append(imageBuffer, { name: `${baseName}.${ext}` });
+        // Stream image body directly into archiver to avoid holding all images in memory
+        const bodyStream = Readable.fromWeb(response.body);
+        archive.append(bodyStream, { name: `${baseName}.${ext}` });
         // Add caption file (same name, .txt extension)
         archive.append(caption, { name: `${baseName}.txt` });
       }
