@@ -426,6 +426,17 @@ export default function ShortsWorkbenchPage() {
   const [voiceSpeed, setVoiceSpeed] = useState(1.15);
   const [voiceApproved, setVoiceApproved] = useState(false);
 
+  // ── Avatar Mode ─────────────────────────────────────────────────
+  const [avatarMode, setAvatarMode] = useState(false);
+  const [avatarSubjectId, setAvatarSubjectId] = useState(null);
+  const [avatarSubjectName, setAvatarSubjectName] = useState('');
+  const [avatarSubjects, setAvatarSubjects] = useState([]); // fetched from API
+  const [avatarPortraitUrl, setAvatarPortraitUrl] = useState(null);
+  const [avatarVideoUrl, setAvatarVideoUrl] = useState(null);
+  const [avatarLipsyncUrl, setAvatarLipsyncUrl] = useState(null);
+  const [avatarStage, setAvatarStage] = useState(null); // 'portrait' | 'animating' | 'lipsyncing' | 'done' | null
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
   // ── Step 2: Timing & Music ──────────────────────────────────────
   const [blocks, setBlocks] = useState([]);
   const [timingLoading, setTimingLoading] = useState(false);
@@ -477,6 +488,9 @@ export default function ShortsWorkbenchPage() {
     sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
     frames, scenePrompts, sceneRefs, clips, finalVideoUrl: finalUrl,
+    // Avatar mode
+    avatarMode, avatarSubjectId, avatarSubjectName,
+    avatarPortraitUrl, avatarVideoUrl, avatarLipsyncUrl,
   });
 
   const saveDraftRef = useRef(false);
@@ -523,6 +537,14 @@ export default function ShortsWorkbenchPage() {
       setAspectRatio(s.aspectRatio || '9:16');
       setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setClips(s.clips || {});
       setFinalUrl(s.finalVideoUrl || null);
+      // Restore avatar state
+      setAvatarMode(s.avatarMode || false);
+      setAvatarSubjectId(s.avatarSubjectId || null);
+      setAvatarSubjectName(s.avatarSubjectName || '');
+      setAvatarPortraitUrl(s.avatarPortraitUrl || null);
+      setAvatarVideoUrl(s.avatarVideoUrl || null);
+      setAvatarLipsyncUrl(s.avatarLipsyncUrl || null);
+      setAvatarStage(s.avatarLipsyncUrl ? 'done' : null);
       if (s.step) setStep(s.step);
       setShowDrafts(false);
     } catch (err) { toast.error(`Load failed: ${err.message}`); }
@@ -538,6 +560,19 @@ export default function ShortsWorkbenchPage() {
       if (data.drafts) setDraftList(data.drafts);
     } catch {}
   };
+
+  // Fetch user's Visual Subjects when avatar mode is toggled on
+  const fetchAvatarSubjects = async () => {
+    try {
+      const res = await apiFetch('/api/brand/avatars');
+      const data = await res.json();
+      if (data.avatars) setAvatarSubjects(data.avatars.filter(a => a.lora_url));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (avatarMode && avatarSubjects.length === 0) fetchAvatarSubjects();
+  }, [avatarMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save when key milestones are reached
   const frameCount = Object.keys(frames).length;
@@ -794,6 +829,68 @@ export default function ShortsWorkbenchPage() {
     finally { setClipLoading(null); }
   };
 
+  const generateAvatarPipeline = async () => {
+    if (!avatarSubjectId || !voiceoverUrl) {
+      toast.error('Select a character and generate voiceover first');
+      return;
+    }
+    setAvatarLoading(true);
+    // effectiveDuration is already computed in the component as ttsDuration / voiceSpeed
+    const effectiveDur = effectiveDuration || duration;
+
+    try {
+      // Stage 1: Portrait
+      setAvatarStage('portrait');
+      let portraitUrl = avatarPortraitUrl;
+      if (!portraitUrl) {
+        const portraitRes = await apiFetch('/api/workbench/generate-avatar-portrait', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visual_subject_id: avatarSubjectId }),
+        });
+        const portraitData = await parseApiResponse(portraitRes);
+        portraitUrl = portraitData.portrait_url;
+        setAvatarPortraitUrl(portraitUrl);
+      }
+
+      // Stage 2: Animate + Loop
+      setAvatarStage('animating');
+      const animRes = await apiFetch('/api/workbench/animate-avatar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portrait_url: portraitUrl, duration: effectiveDur }),
+      });
+      const animData = await parseApiResponse(animRes);
+      setAvatarVideoUrl(animData.avatar_video_url);
+
+      // Stage 3: Lip-sync
+      setAvatarStage('lipsyncing');
+      const lipsyncRes = await apiFetch('/api/workbench/lipsync-avatar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatar_video_url: animData.avatar_video_url,
+          voiceover_url: voiceoverUrl,
+        }),
+      });
+      const lipsyncData = await parseApiResponse(lipsyncRes);
+      setAvatarLipsyncUrl(lipsyncData.lipsync_video_url);
+
+      setAvatarStage('done');
+      saveDraft();
+    } catch (err) {
+      toast.error(`Avatar generation failed: ${err.message}`);
+      setAvatarStage(null);
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const regenerateAvatar = () => {
+    setAvatarPortraitUrl(null);
+    setAvatarVideoUrl(null);
+    setAvatarLipsyncUrl(null);
+    setAvatarStage(null);
+    generateAvatarPipeline();
+  };
+
   const assembleVideo = async () => {
     const validClips = blocks.map((_, i) => clips[i]).filter(c => c?.url);
     if (validClips.length === 0) { toast.error('No video clips to assemble'); return; }
@@ -808,6 +905,9 @@ export default function ShortsWorkbenchPage() {
           music_volume: musicVolume,
           sfx_url: enableSfx ? sfxUrl : null,
           sfx_volume: sfxVolume,
+          // Avatar split-screen
+          avatar_mode: avatarMode && !!avatarLipsyncUrl,
+          avatar_lipsync_url: avatarMode ? avatarLipsyncUrl : null,
           tts_duration: effectiveDuration,
           voice_speed: voiceSpeed,
           caption_config: { font_name: 'Montserrat', font_size: 100, font_weight: 'bold', font_color: 'white', highlight_color: 'purple', stroke_width: 3, stroke_color: 'black', words_per_subtitle: 1, enable_animation: true },
@@ -949,6 +1049,60 @@ export default function ShortsWorkbenchPage() {
                         {d}s
                       </button>
                     ))}
+                  </div>
+
+                  {/* Avatar Mode */}
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={avatarMode} onChange={e => {
+                        setAvatarMode(e.target.checked);
+                        if (!e.target.checked) {
+                          setAvatarSubjectId(null); setAvatarSubjectName('');
+                          setAvatarPortraitUrl(null); setAvatarVideoUrl(null);
+                          setAvatarLipsyncUrl(null); setAvatarStage(null);
+                        }
+                      }}
+                        className="w-4 h-4 rounded border-slate-300 text-[#2C666E] focus:ring-[#2C666E]" />
+                      <span className="text-[11px] font-semibold text-slate-700">Avatar Mode</span>
+                      <span className="text-[9px] text-slate-400">(split-screen talking head)</span>
+                    </label>
+
+                    {avatarMode && (
+                      <div className="mt-2 ml-6">
+                        {avatarSubjects.length > 0 ? (
+                          <div className="space-y-2">
+                            <select
+                              value={avatarSubjectId || ''}
+                              onChange={e => {
+                                const subject = avatarSubjects.find(s => s.id === e.target.value);
+                                setAvatarSubjectId(subject?.id || null);
+                                setAvatarSubjectName(subject?.name || '');
+                                setAvatarPortraitUrl(null); setAvatarVideoUrl(null);
+                                setAvatarLipsyncUrl(null); setAvatarStage(null);
+                              }}
+                              className="w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white"
+                            >
+                              <option value="">Select a character...</option>
+                              {avatarSubjects.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                            {avatarSubjectId && (() => {
+                              const subject = avatarSubjects.find(s => s.id === avatarSubjectId);
+                              return subject?.reference_image_url ? (
+                                <img src={subject.reference_image_url} alt={subject.name}
+                                  className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
+                              ) : null;
+                            })()}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-400">
+                            No characters with trained LoRAs found.{' '}
+                            <button onClick={() => navigate('/settings')} className="text-[#2C666E] underline">Train one first</button>
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1352,6 +1506,13 @@ export default function ShortsWorkbenchPage() {
           <>
             {/* Style selectors */}
             <Panel title="Visual & Motion Style">
+              {avatarMode && (
+                <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-[10px] font-semibold text-blue-700">
+                    B-Roll Scenes (top 60%) — These images fill the upper portion of the split-screen. Your avatar will appear below.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Visual Style</label>
@@ -1586,6 +1747,63 @@ export default function ShortsWorkbenchPage() {
                     <span>Drift: <strong className={Math.abs(Object.values(clips).reduce((s, c) => s + (c?.actualDuration || 0), 0) - effectiveDuration) < 3 ? 'text-emerald-400' : 'text-amber-400'}>
                       {Math.abs(Object.values(clips).reduce((s, c) => s + (c?.actualDuration || 0), 0) - effectiveDuration).toFixed(1)}s
                     </strong></span>
+                  </div>
+                </div>
+              )}
+
+              {/* Avatar Generation */}
+              {avatarMode && avatarSubjectId && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <h3 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    Avatar — {avatarSubjectName}
+                    <span className="text-[9px] text-slate-400 font-normal">(bottom 40% of split-screen)</span>
+                  </h3>
+
+                  {/* Portrait preview */}
+                  {avatarPortraitUrl && (
+                    <div className="mb-3">
+                      <p className="text-[9px] text-slate-500 mb-1">Presenter Portrait</p>
+                      <img src={avatarPortraitUrl} alt="Avatar portrait" className="h-24 rounded-lg border border-slate-200" />
+                    </div>
+                  )}
+
+                  {/* Progress stages */}
+                  {avatarStage && avatarStage !== 'done' && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
+                      <span className="text-xs text-slate-600">
+                        {avatarStage === 'portrait' && 'Generating portrait...'}
+                        {avatarStage === 'animating' && 'Animating avatar (this may take a few minutes)...'}
+                        {avatarStage === 'lipsyncing' && 'Lip-syncing to voiceover...'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Done — show lip-synced preview */}
+                  {avatarStage === 'done' && avatarLipsyncUrl && (
+                    <div className="mb-3">
+                      <Tag color="teal">✓ Avatar ready</Tag>
+                      <video src={avatarLipsyncUrl} controls className="h-28 rounded-lg mt-2" />
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    {!avatarStage && (
+                      <button onClick={generateAvatarPipeline} disabled={avatarLoading || !voiceoverUrl}
+                        className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-[10px] font-semibold hover:bg-[#1f4f55] disabled:opacity-50">
+                        Generate Avatar Video
+                      </button>
+                    )}
+                    {avatarStage === 'done' && (
+                      <button onClick={regenerateAvatar} disabled={avatarLoading}
+                        className="px-3 py-1.5 border border-slate-300 rounded-lg text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                        Regenerate
+                      </button>
+                    )}
+                    {!voiceoverUrl && (
+                      <p className="text-[9px] text-amber-500 self-center">Generate voiceover in Step 1 first</p>
+                    )}
                   </div>
                 </div>
               )}
