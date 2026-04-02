@@ -4,7 +4,7 @@ import {
   ArrowLeft, BookOpen, Upload, Sparkles, Zap, Settings, Image, Video,
   ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Info, Lightbulb,
   Layers, Palette, User, Camera, Clock, DollarSign, HelpCircle, FileText,
-  Brain, Target, Wand2, FolderOpen, Repeat, Shield, Lock,
+  Brain, Target, Wand2, FolderOpen, Repeat, Shield, Lock, TrendingUp,
 } from 'lucide-react';
 
 function PasswordGate({ children }) {
@@ -188,7 +188,13 @@ export default function LoraGuidePage() {
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">1</span>
                 <div>
                   <p className="font-medium text-sm text-gray-900">Upload Photos</p>
-                  <p className="text-xs text-gray-600">Upload 15-25 images of your subject (or style examples). You can drag & drop files or import from your Image Library.</p>
+                  <p className="text-xs text-gray-600 mb-1.5">Upload 15-25 images of your subject (or style examples). You can drag & drop files or import from your Image Library.</p>
+                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                    <p><strong>Two upload methods:</strong></p>
+                    <p>a) <strong>Drag & drop</strong> or click the upload area to select files (JPG, PNG, WebP)</p>
+                    <p>b) <strong>Import from Library</strong> — click the folder icon, browse your saved images by folder, select the ones you want, and import them all at once</p>
+                    <p className="text-gray-500 italic">Minimum 4 images, recommended 15-25. See the "20-Image Formula" section below for the ideal composition.</p>
+                  </div>
                 </div>
               </div>
 
@@ -196,7 +202,20 @@ export default function LoraGuidePage() {
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">2</span>
                 <div>
                   <p className="font-medium text-sm text-gray-900">Configure</p>
-                  <p className="text-xs text-gray-600">Name your LoRA, set a trigger word, choose a training model, and select Subject or Style training type. Enable auto-captioning for best results.</p>
+                  <p className="text-xs text-gray-600 mb-1.5">Set up the training parameters. Most have sensible defaults.</p>
+                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                    <p><strong>Required fields:</strong></p>
+                    <p>a) <strong>LoRA Name</strong> — a friendly name for your reference (e.g. "Sophia Character v1")</p>
+                    <p>b) <strong>Trigger Word</strong> — the magic word that activates your LoRA in prompts. Use something unique like <CodeBlock>soph_x7</CodeBlock> (see Trigger Words section for guidance)</p>
+                    <p className="mt-1"><strong>Key settings:</strong></p>
+                    <p>c) <strong>Training Type</strong> — Subject, Style, or Character (determines how auto-captioning works)</p>
+                    <p>d) <strong>Training Model</strong> — which AI model to train on (FLUX for images, Wan for video — see Models section)</p>
+                    <p>e) <strong>Auto-Caption</strong> — ON by default, recommended. AI writes individual captions per image.</p>
+                    <p className="mt-1"><strong>Advanced (optional — expand to see):</strong></p>
+                    <p>f) <strong>Steps</strong> — training iterations (default is per-model, usually 400-1000)</p>
+                    <p>g) <strong>Learning Rate</strong> — how fast the model learns (default is fine for most cases)</p>
+                    <p>h) <strong>Face Masks</strong> — extra focus on faces during training (only for character/face LoRAs)</p>
+                  </div>
                 </div>
               </div>
 
@@ -204,7 +223,16 @@ export default function LoraGuidePage() {
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">3</span>
                 <div>
                   <p className="font-medium text-sm text-gray-900">Train</p>
-                  <p className="text-xs text-gray-600">Click "Start Training". The system auto-captions your images (if enabled), zips them, and submits to FAL.ai. Training takes 5-45 minutes depending on the model.</p>
+                  <p className="text-xs text-gray-600 mb-1.5">Click "Start Training" and wait. The system handles everything automatically.</p>
+                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                    <p><strong>What happens after clicking "Start Training":</strong></p>
+                    <p>a) Images are uploaded to cloud storage</p>
+                    <p>b) AI auto-captions each image individually (if enabled) — you'll see a "Captioning" stage</p>
+                    <p>c) Images + captions are zipped together and sent to FAL.ai</p>
+                    <p>d) GPU training begins — progress bar shows the current stage</p>
+                    <p>e) On completion, the LoRA (.safetensors file) is saved and appears in the LoRA Picker everywhere</p>
+                    <p className="text-gray-500 italic mt-1">Duration: 5-45 minutes depending on model. FLUX LoRA Fast is ~8 min, Wan I2V is ~25 min. You can close the modal — training continues on FAL's servers.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -587,52 +615,373 @@ export default function LoraGuidePage() {
         </Section>
 
         {/* Advanced Settings */}
-        <Section icon={Settings} title="Advanced Settings — Steps, Learning Rate, Masks">
-          <div className="mt-4 space-y-4">
+        <Section icon={Settings} title="Advanced Settings — Steps, Learning Rate, Masks (Deep Dive)">
+          <div className="mt-4 space-y-6">
             <p className="text-sm text-gray-700">
               These settings are in the collapsible "Advanced Settings" panel on the Configure step.
-              Defaults work well for most cases — only adjust if you know what you're doing.
+              The defaults are calibrated per model and work well for most cases — but understanding them
+              helps you diagnose and fix training issues.
             </p>
 
-            <div className="space-y-4">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">Training Steps</h4>
-                <p className="text-xs text-gray-600 mb-2">
-                  How many optimization iterations the model runs. More steps = more learning, but too many = overfitting.
-                </p>
-                <div className="bg-gray-50 rounded p-3 text-xs text-gray-700 space-y-1">
-                  <p><strong>Too few steps:</strong> Model can't reproduce your subject. Blurry, inconsistent results.</p>
-                  <p><strong>Sweet spot:</strong> Model accurately captures your subject while generalizing to new prompts.</p>
-                  <p><strong>Too many steps:</strong> Model becomes "frozen" — it can only reproduce exact training images, losing generalization. Outputs look overly sharp.</p>
+            {/* TRAINING STEPS */}
+            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-[#2C666E]" />
+                Training Steps
+              </h4>
+              <p className="text-sm text-gray-700">
+                Each "step" is one pass through a batch of training images where the model adjusts its internal weights
+                to better reproduce your concept. Think of it like practice rounds — each step makes the model slightly
+                better at recognizing your subject/style.
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <h5 className="font-medium text-sm text-gray-900">What Happens at Each Step Count</h5>
+                <div className="space-y-2">
+                  <div className="flex gap-3 items-start">
+                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">TOO LOW</span>
+                    <div className="text-xs text-gray-700">
+                      <p><strong>~100-300 steps:</strong> The model barely learns anything. Generated images show vague hints of your subject but lack detail. Faces are blurry, products look generic. The LoRA has almost no effect.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded shrink-0">WARMING UP</span>
+                    <div className="text-xs text-gray-700">
+                      <p><strong>~300-700 steps:</strong> The model starts recognizing the concept. Outputs begin to resemble your subject but details like eye shape, skin texture, or product proportions are inconsistent.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0">SWEET SPOT</span>
+                    <div className="text-xs text-gray-700">
+                      <p><strong>~800-1500 steps (FLUX), ~250-500 (Wan):</strong> The model has learned your concept well AND can still generalize. You can place the subject in new scenes, poses, and lighting that weren't in the training data. This is where you want to be.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0">DIMINISHING</span>
+                    <div className="text-xs text-gray-700">
+                      <p><strong>~1500-2500 steps:</strong> Quality plateaus. The model is accurate but starts losing flexibility — new poses/scenes might look slightly "stiff" or unnatural.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">OVERFIT</span>
+                    <div className="text-xs text-gray-700">
+                      <p><strong>~3000+ steps:</strong> The model has <em>memorized</em> your training images. Every generation looks like a copy of a training photo regardless of your prompt. Outputs look artificially sharp. The LoRA is "frozen" — it refuses to generalize to new situations.</p>
+                    </div>
+                  </div>
                 </div>
-                <Tip>
-                  <strong>Rule of thumb:</strong> For 20 images with FLUX LoRA Fast, 800-1200 steps is usually ideal.
-                  Different models have very different optimal ranges — the defaults are calibrated per model.
-                </Tip>
               </div>
 
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">Learning Rate</h4>
-                <p className="text-xs text-gray-600 mb-2">
-                  How aggressively the model updates its weights each step. Higher = faster learning but risk of instability.
-                  Lower = more stable but needs more steps.
-                </p>
-                <div className="bg-gray-50 rounded p-3 text-xs text-gray-700">
-                  <p>Defaults are set per model (e.g. 0.0004 for FLUX Fast, 0.0002 for Wan). Only change if training
-                  results are consistently too weak (increase slightly) or too distorted (decrease slightly).</p>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 mb-2">Recommended Steps by Model & Dataset Size</h5>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">10 images</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">20 images</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">50 images</th>
+                        <th className="text-left py-1.5 font-semibold text-gray-700">100 images</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-600">
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1200-1800</td><td className="py-1.5">1500-2500</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3">1500-2000</td><td className="py-1.5 pr-3">2000-3000</td><td className="py-1.5 pr-3">3000-4000</td><td className="py-1.5">4000-6000</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3">200-300</td><td className="py-1.5 pr-3">300-500</td><td className="py-1.5 pr-3">400-800</td><td className="py-1.5">600-1200</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
+                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">Face Masks / Segmentation</h4>
-                <p className="text-xs text-gray-600 mb-2">
-                  When enabled, the training system automatically detects and isolates faces in your images, giving
-                  extra training weight to facial features. Only available on models that support it.
+              <div className="grid grid-cols-2 gap-3">
+                <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                  <p className="text-xs font-semibold text-green-800 mb-1.5">Example: Character LoRA (good)</p>
+                  <div className="text-xs text-green-700 space-y-0.5">
+                    <p>Model: FLUX LoRA Fast</p>
+                    <p>Dataset: 20 images of "zk_sarah"</p>
+                    <p>Steps: <strong>1000</strong></p>
+                    <p>Result: Accurate face in new poses, new outfits, new scenes. Natural-looking outputs.</p>
+                  </div>
+                </div>
+                <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
+                  <p className="text-xs font-semibold text-red-800 mb-1.5">Example: Same LoRA (overfit)</p>
+                  <div className="text-xs text-red-700 space-y-0.5">
+                    <p>Model: FLUX LoRA Fast</p>
+                    <p>Dataset: 20 images of "zk_sarah"</p>
+                    <p>Steps: <strong>5000</strong></p>
+                    <p>Result: Every output looks identical — same angle, same expression. Ignores prompt directions. Overly sharp, artificial look.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Tip>
+                <strong>Start with defaults and adjust from there.</strong> Train once with the model's default steps.
+                If the result is too weak/blurry, increase by 25-50%. If it's too rigid/sharp, decrease by 25-50%.
+                Never jump straight to max steps.
+              </Tip>
+            </div>
+
+            {/* LEARNING RATE */}
+            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#2C666E]" />
+                Learning Rate
+              </h4>
+              <p className="text-sm text-gray-700">
+                The learning rate controls how much the model changes its weights on each training step. Think of it
+                like a volume knob — too low and the model barely learns, too high and it "overshoots" and produces
+                distorted, unstable results.
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 mb-3">Visual Analogy</h5>
+                <p className="text-xs text-gray-700 mb-2">
+                  Imagine you're trying to park a car in a tight spot:
                 </p>
-                <div className="bg-gray-50 rounded p-3 text-xs text-gray-700">
-                  <p><strong>Supported by:</strong> FLUX LoRA Fast, Wan 2.2 T2I</p>
-                  <p><strong>Enable for:</strong> Character/face training</p>
-                  <p><strong>Disable for:</strong> Style training, product training, non-face subjects</p>
+                <div className="space-y-2 text-xs text-gray-700">
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500 font-bold shrink-0">0.00001</span>
+                    <span>= Moving 1mm at a time. You'll get there perfectly but it takes forever (needs way more steps).</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold shrink-0">0.0004&nbsp;</span>
+                    <span>= Moving 6 inches at a time. Efficient — you park accurately in a reasonable time. <strong>This is the FLUX default.</strong></span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-500 font-bold shrink-0">0.01&nbsp;&nbsp;&nbsp;</span>
+                    <span>= Flooring the accelerator. You'll overshoot, crash, and the results are garbage. Never do this.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 mb-2">Default Learning Rates by Model</h5>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Default LR</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Safe range</th>
+                        <th className="text-left py-1.5 font-semibold text-gray-700">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-600">
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono">0.0004</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.001</td><td className="py-1.5">Good default for most cases</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3 font-mono">0.00009</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0002</td><td className="py-1.5">Lower — portrait is more sensitive</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3 font-mono">0.0002</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.0005</td><td className="py-1.5">Video models need lower LR</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3 font-mono">0.0007</td><td className="py-1.5 pr-3 font-mono">0.0003 - 0.001</td><td className="py-1.5">Image variant tolerates higher LR</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3 font-mono">0.0005</td><td className="py-1.5 pr-3 font-mono">0.0002 - 0.001</td><td className="py-1.5">Standard range</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Small model, lower rate needed</td></tr>
+                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Hunyuan Video</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Conservative for stability</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                  <p className="text-xs font-semibold text-green-800 mb-1.5">When to INCREASE learning rate</p>
+                  <ul className="text-xs text-green-700 space-y-0.5 list-disc pl-4">
+                    <li>Training completed but LoRA has very weak effect</li>
+                    <li>Trigger word barely changes the output</li>
+                    <li>You've already tried increasing steps with no improvement</li>
+                    <li>Increase by 1.5-2x, not more (e.g. 0.0004 to 0.0006)</li>
+                  </ul>
+                </div>
+                <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
+                  <p className="text-xs font-semibold text-red-800 mb-1.5">When to DECREASE learning rate</p>
+                  <ul className="text-xs text-red-700 space-y-0.5 list-disc pl-4">
+                    <li>Outputs look distorted, warped, or glitchy</li>
+                    <li>Faces have artifacts or wrong proportions</li>
+                    <li>Colors look oversaturated or wrong</li>
+                    <li>Decrease by 50% (e.g. 0.0004 to 0.0002)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <Warning>
+                <strong>Steps and learning rate work together.</strong> If you lower the learning rate, you usually need
+                more steps to compensate (the model learns more slowly per step). If you increase the learning rate,
+                you need fewer steps. Don't change both at once — adjust one, test, then adjust the other if needed.
+              </Warning>
+            </div>
+
+            {/* CREATE MASKS */}
+            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#2C666E]" />
+                Create Masks (Face Detection & Segmentation)
+              </h4>
+              <p className="text-sm text-gray-700">
+                When "Create Masks" is enabled, the training system runs face detection on every image in your dataset.
+                It creates a <strong>segmentation mask</strong> — essentially a highlighted overlay that tells the model
+                "pay extra attention to this area" during training.
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <h5 className="font-medium text-sm text-gray-900">How It Works (Step by Step)</h5>
+                <div className="space-y-2 text-xs text-gray-700">
+                  <div className="flex gap-3 items-start">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#2C666E] text-white text-[10px] font-bold shrink-0">1</span>
+                    <span>Each training image is scanned for faces using AI face detection</span>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#2C666E] text-white text-[10px] font-bold shrink-0">2</span>
+                    <span>A binary mask is generated — white pixels mark the face region, black pixels mark everything else</span>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#2C666E] text-white text-[10px] font-bold shrink-0">3</span>
+                    <span>During training, the model applies <strong>higher loss weight</strong> to the masked (face) region — meaning errors in the face area are penalized more heavily</span>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#2C666E] text-white text-[10px] font-bold shrink-0">4</span>
+                    <span>Result: The model learns facial features more precisely — better eye shape, nose structure, jawline accuracy</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 mb-2">Supported Models</h5>
+                <p className="text-xs text-gray-600 mb-2">
+                  Only 2 of our 10 training models support masks. The toggle is automatically hidden for models that don't support it.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    <span className="text-gray-700"><strong>FLUX LoRA Fast</strong> — <CodeBlock>create_masks</CodeBlock></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    <span className="text-gray-700"><strong>Wan 2.2 T2I</strong> — <CodeBlock>use_masks</CodeBlock></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="border border-green-200 rounded-lg p-4 bg-green-50/50">
+                  <p className="text-xs font-semibold text-green-800 mb-2">ENABLE masks when:</p>
+                  <ul className="text-xs text-green-700 space-y-1 list-disc pl-4">
+                    <li><strong>Training a human character/face</strong> — masks ensure the model prioritizes getting the face right over background details</li>
+                    <li><strong>Your character has distinctive facial features</strong> — unique eye shape, freckles, scars, facial hair that need precise reproduction</li>
+                    <li><strong>You want face consistency across varied scenes</strong> — masks help the model learn "this face" vs "this entire image"</li>
+                  </ul>
+                  <div className="mt-2 p-2 bg-white rounded border border-green-200">
+                    <p className="text-[10px] text-green-800 font-medium mb-1">Example scenario (masks ON):</p>
+                    <p className="text-[10px] text-green-700">Training "zk_sarah" with 20 images. Some images show her full body in complex scenes. Without masks, the model might associate her background environments with the trigger word. With masks, the model knows: "Focus on this face — the background is context, not identity."</p>
+                  </div>
+                </div>
+
+                <div className="border border-red-200 rounded-lg p-4 bg-red-50/50">
+                  <p className="text-xs font-semibold text-red-800 mb-2">DISABLE masks when:</p>
+                  <ul className="text-xs text-red-700 space-y-1 list-disc pl-4">
+                    <li><strong>Training a visual style</strong> — the model needs to learn the entire image's aesthetic, not just faces</li>
+                    <li><strong>Training a product/object</strong> — there are no faces to detect; masks would find nothing or produce false positives</li>
+                    <li><strong>Training non-human subjects</strong> — pets, vehicles, buildings, logos. Face detection won't find them.</li>
+                    <li><strong>Your images don't have clear, visible faces</strong> — back-of-head shots, silhouettes, or heavily stylized art may confuse the face detector</li>
+                  </ul>
+                  <div className="mt-2 p-2 bg-white rounded border border-red-200">
+                    <p className="text-[10px] text-red-800 font-medium mb-1">Example scenario (masks OFF):</p>
+                    <p className="text-[10px] text-red-700">Training "morisot_style" with 18 paintings. The model needs to learn brushstroke technique, color palette, and composition across the entire canvas — not just faces. Masks would make the model over-focus on faces in paintings and ignore the style of landscapes, still lifes, etc.</p>
+                  </div>
+                </div>
+              </div>
+
+              <InfoBox>
+                <strong>Default behavior:</strong> Masks are ON by default for Subject and Character training types,
+                and OFF for Style training. This is automatically set when you switch training types in the UI.
+                You can override it manually in Advanced Settings.
+              </InfoBox>
+            </div>
+
+            {/* COMBINING SETTINGS */}
+            <div className="border border-[#2C666E]/20 rounded-xl p-5 bg-[#2C666E]/5 space-y-4">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-[#2C666E]" />
+                Putting It All Together — Example Configurations
+              </h4>
+
+              <div className="space-y-3">
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-purple-600" />
+                    <h5 className="font-medium text-sm text-gray-900">Character: AI Influencer "Sophia"</h5>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                    <p><strong>Model:</strong> FLUX LoRA Fast</p>
+                    <p><strong>Training Type:</strong> Character</p>
+                    <p><strong>Trigger Word:</strong> <CodeBlock>soph_x7</CodeBlock></p>
+                    <p><strong>Dataset:</strong> 22 images</p>
+                    <p><strong>Steps:</strong> 1000</p>
+                    <p><strong>Learning Rate:</strong> 0.0004 (default)</p>
+                    <p><strong>Masks:</strong> ON</p>
+                    <p><strong>Auto-Caption:</strong> ON</p>
+                    <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>
+                    <p><strong>Time:</strong> ~8 minutes</p>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 italic">Good dataset: 4 close-ups, 4 portraits, 6 waist-up, 8 full-body. 2 outfits, 3 backgrounds, varied poses and lighting.</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Palette className="w-4 h-4 text-amber-600" />
+                    <h5 className="font-medium text-sm text-gray-900">Style: Watercolor Brand Aesthetic</h5>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                    <p><strong>Model:</strong> Z-Image Turbo</p>
+                    <p><strong>Training Type:</strong> Style</p>
+                    <p><strong>Trigger Word:</strong> <CodeBlock>aqua_wash</CodeBlock></p>
+                    <p><strong>Dataset:</strong> 18 images</p>
+                    <p><strong>Steps:</strong> 1000</p>
+                    <p><strong>Learning Rate:</strong> 0.0001 (default)</p>
+                    <p><strong>Masks:</strong> OFF</p>
+                    <p><strong>Auto-Caption:</strong> ON (content-only mode)</p>
+                    <p><strong>Cost:</strong> ~$2.26 + ~$0.01 captioning</p>
+                    <p><strong>Time:</strong> ~12 minutes</p>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 italic">Dataset: 18 watercolor artworks. Mix of landscapes, portraits, still life — all sharing the same watercolor technique. Captions describe content only ("a boat on a lake, mountains in background") — the visual style is NOT described so the trigger word absorbs it.</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Video className="w-4 h-4 text-blue-600" />
+                    <h5 className="font-medium text-sm text-gray-900">Video: Character Consistency in Animation</h5>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                    <p><strong>Model:</strong> Wan 2.2 I2V-A14B</p>
+                    <p><strong>Training Type:</strong> Subject</p>
+                    <p><strong>Trigger Word:</strong> <CodeBlock>soph_x7</CodeBlock></p>
+                    <p><strong>Dataset:</strong> 20 images (same as FLUX)</p>
+                    <p><strong>Steps:</strong> 400</p>
+                    <p><strong>Learning Rate:</strong> 0.0002 (default)</p>
+                    <p><strong>Masks:</strong> N/A (not supported)</p>
+                    <p><strong>Auto-Caption:</strong> ON</p>
+                    <p><strong>Cost:</strong> ~$2.00 + ~$0.01 captioning</p>
+                    <p><strong>Time:</strong> ~25 minutes</p>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 italic">Tip: Use the same trigger word as your FLUX LoRA. Train a FLUX LoRA for keyframes, then a Wan LoRA for animation — both respond to the same trigger word for a unified character pipeline.</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="w-4 h-4 text-teal-600" />
+                    <h5 className="font-medium text-sm text-gray-900">Product: Custom Sneaker Design</h5>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                    <p><strong>Model:</strong> FLUX LoRA Fast</p>
+                    <p><strong>Training Type:</strong> Subject</p>
+                    <p><strong>Trigger Word:</strong> <CodeBlock>rxsnkr_v1</CodeBlock></p>
+                    <p><strong>Dataset:</strong> 15 images</p>
+                    <p><strong>Steps:</strong> 800</p>
+                    <p><strong>Learning Rate:</strong> 0.0004 (default)</p>
+                    <p><strong>Masks:</strong> OFF (no faces)</p>
+                    <p><strong>Auto-Caption:</strong> ON</p>
+                    <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>
+                    <p><strong>Time:</strong> ~6 minutes</p>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 italic">Dataset: Product photos from multiple angles (front, side, back, top, sole). White background + lifestyle shots. Auto-captions describe angle, lighting, surface — NOT the shoe's brand/design details (trigger word absorbs those).</p>
                 </div>
               </div>
             </div>
