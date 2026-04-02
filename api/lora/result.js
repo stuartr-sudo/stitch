@@ -66,14 +66,42 @@ export default async function handler(req, res) {
       console.error('[LoRA Result] Could not extract model URL from response. Model:', modelId, 'Keys:', Object.keys(resultData));
     }
 
+    let permanentUrl = modelUrl; // default to FAL URL, will be overwritten if Supabase upload succeeds
+
     if (loraId) {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
       if (modelUrl) {
-        // Update the brand_loras record
+        // Upload .safetensors to Supabase for permanent storage (FAL CDN URLs expire)
+        try {
+          console.log('[LoRA Result] Uploading model to permanent storage...');
+          const modelResponse = await fetch(modelUrl);
+          if (modelResponse.ok) {
+            const modelBuffer = Buffer.from(await modelResponse.arrayBuffer());
+            const fileName = `lora-${loraId}-${Date.now()}.safetensors`;
+            const filePath = `lora-models/${fileName}`;
+            const { error: uploadError } = await supabase.storage
+              .from('media')
+              .upload(filePath, modelBuffer, {
+                contentType: 'application/octet-stream',
+                upsert: false,
+              });
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
+              permanentUrl = publicUrl;
+              console.log('[LoRA Result] Model saved permanently:', permanentUrl);
+            } else {
+              console.warn('[LoRA Result] Supabase upload failed, keeping FAL URL:', uploadError.message);
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('[LoRA Result] Failed to upload model to permanent storage:', uploadErr.message);
+        }
+
+        // Update the brand_loras record with permanent URL
         await supabase
           .from('brand_loras')
-          .update({ fal_model_url: modelUrl, status: 'ready' })
+          .update({ fal_model_url: permanentUrl, status: 'ready' })
           .eq('id', loraId);
 
         // Auto-update linked visual subject if one exists
@@ -87,7 +115,7 @@ export default async function handler(req, res) {
           await supabase
             .from('visual_subjects')
             .update({
-              lora_url: modelUrl,
+              lora_url: permanentUrl,
               lora_trigger_word: loraRecord.trigger_word,
               brand_lora_id: loraId,
               training_status: 'ready',
@@ -116,7 +144,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.json({ success: true, status: 'completed', modelUrl, requestId });
+    return res.json({ success: true, status: 'completed', modelUrl: permanentUrl || modelUrl, requestId });
   }
 
   if (statusData.status === 'FAILED') {
