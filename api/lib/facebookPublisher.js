@@ -84,3 +84,43 @@ export async function publishToFacebookPage({ accessToken, pageId, message, imag
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Publish a video to a Facebook Page.
+ * Uses the Graph API video upload endpoint.
+ *
+ * @param {Object} params
+ * @param {string} params.accessToken - Page-scoped access token
+ * @param {string} params.pageId - Facebook Page ID
+ * @param {string} params.videoUrl - Public URL of the video file
+ * @param {string} [params.description] - Video description/message
+ * @param {string} [params.title] - Video title
+ * @returns {Promise<{success: boolean, videoId?: string, error?: string}>}
+ */
+export async function publishVideoToFacebookPage({ accessToken, pageId, videoUrl, description, title }) {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/videos`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_url: videoUrl,
+          description: description || '',
+          title: title || '',
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      return { success: false, error: `Facebook video upload failed: ${err}` };
+    }
+
+    const data = await res.json();
+    return { success: true, videoId: data.id };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
