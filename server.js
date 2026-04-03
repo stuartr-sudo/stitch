@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { pollScheduledPublications } from './api/lib/scheduledPublisher.js';
+import { startLoraPoller } from './api/lib/loraPoller.js';
 
 dotenv.config();
 
@@ -1251,5 +1252,8 @@ app.listen(PORT, () => {
     setInterval(pollScheduledPublications, 30000);
     pollScheduledPublications();
     console.log('[scheduled-publisher] Polling every 30s');
+
+    // Start LoRA training background poller (checks every 60s)
+    startLoraPoller();
   }
 });
