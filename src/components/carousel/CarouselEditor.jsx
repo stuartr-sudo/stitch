@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Loader2, Image as ImageIcon, Send, RefreshCw,
   Lock, Unlock, GripVertical, Plus, Trash2, ChevronLeft, ChevronRight, Film,
-  Settings2, Play,
+  Settings2, Play, Music, RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
@@ -57,6 +57,13 @@ export default function CarouselEditor({ carouselId }) {
   const [slideshowVoiceover, setSlideshowVoiceover] = useState(false);
   const [slideshowVoice, setSlideshowVoice] = useState('Rachel');
   const [slideshowMusic, setSlideshowMusic] = useState(false);
+  const [slideshowMusicMood, setSlideshowMusicMood] = useState('auto');
+  const [rerunningAudio, setRerunningAudio] = useState(false);
+  const [showRerunControls, setShowRerunControls] = useState(false);
+  const [rerunMusic, setRerunMusic] = useState(true);
+  const [rerunMusicMood, setRerunMusicMood] = useState('auto');
+  const [rerunVoiceover, setRerunVoiceover] = useState(false);
+  const [rerunVoice, setRerunVoice] = useState('Rachel');
 
   const activeSlide = slides[activeSlideIdx] || null;
 
@@ -99,6 +106,7 @@ export default function CarouselEditor({ carouselId }) {
               setGeneratingVideos(false);
               setAssembling(false);
               setCreatingSlideshow(false);
+              setRerunningAudio(false);
             }
           }
         } catch {}
@@ -260,6 +268,7 @@ export default function CarouselEditor({ carouselId }) {
           voiceover: slideshowVoiceover,
           voice: slideshowVoice,
           music: slideshowMusic,
+          music_mood: slideshowMusicMood,
         }),
       });
       const data = await res.json();
@@ -273,6 +282,35 @@ export default function CarouselEditor({ carouselId }) {
     } catch (err) {
       toast.error('Failed to create slideshow');
       setCreatingSlideshow(false);
+    }
+  }
+
+  // ── Rerun audio on existing slideshow ──
+  async function handleRerunAudio() {
+    setRerunningAudio(true);
+    try {
+      const res = await apiFetch(`/api/carousel/${carouselId}/rerun-audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slide_duration: slideshowDuration,
+          voiceover: rerunVoiceover,
+          voice: rerunVoice,
+          music: rerunMusic,
+          music_mood: rerunMusicMood,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        setRerunningAudio(false);
+      } else {
+        setCarousel(prev => ({ ...prev, status: 'assembling', assembled_video_url: null }));
+        setShowRerunControls(false);
+      }
+    } catch (err) {
+      toast.error('Failed to rerun audio');
+      setRerunningAudio(false);
     }
   }
 
@@ -494,6 +532,23 @@ export default function CarouselEditor({ carouselId }) {
                 />
                 Music
               </label>
+              {slideshowMusic && (
+                <select
+                  value={slideshowMusicMood}
+                  onChange={e => setSlideshowMusicMood(e.target.value)}
+                  className="text-xs border rounded px-1.5 py-1.5 bg-white text-gray-700"
+                  title="Music mood"
+                >
+                  <option value="auto">Auto (AI picks)</option>
+                  <option value="upbeat_energetic">Upbeat & Energetic</option>
+                  <option value="calm_ambient">Calm & Ambient</option>
+                  <option value="corporate_professional">Corporate & Professional</option>
+                  <option value="dramatic_cinematic">Dramatic & Cinematic</option>
+                  <option value="fun_playful">Fun & Playful</option>
+                  <option value="dark_moody">Dark & Moody</option>
+                  <option value="inspiring_uplifting">Inspiring & Uplifting</option>
+                </select>
+              )}
               <Button
                 variant="outline"
                 onClick={handleCreateSlideshow}
@@ -645,6 +700,87 @@ export default function CarouselEditor({ carouselId }) {
               className="w-full rounded-lg"
               style={{ maxHeight: '360px' }}
             />
+
+            {/* Rerun Audio controls */}
+            <div className="mt-3">
+              <button
+                onClick={() => setShowRerunControls(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Rerun Audio
+              </button>
+
+              {showRerunControls && (
+                <div className="mt-2 bg-white/10 rounded-lg p-3 flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rerunMusic}
+                      onChange={e => setRerunMusic(e.target.checked)}
+                      className="rounded border-gray-500"
+                    />
+                    <Music className="w-3.5 h-3.5" />
+                    Music
+                  </label>
+                  {rerunMusic && (
+                    <select
+                      value={rerunMusicMood}
+                      onChange={e => setRerunMusicMood(e.target.value)}
+                      className="text-xs border border-gray-600 rounded px-1.5 py-1 bg-gray-800 text-gray-200"
+                    >
+                      <option value="auto">Auto (AI picks)</option>
+                      <option value="upbeat_energetic">Upbeat & Energetic</option>
+                      <option value="calm_ambient">Calm & Ambient</option>
+                      <option value="corporate_professional">Corporate & Professional</option>
+                      <option value="dramatic_cinematic">Dramatic & Cinematic</option>
+                      <option value="fun_playful">Fun & Playful</option>
+                      <option value="dark_moody">Dark & Moody</option>
+                      <option value="inspiring_uplifting">Inspiring & Uplifting</option>
+                    </select>
+                  )}
+                  <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rerunVoiceover}
+                      onChange={e => setRerunVoiceover(e.target.checked)}
+                      className="rounded border-gray-500"
+                    />
+                    Voiceover
+                  </label>
+                  {rerunVoiceover && (
+                    <select
+                      value={rerunVoice}
+                      onChange={e => setRerunVoice(e.target.value)}
+                      className="text-xs border border-gray-600 rounded px-1.5 py-1 bg-gray-800 text-gray-200"
+                    >
+                      <option value="Rachel">Rachel</option>
+                      <option value="Adam">Adam</option>
+                      <option value="Laura">Laura</option>
+                      <option value="Brian">Brian</option>
+                      <option value="Charlotte">Charlotte</option>
+                      <option value="Charlie">Charlie</option>
+                      <option value="George">George</option>
+                      <option value="Alice">Alice</option>
+                      <option value="Lily">Lily</option>
+                      <option value="Daniel">Daniel</option>
+                    </select>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRerunAudio}
+                    disabled={rerunningAudio || carousel.status === 'assembling' || (!rerunMusic && !rerunVoiceover)}
+                    className="text-xs border-gray-500 text-gray-200 hover:bg-white/10"
+                  >
+                    {rerunningAudio || carousel.status === 'assembling'
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                      : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+                    Regenerate
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

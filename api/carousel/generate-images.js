@@ -23,15 +23,21 @@ function parseAspectRatio(ar) {
 
 /**
  * Build the final image generation prompt.
- * Visual world anchors the scene, style sets the aesthetic, slide prompt adds the angle.
+ * Style leads (models weight the start most), scene anchors the environment,
+ * slide prompt adds the angle, style reinforcement at the end.
  */
 function buildImagePrompt(slideImagePrompt, stylePrompt, visualWorld) {
   const parts = [
+    stylePrompt ? `Style: ${stylePrompt}` : null,
     visualWorld ? `Scene: ${visualWorld}` : null,
-    stylePrompt,
     slideImagePrompt,
   ].filter(Boolean);
-  return parts.join('. ') || 'abstract background';
+  let prompt = parts.join('. ') || 'abstract background';
+  if (stylePrompt) {
+    const styleShort = stylePrompt.split(',')[0].trim();
+    prompt += `. Rendered in ${styleShort} style`;
+  }
+  return prompt;
 }
 
 export default async function handler(req, res) {

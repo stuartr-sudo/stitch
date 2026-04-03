@@ -96,7 +96,7 @@ const IMAGE_PROMPT_RULES = `IMAGE PROMPT CONSISTENCY — CRITICAL:
 
 // ─── Stage 1: Research Synthesis ──────────────────────────────────────────────
 
-async function synthesizeResearch(client, content, topic, brandContext, platform, formatTemplate) {
+async function synthesizeResearch(client, content, topic, brandContext, platform, formatTemplate, stylePreset) {
   const platformInfo = PLATFORM_GUIDANCE[platform] || PLATFORM_GUIDANCE.instagram;
   const slideRange = formatTemplate
     ? `${formatTemplate.slideStructure.minSlides}-${formatTemplate.slideStructure.maxSlides}`
@@ -113,7 +113,7 @@ Rules:
 - The story_beats must be SEQUENTIAL — each beat builds on the previous one. Think: Setup → Tension → Evidence → Evidence → Insight → Resolution. NOT a random list of facts.
 - Extract SPECIFIC facts with real numbers, names, dates, places. If the research doesn't contain specifics, say so — don't invent them.
 - The hook_options should be provocative, curiosity-driven, and SHORT (3-8 words). They should make someone stop scrolling.
-- The visual_world must describe a concrete PHYSICAL ENVIRONMENT — not an artistic style. Not "warm watercolor illustration" but "kitchen countertop next to a window, herb pots, cutting boards, morning sunlight". The artistic style is controlled separately. Describe only the setting, objects, and lighting.
+- The visual_world must describe a concrete PHYSICAL ENVIRONMENT — not an artistic style. Not "warm watercolor illustration" but "kitchen countertop next to a window, herb pots, cutting boards, morning sunlight". The artistic style is controlled separately. Describe only the setting, objects, and lighting.${stylePreset ? `\n- STYLE HINT: The visual style for this carousel will be "${stylePreset}". Choose a physical environment and lighting that harmonise with this aesthetic — don't describe the style itself, but pick settings, objects, and light that complement it naturally.` : ''}
 - The narrative_arc should have genuine tension: what's the problem/surprise/contradiction that makes this worth reading?
 ${formatTemplate ? `\nPOST FORMAT: ${formatTemplate.label}\n${formatTemplate.synthesisPrompt}` : ''}
 
@@ -385,7 +385,7 @@ export default async function handler(req, res) {
     // ── STAGE 1: Research Synthesis ──
     console.log(`[carousel/generate-content] Stage 1: Synthesizing research for carousel ${id}...`);
     const { synthesis, usage: synthUsage } = await synthesizeResearch(
-      client, content, topic, brandContext, carousel.platform, formatTemplate
+      client, content, topic, brandContext, carousel.platform, formatTemplate, carousel.style_preset
     );
 
     if (!synthesis?.thesis) {
