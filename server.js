@@ -1323,5 +1323,8 @@ app.listen(PORT, () => {
     // Recover interrupted flow executions
     const serviceSupabase = createClient(supabaseUrl, supabaseServiceKey);
     import('./api/lib/flowExecutor.js').then(m => m.recoverInterruptedExecutions(serviceSupabase));
+
+    // Start scheduled flow runner (polls every 60s for cron-triggered flows)
+    import('./api/lib/scheduledFlowRunner.js').then(m => m.startScheduledFlowRunner(serviceSupabase));
   }
 });
