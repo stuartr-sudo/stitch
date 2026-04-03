@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useSearchParams, useNavigate } 
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // Silence all non-error toasts — only show toast.error() and toast.warning()
 toast.success = () => {};
@@ -101,6 +102,7 @@ function YouTubeRedirectHandler() {
 function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <YouTubeRedirectHandler />
         <Routes>
@@ -310,6 +312,7 @@ function App() {
           <Route path="/turnaround-educate" element={<Navigate to="/learn?tab=turnaround" replace />} />
           <Route path="/adsmanager-educate" element={<Navigate to="/learn?tab=ads" replace />} />
           <Route path="/educate" element={<Navigate to="/learn" replace />} />
+          <Route path="/video-production" element={<Navigate to="/learn?tab=video" replace />} />
 
           <Route
             path="/settings/accounts"
@@ -325,6 +328,7 @@ function App() {
         </Routes>
         <Toaster position="bottom-right" />
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

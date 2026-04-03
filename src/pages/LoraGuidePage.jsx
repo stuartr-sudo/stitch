@@ -26,15 +26,15 @@ function PasswordGate({ children }) {
   if (unlocked) return children;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 w-full max-w-sm space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 w-full max-w-sm space-y-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2.5 bg-[#2C666E]/10 rounded-lg">
             <Lock className="w-5 h-5 text-[#2C666E]" />
           </div>
           <div>
-            <h2 className="font-bold text-gray-900">Admin Access</h2>
-            <p className="text-xs text-gray-500">LoRA Training Studio Guide</p>
+            <h2 className="font-bold text-gray-900 dark:text-gray-100">Admin Access</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">LoRA Training Studio Guide</p>
           </div>
         </div>
         <input
@@ -43,11 +43,11 @@ function PasswordGate({ children }) {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter admin password"
           className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors ${
-            error ? 'border-red-400 bg-red-50' : 'border-gray-300 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]'
+            error ? 'border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-900/30' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]'
           }`}
           autoFocus
         />
-        {error && <p className="text-xs text-red-600">Incorrect password</p>}
+        {error && <p className="text-xs text-red-600 dark:text-red-400">Incorrect password</p>}
         <button
           type="submit"
           className="w-full bg-[#2C666E] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#235058] transition-colors"
@@ -62,76 +62,76 @@ function PasswordGate({ children }) {
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
         <Icon className="w-5 h-5 text-[#2C666E] shrink-0" />
-        <span className="font-semibold text-gray-900 flex-1">{title}</span>
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+        <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{title}</span>
+        {open ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
       </button>
-      {open && <div className="px-5 pb-5 border-t border-gray-100">{children}</div>}
+      {open && <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-700">{children}</div>}
     </div>
   );
 }
 
 function Tip({ children }) {
   return (
-    <div className="flex gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 my-3">
-      <Lightbulb className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-      <div className="text-sm text-amber-900">{children}</div>
+    <div className="flex gap-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 my-3">
+      <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+      <div className="text-sm text-amber-900 dark:text-amber-200">{children}</div>
     </div>
   );
 }
 
 function Warning({ children }) {
   return (
-    <div className="flex gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 my-3">
-      <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-      <div className="text-sm text-red-900">{children}</div>
+    <div className="flex gap-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 my-3">
+      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+      <div className="text-sm text-red-900 dark:text-red-200">{children}</div>
     </div>
   );
 }
 
 function InfoBox({ children }) {
   return (
-    <div className="flex gap-2.5 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 my-3">
-      <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-      <div className="text-sm text-blue-900">{children}</div>
+    <div className="flex gap-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 my-3">
+      <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+      <div className="text-sm text-blue-900 dark:text-blue-200">{children}</div>
     </div>
   );
 }
 
 function CodeBlock({ children }) {
   return (
-    <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+    <code className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
   );
 }
 
 function ModelCard({ name, base, category, pricing, features, description, bestFor, stepRange, defaultSteps, released }) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h4 className="font-semibold text-gray-900 text-sm">{name}</h4>
-          <p className="text-xs text-gray-500">{base}</p>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{name}</h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{base}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-            category === 'image' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+            category === 'image' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
           }`}>
             {category}
           </span>
           {released && (
-            <span className="text-[10px] text-gray-400">{released}</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">{released}</span>
           )}
         </div>
       </div>
       {description && (
-        <p className="text-xs text-gray-600 mb-2">{description}</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{description}</p>
       )}
-      <div className="space-y-1 text-xs text-gray-600">
+      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-1.5">
           <DollarSign className="w-3 h-3" />
           <span>{pricing}</span>
@@ -143,13 +143,13 @@ function ModelCard({ name, base, category, pricing, features, description, bestF
         {features.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {features.map(f => (
-              <span key={f} className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600">{f}</span>
+              <span key={f} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] text-gray-600 dark:text-gray-400">{f}</span>
             ))}
           </div>
         )}
       </div>
-      <div className="mt-2 pt-2 border-t border-gray-100">
-        <p className="text-xs font-medium text-[#2C666E]">Best for: <span className="font-normal text-gray-600">{bestFor}</span></p>
+      <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <p className="text-xs font-medium text-[#2C666E]">Best for: <span className="font-normal text-gray-600 dark:text-gray-400">{bestFor}</span></p>
       </div>
     </div>
   );
@@ -164,24 +164,24 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Zap} title="Quick Start — Train Your First LoRA in 5 Minutes" defaultOpen={true}>
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               A LoRA (Low-Rank Adaptation) is a small add-on model that teaches an AI image/video generator a new concept —
               your character's face, a specific art style, or a product's appearance.
             </p>
 
             <div className="space-y-3">
-              <h4 className="font-semibold text-sm text-gray-900">The 3-Step Process:</h4>
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">The 3-Step Process:</h4>
 
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">1</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Upload Photos</p>
-                  <p className="text-xs text-gray-600 mb-1.5">Upload 15-25 images of your subject (or style examples). You can drag & drop files or import from your Image Library.</p>
-                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Upload Photos</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Upload 15-25 images of your subject (or style examples). You can drag & drop files or import from your Image Library.</p>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-2.5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     <p><strong>Two upload methods:</strong></p>
                     <p>a) <strong>Drag & drop</strong> or click the upload area to select files (JPG, PNG, WebP)</p>
                     <p>b) <strong>Import from Library</strong> — click the folder icon, browse your saved images by folder, select the ones you want, and import them all at once</p>
-                    <p className="text-gray-500 italic">Minimum 4 images, recommended 15-25. See the "20-Image Formula" section below for the ideal composition.</p>
+                    <p className="text-gray-500 dark:text-gray-400 italic">Minimum 4 images, recommended 15-25. See the "20-Image Formula" section below for the ideal composition.</p>
                   </div>
                 </div>
               </div>
@@ -189,9 +189,9 @@ export function LoraGuideContent() {
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">2</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Configure</p>
-                  <p className="text-xs text-gray-600 mb-1.5">Set up the training parameters. Most have sensible defaults.</p>
-                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Configure</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Set up the training parameters. Most have sensible defaults.</p>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-2.5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     <p><strong>Required fields:</strong></p>
                     <p>a) <strong>LoRA Name</strong> — a friendly name for your reference (e.g. "Sophia Character v1")</p>
                     <p>b) <strong>Trigger Word</strong> — the magic word that activates your LoRA in prompts. Use something unique like <CodeBlock>soph_x7</CodeBlock> (see Trigger Words section for guidance)</p>
@@ -210,16 +210,16 @@ export function LoraGuideContent() {
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">3</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Train</p>
-                  <p className="text-xs text-gray-600 mb-1.5">Click "Start Training" and wait. The system handles everything automatically.</p>
-                  <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-600 space-y-1">
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Train</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Click "Start Training" and wait. The system handles everything automatically.</p>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-2.5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     <p><strong>What happens after clicking "Start Training":</strong></p>
                     <p>a) Images are uploaded to cloud storage</p>
                     <p>b) AI auto-captions each image individually (if enabled) — you'll see a "Captioning" stage</p>
                     <p>c) Images + captions are zipped together and sent to FAL.ai</p>
                     <p>d) GPU training begins — progress bar shows the current stage</p>
                     <p>e) On completion, the LoRA (.safetensors file) is saved and appears in the LoRA Picker everywhere</p>
-                    <p className="text-gray-500 italic mt-1">Duration: 5-45 minutes depending on model. FLUX LoRA Fast is ~8 min, Wan I2V is ~25 min. You can close the modal — training continues on FAL's servers.</p>
+                    <p className="text-gray-500 dark:text-gray-400 italic mt-1">Duration: 5-45 minutes depending on model. FLUX LoRA Fast is ~8 min, Wan I2V is ~25 min. You can close the modal — training continues on FAL's servers.</p>
                   </div>
                 </div>
               </div>
@@ -237,39 +237,39 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Target} title="Training Types — Subject vs Style vs Character">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               The training type determines <strong>what the trigger word learns</strong>. This is the most critical decision
               and affects how the system captions your images.
             </p>
 
             <div className="grid gap-3">
-              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/50">
+              <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50/50 dark:bg-purple-900/40">
                 <div className="flex items-center gap-2 mb-2">
-                  <User className="w-4 h-4 text-purple-600" />
-                  <h4 className="font-semibold text-sm text-purple-900">Subject Training</h4>
-                  <span className="text-[10px] bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full">Default</span>
+                  <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <h4 className="font-semibold text-sm text-purple-900 dark:text-purple-200">Subject Training</h4>
+                  <span className="text-[10px] bg-purple-200 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full">Default</span>
                 </div>
-                <p className="text-xs text-gray-700 mb-2">
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                   Teaches the model to recognize a specific <strong>object, product, or person</strong>. The trigger word absorbs
                   the subject's identity — everything about what it <em>looks like</em>.
                 </p>
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p><strong>Auto-caption describes:</strong> Pose, angle, lighting, setting, clothing, background</p>
                   <p><strong>Auto-caption omits:</strong> The subject's identity, face features, distinguishing characteristics</p>
                   <p><strong>Use for:</strong> Products, logos, specific objects, pets, branded items</p>
                 </div>
               </div>
 
-              <div className="border border-amber-200 rounded-lg p-4 bg-amber-50/50">
+              <div className="border border-amber-200 dark:border-amber-800 rounded-lg p-4 bg-amber-50/50 dark:bg-amber-950/40">
                 <div className="flex items-center gap-2 mb-2">
-                  <Palette className="w-4 h-4 text-amber-600" />
-                  <h4 className="font-semibold text-sm text-amber-900">Style Training</h4>
+                  <Palette className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <h4 className="font-semibold text-sm text-amber-900 dark:text-amber-200">Style Training</h4>
                 </div>
-                <p className="text-xs text-gray-700 mb-2">
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                   Teaches the model a <strong>visual aesthetic or artistic style</strong>. The trigger word absorbs everything
                   about the visual treatment — brushstrokes, color palette, mood, texture.
                 </p>
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p><strong>Auto-caption describes:</strong> Content only — what objects/people/scenes are depicted</p>
                   <p><strong>Auto-caption omits:</strong> Visual style, artistic technique, color palette, texture, mood</p>
                   <p><strong>Use for:</strong> Brand visual identity, artistic styles (watercolor, anime, etc.), consistent aesthetic</p>
@@ -281,16 +281,16 @@ export function LoraGuideContent() {
                 </Tip>
               </div>
 
-              <div className="border border-teal-200 rounded-lg p-4 bg-teal-50/50">
+              <div className="border border-teal-200 dark:border-teal-800 rounded-lg p-4 bg-teal-50/50 dark:bg-teal-900/40">
                 <div className="flex items-center gap-2 mb-2">
-                  <User className="w-4 h-4 text-teal-600" />
-                  <h4 className="font-semibold text-sm text-teal-900">Character Training</h4>
+                  <User className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  <h4 className="font-semibold text-sm text-teal-900 dark:text-teal-200">Character Training</h4>
                 </div>
-                <p className="text-xs text-gray-700 mb-2">
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                   Specialized variant of Subject training for <strong>human characters and faces</strong>. The trigger word
                   absorbs facial features, hair, eye color, and body type.
                 </p>
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p><strong>Auto-caption describes:</strong> Pose, camera angle, lighting, setting, clothing</p>
                   <p><strong>Auto-caption omits:</strong> Face, hair color, eye color, body type</p>
                   <p><strong>Use for:</strong> Consistent AI characters for videos, brand avatars, influencer personas</p>
@@ -305,36 +305,36 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Camera} title="Photography for Super Realistic LoRAs">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Your training images are <strong>90-95% of your LoRA quality</strong>. No amount of parameter tuning will fix a bad dataset.
               This section covers how to photograph or source images that produce hyper-realistic results.
             </p>
 
             <div className="border border-[#2C666E]/20 rounded-xl p-5 bg-[#2C666E]/5 space-y-4">
-              <h4 className="font-semibold text-sm text-gray-900">The "Rotten Egg" Principle</h4>
-              <p className="text-xs text-gray-700">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">The "Rotten Egg" Principle</h4>
+              <p className="text-xs text-gray-700 dark:text-gray-300">
                 One bad image in a dataset of 20 has an <strong>outsized negative impact</strong> on the entire LoRA.
                 A single blurry, watermarked, or low-quality image will degrade every generation the LoRA produces.
                 Manual curation is essential — <strong>15 perfect images will always outperform 50 mediocre ones</strong>.
               </p>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Lighting</h4>
-            <div className="space-y-2 text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Lighting</h4>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Outdoor:</strong> Shoot on a sunny day <em>in the shade</em>, or on an overcast day. This gives you soft, even light with no harsh shadows — ideal for face training.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Reflector:</strong> Use a white or silver reflector disc to bounce light onto the face. Even a cheap $15 reflector dramatically improves results. This eliminates the dark shadows under eyes, nose, and chin that confuse the model.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Indoor:</strong> Use a large window as your key light, with a reflector or white surface opposite. Avoid overhead fluorescent lighting.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Vary it:</strong> Include 2-3 different lighting conditions across your dataset. This teaches the model that lighting is variable, not part of the subject's identity.</span>
               </div>
             </div>
@@ -344,18 +344,18 @@ export function LoraGuideContent() {
               Each image should have one dominant, clean light source.
             </Warning>
 
-            <h4 className="font-semibold text-sm text-gray-900">Facial Expressions (for Character LoRAs)</h4>
-            <div className="space-y-2 text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Facial Expressions (for Character LoRAs)</h4>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Relaxed, natural smile</strong> — this is your "default face". Include it in at least half your images.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Visible teeth</strong> in 3-4 shots. The model needs to learn how teeth look — otherwise it generates blurry mouths or avoids showing teeth entirely.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Eyes clearly visible</strong> in all shots. No sunglasses, no squinting, no hair covering eyes.</span>
               </div>
               <div className="flex items-start gap-2">
@@ -364,38 +364,38 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Composition & Cropping</h4>
-            <div className="space-y-2 text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Composition & Cropping</h4>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Face close-ups:</strong> Crop to 1:1 (square), centered on the face with minimal shoulder visible. 5+ close-ups in your dataset.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Portraits:</strong> 3:4 aspect ratio for head-and-shoulders and waist-up shots.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Center the subject</strong> — the model learns what's at the center of attention. Don't crop them to the edge.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Resolution:</strong> 1024x1024 is optimal for FLUX models. Minimum 512x512. Higher resolution originals can be resized down during training — this naturally eliminates compression artifacts.</span>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">File Format</h4>
-            <div className="space-y-2 text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">File Format</h4>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>PNG preferred</strong> — lossless, no compression artifacts. TIFF also works.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>JPEG is acceptable</strong> at high quality (90%+). Heavily compressed JPEGs introduce noise the model will learn.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Upscale small images</strong> to at least 1024x1024 using Topaz or a similar AI upscaler before including them in your dataset.</span>
               </div>
             </div>
@@ -425,24 +425,24 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Image} title="Preparing Your Training Images — The 20-Image Formula">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Quality and variety of your training images matters far more than quantity. 20 well-composed images
               consistently outperform 100 near-identical ones.
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-3">The Ideal 20-Image Dataset (for Character/Subject):</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-3">The Ideal 20-Image Dataset (for Character/Subject):</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>1 reference image</strong> — your "source of truth", the best/clearest shot</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>4 base shots</strong> — close-up face, head & shoulders portrait, waist up, full body</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>~15 anchor images</strong> varying across all of:</span>
                 </div>
                 <div className="pl-8 space-y-1">
@@ -455,48 +455,48 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-3">For Style Training:</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-3">For Style Training:</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>15-25 images</strong> that exemplify the style you want to learn</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>Diverse content</strong> — different subjects, scenes, but all in the same visual style</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>Consistent aesthetic</strong> — all images should share the same visual treatment</span>
                 </div>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Dataset Recipes by Goal</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Dataset Recipes by Goal</h4>
             <div className="grid gap-3">
-              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
-                <h5 className="font-medium text-xs text-purple-900 mb-2">Face Consistency Recipe (20 images)</h5>
-                <div className="text-xs text-gray-700 space-y-1">
+              <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50/30 dark:bg-purple-900/40">
+                <h5 className="font-medium text-xs text-purple-900 dark:text-purple-200 mb-2">Face Consistency Recipe (20 images)</h5>
+                <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
                   <p>5 close-up face shots (different angles, expressions)</p>
                   <p>5 head-and-shoulder portraits (varied lighting)</p>
                   <p>5 waist-up shots (different outfits)</p>
                   <p>5 full-body shots (different backgrounds)</p>
-                  <p className="text-gray-500 italic mt-1">Minimum: 3 outfits, 3 backgrounds, 3 lighting setups</p>
+                  <p className="text-gray-500 dark:text-gray-400 italic mt-1">Minimum: 3 outfits, 3 backgrounds, 3 lighting setups</p>
                 </div>
               </div>
-              <div className="border border-amber-200 rounded-lg p-4 bg-amber-50/30">
-                <h5 className="font-medium text-xs text-amber-900 mb-2">Product Photography Recipe (20 images)</h5>
-                <div className="text-xs text-gray-700 space-y-1">
+              <div className="border border-amber-200 dark:border-amber-800 rounded-lg p-4 bg-amber-50/30 dark:bg-amber-950/40">
+                <h5 className="font-medium text-xs text-amber-900 dark:text-amber-200 mb-2">Product Photography Recipe (20 images)</h5>
+                <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
                   <p>8 angles on clean background (front, back, sides, top, bottom, 3/4 views)</p>
                   <p>4 lifestyle/context shots (product in use, in setting)</p>
                   <p>4 detail/macro shots (textures, labels, unique features)</p>
                   <p>4 in-use shots (held, worn, displayed)</p>
                 </div>
               </div>
-              <div className="border border-teal-200 rounded-lg p-4 bg-teal-50/30">
-                <h5 className="font-medium text-xs text-teal-900 mb-2">Style Recipe (15-25 images)</h5>
-                <div className="text-xs text-gray-700 space-y-1">
+              <div className="border border-teal-200 dark:border-teal-800 rounded-lg p-4 bg-teal-50/30 dark:bg-teal-900/40">
+                <h5 className="font-medium text-xs text-teal-900 dark:text-teal-200 mb-2">Style Recipe (15-25 images)</h5>
+                <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
                   <p>All images must share the <strong>same visual style</strong></p>
                   <p>Content should be as diverse as possible: landscapes, portraits, still life, architecture, abstract</p>
                   <p>Cherry-pick ruthlessly — a curated set of 16 consistently outperforms a messy set of 100+</p>
@@ -504,22 +504,22 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Resolution Recommendations per Model</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Resolution Recommendations per Model</h4>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model Family</th>
-                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Optimal Resolution</th>
-                    <th className="text-left py-1.5 font-semibold text-gray-700">Minimum</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Model Family</th>
+                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Optimal Resolution</th>
+                    <th className="text-left py-1.5 font-semibold text-gray-700 dark:text-gray-300">Minimum</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600">
-                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX (all trainers)</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
-                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
-                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
-                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3">768x768</td><td className="py-1.5">512x512</td></tr>
-                  <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Video models (Wan I2V, etc.)</td><td className="py-1.5 pr-3">720p equivalent</td><td className="py-1.5">480p</td></tr>
+                <tbody className="text-gray-600 dark:text-gray-400">
+                  <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">FLUX (all trainers)</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Z-Image Turbo</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Qwen Image</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Wan 2.2 T2I</td><td className="py-1.5 pr-3">768x768</td><td className="py-1.5">512x512</td></tr>
+                  <tr><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Video models (Wan I2V, etc.)</td><td className="py-1.5 pr-3">720p equivalent</td><td className="py-1.5">480p</td></tr>
                 </tbody>
               </table>
             </div>
@@ -540,9 +540,9 @@ export function LoraGuideContent() {
               reproduce those exact images. Variety is the key to generalization.
             </Warning>
 
-            <h4 className="font-semibold text-sm text-gray-900">Uploading Images</h4>
-            <p className="text-sm text-gray-600">Two methods:</p>
-            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-5">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Uploading Images</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Two methods:</p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-disc pl-5">
               <li><strong>Drag & Drop / File Upload:</strong> Click the upload area or drag files directly. Supports JPG, PNG, WebP.</li>
               <li><strong>Import from Library:</strong> Click the folder icon to browse your Image Library. Select images across folders, then import them all at once.</li>
             </ul>
@@ -554,42 +554,42 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Wand2} title="Trigger Words — How They Work">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               The trigger word is a unique identifier that activates your LoRA during image generation. When you include
               the trigger word in your prompt, the model applies the learned concept.
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">Choosing a Good Trigger Word</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">Choosing a Good Trigger Word</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>Unique and unlikely:</strong> Choose something that doesn't exist in the base model's training data. "blonde3G" works better than "blonde woman".</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>Short and memorable:</strong> "rxsneaker" is better than "my_red_custom_sneaker_v2".</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span><strong>No common words:</strong> Avoid "red car" or "modern house" — these will collide with the model's existing knowledge.</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                <p className="text-xs font-semibold text-green-800 mb-1">Good Trigger Words</p>
-                <div className="space-y-0.5 text-xs text-green-700">
+              <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Good Trigger Words</p>
+                <div className="space-y-0.5 text-xs text-green-700 dark:text-green-300">
                   <p><CodeBlock>rxsneaker</CodeBlock> — product</p>
                   <p><CodeBlock>zk_sarah</CodeBlock> — character</p>
                   <p><CodeBlock>morisot_style</CodeBlock> — art style</p>
                   <p><CodeBlock>acmebrand</CodeBlock> — brand identity</p>
                 </div>
               </div>
-              <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
-                <p className="text-xs font-semibold text-red-800 mb-1">Bad Trigger Words</p>
-                <div className="space-y-0.5 text-xs text-red-700">
+              <div className="border border-red-200 dark:border-red-800 rounded-lg p-3 bg-red-50/50 dark:bg-red-950/40">
+                <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-1">Bad Trigger Words</p>
+                <div className="space-y-0.5 text-xs text-red-700 dark:text-red-300">
                   <p><CodeBlock>red shoe</CodeBlock> — too common</p>
                   <p><CodeBlock>woman</CodeBlock> — way too generic</p>
                   <p><CodeBlock>watercolor</CodeBlock> — existing concept</p>
@@ -612,41 +612,41 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={FileText} title="Captioning Deep Dive — AI Captions, Formats & The Two-Caption Method">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Every training image needs a text caption file. Captions are the second most important factor
               after image quality — they determine what the trigger word learns vs what stays flexible.
             </p>
 
             <div className="grid gap-3">
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Brain className="w-4 h-4 text-purple-600" />
-                  <h4 className="font-semibold text-sm text-gray-900">AI Auto-Caption (Recommended)</h4>
-                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">ON by default</span>
+                  <Brain className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">AI Auto-Caption (Recommended)</h4>
+                  <span className="text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full">ON by default</span>
                 </div>
-                <p className="text-xs text-gray-600 mb-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                   GPT-4o-mini analyzes each image individually and writes a custom caption. This produces significantly
                   better LoRAs than template captions because every image gets a unique, accurate description.
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   The captioning strategy automatically adapts to your training type:
                 </p>
-                <ul className="text-xs text-gray-600 mt-1 space-y-1 list-disc pl-5">
+                <ul className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-1 list-disc pl-5">
                   <li><strong>Subject:</strong> Describes pose, setting, clothing — omits identity</li>
                   <li><strong>Style:</strong> Describes content only — omits visual aesthetic</li>
                   <li><strong>Character:</strong> Describes pose, setting — omits facial features</li>
                 </ul>
               </div>
 
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <h4 className="font-semibold text-sm text-gray-900">Template Captions (Fallback)</h4>
+                  <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Template Captions (Fallback)</h4>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   If auto-captioning is off or fails, every image gets the same generic caption:
                 </p>
-                <ul className="text-xs text-gray-600 mt-1 space-y-1 list-disc pl-5">
+                <ul className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-1 list-disc pl-5">
                   <li>Subject: <CodeBlock>a photo of {'{trigger_word}'}</CodeBlock></li>
                   <li>Style: <CodeBlock>an image in {'{trigger_word}'} style</CodeBlock></li>
                   <li>Character: <CodeBlock>a portrait of {'{trigger_word}'}, face visible</CodeBlock></li>
@@ -654,61 +654,61 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Natural Language vs Tag-Based Captioning</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Natural Language vs Tag-Based Captioning</h4>
             <div className="grid grid-cols-2 gap-3">
-              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                <p className="text-xs font-semibold text-green-800 mb-1">Natural Language (Preferred for FLUX)</p>
-                <div className="bg-white border border-green-200 rounded p-2 mt-1">
-                  <p className="text-[10px] font-mono text-gray-600">zk_sarah, standing in a park with trees in the background, wearing a blue denim jacket, natural sunlight from the left, three-quarter angle</p>
+              <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Natural Language (Preferred for FLUX)</p>
+                <div className="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded p-2 mt-1">
+                  <p className="text-[10px] font-mono text-gray-600 dark:text-gray-400">zk_sarah, standing in a park with trees in the background, wearing a blue denim jacket, natural sunlight from the left, three-quarter angle</p>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1">Produces richer, more detailed LoRAs. FLUX models strongly prefer this format.</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Produces richer, more detailed LoRAs. FLUX models strongly prefer this format.</p>
               </div>
-              <div className="border border-gray-200 rounded-lg p-3">
-                <p className="text-xs font-semibold text-gray-800 mb-1">Tag-Based (Acceptable for Qwen/Z-Image)</p>
-                <div className="bg-gray-50 border border-gray-200 rounded p-2 mt-1">
-                  <p className="text-[10px] font-mono text-gray-600">zk_sarah, park, trees, blue denim jacket, sunlight, three-quarter angle</p>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1">Tag-Based (Acceptable for Qwen/Z-Image)</p>
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded p-2 mt-1">
+                  <p className="text-[10px] font-mono text-gray-600 dark:text-gray-400">zk_sarah, park, trees, blue denim jacket, sunlight, three-quarter angle</p>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1">Shorter, more keyword-focused. Qwen and Z-Image models handle both formats equally well.</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Shorter, more keyword-focused. Qwen and Z-Image models handle both formats equally well.</p>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Caption Format Examples by Training Type</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Caption Format Examples by Training Type</h4>
             <div className="space-y-2">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-purple-700 mb-1">SUBJECT CAPTION:</p>
-                <p className="text-xs font-mono text-gray-700">rxsneaker, a red running shoe photographed at a 45-degree angle on a marble surface, soft studio lighting from above, shallow depth of field, white background</p>
-                <p className="text-[10px] text-gray-500 mt-1">Describes: angle, surface, lighting, background. Omits: shoe brand, design details, color specifics (trigger word absorbs these).</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 mb-1">SUBJECT CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">rxsneaker, a red running shoe photographed at a 45-degree angle on a marble surface, soft studio lighting from above, shallow depth of field, white background</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Describes: angle, surface, lighting, background. Omits: shoe brand, design details, color specifics (trigger word absorbs these).</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-teal-700 mb-1">CHARACTER CAPTION:</p>
-                <p className="text-xs font-mono text-gray-700">zk_sarah, sitting at a wooden desk in a home office, wearing a cream knit sweater, warm window light from the right, looking slightly to the left, medium close-up</p>
-                <p className="text-[10px] text-gray-500 mt-1">Describes: pose, clothing, setting, lighting, angle. Omits: hair color, eye color, face shape, skin tone (trigger word absorbs these).</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-teal-700 dark:text-teal-300 mb-1">CHARACTER CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">zk_sarah, sitting at a wooden desk in a home office, wearing a cream knit sweater, warm window light from the right, looking slightly to the left, medium close-up</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Describes: pose, clothing, setting, lighting, angle. Omits: hair color, eye color, face shape, skin tone (trigger word absorbs these).</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-amber-700 mb-1">STYLE CAPTION:</p>
-                <p className="text-xs font-mono text-gray-700">a mountain lake surrounded by pine trees with a small wooden boat at the shore, morning fog rising from the water, distant snow-capped peaks</p>
-                <p className="text-[10px] text-gray-500 mt-1">Describes: content/subject matter ONLY. Omits: brushstrokes, color palette, texture, mood, artistic technique (trigger word absorbs the entire visual style).</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 mb-1">STYLE CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">a mountain lake surrounded by pine trees with a small wooden boat at the shore, morning fog rising from the water, distant snow-capped peaks</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Describes: content/subject matter ONLY. Omits: brushstrokes, color palette, texture, mood, artistic technique (trigger word absorbs the entire visual style).</p>
               </div>
             </div>
 
-            <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/30">
-              <h4 className="font-semibold text-sm text-amber-900 mb-2">The Two-Caption Method (Advanced — for Style LoRAs on FLUX)</h4>
-              <p className="text-xs text-gray-700 mb-2">
+            <div className="border border-amber-200 dark:border-amber-800 rounded-xl p-4 bg-amber-50/30 dark:bg-amber-950/40">
+              <h4 className="font-semibold text-sm text-amber-900 dark:text-amber-200 mb-2">The Two-Caption Method (Advanced — for Style LoRAs on FLUX)</h4>
+              <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                 This technique from the FLUX community strengthens style absorption and weakens subject association. It's built into Stitch's
                 auto-captioning when you select "Style" training type, but understanding it helps you write better manual captions.
               </p>
-              <div className="space-y-2 text-xs text-gray-700">
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <p><strong>How it works:</strong></p>
                 <p>1. <strong>Long caption:</strong> Detailed content description (what's in the image) — "a sunset over a mountain lake with pine trees, a small boat near the shore, golden hour reflections on the water"</p>
                 <p>2. <strong>Short caption:</strong> Just the trigger phrase — "in the style of aqua_wash"</p>
                 <p>3. The model trains on both versions of each image. The long caption teaches it that content is variable (not part of the style).
                    The short caption reinforces that the trigger word = the visual treatment.</p>
-                <p className="text-gray-500 italic mt-1">Result: Stronger style LoRAs that can be applied to any content without the model trying to reproduce the training image subjects.</p>
+                <p className="text-gray-500 dark:text-gray-400 italic mt-1">Result: Stronger style LoRAs that can be applied to any content without the model trying to reproduce the training image subjects.</p>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">When to Write Manual Captions</h4>
-            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-5">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">When to Write Manual Captions</h4>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-disc pl-5">
               <li>If auto-captions are describing features you want the trigger word to absorb (e.g., describing the art style in a style LoRA)</li>
               <li>If your dataset has unusual content the AI might miscaption (niche products, abstract art)</li>
               <li>If you want maximum precision for a commercial character LoRA</li>
@@ -726,12 +726,12 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Layers} title="Training Models — Complete Reference">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               18 training models are available across 2 categories (14 image, 4 video). Each produces a LoRA compatible with its base model family.
             </p>
 
-            <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-              <Image className="w-4 h-4 text-purple-600" /> Image Models (14)
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Image className="w-4 h-4 text-purple-600 dark:text-purple-400" /> Image Models (14)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -904,8 +904,8 @@ export function LoraGuideContent() {
               />
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2 mt-6">
-              <Video className="w-4 h-4 text-blue-600" /> Video Models (4)
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2 mt-6">
+              <Video className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Video Models (4)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -978,7 +978,7 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={TrendingUp} title="Model-Specific Parameter Recipes">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Concrete starting configurations per model family, optimized for realistic output. These are battle-tested defaults —
               start here and adjust based on results.
             </p>
@@ -986,73 +986,73 @@ export function LoraGuideContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Model</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Learning Rate</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Steps (Style)</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Steps (Character)</th>
-                    <th className="text-left py-2 font-semibold text-gray-900">Key Notes</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Model</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Learning Rate</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Steps (Style)</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Steps (Character)</th>
+                    <th className="text-left py-2 font-semibold text-gray-900 dark:text-gray-100">Key Notes</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600">
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX LoRA Fast</td>
-                    <td className="py-2 pr-2 font-mono text-gray-400">Internal</td>
+                <tbody className="text-gray-600 dark:text-gray-400">
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX LoRA Fast</td>
+                    <td className="py-2 pr-2 font-mono text-gray-400 dark:text-gray-500">Internal</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2">$2 flat. Best default — start here.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX Portrait</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX Portrait</td>
                     <td className="py-2 pr-2 font-mono">0.00009</td>
-                    <td className="py-2 pr-2 text-gray-400">N/A</td>
+                    <td className="py-2 pr-2 text-gray-400 dark:text-gray-500">N/A</td>
                     <td className="py-2 pr-2">2000-3000</td>
                     <td className="py-2">Face specialist. Auto-crops to subject.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Turbo FLUX</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Turbo FLUX</td>
                     <td className="py-2 pr-2 font-mono">0.00115</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">800-1500</td>
                     <td className="py-2">Aggressive LR. Face crop built in.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Dev V2</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX.2 Dev V2</td>
                     <td className="py-2 pr-2 font-mono">0.00005</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">800-1500</td>
                     <td className="py-2">Premium. Very conservative LR — start low.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image Turbo</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Z-Image Turbo</td>
                     <td className="py-2 pr-2 font-mono">0.0001</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">1000-1500</td>
                     <td className="py-2">Small model, sensitive. Start conservative.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image V2</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Z-Image V2</td>
                     <td className="py-2 pr-2 font-mono">0.0005</td>
                     <td className="py-2 pr-2">1500-2500</td>
                     <td className="py-2 pr-2">2000-3000</td>
                     <td className="py-2">Cheapest. Needs more steps at higher LR.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Wan 2.2 T2I</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Wan 2.2 T2I</td>
                     <td className="py-2 pr-2 font-mono">0.0007</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">800-1500</td>
                     <td className="py-2">Highest default LR. Style + mask support.</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Qwen (all)</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Qwen (all)</td>
                     <td className="py-2 pr-2 font-mono">0.0005</td>
                     <td className="py-2 pr-2">800-1200</td>
                     <td className="py-2 pr-2">800-1500</td>
                     <td className="py-2">Works from small datasets (even 8-10 images).</td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-medium text-gray-900">Video (Wan I2V)</td>
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Video (Wan I2V)</td>
                     <td className="py-2 pr-2 font-mono">0.0002</td>
                     <td className="py-2 pr-2">300-500</td>
                     <td className="py-2 pr-2">300-500</td>
@@ -1063,21 +1063,21 @@ export function LoraGuideContent() {
             </div>
 
             <div className="border border-[#2C666E]/20 rounded-xl p-4 bg-[#2C666E]/5">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">FAL.ai Sweet Spot Research</h4>
-              <p className="text-xs text-gray-700">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">FAL.ai Sweet Spot Research</h4>
+              <p className="text-xs text-gray-700 dark:text-gray-300">
                 From FAL.ai's own blog posts and community testing:
               </p>
-              <div className="mt-2 space-y-2 text-xs text-gray-700">
+              <div className="mt-2 space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <div className="flex gap-3 items-start">
-                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">500 steps</span>
+                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[10px] font-bold rounded shrink-0">500 steps</span>
                   <span>Insufficient — style barely learned, character unrecognizable</span>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0">1000 steps</span>
+                  <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold rounded shrink-0">1000 steps</span>
                   <span>Sweet spot for style LoRAs. Good results at ~1500 for characters, peak quality around 2500-3000</span>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0">2000+ steps</span>
+                  <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-[10px] font-bold rounded shrink-0">2000+ steps</span>
                   <span>Diminishing returns for styles. Characters can go higher but watch for overfitting above 3000</span>
                 </div>
               </div>
@@ -1101,97 +1101,97 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Settings} title="Advanced Settings — Steps, Learning Rate, Masks (Deep Dive)">
           <div className="mt-4 space-y-6">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               These settings are in the collapsible "Advanced Settings" panel on the Configure step.
               The defaults are calibrated per model and work well for most cases — but understanding them
               helps you diagnose and fix training issues.
             </p>
 
             {/* TRAINING STEPS */}
-            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Repeat className="w-4 h-4 text-[#2C666E]" />
                 Training Steps
               </h4>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Each "step" is one pass through a batch of training images where the model adjusts its internal weights
                 to better reproduce your concept. Think of it like practice rounds — each step makes the model slightly
                 better at recognizing your subject/style.
               </p>
 
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <h5 className="font-medium text-sm text-gray-900">What Happens at Each Step Count</h5>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">What Happens at Each Step Count</h5>
                 <div className="space-y-2">
                   <div className="flex gap-3 items-start">
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">TOO LOW</span>
-                    <div className="text-xs text-gray-700">
+                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[10px] font-bold rounded shrink-0">TOO LOW</span>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">
                       <p><strong>~100-300 steps:</strong> The model barely learns anything. Generated images show vague hints of your subject but lack detail. Faces are blurry, products look generic. The LoRA has almost no effect.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
-                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded shrink-0">WARMING UP</span>
-                    <div className="text-xs text-gray-700">
+                    <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 text-[10px] font-bold rounded shrink-0">WARMING UP</span>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">
                       <p><strong>~300-700 steps:</strong> The model starts recognizing the concept. Outputs begin to resemble your subject but details like eye shape, skin texture, or product proportions are inconsistent.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0">SWEET SPOT</span>
-                    <div className="text-xs text-gray-700">
+                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold rounded shrink-0">SWEET SPOT</span>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">
                       <p><strong>~800-1500 steps (FLUX), ~250-500 (Wan):</strong> The model has learned your concept well AND can still generalize. You can place the subject in new scenes, poses, and lighting that weren't in the training data. This is where you want to be.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
-                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0">DIMINISHING</span>
-                    <div className="text-xs text-gray-700">
+                    <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-[10px] font-bold rounded shrink-0">DIMINISHING</span>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">
                       <p><strong>~1500-2500 steps:</strong> Quality plateaus. The model is accurate but starts losing flexibility — new poses/scenes might look slightly "stiff" or unnatural.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">OVERFIT</span>
-                    <div className="text-xs text-gray-700">
+                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[10px] font-bold rounded shrink-0">OVERFIT</span>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">
                       <p><strong>~3000+ steps:</strong> The model has <em>memorized</em> your training images. Every generation looks like a copy of a training photo regardless of your prompt. Outputs look artificially sharp. The LoRA is "frozen" — it refuses to generalize to new situations.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h5 className="font-medium text-sm text-gray-900 mb-2">Recommended Steps by Model & Dataset Size</h5>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Recommended Steps by Model & Dataset Size</h5>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model</th>
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">10 images</th>
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">20 images</th>
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">50 images</th>
-                        <th className="text-left py-1.5 font-semibold text-gray-700">100 images</th>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Model</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">10 images</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">20 images</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">50 images</th>
+                        <th className="text-left py-1.5 font-semibold text-gray-700 dark:text-gray-300">100 images</th>
                       </tr>
                     </thead>
-                    <tbody className="text-gray-600">
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1200-1800</td><td className="py-1.5">1500-2500</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3">1500-2000</td><td className="py-1.5 pr-3">2000-3000</td><td className="py-1.5 pr-3">3000-4000</td><td className="py-1.5">4000-6000</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3">200-300</td><td className="py-1.5 pr-3">300-500</td><td className="py-1.5 pr-3">400-800</td><td className="py-1.5">600-1200</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
-                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
+                    <tbody className="text-gray-600 dark:text-gray-400">
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">FLUX LoRA Fast</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1200-1800</td><td className="py-1.5">1500-2500</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">FLUX Portrait</td><td className="py-1.5 pr-3">1500-2000</td><td className="py-1.5 pr-3">2000-3000</td><td className="py-1.5 pr-3">3000-4000</td><td className="py-1.5">4000-6000</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3">200-300</td><td className="py-1.5 pr-3">300-500</td><td className="py-1.5 pr-3">400-800</td><td className="py-1.5">600-1200</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Z-Image Turbo</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
+                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Qwen Image</td><td className="py-1.5 pr-3">600-800</td><td className="py-1.5 pr-3">800-1200</td><td className="py-1.5 pr-3">1000-1500</td><td className="py-1.5">1200-2000</td></tr>
                     </tbody>
                   </table>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                  <p className="text-xs font-semibold text-green-800 mb-1.5">Example: Character LoRA (good)</p>
-                  <div className="text-xs text-green-700 space-y-0.5">
+                <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1.5">Example: Character LoRA (good)</p>
+                  <div className="text-xs text-green-700 dark:text-green-300 space-y-0.5">
                     <p>Model: FLUX LoRA Fast</p>
                     <p>Dataset: 20 images of "zk_sarah"</p>
                     <p>Steps: <strong>1000</strong></p>
                     <p>Result: Accurate face in new poses, new outfits, new scenes. Natural-looking outputs.</p>
                   </div>
                 </div>
-                <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
-                  <p className="text-xs font-semibold text-red-800 mb-1.5">Example: Same LoRA (overfit)</p>
-                  <div className="text-xs text-red-700 space-y-0.5">
+                <div className="border border-red-200 dark:border-red-800 rounded-lg p-3 bg-red-50/50 dark:bg-red-950/40">
+                  <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-1.5">Example: Same LoRA (overfit)</p>
+                  <div className="text-xs text-red-700 dark:text-red-300 space-y-0.5">
                     <p>Model: FLUX LoRA Fast</p>
                     <p>Dataset: 20 images of "zk_sarah"</p>
                     <p>Steps: <strong>5000</strong></p>
@@ -1208,29 +1208,29 @@ export function LoraGuideContent() {
             </div>
 
             {/* LEARNING RATE */}
-            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[#2C666E]" />
                 Learning Rate
               </h4>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 The learning rate controls how much the model changes its weights on each training step. Think of it
                 like a volume knob — too low and the model barely learns, too high and it "overshoots" and produces
                 distorted, unstable results.
               </p>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h5 className="font-medium text-sm text-gray-900 mb-3">Visual Analogy</h5>
-                <p className="text-xs text-gray-700 mb-2">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3">Visual Analogy</h5>
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                   Imagine you're trying to park a car in a tight spot:
                 </p>
-                <div className="space-y-2 text-xs text-gray-700">
+                <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                   <div className="flex items-start gap-2">
                     <span className="text-blue-500 font-bold shrink-0">0.00001</span>
                     <span>= Moving 1mm at a time. You'll get there perfectly but it takes forever (needs way more steps).</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="text-green-600 font-bold shrink-0">0.0004&nbsp;</span>
+                    <span className="text-green-600 dark:text-green-400 font-bold shrink-0">0.0004&nbsp;</span>
                     <span>= Moving 6 inches at a time. Efficient — you park accurately in a reasonable time. <strong>This is a typical default (e.g. Qwen Image, Wan T2I).</strong></span>
                   </div>
                   <div className="flex items-start gap-2">
@@ -1240,44 +1240,44 @@ export function LoraGuideContent() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h5 className="font-medium text-sm text-gray-900 mb-2">Default Learning Rates by Model</h5>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Default Learning Rates by Model</h5>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model</th>
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Default LR</th>
-                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Safe range</th>
-                        <th className="text-left py-1.5 font-semibold text-gray-700">Notes</th>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Model</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Default LR</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-gray-700 dark:text-gray-300">Safe range</th>
+                        <th className="text-left py-1.5 font-semibold text-gray-700 dark:text-gray-300">Notes</th>
                       </tr>
                     </thead>
-                    <tbody className="text-gray-600">
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono text-gray-400">N/A</td><td className="py-1.5 pr-3 font-mono text-gray-400">&mdash;</td><td className="py-1.5">Internally calibrated. Not adjustable.</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3 font-mono">0.00009</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0002</td><td className="py-1.5">Lower — portrait is more sensitive</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3 font-mono">0.0002</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.0005</td><td className="py-1.5">Video models need lower LR</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3 font-mono">0.0007</td><td className="py-1.5 pr-3 font-mono">0.0003 - 0.001</td><td className="py-1.5">Image variant tolerates higher LR</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3 font-mono">0.0005</td><td className="py-1.5 pr-3 font-mono">0.0002 - 0.001</td><td className="py-1.5">Standard range</td></tr>
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Small model, lower rate needed</td></tr>
-                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Hunyuan Video</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Conservative for stability</td></tr>
+                    <tbody className="text-gray-600 dark:text-gray-400">
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono text-gray-400 dark:text-gray-500">N/A</td><td className="py-1.5 pr-3 font-mono text-gray-400 dark:text-gray-500">&mdash;</td><td className="py-1.5">Internally calibrated. Not adjustable.</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">FLUX Portrait</td><td className="py-1.5 pr-3 font-mono">0.00009</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0002</td><td className="py-1.5">Lower — portrait is more sensitive</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3 font-mono">0.0002</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.0005</td><td className="py-1.5">Video models need lower LR</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Wan 2.2 T2I</td><td className="py-1.5 pr-3 font-mono">0.0007</td><td className="py-1.5 pr-3 font-mono">0.0003 - 0.001</td><td className="py-1.5">Image variant tolerates higher LR</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Qwen Image</td><td className="py-1.5 pr-3 font-mono">0.0005</td><td className="py-1.5 pr-3 font-mono">0.0002 - 0.001</td><td className="py-1.5">Standard range</td></tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700"><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Z-Image Turbo</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Small model, lower rate needed</td></tr>
+                      <tr><td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">Hunyuan Video</td><td className="py-1.5 pr-3 font-mono">0.0001</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0003</td><td className="py-1.5">Conservative for stability</td></tr>
                     </tbody>
                   </table>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                  <p className="text-xs font-semibold text-green-800 mb-1.5">When to INCREASE learning rate</p>
-                  <ul className="text-xs text-green-700 space-y-0.5 list-disc pl-4">
+                <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1.5">When to INCREASE learning rate</p>
+                  <ul className="text-xs text-green-700 dark:text-green-300 space-y-0.5 list-disc pl-4">
                     <li>Training completed but LoRA has very weak effect</li>
                     <li>Trigger word barely changes the output</li>
                     <li>You've already tried increasing steps with no improvement</li>
                     <li>Increase by 1.5-2x, not more (e.g. 0.0005 to 0.00075)</li>
                   </ul>
                 </div>
-                <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
-                  <p className="text-xs font-semibold text-red-800 mb-1.5">When to DECREASE learning rate</p>
-                  <ul className="text-xs text-red-700 space-y-0.5 list-disc pl-4">
+                <div className="border border-red-200 dark:border-red-800 rounded-lg p-3 bg-red-50/50 dark:bg-red-950/40">
+                  <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-1.5">When to DECREASE learning rate</p>
+                  <ul className="text-xs text-red-700 dark:text-red-300 space-y-0.5 list-disc pl-4">
                     <li>Outputs look distorted, warped, or glitchy</li>
                     <li>Faces have artifacts or wrong proportions</li>
                     <li>Colors look oversaturated or wrong</li>
@@ -1294,20 +1294,20 @@ export function LoraGuideContent() {
             </div>
 
             {/* CREATE MASKS */}
-            <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-4">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Target className="w-4 h-4 text-[#2C666E]" />
                 Create Masks (Face Detection & Segmentation)
               </h4>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 When "Create Masks" is enabled, the training system runs face detection on every image in your dataset.
                 It creates a <strong>segmentation mask</strong> — essentially a highlighted overlay that tells the model
                 "pay extra attention to this area" during training.
               </p>
 
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <h5 className="font-medium text-sm text-gray-900">How It Works (Step by Step)</h5>
-                <div className="space-y-2 text-xs text-gray-700">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">How It Works (Step by Step)</h5>
+                <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                   <div className="flex gap-3 items-start">
                     <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#2C666E] text-white text-[10px] font-bold shrink-0">1</span>
                     <span>Each training image is scanned for faces using AI face detection</span>
@@ -1327,36 +1327,36 @@ export function LoraGuideContent() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h5 className="font-medium text-sm text-gray-900 mb-2">Supported Models</h5>
-                <p className="text-xs text-gray-600 mb-2">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Supported Models</h5>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                   Only 2 of our 16 training models support masks. The toggle is automatically hidden for models that don't support it. Both models have masks enabled by default.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span className="text-gray-700"><strong>FLUX LoRA Fast</strong> — <CodeBlock>create_masks</CodeBlock></span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300"><strong>FLUX LoRA Fast</strong> — <CodeBlock>create_masks</CodeBlock></span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span className="text-gray-700"><strong>Wan 2.2 T2I</strong> — <CodeBlock>use_masks</CodeBlock></span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300"><strong>Wan 2.2 T2I</strong> — <CodeBlock>use_masks</CodeBlock></span>
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3">
-                <div className="border border-green-200 rounded-lg p-4 bg-green-50/50">
-                  <p className="text-xs font-semibold text-green-800 mb-2">ENABLE masks when:</p>
-                  <ul className="text-xs text-green-700 space-y-1 list-disc pl-4">
+                <div className="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50/50 dark:bg-green-950/40">
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-2">ENABLE masks when:</p>
+                  <ul className="text-xs text-green-700 dark:text-green-300 space-y-1 list-disc pl-4">
                     <li><strong>Training a human character/face</strong> — masks ensure the model prioritizes getting the face right over background details</li>
                     <li><strong>Your character has distinctive facial features</strong> — unique eye shape, freckles, scars, facial hair that need precise reproduction</li>
                     <li><strong>You want face consistency across varied scenes</strong> — masks help the model learn "this face" vs "this entire image"</li>
                   </ul>
                 </div>
 
-                <div className="border border-red-200 rounded-lg p-4 bg-red-50/50">
-                  <p className="text-xs font-semibold text-red-800 mb-2">DISABLE masks when:</p>
-                  <ul className="text-xs text-red-700 space-y-1 list-disc pl-4">
+                <div className="border border-red-200 dark:border-red-800 rounded-lg p-4 bg-red-50/50 dark:bg-red-950/40">
+                  <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-2">DISABLE masks when:</p>
+                  <ul className="text-xs text-red-700 dark:text-red-300 space-y-1 list-disc pl-4">
                     <li><strong>Training a visual style</strong> — the model needs to learn the entire image's aesthetic, not just faces</li>
                     <li><strong>Training a product/object</strong> — there are no faces to detect; masks would find nothing or produce false positives</li>
                     <li><strong>Training non-human subjects</strong> — pets, vehicles, buildings, logos. Face detection won't find them.</li>
@@ -1374,18 +1374,18 @@ export function LoraGuideContent() {
 
             {/* COMBINING SETTINGS */}
             <div className="border border-[#2C666E]/20 rounded-xl p-5 bg-[#2C666E]/5 space-y-4">
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-[#2C666E]" />
                 Putting It All Together — Example Configurations
               </h4>
 
               <div className="space-y-3">
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-purple-600" />
-                    <h5 className="font-medium text-sm text-gray-900">Character: AI Influencer "Sophia"</h5>
+                    <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">Character: AI Influencer "Sophia"</h5>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
                     <p><strong>Model:</strong> FLUX LoRA Fast</p>
                     <p><strong>Training Type:</strong> Character</p>
                     <p><strong>Trigger Word:</strong> <CodeBlock>soph_x7</CodeBlock></p>
@@ -1397,15 +1397,15 @@ export function LoraGuideContent() {
                     <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>
                     <p><strong>Time:</strong> ~8 minutes</p>
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-2 italic">Good dataset: 4 close-ups, 4 portraits, 6 waist-up, 8 full-body. 2 outfits, 3 backgrounds, varied poses and lighting.</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">Good dataset: 4 close-ups, 4 portraits, 6 waist-up, 8 full-body. 2 outfits, 3 backgrounds, varied poses and lighting.</p>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
-                    <Palette className="w-4 h-4 text-amber-600" />
-                    <h5 className="font-medium text-sm text-gray-900">Style: Watercolor Brand Aesthetic</h5>
+                    <Palette className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">Style: Watercolor Brand Aesthetic</h5>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
                     <p><strong>Model:</strong> Z-Image Turbo</p>
                     <p><strong>Training Type:</strong> Style</p>
                     <p><strong>Trigger Word:</strong> <CodeBlock>aqua_wash</CodeBlock></p>
@@ -1417,15 +1417,15 @@ export function LoraGuideContent() {
                     <p><strong>Cost:</strong> ~$2.26 + ~$0.01 captioning</p>
                     <p><strong>Time:</strong> ~12 minutes</p>
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-2 italic">Dataset: 18 watercolor artworks. Mix of landscapes, portraits, still life — all sharing the same watercolor technique. Captions describe content only ("a boat on a lake, mountains in background") — the visual style is NOT described so the trigger word absorbs it.</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">Dataset: 18 watercolor artworks. Mix of landscapes, portraits, still life — all sharing the same watercolor technique. Captions describe content only ("a boat on a lake, mountains in background") — the visual style is NOT described so the trigger word absorbs it.</p>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
-                    <Video className="w-4 h-4 text-blue-600" />
-                    <h5 className="font-medium text-sm text-gray-900">Video: Character Consistency in Animation</h5>
+                    <Video className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">Video: Character Consistency in Animation</h5>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
                     <p><strong>Model:</strong> Wan 2.2 I2V-A14B</p>
                     <p><strong>Training Type:</strong> Subject</p>
                     <p><strong>Trigger Word:</strong> <CodeBlock>soph_x7</CodeBlock></p>
@@ -1437,15 +1437,15 @@ export function LoraGuideContent() {
                     <p><strong>Cost:</strong> ~$2.00 + ~$0.01 captioning</p>
                     <p><strong>Time:</strong> ~25 minutes</p>
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-2 italic">Tip: Use the same trigger word as your FLUX LoRA. Train a FLUX LoRA for keyframes, then a Wan LoRA for animation — both respond to the same trigger word for a unified character pipeline.</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">Tip: Use the same trigger word as your FLUX LoRA. Train a FLUX LoRA for keyframes, then a Wan LoRA for animation — both respond to the same trigger word for a unified character pipeline.</p>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
-                    <Camera className="w-4 h-4 text-teal-600" />
-                    <h5 className="font-medium text-sm text-gray-900">Product: Custom Sneaker Design</h5>
+                    <Camera className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100">Product: Custom Sneaker Design</h5>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
                     <p><strong>Model:</strong> FLUX LoRA Fast</p>
                     <p><strong>Training Type:</strong> Subject</p>
                     <p><strong>Trigger Word:</strong> <CodeBlock>rxsnkr_v1</CodeBlock></p>
@@ -1457,7 +1457,7 @@ export function LoraGuideContent() {
                     <p><strong>Cost:</strong> $2.00 flat + ~$0.01 captioning</p>
                     <p><strong>Time:</strong> ~6 minutes</p>
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-2 italic">Dataset: Product photos from multiple angles (front, side, back, top, sole). White background + lifestyle shots. Auto-captions describe angle, lighting, surface — NOT the shoe's brand/design details (trigger word absorbs those).</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">Dataset: Product photos from multiple angles (front, side, back, top, sole). White background + lifestyle shots. Auto-captions describe angle, lighting, surface — NOT the shoe's brand/design details (trigger word absorbs those).</p>
                 </div>
               </div>
             </div>
@@ -1469,7 +1469,7 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Clock} title="What Happens During Training">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               After you click "Start Training", here's exactly what happens behind the scenes:
             </p>
 
@@ -1487,8 +1487,8 @@ export function LoraGuideContent() {
                     <StageIcon className={`w-4 h-4 text-${color}-600`} />
                   </div>
                   <div>
-                    <p className="font-medium text-sm text-gray-900">{stage}</p>
-                    <p className="text-xs text-gray-600">{desc}</p>
+                    <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{stage}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{desc}</p>
                   </div>
                 </div>
               ))}
@@ -1506,13 +1506,13 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Sparkles} title="Generating Images with Your LoRA — Complete Guide" defaultOpen={true}>
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               This is the most important section. Training a LoRA is only half the battle — you need to know
               <strong> which generation model to use</strong>, how to configure scale, and how to write prompts that get realistic results.
             </p>
 
-            <h4 className="font-semibold text-sm text-gray-900">Model Compatibility Matrix</h4>
-            <p className="text-xs text-gray-600 mb-2">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Model Compatibility Matrix</h4>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
               LoRAs only work with generation models from the <strong>same model family</strong> they were trained on.
               A FLUX LoRA will not work with a Wan generator, and vice versa.
             </p>
@@ -1520,55 +1520,55 @@ export function LoraGuideContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Trained On</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Compatible Generator</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Type</th>
-                    <th className="text-left py-2 font-semibold text-gray-900">Works In</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Trained On</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Compatible Generator</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Type</th>
+                    <th className="text-left py-2 font-semibold text-gray-900 dark:text-gray-100">Works In</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600">
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.1 trainers (Fast, Portrait, Turbo, Kontext)</td>
+                <tbody className="text-gray-600 dark:text-gray-400">
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX.1 trainers (Fast, Portrait, Turbo, Kontext)</td>
                     <td className="py-2 pr-2">FLUX 2 Dev (LoRA)</td>
                     <td className="py-2 pr-2">Image</td>
                     <td className="py-2">Imagineer, Turnaround, Storyboard, Shorts, Campaigns</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Dev V2</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX.2 Dev V2</td>
                     <td className="py-2 pr-2">FLUX 2 Dev (LoRA)</td>
                     <td className="py-2 pr-2">Image</td>
                     <td className="py-2">Same as above</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Klein 4B</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX.2 Klein 4B</td>
                     <td className="py-2 pr-2">Klein 4B (LoRA)</td>
                     <td className="py-2 pr-2">Image</td>
                     <td className="py-2">Imagineer (cheapest inference at $0.016/MP)</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Klein 9B</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">FLUX.2 Klein 9B</td>
                     <td className="py-2 pr-2">Klein 9B (LoRA)</td>
                     <td className="py-2 pr-2">Image</td>
                     <td className="py-2">Imagineer (mid-tier at $0.02/MP)</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-green-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Wan 2.2 T2I</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Wan 2.2 T2I</td>
                     <td className="py-2 pr-2">Wan 2.2 T2I (LoRA)</td>
                     <td className="py-2 pr-2">Image</td>
                     <td className="py-2">Imagineer, pipelines (dual-LoRA auto-detected)</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-red-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image (all)</td>
-                    <td className="py-2 pr-2 text-red-600 italic">No generation endpoint yet</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-red-50/30 dark:bg-red-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Z-Image (all)</td>
+                    <td className="py-2 pr-2 text-red-600 dark:text-red-400 italic">No generation endpoint yet</td>
                     <td className="py-2 pr-2">—</td>
-                    <td className="py-2 text-gray-400">Future support</td>
+                    <td className="py-2 text-gray-400 dark:text-gray-500">Future support</td>
                   </tr>
-                  <tr className="bg-red-50/30">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Qwen (all)</td>
-                    <td className="py-2 pr-2 text-red-600 italic">No generation endpoint yet</td>
+                  <tr className="bg-red-50/30 dark:bg-red-950/40">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Qwen (all)</td>
+                    <td className="py-2 pr-2 text-red-600 dark:text-red-400 italic">No generation endpoint yet</td>
                     <td className="py-2 pr-2">—</td>
-                    <td className="py-2 text-gray-400">Future support</td>
+                    <td className="py-2 text-gray-400 dark:text-gray-500">Future support</td>
                   </tr>
                 </tbody>
               </table>
@@ -1581,44 +1581,44 @@ export function LoraGuideContent() {
               On a budget? Klein 4B ($0.005/step training + $0.016/image) is the cheapest full pipeline. For best quality, use FLUX LoRA Fast ($2 flat).
             </Warning>
 
-            <h4 className="font-semibold text-sm text-gray-900">Step-by-Step: Generating Your First LoRA Image</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Step-by-Step: Generating Your First LoRA Image</h4>
             <div className="space-y-3">
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">1</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Open a Generation Tool</p>
-                  <p className="text-xs text-gray-600">Open <strong>Imagineer</strong> (Text-to-Image mode) — this is the best place to test your LoRA before using it in pipelines.</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Open a Generation Tool</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Open <strong>Imagineer</strong> (Text-to-Image mode) — this is the best place to test your LoRA before using it in pipelines.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">2</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Select the Right Model</p>
-                  <p className="text-xs text-gray-600">Choose a LoRA-compatible generation model: <strong>Flux 2 Dev (LoRA)</strong> for FLUX-trained LoRAs, <strong>Klein 4B/9B</strong> for Klein-trained LoRAs, or <strong>Wan 2.2 T2I</strong> for Wan-trained LoRAs. If you select a non-LoRA model (Nano Banana, SeedDream, Imagen, etc.), the LoRA will have no effect. Wan 2.2 dual-LoRA is auto-detected — just select the LoRA and the right model is chosen for you.</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Select the Right Model</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Choose a LoRA-compatible generation model: <strong>Flux 2 Dev (LoRA)</strong> for FLUX-trained LoRAs, <strong>Klein 4B/9B</strong> for Klein-trained LoRAs, or <strong>Wan 2.2 T2I</strong> for Wan-trained LoRAs. If you select a non-LoRA model (Nano Banana, SeedDream, Imagen, etc.), the LoRA will have no effect. Wan 2.2 dual-LoRA is auto-detected — just select the LoRA and the right model is chosen for you.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">3</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Select Your LoRA</p>
-                  <p className="text-xs text-gray-600">Expand the LoRA section and click to select your trained LoRA. You can select multiple LoRAs for stacking. Custom LoRAs default to scale 1.0, pre-built library LoRAs default to 0.8.</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Select Your LoRA</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Expand the LoRA section and click to select your trained LoRA. You can select multiple LoRAs for stacking. Custom LoRAs default to scale 1.0, pre-built library LoRAs default to 0.8.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">4</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Write Your Prompt WITH the Trigger Word</p>
-                  <p className="text-xs text-gray-600">Place the trigger word at the <strong>beginning</strong> of your prompt:</p>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-2.5 mt-1">
-                    <p className="text-xs font-mono text-gray-700">soph_x7, sitting at a modern cafe, wearing a white linen blouse, warm afternoon sunlight, Canon EOS R5, 85mm f/1.4, shallow depth of field</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Write Your Prompt WITH the Trigger Word</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Place the trigger word at the <strong>beginning</strong> of your prompt:</p>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded p-2.5 mt-1">
+                    <p className="text-xs font-mono text-gray-700 dark:text-gray-300">soph_x7, sitting at a modern cafe, wearing a white linen blouse, warm afternoon sunlight, Canon EOS R5, 85mm f/1.4, shallow depth of field</p>
                   </div>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">5</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Generate & Iterate</p>
-                  <p className="text-xs text-gray-600">Click generate. If the likeness is too weak, increase LoRA scale to 1.0-1.2. If the output is too rigid or shows artifacts, decrease to 0.6-0.8. See the Scale & Stacking section below for detailed guidance.</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">Generate & Iterate</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Click generate. If the likeness is too weak, increase LoRA scale to 1.0-1.2. If the output is too rigid or shows artifacts, decrease to 0.6-0.8. See the Scale & Stacking section below for detailed guidance.</p>
                 </div>
               </div>
             </div>
@@ -1641,64 +1641,64 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Layers} title="LoRA Scale & Stacking Guide">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               The <strong>scale</strong> slider (0.1 - 1.5) controls how strongly the LoRA's learned concept is applied.
               You can also <strong>stack</strong> multiple LoRAs for combined effects.
             </p>
 
-            <h4 className="font-semibold text-sm text-gray-900">Understanding Scale Values</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Understanding Scale Values</h4>
             <div className="space-y-2">
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.1-0.3</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.1-0.3</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Barely perceptible.</strong> Extremely subtle influence — you might not even notice the LoRA is active. Useful for light style hints that shouldn't overpower the prompt.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.4-0.6</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.4-0.6</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Moderate influence.</strong> Subject becomes recognizable but the base model still has significant creative freedom. Good for blending a LoRA concept with creative, varied prompts.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.7-0.8</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.7-0.8</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Recommended balance.</strong> Strong likeness/style while preserving prompt flexibility. Pre-built library LoRAs default to 0.8. This is where most LoRAs work best.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.9-1.0</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.9-1.0</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Full strength.</strong> Strong likeness but reduced prompt flexibility. Custom-trained LoRAs default to 1.0. Outputs closely match training data characteristics.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.1-1.3</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.1-1.3</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Over-strength.</strong> Amplifies the LoRA effect beyond its training weight. Can be useful for style LoRAs that are too subtle at 1.0, but introduces artifacts for character LoRAs. Use with caution.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.4-1.5</span>
-                <div className="text-xs text-gray-700">
+                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.4-1.5</span>
+                <div className="text-xs text-gray-700 dark:text-gray-300">
                   <p><strong>Maximum — experimental only.</strong> High risk of artifacts, distortion, color blowout, and "uncanny valley" effects. Only for edge-case experimentation.</p>
                 </div>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Realism-Specific Scale Guidance</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Realism-Specific Scale Guidance</h4>
             <div className="grid grid-cols-2 gap-3">
-              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                <p className="text-xs font-semibold text-green-800 mb-1.5">For Photorealistic Characters</p>
-                <ul className="text-xs text-green-700 space-y-0.5 list-disc pl-4">
+              <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1.5">For Photorealistic Characters</p>
+                <ul className="text-xs text-green-700 dark:text-green-300 space-y-0.5 list-disc pl-4">
                   <li>Start at <strong>0.8</strong></li>
                   <li>Increase to 1.0 only if likeness is insufficient</li>
                   <li>Above 1.0 tends to produce "uncanny valley" — faces look too perfect, skin too smooth, eyes too sharp</li>
                 </ul>
               </div>
-              <div className="border border-purple-200 rounded-lg p-3 bg-purple-50/50">
-                <p className="text-xs font-semibold text-purple-800 mb-1.5">For Character + Style Blend</p>
-                <ul className="text-xs text-purple-700 space-y-0.5 list-disc pl-4">
+              <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-3 bg-purple-50/50 dark:bg-purple-900/40">
+                <p className="text-xs font-semibold text-purple-800 dark:text-purple-200 mb-1.5">For Character + Style Blend</p>
+                <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-0.5 list-disc pl-4">
                   <li>Character LoRA at <strong>0.7</strong></li>
                   <li>Style LoRA at <strong>0.3-0.4</strong></li>
                   <li>Combined: ~1.0-1.1 total (safe range)</li>
@@ -1706,21 +1706,21 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">LoRA Stacking</h4>
-            <p className="text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">LoRA Stacking</h4>
+            <p className="text-xs text-gray-700 dark:text-gray-300">
               You can select multiple LoRAs simultaneously in the LoRA picker. They're sent as an array to the generation model.
             </p>
-            <div className="space-y-2 text-xs text-gray-700">
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Combined strength should stay below ~1.2</strong> (e.g., two LoRAs at 0.6 each = 1.2 total). Going higher causes artifacts.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Practical combo:</strong> Character LoRA (0.7) + Style LoRA (0.4) = your character rendered in a specific visual style.</span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                 <span><strong>Order matters:</strong> The first LoRA in the picker list takes priority when weights compete.</span>
               </div>
               <div className="flex items-start gap-2">
@@ -1741,62 +1741,62 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Wand2} title="Prompting with LoRAs for Realism">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               How you write your prompt dramatically affects the realism of LoRA-generated images.
               These techniques are specific to getting photorealistic output.
             </p>
 
-            <h4 className="font-semibold text-sm text-gray-900">Trigger Word Placement</h4>
-            <p className="text-xs text-gray-700 mb-2">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Trigger Word Placement</h4>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
               Always place the trigger word at the <strong>beginning</strong> of your prompt. This matches how the training data was
               structured (trigger word prepended to captions) and gives it the strongest influence.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
-                <p className="text-xs font-semibold text-green-800 mb-1">Correct</p>
-                <p className="text-[10px] font-mono text-green-700"><strong>soph_x7</strong>, professional portrait, studio lighting, Canon EOS R5</p>
+              <div className="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/40">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Correct</p>
+                <p className="text-[10px] font-mono text-green-700 dark:text-green-300"><strong>soph_x7</strong>, professional portrait, studio lighting, Canon EOS R5</p>
               </div>
-              <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
-                <p className="text-xs font-semibold text-red-800 mb-1">Avoid</p>
-                <p className="text-[10px] font-mono text-red-700">professional portrait of a woman called <strong>soph_x7</strong> in studio</p>
+              <div className="border border-red-200 dark:border-red-800 rounded-lg p-3 bg-red-50/50 dark:bg-red-950/40">
+                <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-1">Avoid</p>
+                <p className="text-[10px] font-mono text-red-700 dark:text-red-300">professional portrait of a woman called <strong>soph_x7</strong> in studio</p>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">The Realism Prompt Formula</h4>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <p className="text-xs font-mono text-gray-700 leading-relaxed">
-                <span className="text-purple-600 font-bold">{'{trigger_word}'}</span>,{' '}
-                <span className="text-blue-600">[action/pose]</span>,{' '}
-                <span className="text-teal-600">[clothing/appearance]</span>,{' '}
-                <span className="text-amber-600">[setting/location]</span>,{' '}
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">The Realism Prompt Formula</h4>
+            <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 leading-relaxed">
+                <span className="text-purple-600 dark:text-purple-400 font-bold">{'{trigger_word}'}</span>,{' '}
+                <span className="text-blue-600 dark:text-blue-400">[action/pose]</span>,{' '}
+                <span className="text-teal-600 dark:text-teal-400">[clothing/appearance]</span>,{' '}
+                <span className="text-amber-600 dark:text-amber-400">[setting/location]</span>,{' '}
                 <span className="text-orange-600">[lighting description]</span>,{' '}
-                <span className="text-red-600">[camera + lens]</span>,{' '}
-                <span className="text-gray-500">[quality modifiers]</span>
+                <span className="text-red-600 dark:text-red-400">[camera + lens]</span>,{' '}
+                <span className="text-gray-500 dark:text-gray-400">[quality modifiers]</span>
               </p>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Example Prompts for Photorealism</h4>
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Example Prompts for Photorealism</h4>
             <div className="space-y-2">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-purple-700 mb-1">CHARACTER — Outdoor Portrait</p>
-                <p className="text-xs font-mono text-gray-700">soph_x7, sitting at a sidewalk cafe in Paris, wearing a cream knit sweater, warm golden hour sunlight from the left, shallow depth of field, Canon EOS R5, 85mm f/1.4, sharp focus, photorealistic</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 mb-1">CHARACTER — Outdoor Portrait</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">soph_x7, sitting at a sidewalk cafe in Paris, wearing a cream knit sweater, warm golden hour sunlight from the left, shallow depth of field, Canon EOS R5, 85mm f/1.4, sharp focus, photorealistic</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-purple-700 mb-1">CHARACTER — Studio Headshot</p>
-                <p className="text-xs font-mono text-gray-700">soph_x7, professional headshot, slight smile, dark gray studio background, Rembrandt lighting with fill, medium close-up, 105mm f/2, 8K, sharp detail on eyes and skin texture</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 mb-1">CHARACTER — Studio Headshot</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">soph_x7, professional headshot, slight smile, dark gray studio background, Rembrandt lighting with fill, medium close-up, 105mm f/2, 8K, sharp detail on eyes and skin texture</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-amber-700 mb-1">PRODUCT — Lifestyle</p>
-                <p className="text-xs font-mono text-gray-700">rxsnkr_v1, placed on a wet concrete surface with city lights reflecting, night scene, moody blue and orange neon lighting, low angle shot, product photography, 50mm macro, crisp detail</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 mb-1">PRODUCT — Lifestyle</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">rxsnkr_v1, placed on a wet concrete surface with city lights reflecting, night scene, moody blue and orange neon lighting, low angle shot, product photography, 50mm macro, crisp detail</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-teal-700 mb-1">STYLE — Applied to New Content</p>
-                <p className="text-xs font-mono text-gray-700">aqua_wash, a mountain village at sunset with smoke rising from chimneys, winding cobblestone path, warm and cool color contrast</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-teal-700 dark:text-teal-300 mb-1">STYLE — Applied to New Content</p>
+                <p className="text-xs font-mono text-gray-700 dark:text-gray-300">aqua_wash, a mountain village at sunset with smoke rising from chimneys, winding cobblestone path, warm and cool color contrast</p>
               </div>
             </div>
 
-            <h4 className="font-semibold text-sm text-gray-900">Prompting Anti-Patterns</h4>
-            <div className="space-y-2 text-xs text-gray-700">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Prompting Anti-Patterns</h4>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
                 <span><strong>Don't re-describe what the LoRA already knows.</strong> If your character LoRA learned "blonde woman with blue eyes", don't write "soph_x7, blonde woman with blue eyes" — this creates conflicts. Just use the trigger word and describe the <em>new</em> context (pose, setting, clothing).</span>
@@ -1824,47 +1824,47 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={FolderOpen} title="Where LoRAs Work in Stitch">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               LoRAs are available across multiple Stitch tools. Here's where and how to access them in each.
             </p>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Tool</th>
-                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">How to Access LoRA</th>
-                    <th className="text-left py-2 font-semibold text-gray-900">Generation Model</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">Tool</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900 dark:text-gray-100">How to Access LoRA</th>
+                    <th className="text-left py-2 font-semibold text-gray-900 dark:text-gray-100">Generation Model</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600">
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Imagineer (T2I)</td>
+                <tbody className="text-gray-600 dark:text-gray-400">
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Imagineer (T2I)</td>
                     <td className="py-2 pr-2">LoRA picker in generation panel. Must select "Flux 2 Dev" model.</td>
                     <td className="py-2">FLUX 2 Dev (LoRA)</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Imagineer (I2I)</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Imagineer (I2I)</td>
                     <td className="py-2 pr-2">LoRA picker in I2I panel. Must select "Flux 2 Dev" model.</td>
                     <td className="py-2">FLUX 2 Dev (LoRA)</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Turnaround Sheet</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Turnaround Sheet</td>
                     <td className="py-2 pr-2">Available when using the Flux 2 model option.</td>
                     <td className="py-2">FLUX 2 Dev (LoRA)</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Video Ad Creator</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Video Ad Creator</td>
                     <td className="py-2 pr-2">Brand Assets panel. LoRA config saved per campaign template.</td>
                     <td className="py-2">FLUX 2 (images) + Wavespeed WAN (video)</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-medium text-gray-900">Storyboard</td>
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Storyboard</td>
                     <td className="py-2 pr-2">Resolved from template config or brand kit defaults.</td>
                     <td className="py-2">FLUX 2 Dev (auto-selected when LoRAs present)</td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-medium text-gray-900">Shorts Workbench</td>
+                    <td className="py-2 pr-2 font-medium text-gray-900 dark:text-gray-100">Shorts Workbench</td>
                     <td className="py-2 pr-2">Resolved via brand kit defaults or visual subject avatar.</td>
                     <td className="py-2">FLUX 2 Dev (auto-selected when LoRAs present)</td>
                   </tr>
@@ -1885,13 +1885,13 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={AlertTriangle} title="Overfitting, Underfitting & Style Bleed — Diagnosis Guide">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               The three most common LoRA problems, how to identify them, and how to fix them.
             </p>
 
-            <div className="border border-red-200 rounded-xl p-5 bg-red-50/30 space-y-3">
-              <h4 className="font-semibold text-sm text-red-900">Overfitting</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="border border-red-200 dark:border-red-800 rounded-xl p-5 bg-red-50/30 dark:bg-red-950/40 space-y-3">
+              <h4 className="font-semibold text-sm text-red-900 dark:text-red-200">Overfitting</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <p><strong>Symptoms:</strong></p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li>Generated images look like <strong>exact copies</strong> of training photos</li>
@@ -1910,9 +1910,9 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <div className="border border-yellow-200 rounded-xl p-5 bg-yellow-50/30 space-y-3">
-              <h4 className="font-semibold text-sm text-yellow-900">Underfitting</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="border border-yellow-200 dark:border-yellow-800 rounded-xl p-5 bg-yellow-50/30 dark:bg-yellow-950/40 space-y-3">
+              <h4 className="font-semibold text-sm text-yellow-900 dark:text-yellow-200">Underfitting</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <p><strong>Symptoms:</strong></p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li>Subject is <strong>not recognizable</strong> — vague resemblance at best</li>
@@ -1931,9 +1931,9 @@ export function LoraGuideContent() {
               </div>
             </div>
 
-            <div className="border border-purple-200 rounded-xl p-5 bg-purple-50/30 space-y-3">
-              <h4 className="font-semibold text-sm text-purple-900">Style Bleed</h4>
-              <div className="space-y-2 text-xs text-gray-700">
+            <div className="border border-purple-200 dark:border-purple-800 rounded-xl p-5 bg-purple-50/30 dark:bg-purple-900/40 space-y-3">
+              <h4 className="font-semibold text-sm text-purple-900 dark:text-purple-200">Style Bleed</h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                 <p><strong>Symptoms:</strong></p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li>The learned visual style appears <strong>even without the trigger word</strong> in the prompt</li>
@@ -2018,9 +2018,9 @@ export function LoraGuideContent() {
                 a: 'Combined strength likely exceeds 1.2. Reduce individual scales — try 0.5 + 0.5 instead of 0.8 + 0.8. Also check that the LoRAs aren\'t conflicting (e.g., two different character LoRAs).',
               },
             ].map(({ q, a }, i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-3">
-                <p className="font-medium text-sm text-gray-900 mb-1">{q}</p>
-                <p className="text-xs text-gray-600">{a}</p>
+              <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <p className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-1">{q}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{a}</p>
               </div>
             ))}
           </div>
@@ -2031,21 +2031,21 @@ export function LoraGuideContent() {
             ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={DollarSign} title="Cost Reference">
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               All training runs through FAL.ai. Costs vary by model:
             </p>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 pr-3 font-semibold text-gray-900">Model</th>
-                    <th className="text-left py-2 pr-3 font-semibold text-gray-900">Pricing</th>
-                    <th className="text-left py-2 pr-3 font-semibold text-gray-900">Cost for 1000 steps</th>
-                    <th className="text-left py-2 font-semibold text-gray-900">Est. Training Time</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 pr-3 font-semibold text-gray-900 dark:text-gray-100">Model</th>
+                    <th className="text-left py-2 pr-3 font-semibold text-gray-900 dark:text-gray-100">Pricing</th>
+                    <th className="text-left py-2 pr-3 font-semibold text-gray-900 dark:text-gray-100">Cost for 1000 steps</th>
+                    <th className="text-left py-2 font-semibold text-gray-900 dark:text-gray-100">Est. Training Time</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600">
+                <tbody className="text-gray-600 dark:text-gray-400">
                   {[
                     ['FLUX LoRA Fast', '$2 flat', '$2.00', '5-10 min'],
                     ['FLUX Portrait', '$0.0024/step', '$2.40', '20-30 min'],
@@ -2064,8 +2064,8 @@ export function LoraGuideContent() {
                     ['Hunyuan Video', '$5 flat', '$5.00', '20-45 min'],
                     ['LTX-2 Video', '$0.0048/step', '$4.80', '15-30 min'],
                   ].map(([model, pricing, cost, time]) => (
-                    <tr key={model} className="border-b border-gray-100">
-                      <td className="py-2 pr-3 font-medium text-gray-900">{model}</td>
+                    <tr key={model} className="border-b border-gray-100 dark:border-gray-700">
+                      <td className="py-2 pr-3 font-medium text-gray-900 dark:text-gray-100">{model}</td>
                       <td className="py-2 pr-3">{pricing}</td>
                       <td className="py-2 pr-3">{cost}</td>
                       <td className="py-2">{time}</td>
@@ -2134,17 +2134,17 @@ export function LoraGuideContent() {
               },
             ].map(({ title, desc }, i) => (
               <div key={i} className="flex gap-3 items-start">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold shrink-0">{i + 1}</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0">{i + 1}</span>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">{title}</p>
-                  <p className="text-xs text-gray-600">{desc}</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{title}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </Section>
 
-        <div className="text-center text-xs text-gray-400 py-6">
+        <div className="text-center text-xs text-gray-400 dark:text-gray-500 py-6">
           LoRA Training Studio Guide &middot; Internal Admin Reference &middot; Last updated April 2026
         </div>
     </div>
@@ -2156,21 +2156,21 @@ export default function LoraGuidePage() {
 
   return (
     <PasswordGate>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30">
+      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/studio')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <button onClick={() => navigate('/studio')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#2C666E]/10 rounded-lg">
                 <BookOpen className="w-5 h-5 text-[#2C666E]" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">LoRA Training Studio Guide</h1>
-                <p className="text-xs text-gray-500">Complete reference for training and generating with custom AI models</p>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">LoRA Training Studio Guide</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Complete reference for training and generating with custom AI models</p>
               </div>
             </div>
           </div>

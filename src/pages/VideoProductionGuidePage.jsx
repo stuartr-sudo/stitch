@@ -27,23 +27,23 @@ import {
 function Section({ icon: Icon, title, children, defaultOpen = false, badge }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
       >
         <Icon className="w-5 h-5 text-[#2C666E] shrink-0" />
-        <span className="font-semibold text-gray-900 flex-1">{title}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{title}</span>
         {badge && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#2C666E]/10 text-[#2C666E]">{badge}</span>
         )}
         {open
-          ? <ChevronDown className="w-4 h-4 text-gray-400" />
-          : <ChevronRight className="w-4 h-4 text-gray-400" />
+          ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         }
       </button>
       {open && (
-        <div className="px-5 pb-5 bg-white border-t border-gray-100">
+        <div className="px-5 pb-5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           {children}
         </div>
       )}
@@ -56,8 +56,8 @@ function Step({ number, title, children }) {
     <div className="flex gap-4 mt-4">
       <div className="shrink-0 w-8 h-8 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold">{number}</div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-        <div className="text-sm text-gray-600 space-y-2">{children}</div>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{title}</h4>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">{children}</div>
       </div>
     </div>
   );
@@ -65,7 +65,7 @@ function Step({ number, title, children }) {
 
 function Tip({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex gap-2">
       <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -74,7 +74,7 @@ function Tip({ children }) {
 
 function Warning({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 flex gap-2">
       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -83,14 +83,14 @@ function Warning({ children }) {
 
 function InfoBox({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200 flex gap-2">
       <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
   );
 }
 
-function Badge({ label, color = 'bg-gray-100 text-gray-700' }) {
+function Badge({ label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
       {label}
@@ -106,7 +106,7 @@ const STYLE_CATEGORIES = [
     label: 'Realistic / UGC',
     icon: Smartphone,
     color: 'from-orange-500 to-red-500',
-    badgeColor: 'bg-orange-100 text-orange-700',
+    badgeColor: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
     count: 15,
     description: 'Authentic handheld smartphone, UGC testimonials, TikTok creator content, vlog styles',
     bestFor: 'Social media ads, influencer-style content, product reviews, testimonials',
@@ -133,7 +133,7 @@ const STYLE_CATEGORIES = [
     label: 'Professional / Commercial',
     icon: Camera,
     color: 'from-blue-500 to-indigo-500',
-    badgeColor: 'bg-blue-100 text-blue-700',
+    badgeColor: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
     count: 18,
     description: 'Cinematic film looks, commercial ads, product demos, corporate video, documentaries',
     bestFor: 'Brand campaigns, product launches, corporate videos, real estate, training content',
@@ -163,7 +163,7 @@ const STYLE_CATEGORIES = [
     label: 'Artistic / Stylized',
     icon: Brush,
     color: 'from-purple-500 to-pink-500',
-    badgeColor: 'bg-purple-100 text-purple-700',
+    badgeColor: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
     count: 17,
     description: 'Dreamy, vintage, noir, anime, cyberpunk, fantasy, stop motion, watercolor',
     bestFor: 'Creative campaigns, music videos, artistic shorts, distinctive brand identity',
@@ -192,7 +192,7 @@ const STYLE_CATEGORIES = [
     label: 'Faceless / B-Roll',
     icon: Eye,
     color: 'from-teal-500 to-cyan-500',
-    badgeColor: 'bg-teal-100 text-teal-700',
+    badgeColor: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',
     count: 10,
     description: 'No people — landscapes, tech, abstract, food, travel, luxury objects',
     bestFor: 'Faceless YouTube channels, B-roll overlays, ambient content, product-only videos',
@@ -214,7 +214,7 @@ const STYLE_CATEGORIES = [
     label: 'Kids / Animation',
     icon: Baby,
     color: 'from-pink-400 to-yellow-400',
-    badgeColor: 'bg-pink-100 text-pink-700',
+    badgeColor: 'bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300',
     count: 26,
     description: 'Cartoon, 3D animation, storybook, educational, preschool, puppet, watercolor',
     bestFor: 'Kids YouTube channels, educational content, family entertainment, bedtime stories',
@@ -560,55 +560,55 @@ function StyleExplorer() {
     <div>
       {/* Search bar */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search styles... (e.g. 'cinematic', 'kids', 'selfie', 'noir')"
-          className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none transition-colors text-gray-900"
+          className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] outline-none transition-colors text-gray-900 dark:text-gray-100"
         />
       </div>
 
       {/* Category cards */}
       <div className="space-y-4">
         {filteredCategories.map((cat) => (
-          <div key={cat.id} className="border border-gray-200 rounded-xl overflow-hidden">
+          <div key={cat.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
             <button
               onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)}
-              className="w-full flex items-center gap-4 px-5 py-4 bg-white hover:bg-gray-50 transition-colors text-left"
+              className="w-full flex items-center gap-4 px-5 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
             >
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center`}>
                 <cat.icon className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-900">{cat.label}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{cat.label}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${cat.badgeColor}`}>{cat.count} styles</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">{cat.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{cat.description}</p>
               </div>
               {expandedCat === cat.id
-                ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-                : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
               }
             </button>
 
             {expandedCat === cat.id && (
-              <div className="px-5 pb-5 border-t border-gray-100 bg-white">
+              <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div className="mt-3 px-4 py-2.5 bg-[#2C666E]/5 border border-[#2C666E]/15 rounded-lg">
                   <p className="text-xs text-[#07393C]"><strong>Best for:</strong> {cat.bestFor}</p>
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-3">
                   {cat.styles.map((style) => (
-                    <div key={style.key} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div key={style.key} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <div className="flex items-start gap-2">
                         <div className="shrink-0 mt-0.5">
                           <Palette className="w-3.5 h-3.5 text-[#2C666E]" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{style.label}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{style.desc}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{style.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{style.desc}</p>
                         </div>
                       </div>
                     </div>
@@ -621,7 +621,7 @@ function StyleExplorer() {
       </div>
 
       {filteredCategories.length === 0 && (
-        <div className="text-center py-8 text-gray-400 text-sm">
+        <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
           No styles match "{search}". Try a different search term.
         </div>
       )}
@@ -640,8 +640,8 @@ export function VideoProductionGuideContent() {
           <Film className="w-5 h-5 text-[#2C666E]" />
           <span className="text-sm font-bold text-[#2C666E]">Video Production Guide</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Master Video Production in Stitch</h1>
-        <p className="text-gray-500 max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">Master Video Production in Stitch</h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
           Everything you need to know about video styles, models, generation modes, prompt writing,
           and production workflows. From your first Shorts clip to multi-shot cinematic sequences.
         </p>
@@ -684,7 +684,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Palette} title="Video Style Presets — The 86 Looks" badge="86 styles" defaultOpen>
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Video style presets control <strong>how your video moves and feels</strong> — the camera work, lighting,
             color grading, motion quality, and overall aesthetic. They're appended to your motion prompt when
@@ -696,21 +696,21 @@ export function VideoProductionGuideContent() {
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">86</div>
-              <div className="text-xs text-gray-500">Total Presets</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Total Presets</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">6</div>
-              <div className="text-xs text-gray-500">Categories</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Categories</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">~100</div>
-              <div className="text-xs text-gray-500">Words per Prompt</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Words per Prompt</div>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">How to choose a style</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">How to choose a style</h4>
           <ol className="list-decimal list-inside space-y-1.5">
             <li><strong>Match your audience:</strong> UGC/Realistic for social media trust, Professional for brand credibility, Kids for family content.</li>
             <li><strong>Match your niche:</strong> Horror channels use Noir/Dark, tech uses Faceless Tech, food uses Faceless Food.</li>
@@ -723,7 +723,7 @@ export function VideoProductionGuideContent() {
             to all scene clips. In the Storyboard workspace, they're configured in Settings before script generation.
           </Tip>
 
-          <h4 className="font-semibold text-gray-900 mt-5 mb-2">Browse All 86 Styles</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5 mb-2">Browse All 86 Styles</h4>
           <StyleExplorer />
         </div>
       </Section>
@@ -733,38 +733,38 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Cpu} title="Video Models — Which AI to Use" badge="13 models">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Stitch supports <strong>13 video generation models</strong> across two providers (FAL.ai and Wavespeed).
             Each model has different strengths, costs, and supported generation modes. Choosing the right model
             for your content type is the single biggest factor in output quality.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Quick Decision Guide</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Quick Decision Guide</h4>
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-xs font-bold text-purple-700 uppercase mb-1">Best Overall Quality</p>
-              <p className="text-sm font-semibold text-gray-900">Veo 3.1</p>
-              <p className="text-xs text-gray-500">Premium, FLF support, audio</p>
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-lg">
+              <p className="text-xs font-bold text-purple-700 dark:text-purple-300 uppercase mb-1">Best Overall Quality</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Veo 3.1</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Premium, FLF support, audio</p>
             </div>
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-bold text-blue-700 uppercase mb-1">Best Value</p>
-              <p className="text-sm font-semibold text-gray-900">Veo 3.1 Lite</p>
-              <p className="text-xs text-gray-500">60% cheaper, same FLF</p>
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase mb-1">Best Value</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Veo 3.1 Lite</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">60% cheaper, same FLF</p>
             </div>
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-xs font-bold text-green-700 uppercase mb-1">Best for Characters</p>
-              <p className="text-sm font-semibold text-gray-900">Kling V3/O3 Pro</p>
-              <p className="text-xs text-gray-500">Multi-shot, R2V, motion transfer</p>
+            <div className="p-3 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-xs font-bold text-green-700 dark:text-green-300 uppercase mb-1">Best for Characters</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Kling V3/O3 Pro</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Multi-shot, R2V, motion transfer</p>
             </div>
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs font-bold text-amber-700 uppercase mb-1">Cheapest Testing</p>
-              <p className="text-sm font-semibold text-gray-900">Wan 2.5 / Wavespeed WAN</p>
-              <p className="text-xs text-gray-500">~$0.02/gen, fast iteration</p>
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase mb-1">Cheapest Testing</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Wan 2.5 / Wavespeed WAN</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">~$0.02/gen, fast iteration</p>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">All 13 Models</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">All 13 Models</h4>
           <div className="space-y-3 mt-3">
             {VIDEO_MODELS_DATA.map((m) => (
               <ModelDetailCard key={m.key} model={m} />
@@ -778,7 +778,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Layers} title="Generation Modes — How Scenes Connect" badge="5 modes">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Generation modes determine <strong>how the AI creates and connects your video clips</strong>.
             The mode is determined by your model choice and content needs. Understanding modes is key to
@@ -787,21 +787,21 @@ export function VideoProductionGuideContent() {
 
           <div className="space-y-4 mt-4">
             {GENERATION_MODES.map((mode) => (
-              <div key={mode.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+              <div key={mode.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-800">
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`w-8 h-8 rounded-lg ${mode.color} flex items-center justify-center`}>
                     <mode.icon className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">{mode.name}</h4>
-                    <p className="text-xs text-gray-400">{mode.supportedModels}</p>
+                    <h4 className="font-bold text-gray-900 dark:text-gray-100">{mode.name}</h4>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{mode.supportedModels}</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{mode.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{mode.description}</p>
 
                 <div className="mb-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">How it works</p>
-                  <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1.5">How it works</p>
+                  <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
                     {mode.howItWorks.map((step, i) => <li key={i}>{step}</li>)}
                   </ol>
                 </div>
@@ -811,8 +811,8 @@ export function VideoProductionGuideContent() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Pro tips</p>
-                  <ul className="text-xs text-gray-500 space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Pro tips</p>
+                  <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                     {mode.tips.map((tip, i) => (
                       <li key={i} className="flex items-start gap-1.5">
                         <Lightbulb className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
@@ -832,7 +832,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Crosshair} title="Camera Control System — Per-Scene Direction" badge="16 presets">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             The camera control system gives you <strong>per-scene camera direction</strong> with structured, composable controls.
             Instead of writing freeform camera movement text, you select from organized layers that combine into precise
@@ -843,7 +843,7 @@ export function VideoProductionGuideContent() {
             while keeping the overall visual aesthetic.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">16 Quick Presets</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">16 Quick Presets</h4>
           <p>Each preset combines movement, speed, angle, and framing into a ready-to-use camera direction.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
@@ -865,35 +865,35 @@ export function VideoProductionGuideContent() {
               { name: 'Tilt Reveal', desc: 'Slow tilt up, low angle, medium to extreme wide. Scale and grandeur.' },
               { name: 'Detail Inspect', desc: 'Very slow zoom in, eye level, extreme close-up. Texture and detail.' },
             ].map((p) => (
-              <div key={p.name} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
-                <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+              <div key={p.name} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.name}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{p.desc}</p>
               </div>
             ))}
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Custom Camera Controls — 4 Layers</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Custom Camera Controls — 4 Layers</h4>
           <p>When presets don't fit, build your own camera direction from four composable layers:</p>
 
           <div className="space-y-3 mt-3">
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Move className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Movement (16 options)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Movement (16 options)</p>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {['Static', 'Pan Left', 'Pan Right', 'Tilt Up', 'Tilt Down', 'Dolly In', 'Dolly Out',
                   'Orbit Left', 'Orbit Right', 'Tracking', 'Crane Up', 'Crane Down', 'Zoom In',
                   'Zoom Out', 'Handheld', 'Whip Pan'].map((m) => (
-                  <span key={m} className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">{m}</span>
+                  <span key={m} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-medium text-gray-600 dark:text-gray-400">{m}</span>
                 ))}
               </div>
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Gauge className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Speed (4 options)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Speed (4 options)</p>
               </div>
               <div className="flex gap-3">
                 {[
@@ -902,53 +902,53 @@ export function VideoProductionGuideContent() {
                   { label: 'Medium', desc: 'Smooth and steady' },
                   { label: 'Fast', desc: 'Swift and dynamic' },
                 ].map((s) => (
-                  <div key={s.label} className="flex-1 px-2 py-1.5 bg-gray-50 rounded text-center">
-                    <p className="text-xs font-semibold text-gray-900">{s.label}</p>
-                    <p className="text-[10px] text-gray-400">{s.desc}</p>
+                  <div key={s.label} className="flex-1 px-2 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded text-center">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{s.label}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{s.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Compass className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Angle (6 options)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Angle (6 options)</p>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {['Eye Level', 'Low Angle', 'High Angle', 'Dutch Angle', "Bird's Eye", "Worm's Eye"].map((a) => (
-                  <span key={a} className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">{a}</span>
+                  <span key={a} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-medium text-gray-600 dark:text-gray-400">{a}</span>
                 ))}
               </div>
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Grid3X3 className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Framing (5 options)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Framing (5 options)</p>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {['Extreme Wide', 'Wide', 'Medium', 'Close-Up', 'Extreme Close-Up'].map((f) => (
-                  <span key={f} className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-600">{f}</span>
+                  <span key={f} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-medium text-gray-600 dark:text-gray-400">{f}</span>
                 ))}
               </div>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Presets vs. Custom: When to Use Which</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Presets vs. Custom: When to Use Which</h4>
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-xs font-bold text-green-700 uppercase mb-1.5">Use Presets When...</p>
-              <ul className="text-xs text-green-800 space-y-1">
+            <div className="p-3 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-xs font-bold text-green-700 dark:text-green-300 uppercase mb-1.5">Use Presets When...</p>
+              <ul className="text-xs text-green-800 dark:text-green-200 space-y-1">
                 <li>You need quick, proven camera direction</li>
                 <li>The preset matches your scene intent closely</li>
                 <li>You're prototyping and want to move fast</li>
                 <li>Consistency matters more than precision</li>
               </ul>
             </div>
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-bold text-blue-700 uppercase mb-1.5">Use Custom When...</p>
-              <ul className="text-xs text-blue-800 space-y-1">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase mb-1.5">Use Custom When...</p>
+              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
                 <li>No preset matches the exact camera work you want</li>
                 <li>You need a specific combination of layers</li>
                 <li>You want different speeds for similar movements</li>
@@ -957,19 +957,19 @@ export function VideoProductionGuideContent() {
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Camera Preset Decision Matrix</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Camera Preset Decision Matrix</h4>
           <p>Quick reference for matching content types to camera presets:</p>
 
           <div className="overflow-x-auto mt-2">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 pr-3 font-semibold text-gray-700">Content Type</th>
-                  <th className="text-left py-2 pr-3 font-semibold text-gray-700">Primary Preset</th>
-                  <th className="text-left py-2 font-semibold text-gray-700">Alt Presets</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Content Type</th>
+                  <th className="text-left py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Primary Preset</th>
+                  <th className="text-left py-2 font-semibold text-gray-700 dark:text-gray-300">Alt Presets</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 <tr><td className="py-2 pr-3 font-medium">Product reveal</td><td className="py-2 pr-3">Hero Reveal</td><td className="py-2">Orbit Reveal, Pullback Reveal</td></tr>
                 <tr><td className="py-2 pr-3 font-medium">Scene introduction</td><td className="py-2 pr-3">Establishing Pan</td><td className="py-2">Epic Crane, God View</td></tr>
                 <tr><td className="py-2 pr-3 font-medium">Horror/suspense</td><td className="py-2 pr-3">Tension</td><td className="py-2">Surveillance, Detail Inspect</td></tr>
@@ -1003,14 +1003,14 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={UserCircle} title="Character System & Cameos" badge="NEW">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             The character system provides lightweight character management for maintaining consistent
             characters across scenes and videos. Upload a face photo, and Stitch auto-generates a detailed
             visual description via GPT Vision.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Creating Characters</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Creating Characters</h4>
           <Step number="1" title="Upload a Reference Photo">
             <p>
               Provide a clear face photo — frontal, well-lit, minimal background clutter. This becomes the
@@ -1030,7 +1030,7 @@ export function VideoProductionGuideContent() {
             </p>
           </Step>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Using Characters in Production</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Using Characters in Production</h4>
           <ul className="space-y-2 mt-2">
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
@@ -1046,11 +1046,11 @@ export function VideoProductionGuideContent() {
             </li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Characters vs. LoRA Training</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Characters vs. LoRA Training</h4>
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 border border-gray-200 rounded-lg">
+            <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
               <p className="text-xs font-bold text-[#2C666E] uppercase mb-1.5">Characters (Lightweight)</p>
-              <ul className="text-xs text-gray-600 space-y-1">
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 <li>Upload one photo, instant setup</li>
                 <li>Description-based consistency</li>
                 <li>Free — no training cost</li>
@@ -1058,9 +1058,9 @@ export function VideoProductionGuideContent() {
                 <li>Works across all image models</li>
               </ul>
             </div>
-            <div className="p-3 border border-gray-200 rounded-lg">
+            <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
               <p className="text-xs font-bold text-[#2C666E] uppercase mb-1.5">LoRA Training (Heavy)</p>
-              <ul className="text-xs text-gray-600 space-y-1">
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 <li>Upload 10-20 photos, training takes minutes</li>
                 <li>Pixel-level identity fidelity</li>
                 <li>$2-5 per training run</li>
@@ -1076,7 +1076,7 @@ export function VideoProductionGuideContent() {
             (cartoon, anime, 3D) that text descriptions can't accurately reproduce.
           </InfoBox>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Character Consistency Tips</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Character Consistency Tips</h4>
           <ul className="space-y-1.5 mt-2">
             <li className="flex items-start gap-1.5">
               <Lightbulb className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
@@ -1103,7 +1103,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={ImageIcon} title="Image Generation & Visual Styles" badge="8 models + 137 styles">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Before video generation happens, every scene needs a <strong>keyframe image</strong>.
             Image generation uses a separate set of models and styles from video. Understanding
@@ -1111,7 +1111,7 @@ export function VideoProductionGuideContent() {
             poor video regardless of which video model you use.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">8 Image Models</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">8 Image Models</h4>
           <div className="space-y-2 mt-3">
             {[
               { name: 'Nano Banana 2', provider: 'FAL.ai', strengths: 'Fastest, cheapest, great for iteration. Supports multi-image I2I composition.', cost: '~$0.01', best: 'Quick prototyping, bulk generation, multi-style tests' },
@@ -1123,19 +1123,19 @@ export function VideoProductionGuideContent() {
               { name: 'Ideogram v2', provider: 'FAL.ai', strengths: 'Best text-in-image rendering of any model.', cost: '~$0.04', best: 'Logos, posters, any scene requiring legible text' },
               { name: 'Wavespeed', provider: 'Wavespeed', strengths: 'Lowest cost, fast processing.', cost: '~$0.01', best: 'Budget generation, testing prompts cheaply' },
             ].map((m) => (
-              <div key={m.name} className="border border-gray-100 rounded-lg p-3">
+              <div key={m.name} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-                  <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-medium text-gray-500">{m.provider}</span>
-                  <span className="px-1.5 py-0.5 bg-green-50 rounded text-[9px] font-medium text-green-600">{m.cost}</span>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{m.name}</p>
+                  <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[9px] font-medium text-gray-500 dark:text-gray-400">{m.provider}</span>
+                  <span className="px-1.5 py-0.5 bg-green-50 dark:bg-green-950/40 rounded text-[9px] font-medium text-green-600 dark:text-green-400">{m.cost}</span>
                 </div>
-                <p className="text-xs text-gray-500">{m.strengths}</p>
-                <p className="text-xs text-gray-400 mt-0.5"><strong>Best for:</strong> {m.best}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{m.strengths}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5"><strong>Best for:</strong> {m.best}</p>
               </div>
             ))}
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">14 Shorts Visual Styles</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">14 Shorts Visual Styles</h4>
           <p>
             These are the <strong>image aesthetic styles</strong> used specifically in the Shorts Workbench (Step 3).
             They control the look and feel of keyframe images. They are separate from the 86 video style presets
@@ -1146,28 +1146,28 @@ export function VideoProductionGuideContent() {
             Video style presets control how the video MOVES and feels. They work together but are independent choices.
           </InfoBox>
 
-          <h4 className="font-semibold text-gray-900 mt-5">123 StyleGrid Presets</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">123 StyleGrid Presets</h4>
           <p>
             The full visual style system used across Imagineer, Ads Manager, and image regeneration throughout Stitch.
             Organized into categories with detailed ~50-word prompt descriptions per style. Loaded via the
-            <code className="px-1 py-0.5 bg-gray-100 rounded text-[10px]">StyleGrid</code> component.
+            <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">StyleGrid</code> component.
           </p>
           <div className="grid grid-cols-3 gap-3 mt-2">
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">123</div>
-              <div className="text-xs text-gray-500">StyleGrid Presets</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">StyleGrid Presets</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">14</div>
-              <div className="text-xs text-gray-500">Shorts Visual Styles</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Shorts Visual Styles</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-[#2C666E]">86</div>
-              <div className="text-xs text-gray-500">Imagineer Styles</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Imagineer Styles</div>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">I2I Reference Images</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">I2I Reference Images</h4>
           <p>
             In Step 3, each scene supports an <strong>Image-to-Image (I2I) reference</strong>. This guides the
             image model to match the visual characteristics of your reference while generating the scene's keyframe.
@@ -1187,23 +1187,23 @@ export function VideoProductionGuideContent() {
             </li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Keyframe Prompt Synthesis</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Keyframe Prompt Synthesis</h4>
           <p>
             You don't write image prompts manually (though you can edit them). The LLM synthesizes a single
             optimized prompt from three inputs:
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <div className="p-3 bg-gray-50 rounded-lg text-center border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900">Narration Text</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">What's being said</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">Narration Text</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">What's being said</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg text-center border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900">Visual Style</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Art direction</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">Visual Style</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Art direction</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg text-center border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900">Niche Mood</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Atmosphere/color</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">Niche Mood</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Atmosphere/color</p>
             </div>
           </div>
           <p className="mt-2">
@@ -1237,9 +1237,9 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Rocket} title="New Features Guide" badge="NEW">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
 
-          <h4 className="font-semibold text-gray-900">Video Analysis & Remix</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Video Analysis & Remix</h4>
           <p>
             The <strong>Video Analyzer</strong> lets you reverse-engineer any video. Paste a URL, and GPT Vision
             analyzes the structure, style, pacing, camera work, transitions, and hooks. Then click "Recreate This"
@@ -1261,20 +1261,20 @@ export function VideoProductionGuideContent() {
             </p>
           </Step>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Production Queue & Autopilot</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Production Queue & Autopilot</h4>
           <p>
-            The <strong>Production Queue</strong> at <code className="px-1 py-0.5 bg-gray-100 rounded text-[10px]">/queue</code> manages
+            The <strong>Production Queue</strong> at <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">/queue</code> manages
             batch Shorts production. Add items with topic, niche, and settings, then process them individually
             or enable Autopilot for hands-free production.
           </p>
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
               <p className="text-xs font-bold text-gray-700 uppercase mb-1">Manual Mode</p>
-              <p className="text-xs text-gray-500">Add items to the queue, reorder by priority, kick off individual items when ready. Full control over each step.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Add items to the queue, reorder by priority, kick off individual items when ready. Full control over each step.</p>
             </div>
             <div className="p-3 bg-[#2C666E]/5 border border-[#2C666E]/15 rounded-lg">
               <p className="text-xs font-bold text-[#2C666E] uppercase mb-1">Autopilot Mode</p>
-              <p className="text-xs text-gray-500">Enable Autopilot and the worker processes the queue automatically — scripting, voiceover, keyframes, clips, and assembly with no manual intervention.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Enable Autopilot and the worker processes the queue automatically — scripting, voiceover, keyframes, clips, and assembly with no manual intervention.</p>
             </div>
           </div>
           <Tip>
@@ -1282,7 +1282,7 @@ export function VideoProductionGuideContent() {
             Configure your niche defaults in the Queue Settings panel before enabling Autopilot.
           </Tip>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Multi-Platform Repurposing</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Multi-Platform Repurposing</h4>
           <p>
             After producing a Short, the <strong>Repurpose Panel</strong> generates platform-optimized metadata
             and format variants for multiple destinations:
@@ -1294,9 +1294,9 @@ export function VideoProductionGuideContent() {
               { platform: 'Instagram Reels', desc: 'Emoji-rich, 30 hashtags' },
               { platform: 'YouTube Landscape', desc: '16:9 letterbox, full SEO' },
             ].map((p) => (
-              <div key={p.platform} className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                <p className="text-xs font-semibold text-gray-900">{p.platform}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{p.desc}</p>
+              <div key={p.platform} className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 text-center">
+                <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{p.platform}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{p.desc}</p>
               </div>
             ))}
           </div>
@@ -1305,7 +1305,7 @@ export function VideoProductionGuideContent() {
             YouTube Landscape also generates a 16:9 letterboxed version of the video.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Ad Cloning</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Ad Cloning</h4>
           <p>
             The <strong>Ad Clone</strong> tool analyzes competitor video ads and extracts a "clone recipe" —
             hook strategy, visual style, pacing pattern, CTA approach, and emotional arc. You can then
@@ -1333,7 +1333,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={LayoutGrid} title="Structural Frameworks — The 76 Story Templates" badge="76 frameworks">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Video Style Frameworks are <strong>story structure templates</strong> that determine scene count,
             pacing, transitions, TTS mode, and overlays. They're separate from visual style presets —
@@ -1341,42 +1341,42 @@ export function VideoProductionGuideContent() {
           </p>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm font-bold text-gray-900">16 Universal</p>
-              <p className="text-xs text-gray-500">Work with any niche: Personal Journey, Origin Story, Top X Countdown, Myth Busting, etc.</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">16 Universal</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Work with any niche: Personal Journey, Origin Story, Top X Countdown, Myth Busting, etc.</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm font-bold text-gray-900">60 Niche-Specific</p>
-              <p className="text-xs text-gray-500">3 per niche across 20 niches: AI Tech Demo, Horror Campfire, Crime Case File, etc.</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">60 Niche-Specific</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">3 per niche across 20 niches: AI Tech Demo, Horror Campfire, Crime Case File, etc.</p>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Two framework categories</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Two framework categories</h4>
 
           <div className="space-y-3 mt-2">
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Story Frameworks (47)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Story Frameworks (47)</p>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Slower-paced, narrative-driven structures. Atmosphere, emotion, and pacing pills.
                 Examples: Personal Journey, Origin Story, Mini Documentary, Horror Campfire, Crime Case File.
               </p>
             </div>
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Zap className="w-4 h-4 text-[#2C666E]" />
-                <p className="font-semibold text-gray-900 text-sm">Fast-Paced Frameworks (29)</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Fast-Paced Frameworks (29)</p>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Quick-cut, high-energy structures. Action, impact, and rhythm pills.
                 Examples: Top X Countdown, Everything You Need to Know, Myth Busting, Did You Know.
               </p>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-4">What frameworks control</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">What frameworks control</h4>
           <ul className="space-y-1.5 mt-2">
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
@@ -1410,7 +1410,7 @@ export function VideoProductionGuideContent() {
             override the visual style separately in Step 3.
           </Tip>
 
-          <h4 className="font-semibold text-gray-900 mt-4">The 20 niches</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">The 20 niches</h4>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {[
               'AI & Tech News', 'Finance & Money', 'Motivation & Self-Help', 'Scary & Horror',
@@ -1419,7 +1419,7 @@ export function VideoProductionGuideContent() {
               'Food & Cooking', 'Travel & Adventure', 'Psychology & Mind-Blown', 'Space & Cosmos',
               'Animals & Wildlife', 'Sports & Athletes', 'Education & Learning', 'Paranormal & UFO',
             ].map((n) => (
-              <span key={n} className="px-2.5 py-1 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{n}</span>
+              <span key={n} className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-400 font-medium">{n}</span>
             ))}
           </div>
         </div>
@@ -1430,13 +1430,13 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Wand2} title="Writing Effective Motion Prompts">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Motion prompts describe <strong>what happens in the video</strong> — the movement, camera work, and action.
             They're separate from style presets (which handle the look) and keyframe prompts (which handle the static image).
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">The Golden Rule</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">The Golden Rule</h4>
           <div className="px-4 py-3 bg-[#2C666E]/5 border border-[#2C666E]/15 rounded-lg">
             <p className="text-sm text-[#07393C] font-medium">
               Describe MOVEMENT and ACTION, not scene appearance. The keyframe image already shows what the scene
@@ -1445,22 +1445,22 @@ export function VideoProductionGuideContent() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 border border-red-200 rounded-lg bg-red-50">
-              <p className="text-xs font-bold text-red-700 uppercase mb-1.5 flex items-center gap-1">
+            <div className="p-3 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950/40">
+              <p className="text-xs font-bold text-red-700 dark:text-red-300 uppercase mb-1.5 flex items-center gap-1">
                 <XCircle className="w-3 h-3" /> Bad Prompts
               </p>
-              <ul className="text-xs text-red-800 space-y-1.5">
+              <ul className="text-xs text-red-800 dark:text-red-200 space-y-1.5">
                 <li>"A woman standing in a kitchen" — describes a scene, not motion</li>
                 <li>"Beautiful sunset over mountains" — static description</li>
                 <li>"Product on a white background" — no movement described</li>
                 <li>"Happy family at dinner table" — scene setup, not action</li>
               </ul>
             </div>
-            <div className="p-3 border border-green-200 rounded-lg bg-green-50">
-              <p className="text-xs font-bold text-green-700 uppercase mb-1.5 flex items-center gap-1">
+            <div className="p-3 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/40">
+              <p className="text-xs font-bold text-green-700 dark:text-green-300 uppercase mb-1.5 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Good Prompts
               </p>
-              <ul className="text-xs text-green-800 space-y-1.5">
+              <ul className="text-xs text-green-800 dark:text-green-200 space-y-1.5">
                 <li>"Slow push forward, woman lifts mug and sips, steam rises"</li>
                 <li>"Slow aerial pan left revealing the valley, clouds drift by"</li>
                 <li>"Smooth 360 rotation, product spins on turntable, light shifts"</li>
@@ -1469,27 +1469,27 @@ export function VideoProductionGuideContent() {
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Prompt structure for different models</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Prompt structure for different models</h4>
 
           <div className="space-y-3 mt-2">
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <p className="font-semibold text-gray-900 text-sm mb-1">Kling (V3, O3, 2.0)</p>
-              <p className="text-xs text-gray-500 mb-2">Optimal structure: Camera → Subject → Action → Environment → Lighting → Texture</p>
-              <div className="px-3 py-2 bg-gray-50 rounded text-xs font-mono text-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Optimal structure: Camera → Subject → Action → Environment → Lighting → Texture</p>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs font-mono text-gray-700 dark:text-gray-300">
                 "Slow dolly push forward, woman in blue dress turns toward camera, lifts hand in greeting, cozy living room with warm window light, soft ambient glow, natural skin texture"
               </div>
             </div>
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <p className="font-semibold text-gray-900 text-sm mb-1">Veo 3.1 / Veo 3.1 Lite</p>
-              <p className="text-xs text-gray-500 mb-2">Prefers natural language with emotional tone emphasis. Describe the feeling.</p>
-              <div className="px-3 py-2 bg-gray-50 rounded text-xs font-mono text-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Prefers natural language with emotional tone emphasis. Describe the feeling.</p>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs font-mono text-gray-700 dark:text-gray-300">
                 "A gentle, intimate moment as the camera slowly pushes in. She looks up from her book with a warm smile, afternoon light casting long shadows across the desk."
               </div>
             </div>
-            <div className="border border-gray-200 rounded-lg p-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <p className="font-semibold text-gray-900 text-sm mb-1">Wan 2.5 / Wan Pro</p>
-              <p className="text-xs text-gray-500 mb-2">Responds well to motion-first, physics-based descriptions.</p>
-              <div className="px-3 py-2 bg-gray-50 rounded text-xs font-mono text-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Responds well to motion-first, physics-based descriptions.</p>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs font-mono text-gray-700 dark:text-gray-300">
                 "Smooth forward movement through the corridor, overhead lights flicker in sequence, subtle camera shake from footsteps, dust particles float in light beams"
               </div>
             </div>
@@ -1501,7 +1501,7 @@ export function VideoProductionGuideContent() {
             manual prompt writing too.
           </Warning>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Camera movement vocabulary</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Camera movement vocabulary</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
             {[
               { term: 'Dolly in/out', desc: 'Camera moves toward/away from subject' },
@@ -1517,9 +1517,9 @@ export function VideoProductionGuideContent() {
               { term: 'Rack focus', desc: 'Shift focus between near/far objects' },
               { term: 'Static', desc: 'Camera doesn\'t move (subject does)' },
             ].map((item) => (
-              <div key={item.term} className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs font-semibold text-gray-900">{item.term}</p>
-                <p className="text-[10px] text-gray-400">{item.desc}</p>
+              <div key={item.term} className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{item.term}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -1531,9 +1531,9 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={SlidersHorizontal} title="Production Workflows — Putting It All Together">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
 
-          <h4 className="font-semibold text-gray-900">Workflow 1: Standard Shorts (Most Common)</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Workflow 1: Standard Shorts (Most Common)</h4>
           <div className="mt-2 space-y-0">
             <Step number="1" title="Script & Voice (Step 1)">
               <p>Choose your niche, framework, and topic. Generate script with AI. Select voice and speed.</p>
@@ -1557,7 +1557,7 @@ export function VideoProductionGuideContent() {
             for the final generation. You can regenerate individual scenes without redoing the whole video.
           </Tip>
 
-          <h4 className="font-semibold text-gray-900 mt-6">Workflow 2: Character-Consistent Series</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-6">Workflow 2: Character-Consistent Series</h4>
           <div className="mt-2 space-y-0">
             <Step number="1" title="Create Turnaround Sheet">
               <p>Use the Turnaround wizard with the R2V Reference pose set. Generate a 3x2 grid: 3 full-body + 3 portrait angles.</p>
@@ -1573,7 +1573,7 @@ export function VideoProductionGuideContent() {
             </Step>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-6">Workflow 3: Multi-Shot Narrative</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-6">Workflow 3: Multi-Shot Narrative</h4>
           <div className="mt-2 space-y-0">
             <Step number="1" title="Write a Short with 3-6 Scenes">
               <p>Use the Shorts Workbench. Keep total duration under 15s for Multi-Shot mode.</p>
@@ -1589,7 +1589,7 @@ export function VideoProductionGuideContent() {
             </Step>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-6">Workflow 4: Storyboard Production</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-6">Workflow 4: Storyboard Production</h4>
           <div className="mt-2 space-y-0">
             <Step number="1" title="Create & Configure Storyboard">
               <p>Set duration, visual style, mood, video model, brand kit, and characters in the Settings tab.</p>
@@ -1612,9 +1612,9 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Volume2} title="Audio, Voiceover & Captions">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
 
-          <h4 className="font-semibold text-gray-900">Voiceover (TTS)</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Voiceover (TTS)</h4>
           <p>
             Stitch uses <strong>Gemini TTS</strong> (30 voices) as the default voiceover engine. Each voice has a
             personality profile. 12 featured voices are shown by default. Voice speed defaults to 1.15x and can be
@@ -1631,22 +1631,22 @@ export function VideoProductionGuideContent() {
             </li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Background Music</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Background Music</h4>
           <p>
             Generated via ElevenLabs Music through FAL.ai proxy. Always instrumental (no lyrics).
             Niche-aware mood selection — each niche template has a default <code>music_mood</code>.
             Music volume defaults to 15% in the final assembly.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Captions</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Captions</h4>
           <p>
             Burned directly into the video via <code>fal-ai/workflow-utilities/auto-subtitle</code>.
             Multiple caption styles available:
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
             {['Word Pop', 'Karaoke Glow', 'Word Highlight', 'News Ticker'].map((s) => (
-              <div key={s} className="px-3 py-2 bg-gray-50 rounded-lg text-center border border-gray-100">
-                <p className="text-xs font-medium text-gray-700">{s}</p>
+              <div key={s} className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-100 dark:border-gray-700">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{s}</p>
               </div>
             ))}
           </div>
@@ -1654,7 +1654,7 @@ export function VideoProductionGuideContent() {
             Full caption config supports: font family, size, color, stroke, position, animation, background, and more.
           </p>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Model Audio Generation</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Model Audio Generation</h4>
           <p>Some video models can generate audio <em>within the video clip itself</em> (separate from voiceover/music):</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <div className="flex items-center gap-2 text-xs">
@@ -1678,20 +1678,20 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={Clock} title="Duration, Cost & Performance">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
 
-          <h4 className="font-semibold text-gray-900">Duration rules by model</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Duration rules by model</h4>
           <div className="overflow-x-auto mt-2">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 pr-3 font-semibold text-gray-700">Model</th>
-                  <th className="text-left py-2 pr-3 font-semibold text-gray-700">Accepted Durations</th>
-                  <th className="text-left py-2 pr-3 font-semibold text-gray-700">Format</th>
-                  <th className="text-left py-2 font-semibold text-gray-700">Cost Range</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Model</th>
+                  <th className="text-left py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Accepted Durations</th>
+                  <th className="text-left py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Format</th>
+                  <th className="text-left py-2 font-semibold text-gray-700 dark:text-gray-300">Cost Range</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 <tr><td className="py-2 pr-3 font-medium">Veo 3.1 / Lite</td><td className="py-2 pr-3">4s, 6s, 8s ONLY</td><td className="py-2 pr-3">"4s" / "6s" / "8s"</td><td className="py-2">$0.10–0.40</td></tr>
                 <tr><td className="py-2 pr-3 font-medium">Kling V3 / O3</td><td className="py-2 pr-3">5s, 10s</td><td className="py-2 pr-3">"5" / "10"</td><td className="py-2">$0.55–1.10</td></tr>
                 <tr><td className="py-2 pr-3 font-medium">Kling 2.0</td><td className="py-2 pr-3">5s, 10s</td><td className="py-2 pr-3">"5" / "10"</td><td className="py-2">$0.25–0.50</td></tr>
@@ -1709,7 +1709,7 @@ export function VideoProductionGuideContent() {
             The model registry handles this automatically, but be aware when estimating total video length.
           </Warning>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Cost optimization strategies</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Cost optimization strategies</h4>
           <ul className="space-y-1.5 mt-2">
             <li className="flex items-start gap-1.5">
               <DollarSign className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
@@ -1733,19 +1733,19 @@ export function VideoProductionGuideContent() {
             </li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Processing time expectations</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Processing time expectations</h4>
           <div className="grid grid-cols-3 gap-3 mt-2">
-            <div className="p-3 bg-green-50 rounded-lg border border-green-200 text-center">
-              <p className="text-lg font-bold text-green-700">15-30s</p>
-              <p className="text-xs text-green-600">Wan 2.5, Wavespeed</p>
+            <div className="p-3 bg-green-50 dark:bg-green-950/40 rounded-lg border border-green-200 dark:border-green-800 text-center">
+              <p className="text-lg font-bold text-green-700 dark:text-green-300">15-30s</p>
+              <p className="text-xs text-green-600 dark:text-green-400">Wan 2.5, Wavespeed</p>
             </div>
-            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-center">
-              <p className="text-lg font-bold text-amber-700">30-90s</p>
-              <p className="text-xs text-amber-600">Veo, Hailuo, PixVerse</p>
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800 text-center">
+              <p className="text-lg font-bold text-amber-700 dark:text-amber-300">30-90s</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">Veo, Hailuo, PixVerse</p>
             </div>
-            <div className="p-3 bg-red-50 rounded-lg border border-red-200 text-center">
-              <p className="text-lg font-bold text-red-700">60-180s</p>
-              <p className="text-xs text-red-600">Kling V3/O3, Multi-Shot</p>
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-800 text-center">
+              <p className="text-lg font-bold text-red-700 dark:text-red-300">60-180s</p>
+              <p className="text-xs text-red-600 dark:text-red-400">Kling V3/O3, Multi-Shot</p>
             </div>
           </div>
         </div>
@@ -1756,7 +1756,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={AlertTriangle} title="Troubleshooting & Common Issues">
-        <div className="mt-3 text-sm text-gray-600 space-y-4">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
 
           <TroubleshootItem
             problem="Veo 3.1 returns 422 'no_media_generated'"
@@ -1931,7 +1931,7 @@ export function VideoProductionGuideContent() {
       {/* ══════════════════════════════════════════════════════════════════ */}
 
       <Section icon={BookOpen} title="Glossary">
-        <div className="mt-3 text-sm text-gray-600">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
           <div className="grid grid-cols-1 gap-2">
             {[
               { term: 'I2V', def: 'Image-to-Video — animate a still image into a video clip' },
@@ -1965,9 +1965,9 @@ export function VideoProductionGuideContent() {
               { term: 'Brand Kit', def: 'Logo, colors, fonts, guidelines, and voice configuration saved for consistent branded content across all tools' },
               { term: 'LoRA', def: 'Low-Rank Adaptation — fine-tuned model weights trained on your images for pixel-level character/style consistency' },
             ].map((item) => (
-              <div key={item.term} className="flex gap-3 py-2 border-b border-gray-100 last:border-0">
+              <div key={item.term} className="flex gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                 <span className="font-mono text-xs font-bold text-[#2C666E] shrink-0 w-32">{item.term}</span>
-                <span className="text-xs text-gray-600">{item.def}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">{item.def}</span>
               </div>
             ))}
           </div>
@@ -2107,7 +2107,7 @@ function StyleDecisionGuide() {
 
   return (
     <Section icon={Compass} title="Interactive Style Decision Guide" badge="INTERACTIVE">
-      <div className="mt-3 text-sm text-gray-600 space-y-4">
+      <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
         <p>
           Not sure which styles and settings to use? Answer these questions and get a tailored recommendation.
         </p>
@@ -2118,7 +2118,7 @@ function StyleDecisionGuide() {
             <div
               key={q.id}
               className={`h-1.5 flex-1 rounded-full transition-colors ${
-                answers[q.id] ? 'bg-[#2C666E]' : i === step ? 'bg-[#2C666E]/40' : 'bg-gray-200'
+                answers[q.id] ? 'bg-[#2C666E]' : i === step ? 'bg-[#2C666E]/40' : 'bg-gray-200 dark:bg-gray-700'
               }`}
             />
           ))}
@@ -2138,12 +2138,12 @@ function StyleDecisionGuide() {
                     className={`p-3 rounded-lg border text-left transition-all ${
                       isSelected
                         ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]'
-                        : 'border-gray-200 hover:border-[#2C666E]/40 hover:bg-gray-50'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-[#2C666E]/40 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {opt.icon && <opt.icon className="w-4 h-4 text-[#2C666E]" />}
-                      <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{opt.label}</span>
                     </div>
                   </button>
                 );
@@ -2155,7 +2155,7 @@ function StyleDecisionGuide() {
               {step > 0 && (
                 <button
                   onClick={() => setStep(step - 1)}
-                  className="px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Back
                 </button>
@@ -2168,7 +2168,7 @@ function StyleDecisionGuide() {
         {allAnswered && recipe && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-gray-900">Your Recommended Recipe</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Your Recommended Recipe</h4>
               <button onClick={reset} className="text-xs text-[#2C666E] hover:underline flex items-center gap-1">
                 <RotateCcw className="w-3 h-3" /> Start Over
               </button>
@@ -2188,8 +2188,8 @@ function StyleDecisionGuide() {
                 { label: 'Camera Preset', value: recipe.camera },
               ].map((r) => (
                 <div key={r.label} className="flex items-center justify-between py-2 border-b border-[#2C666E]/10 last:border-0">
-                  <span className="text-xs font-semibold text-gray-500 uppercase">{r.label}</span>
-                  <span className="text-sm font-medium text-gray-900">{r.value}</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{r.label}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.value}</span>
                 </div>
               ))}
             </div>
@@ -2460,7 +2460,7 @@ function NicheMasteryGuide() {
 
   return (
     <Section icon={Globe} title="Niche Mastery Guide — 20 Niches" badge="20 niches">
-      <div className="mt-3 text-sm text-gray-600 space-y-3">
+      <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
         <p>
           Each of the 20 niches has optimal settings, recommended styles, and common pitfalls.
           Select a niche group to see detailed recommendations.
@@ -2468,75 +2468,75 @@ function NicheMasteryGuide() {
 
         <div className="space-y-3 mt-4">
           {Object.entries(NICHE_GUIDE_DATA).map(([groupKey, group]) => (
-            <div key={groupKey} className="border border-gray-200 rounded-xl overflow-hidden">
+            <div key={groupKey} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
               <button
                 onClick={() => setExpandedGroup(expandedGroup === groupKey ? null : groupKey)}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
               >
                 <group.icon className="w-5 h-5 text-[#2C666E]" />
-                <span className="font-semibold text-gray-900 flex-1">{group.label}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{group.label}</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#2C666E]/10 text-[#2C666E]">
                   {group.niches.length} niches
                 </span>
                 {expandedGroup === groupKey
-                  ? <ChevronDown className="w-4 h-4 text-gray-400" />
-                  : <ChevronRight className="w-4 h-4 text-gray-400" />
+                  ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                 }
               </button>
 
               {expandedGroup === groupKey && (
-                <div className="px-4 pb-4 bg-white border-t border-gray-100 space-y-2">
+                <div className="px-4 pb-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 space-y-2">
                   {group.niches.map((niche) => (
-                    <div key={niche.key} className="border border-gray-100 rounded-lg overflow-hidden mt-2">
+                    <div key={niche.key} className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden mt-2">
                       <button
                         onClick={() => setExpandedNiche(expandedNiche === niche.key ? null : niche.key)}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
                       >
                         <niche.icon className="w-4 h-4 text-[#2C666E]" />
-                        <span className="text-sm font-medium text-gray-900 flex-1">{niche.label}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{niche.label}</span>
                         {expandedNiche === niche.key
-                          ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                          : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                          ? <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                         }
                       </button>
 
                       {expandedNiche === niche.key && (
                         <div className="px-3 pb-3 space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Recommended Frameworks</p>
-                              <p className="text-xs text-gray-700">{niche.frameworks}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Recommended Frameworks</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.frameworks}</p>
                             </div>
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Visual Styles</p>
-                              <p className="text-xs text-gray-700">{niche.visualStyle}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Visual Styles</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.visualStyle}</p>
                             </div>
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Video Style Presets</p>
-                              <p className="text-xs text-gray-700">{niche.videoStyle}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Video Style Presets</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.videoStyle}</p>
                             </div>
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Voice Recommendations</p>
-                              <p className="text-xs text-gray-700">{niche.voice}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Voice Recommendations</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.voice}</p>
                             </div>
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Camera Presets</p>
-                              <p className="text-xs text-gray-700">{niche.camera}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Camera Presets</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.camera}</p>
                             </div>
-                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Topic Ideas</p>
-                              <p className="text-xs text-gray-700">{niche.topics}</p>
+                            <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Topic Ideas</p>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{niche.topics}</p>
                             </div>
                           </div>
 
-                          <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-[10px] font-bold text-blue-700 uppercase mb-1">Hook Patterns That Work</p>
-                            <p className="text-xs text-blue-800 italic">{niche.hooks}</p>
+                          <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase mb-1">Hook Patterns That Work</p>
+                            <p className="text-xs text-blue-800 dark:text-blue-200 italic">{niche.hooks}</p>
                           </div>
 
-                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-[10px] font-bold text-red-700 uppercase mb-1">Common Mistakes to Avoid</p>
-                            <p className="text-xs text-red-800">{niche.mistakes}</p>
+                          <div className="p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg">
+                            <p className="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase mb-1">Common Mistakes to Avoid</p>
+                            <p className="text-xs text-red-800 dark:text-red-200">{niche.mistakes}</p>
                           </div>
                         </div>
                       )}
@@ -2557,45 +2557,45 @@ function NicheMasteryGuide() {
 function ModelDetailCard({ model }) {
   const [expanded, setExpanded] = useState(false);
   const tierColor = model.tier === 'Premium'
-    ? 'bg-purple-100 text-purple-700'
+    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
     : model.tier === 'Mid'
-      ? 'bg-blue-100 text-blue-700'
-      : 'bg-green-100 text-green-700';
+      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+      : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300';
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900 text-sm">{model.name}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{model.name}</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tierColor}`}>{model.tier}</span>
             {model.audio && <Volume2 className="w-3 h-3 text-green-500" />}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-gray-400">{model.provider}</span>
-            <span className="text-[10px] text-gray-300">|</span>
-            <span className="text-[10px] text-gray-400">{model.durations}</span>
-            <span className="text-[10px] text-gray-300">|</span>
-            <span className="text-[10px] text-gray-400">{model.cost}</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">{model.provider}</span>
+            <span className="text-[10px] text-gray-300 dark:text-gray-600">|</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">{model.durations}</span>
+            <span className="text-[10px] text-gray-300 dark:text-gray-600">|</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">{model.cost}</span>
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
           {model.modes.map((m) => (
-            <span key={m} className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-medium text-gray-600">{m}</span>
+            <span key={m} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[9px] font-medium text-gray-600 dark:text-gray-400">{m}</span>
           ))}
         </div>
-        {expanded ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
+        {expanded ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />}
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 bg-white border-t border-gray-100">
+        <div className="px-4 pb-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Strengths</p>
-              <ul className="text-xs text-gray-600 space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Strengths</p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 {model.strengths.map((s, i) => (
                   <li key={i} className="flex items-start gap-1.5">
                     <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
@@ -2605,8 +2605,8 @@ function ModelDetailCard({ model }) {
               </ul>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Weaknesses</p>
-              <ul className="text-xs text-gray-600 space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Weaknesses</p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 {model.weaknesses.map((w, i) => (
                   <li key={i} className="flex items-start gap-1.5">
                     <XCircle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
@@ -2628,20 +2628,20 @@ function ModelDetailCard({ model }) {
 function TroubleshootItem({ problem, causes, fixes }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
       >
         <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-        <span className="text-sm font-medium text-gray-900 flex-1">{problem}</span>
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{problem}</span>
+        {open ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
       </button>
       {open && (
-        <div className="px-4 pb-4 bg-white border-t border-gray-100">
+        <div className="px-4 pb-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           <div className="mt-2">
-            <p className="text-xs font-semibold text-red-600 uppercase mb-1">Possible Causes</p>
-            <ul className="text-xs text-gray-600 space-y-1">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase mb-1">Possible Causes</p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               {causes.map((c, i) => (
                 <li key={i} className="flex items-start gap-1.5">
                   <XCircle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
@@ -2651,8 +2651,8 @@ function TroubleshootItem({ problem, causes, fixes }) {
             </ul>
           </div>
           <div className="mt-3">
-            <p className="text-xs font-semibold text-green-600 uppercase mb-1">Fixes</p>
-            <ul className="text-xs text-gray-600 space-y-1">
+            <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase mb-1">Fixes</p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               {fixes.map((f, i) => (
                 <li key={i} className="flex items-start gap-1.5">
                   <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
@@ -2669,7 +2669,7 @@ function TroubleshootItem({ problem, causes, fixes }) {
 
 export default function VideoProductionGuidePage() {
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950 min-h-screen">
       <VideoProductionGuideContent />
     </div>
   );

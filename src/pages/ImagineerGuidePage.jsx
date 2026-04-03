@@ -18,20 +18,20 @@ import {
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
       >
         <Icon className="w-5 h-5 text-[#2C666E] shrink-0" />
-        <span className="font-semibold text-gray-900 flex-1">{title}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{title}</span>
         {open
-          ? <ChevronDown className="w-4 h-4 text-gray-400" />
-          : <ChevronRight className="w-4 h-4 text-gray-400" />
+          ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         }
       </button>
       {open && (
-        <div className="px-5 pb-5 bg-white border-t border-gray-100">
+        <div className="px-5 pb-5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           {children}
         </div>
       )}
@@ -44,8 +44,8 @@ function Step({ number, title, children }) {
     <div className="flex gap-4 mt-4">
       <div className="shrink-0 w-8 h-8 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold">{number}</div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-        <div className="text-sm text-gray-600 space-y-2">{children}</div>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{title}</h4>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">{children}</div>
       </div>
     </div>
   );
@@ -53,7 +53,7 @@ function Step({ number, title, children }) {
 
 function Tip({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex gap-2">
       <span className="shrink-0">&#128161;</span>
       <div>{children}</div>
     </div>
@@ -62,7 +62,7 @@ function Tip({ children }) {
 
 function Warning({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 flex gap-2">
       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -71,14 +71,14 @@ function Warning({ children }) {
 
 function InfoBox({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200 flex gap-2">
       <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
   );
 }
 
-function Badge({ icon: Icon, label, color = 'bg-gray-100 text-gray-700' }) {
+function Badge({ icon: Icon, label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
       {Icon && <Icon className="w-3 h-3" />}
@@ -90,8 +90,8 @@ function Badge({ icon: Icon, label, color = 'bg-gray-100 text-gray-700' }) {
 function KV({ label, children }) {
   return (
     <div className="flex gap-2 mt-1">
-      <span className="text-xs font-semibold text-gray-500 shrink-0 w-36">{label}</span>
-      <span className="text-sm text-gray-700">{children}</span>
+      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-36">{label}</span>
+      <span className="text-sm text-gray-700 dark:text-gray-300">{children}</span>
     </div>
   );
 }
@@ -99,22 +99,22 @@ function KV({ label, children }) {
 function ModelTable({ models }) {
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <thead>
-          <tr className="bg-gray-50 text-left">
-            <th className="px-3 py-2 font-semibold text-gray-700">Model</th>
-            <th className="px-3 py-2 font-semibold text-gray-700">Best For</th>
-            <th className="px-3 py-2 font-semibold text-gray-700 text-center">Multi-Image</th>
-            <th className="px-3 py-2 font-semibold text-gray-700 text-center">LoRA</th>
+          <tr className="bg-gray-50 dark:bg-gray-800/50 text-left">
+            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300">Model</th>
+            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300">Best For</th>
+            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 text-center">Multi-Image</th>
+            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 text-center">LoRA</th>
           </tr>
         </thead>
         <tbody>
           {models.map((m, i) => (
-            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-              <td className="px-3 py-2 font-medium text-gray-900">{m.name}</td>
-              <td className="px-3 py-2 text-gray-600">{m.bestFor}</td>
-              <td className="px-3 py-2 text-center">{m.multiImage ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300">--</span>}</td>
-              <td className="px-3 py-2 text-center">{m.lora ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300">--</span>}</td>
+            <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'}>
+              <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{m.name}</td>
+              <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{m.bestFor}</td>
+              <td className="px-3 py-2 text-center">{m.multiImage ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300 dark:text-gray-500">--</span>}</td>
+              <td className="px-3 py-2 text-center">{m.lora ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300 dark:text-gray-500">--</span>}</td>
             </tr>
           ))}
         </tbody>
@@ -131,7 +131,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 1: Overview ── */}
       <Section icon={Sparkles} title="Overview: Image Creation & Editing Tools" defaultOpen={true}>
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Stitch Studio provides a comprehensive suite of AI-powered image tools, all accessible
             from the <strong>Image Tools</strong> section in the sidebar. Each tool is designed for
@@ -148,11 +148,11 @@ export function ImagineerGuideContent() {
               { icon: Focus, name: 'Lens', desc: 'Multi-angle adjustment' },
               { icon: Shirt, name: 'Try Style', desc: 'Virtual clothing try-on' },
             ].map(({ icon: I, name, desc }) => (
-              <div key={name} className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
+              <div key={name} className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                 <I className="w-4 h-4 text-[#2C666E] mt-0.5 shrink-0" />
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">{name}</div>
-                  <div className="text-xs text-gray-500">{desc}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{desc}</div>
                 </div>
               </div>
             ))}
@@ -168,7 +168,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 2: Imagineer (T2I) ── */}
       <Section icon={Wand2} title="Imagineer (Text-to-Image)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             The Imagineer is a <strong>4-step wizard</strong> for generating images from text descriptions.
             Each step focuses on a different aspect of the creative brief, and the Cohesive Prompt Builder
@@ -222,7 +222,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 3: Image-to-Image (Edit) ── */}
       <Section icon={Pencil} title="Image-to-Image (Edit)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             The Edit tool modifies existing images based on text instructions. It shares the same
             enhance options as Imagineer (lighting, mood, style, etc.) but starts from your uploaded
@@ -265,7 +265,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 4: Inpaint ── */}
       <Section icon={Eraser} title="Inpaint (Object Removal & Replacement)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             Inpaint lets you edit <strong>specific regions</strong> of an image using a painted mask.
             The masked area gets replaced based on your prompt, while everything outside the mask stays untouched.
@@ -299,7 +299,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 5: Smoosh (Compositor) ── */}
       <Section icon={Layers} title="Smoosh (Canvas Compositor)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             Smoosh is a <strong>canvas-based compositor</strong> for arranging multiple images into a single
             composition. You drag, resize, and layer images on a canvas, then the AI seamlessly blends them
@@ -334,7 +334,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 6: Lens ── */}
       <Section icon={Focus} title="Lens (Multi-Angle Adjustment)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             Lens adjusts the <strong>viewing angle and perspective</strong> of an existing image.
             Perfect for product photography where you need slightly different angles without reshooting.
@@ -359,7 +359,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 7: Try Style ── */}
       <Section icon={Shirt} title="Try Style (Virtual Try-On)">
-        <div className="mt-3 text-sm text-gray-600 space-y-2">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
             Try Style renders <strong>clothing on a person</strong> using AI fit simulation.
             Upload a model photo and a garment image, and the AI produces a realistic try-on render.
@@ -387,7 +387,7 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 8: Cohesive Prompt Builder ── */}
       <Section icon={Brain} title="Cohesive Prompt Builder (Behind the Scenes)">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             The <strong>Cohesive Prompt Builder</strong> is the shared prompt assembly system that powers
             every image tool. Instead of writing raw prompts yourself, you fill in structured fields
@@ -399,11 +399,11 @@ export function ImagineerGuideContent() {
             The builder understands each tool's requirements and adapts the prompt format accordingly.
           </p>
 
-          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h4 className="font-semibold text-gray-900 text-sm mb-2">How It Works</h4>
-            <div className="text-sm text-gray-600 space-y-2">
+          <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-2">How It Works</h4>
+            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
               <p><strong>1.</strong> You fill in structured fields across the wizard steps (subject, style, enhance, etc.)</p>
-              <p><strong>2.</strong> All fields are sent to the <code className="text-xs bg-gray-200 px-1 rounded">/api/prompt/build-cohesive</code> endpoint</p>
+              <p><strong>2.</strong> All fields are sent to the <code className="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded">/api/prompt/build-cohesive</code> endpoint</p>
               <p><strong>3.</strong> GPT-4 assembles everything into a single, optimized prompt — resolving conflicts, adding coherence, and formatting for the target model</p>
               <p><strong>4.</strong> The optimized prompt is sent to the selected image model for generation</p>
             </div>
@@ -419,10 +419,10 @@ export function ImagineerGuideContent() {
 
       {/* ── Section 9: Tips & Best Practices ── */}
       <Section icon={Lightbulb} title="Tips & Best Practices">
-        <div className="mt-3 text-sm text-gray-600 space-y-4">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Choosing the Right Tool</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Choosing the Right Tool</h4>
             <div className="space-y-1">
               <KV label="Starting from scratch">Use Imagineer (T2I) with a detailed subject description</KV>
               <KV label="Modifying an image">Use Edit Image (I2I) for global changes to existing images</KV>
@@ -434,7 +434,7 @@ export function ImagineerGuideContent() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Model Selection Guide</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Model Selection Guide</h4>
             <div className="space-y-1">
               <KV label="Fastest">Nano Banana 2 — best for quick iterations and drafts</KV>
               <KV label="Highest quality">Seedream v4 / v4.5 — excellent prompt adherence and detail</KV>
@@ -445,7 +445,7 @@ export function ImagineerGuideContent() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Multi-Style Workflow</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Multi-Style Workflow</h4>
             <p>
               Select multiple styles in the StyleGrid to generate one image per style in a single batch.
               This is the fastest way to A/B test visual directions. Each result can be individually
@@ -454,7 +454,7 @@ export function ImagineerGuideContent() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Reference Images</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Reference Images</h4>
             <div className="space-y-1">
               <KV label="T2I Reference">Analyzed by GPT-4 vision and described textually to seed the prompt</KV>
               <KV label="I2I References">Directly blended by multi-image models as visual input</KV>
@@ -463,7 +463,7 @@ export function ImagineerGuideContent() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Brand Consistency</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Brand Consistency</h4>
             <p>
               For consistent output across all tools, create a <strong>Brand Kit</strong> (sidebar &rarr; Brand)
               with your colors, mood, and visual rules. Then select the Brand Style Guide in the enhance step.
@@ -473,7 +473,7 @@ export function ImagineerGuideContent() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Resolution Guide</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Resolution Guide</h4>
             <div className="space-y-1">
               <KV label="Social media">1080x1080 (feed), 1080x1920 (stories/reels)</KV>
               <KV label="Website/blog">1920x1080 or 2560x1440</KV>

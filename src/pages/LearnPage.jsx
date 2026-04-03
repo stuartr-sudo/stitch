@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
+  Sun, Moon,
 } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
 import PracticeTab from '@/components/educate/PracticeTab';
 import ReferenceTab from '@/components/educate/ReferenceTab';
@@ -15,6 +17,7 @@ import { CarouselGuideContent } from './CarouselGuidePage';
 import { AdsManagerGuideContent } from './AdsManagerGuidePage';
 import { ImagineerGuideContent } from './ImagineerGuidePage';
 import { MotionTransferGuideContent } from './MotionTransferGuidePage';
+import { VideoProductionGuideContent } from './VideoProductionGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -65,6 +68,7 @@ const TABS = [
   { id: 'carousels',   label: 'Carousels',      Icon: LayoutGrid },
   { id: 'ads',         label: 'Ads Manager',    Icon: Target },
   { id: 'motion',      label: 'Motion',         Icon: Play },
+  { id: 'video',       label: 'Video Production', Icon: Film },
 ];
 
 const CLI_SUB_TABS = [
@@ -74,6 +78,7 @@ const CLI_SUB_TABS = [
 ];
 
 export default function LearnPage() {
+  const { theme, toggleTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = TABS.find((t) => t.id === searchParams.get('tab'))?.id || 'cli';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -124,37 +129,46 @@ export default function LearnPage() {
   };
 
   return (
-    <div className="bg-gray-950 min-h-screen text-white flex flex-col">
+    <div className="bg-gray-50 dark:bg-gray-950 min-h-screen text-gray-900 dark:text-white flex flex-col">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <GraduationCap className="w-6 h-6 text-[#2C666E]" />
           <h1 className="text-2xl font-bold">Learn</h1>
         </div>
-        {activeTab === 'cli' && (
-          <div className="flex items-center gap-6 text-sm text-gray-400">
-            <span>
-              <span className="text-white font-medium">{progress.completedLessons.length}</span>
-              <span>/{TOTAL_LESSONS} lessons</span>
-            </span>
-            <span>
-              <span className="text-white font-medium">{totalScore}</span>
-              <span> pts</span>
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {activeTab === 'cli' && (
+            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+              <span>
+                <span className="text-gray-900 dark:text-white font-medium">{progress.completedLessons.length}</span>
+                <span>/{TOTAL_LESSONS} lessons</span>
+              </span>
+              <span>
+                <span className="text-gray-900 dark:text-white font-medium">{totalScore}</span>
+                <span> pts</span>
+              </span>
+            </div>
+          )}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Main tab bar */}
-      <div className="px-6 border-b border-gray-800 flex gap-1 overflow-x-auto">
+      <div className="px-6 border-b border-gray-200 dark:border-gray-800 flex gap-1 overflow-x-auto">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => switchTab(id)}
             className={`flex items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors px-3 ${
               activeTab === id
-                ? 'border-b-2 border-[#2C666E] text-white pb-3 pt-3'
-                : 'text-gray-500 hover:text-gray-300 pb-3 pt-3'
+                ? 'border-b-2 border-[#2C666E] text-gray-900 dark:text-white pb-3 pt-3'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 pb-3 pt-3'
             }`}
           >
             <Icon className="w-4 h-4" />
@@ -167,7 +181,7 @@ export default function LearnPage() {
       <div className="flex-1 overflow-y-auto">
         {/* CLI Lab — has its own sub-tabs */}
         {activeTab === 'cli' && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full bg-gray-950 text-white">
             <div className="px-6 border-b border-gray-800 flex gap-6">
               {CLI_SUB_TABS.map(({ id, label, Icon }) => (
                 <button
@@ -202,38 +216,43 @@ export default function LearnPage() {
 
         {/* Guide pages — light bg wrapper */}
         {activeTab === 'lora' && (
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <LoraGuideContent />
           </div>
         )}
         {activeTab === 'storyboards' && (
-          <div className="bg-gray-50 min-h-full">
+          <div className="bg-gray-50 dark:bg-gray-900 min-h-full">
             <StoryboardGuideContent />
           </div>
         )}
         {activeTab === 'turnaround' && (
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <TurnaroundGuideContent />
           </div>
         )}
         {activeTab === 'carousels' && (
-          <div className="bg-gray-50 min-h-full">
+          <div className="bg-gray-50 dark:bg-gray-900 min-h-full">
             <CarouselGuideContent />
           </div>
         )}
         {activeTab === 'ads' && (
-          <div className="bg-gray-50 min-h-full">
+          <div className="bg-gray-50 dark:bg-gray-900 min-h-full">
             <AdsManagerGuideContent />
           </div>
         )}
         {activeTab === 'imagineer' && (
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <ImagineerGuideContent />
           </div>
         )}
         {activeTab === 'motion' && (
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <MotionTransferGuideContent />
+          </div>
+        )}
+        {activeTab === 'video' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <VideoProductionGuideContent />
           </div>
         )}
       </div>

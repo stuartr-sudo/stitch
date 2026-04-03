@@ -20,20 +20,20 @@ import {
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
       >
         <Icon className="w-5 h-5 text-[#2C666E] shrink-0" />
-        <span className="font-semibold text-gray-900 flex-1">{title}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{title}</span>
         {open
-          ? <ChevronDown className="w-4 h-4 text-gray-400" />
-          : <ChevronRight className="w-4 h-4 text-gray-400" />
+          ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         }
       </button>
       {open && (
-        <div className="px-5 pb-5 bg-white border-t border-gray-100">
+        <div className="px-5 pb-5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           {children}
         </div>
       )}
@@ -48,8 +48,8 @@ function Step({ number, title, children }) {
     <div className="flex gap-4 mt-4">
       <div className="shrink-0 w-8 h-8 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold">{number}</div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-        <div className="text-sm text-gray-600 space-y-2">{children}</div>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{title}</h4>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">{children}</div>
       </div>
     </div>
   );
@@ -59,7 +59,7 @@ function Step({ number, title, children }) {
 
 function Tip({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex gap-2">
       <span className="shrink-0">&#128161;</span>
       <div>{children}</div>
     </div>
@@ -70,7 +70,7 @@ function Tip({ children }) {
 
 function Warning({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 flex gap-2">
       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -79,7 +79,7 @@ function Warning({ children }) {
 
 // ── Inline badge ──
 
-function Badge({ icon: Icon, label, color = 'bg-gray-100 text-gray-700' }) {
+function Badge({ icon: Icon, label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
       {Icon && <Icon className="w-3 h-3" />}
@@ -93,8 +93,8 @@ function Badge({ icon: Icon, label, color = 'bg-gray-100 text-gray-700' }) {
 function KV({ label, children }) {
   return (
     <div className="flex gap-2 mt-1">
-      <span className="text-xs font-semibold text-gray-500 shrink-0 w-32">{label}</span>
-      <span className="text-sm text-gray-700">{children}</span>
+      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-32">{label}</span>
+      <span className="text-sm text-gray-700 dark:text-gray-300">{children}</span>
     </div>
   );
 }
@@ -107,7 +107,7 @@ export function CarouselGuideContent() {
 
         {/* ── Overview ── */}
         <Section icon={LayoutGrid} title="Overview — What Is the Carousel Builder?" defaultOpen={true}>
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               The Carousel Builder creates <strong>branded carousel posts</strong> for social media.
               A carousel is a series of swipeable image slides — each with a headline, body text, and
@@ -119,21 +119,21 @@ export function CarouselGuideContent() {
               at once from a single topic.
             </p>
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h5 className="font-semibold text-gray-900 text-xs mb-1">Supported Platforms</h5>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-1">Supported Platforms</h5>
                 <div className="flex flex-wrap gap-1.5">
-                  <Badge icon={Smartphone} label="Instagram (1080×1350)" color="bg-pink-100 text-pink-700" />
-                  <Badge icon={Globe} label="Facebook (1080×1080)" color="bg-blue-100 text-blue-700" />
-                  <Badge icon={Monitor} label="LinkedIn (1080×1080)" color="bg-sky-100 text-sky-700" />
+                  <Badge icon={Smartphone} label="Instagram (1080×1350)" color="bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300" />
+                  <Badge icon={Globe} label="Facebook (1080×1080)" color="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" />
+                  <Badge icon={Monitor} label="LinkedIn (1080×1080)" color="bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" />
                   <Badge icon={Smartphone} label="TikTok (1080×1920)" color="bg-gray-800 text-white" />
                 </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h5 className="font-semibold text-gray-900 text-xs mb-1">Output Modes</h5>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-1">Output Modes</h5>
                 <div className="flex flex-wrap gap-1.5">
-                  <Badge icon={ImageIcon} label="Static images" color="bg-green-100 text-green-700" />
-                  <Badge icon={Film} label="Video carousel" color="bg-purple-100 text-purple-700" />
-                  <Badge icon={Play} label="Slideshow video" color="bg-orange-100 text-orange-700" />
+                  <Badge icon={ImageIcon} label="Static images" color="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" />
+                  <Badge icon={Film} label="Video carousel" color="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" />
+                  <Badge icon={Play} label="Slideshow video" color="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" />
                 </div>
               </div>
             </div>
@@ -191,9 +191,9 @@ export function CarouselGuideContent() {
                 ['Clean Overlay', 'Light full overlay, professional'],
                 ['No Overlay', 'No scrim, text floats on image'],
               ].map(([name, desc]) => (
-                <div key={name} className="bg-gray-50 rounded p-2">
-                  <span className="text-xs font-semibold text-gray-900">{name}</span>
-                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                <div key={name} className="bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+                  <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">{name}</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
                 </div>
               ))}
             </div>
@@ -223,24 +223,24 @@ export function CarouselGuideContent() {
 
         {/* ── Editor Layout ── */}
         <Section icon={LayoutGrid} title="Step 2 — The Carousel Editor">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>After creation, you enter the <strong>Carousel Editor</strong> — a three-panel layout:</p>
 
             <div className="grid grid-cols-3 gap-3 mt-3">
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <h5 className="font-semibold text-blue-900 text-xs mb-1">Left Panel — Filmstrip</h5>
-                <p className="text-xs text-blue-700">Thumbnail previews of all slides. Click to select.
+              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <h5 className="font-semibold text-blue-900 dark:text-blue-200 text-xs mb-1">Left Panel — Filmstrip</h5>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Thumbnail previews of all slides. Click to select.
                   Shows slide number, type badge (hook/story/conclusion), and generation status.</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <h5 className="font-semibold text-blue-900 text-xs mb-1">Center Panel — Preview</h5>
-                <p className="text-xs text-blue-700">Large preview of the active slide. Shows the final
+              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <h5 className="font-semibold text-blue-900 dark:text-blue-200 text-xs mb-1">Center Panel — Preview</h5>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Large preview of the active slide. Shows the final
                   composed image (background + text overlay + logo). Navigate with arrow buttons or
                   click filmstrip thumbnails.</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <h5 className="font-semibold text-blue-900 text-xs mb-1">Right Panel — Slide Editor</h5>
-                <p className="text-xs text-blue-700">Edit headline, body text, image prompt. Change
+              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <h5 className="font-semibold text-blue-900 dark:text-blue-200 text-xs mb-1">Right Panel — Slide Editor</h5>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Edit headline, body text, image prompt. Change
                   slide type. Lock/unlock slides. Regenerate individual slides. Edit post caption.</p>
               </div>
             </div>
@@ -277,7 +277,7 @@ export function CarouselGuideContent() {
 
         {/* ── Image Generation ── */}
         <Section icon={ImageIcon} title="Step 3 — Image Generation">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               Images are generated using <strong>Nano Banana 2</strong> (via FAL.ai). Each slide gets a unique
               background image based on its <strong>Image Prompt</strong> + the carousel's <strong>visual style</strong>.
@@ -289,7 +289,7 @@ export function CarouselGuideContent() {
             <p>
               After content generation completes, click <strong>"Generate Images"</strong> in the toolbar.
               This generates background images for ALL slides and composites them with text overlays.
-              The status badge changes to <Badge label="generating" color="bg-purple-100 text-purple-700" />.
+              The status badge changes to <Badge label="generating" color="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" />.
             </p>
           </Step>
 
@@ -316,7 +316,7 @@ export function CarouselGuideContent() {
 
         {/* ── Style Controls ── */}
         <Section icon={Palette} title="Style Override Controls">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               Click the <Badge icon={Settings2} label="gear icon" /> in the toolbar to toggle the
               <strong> Style Controls bar</strong>. These controls let you fine-tune the visual appearance
@@ -398,7 +398,7 @@ export function CarouselGuideContent() {
 
         {/* ── Slideshow ── */}
         <Section icon={Play} title="Slideshow Mode (Static Image → Video)">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               The <strong>Slideshow</strong> feature converts your static image carousel into a video
               by sequencing the composed slide images with optional voiceover and background music.
@@ -440,7 +440,7 @@ export function CarouselGuideContent() {
               ].map(([name, desc]) => (
                 <div key={name} className="text-xs">
                   <span className="font-semibold">{name}</span>
-                  <span className="text-gray-400"> — {desc}</span>
+                  <span className="text-gray-400 dark:text-gray-500"> — {desc}</span>
                 </div>
               ))}
             </div>
@@ -468,7 +468,7 @@ export function CarouselGuideContent() {
           <Step number="4" title="Create Slideshow">
             <p>
               Click <strong>"Create Slideshow"</strong>. The button shows a spinner and the status changes to
-              <Badge label="assembling" color="bg-purple-100 text-purple-700" />. The backend:
+              <Badge label="assembling" color="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" />. The backend:
             </p>
             <ol className="list-decimal list-inside space-y-1 mt-1 ml-2">
               <li>Generates voiceover TTS (if enabled)</li>
@@ -478,7 +478,7 @@ export function CarouselGuideContent() {
             </ol>
             <p className="mt-2">
               The page polls every 5 seconds. Once complete, the status changes to
-              <Badge label="ready" color="bg-green-100 text-green-700" /> and the video player appears
+              <Badge label="ready" color="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" /> and the video player appears
               with a <strong>Download</strong> link.
             </p>
           </Step>
@@ -494,7 +494,7 @@ export function CarouselGuideContent() {
 
         {/* ── Video Carousel ── */}
         <Section icon={Film} title="Video Carousel Mode (AI-Animated Slides)">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               <strong>Video Carousel</strong> mode AI-animates each slide individually using a video generation
               model, then assembles them into a final video. This produces much richer motion than the
@@ -525,9 +525,9 @@ export function CarouselGuideContent() {
 
         {/* ── Publishing ── */}
         <Section icon={Send} title="Publishing">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
-              Once your carousel is <Badge label="ready" color="bg-green-100 text-green-700" /> (all images
+              Once your carousel is <Badge label="ready" color="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" /> (all images
               generated), you can publish directly to the carousel's platform.
             </p>
           </div>
@@ -559,7 +559,7 @@ export function CarouselGuideContent() {
 
         {/* ── Multi-Platform ── */}
         <Section icon={Globe} title="Multi-Platform Carousels">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               When you select multiple platforms during creation, the system creates a
               <strong> separate carousel for each platform</strong>. Each gets:
@@ -579,7 +579,7 @@ export function CarouselGuideContent() {
 
         {/* ── Compositor ── */}
         <Section icon={Layers} title="How Image Composition Works (Technical)">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               Each slide image is a <strong>composite</strong> of three layers:
             </p>
@@ -610,7 +610,7 @@ export function CarouselGuideContent() {
 
         {/* ── Carousel Style Templates ── */}
         <Section icon={FileText} title="Carousel Style Templates (Deep Dive)">
-          <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
             <p>
               Each style template defines a complete text layout configuration. Here are the key properties
               that each template controls:
@@ -618,7 +618,7 @@ export function CarouselGuideContent() {
             <div className="overflow-x-auto mt-3">
               <table className="text-xs w-full border-collapse">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-gray-50 dark:bg-gray-800/50">
                     <th className="text-left p-2 border">Property</th>
                     <th className="text-left p-2 border">What It Controls</th>
                     <th className="text-left p-2 border">Example Values</th>
@@ -639,7 +639,7 @@ export function CarouselGuideContent() {
                     <tr key={prop}>
                       <td className="p-2 border font-mono text-[#2C666E]">{prop}</td>
                       <td className="p-2 border">{desc}</td>
-                      <td className="p-2 border text-gray-500">{vals}</td>
+                      <td className="p-2 border text-gray-500 dark:text-gray-400">{vals}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -712,7 +712,7 @@ export function CarouselGuideContent() {
             <p>
               Check that all slides have composed images (no slides still generating or failed).
               If it fails with an FFmpeg error, try again — FAL.ai occasionally has transient queue issues.
-              The carousel status will show <Badge label="failed" color="bg-red-100 text-red-700" /> with
+              The carousel status will show <Badge label="failed" color="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" /> with
               an error message.
             </p>
           </Step>
@@ -744,20 +744,20 @@ export function CarouselGuideContent() {
 
         {/* ── Keyboard & Status Reference ── */}
         <Section icon={Eye} title="Status Reference">
-          <div className="mt-3 text-sm text-gray-600">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
             <p>Carousel status badges and what they mean:</p>
             <div className="grid grid-cols-2 gap-2 mt-3">
               {[
-                ['draft', 'bg-gray-100 text-gray-600', 'Carousel created, content generated, no images yet'],
-                ['generating', 'bg-purple-100 text-purple-700', 'Images are being generated right now'],
-                ['assembling', 'bg-purple-100 text-purple-700', 'Slideshow/video is being assembled'],
-                ['ready', 'bg-green-100 text-green-700', 'All images done, ready to publish or download'],
-                ['published', 'bg-blue-100 text-blue-700', 'Posted to the target platform'],
-                ['failed', 'bg-red-100 text-red-700', 'Something went wrong — check error message'],
+                ['draft', 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400', 'Carousel created, content generated, no images yet'],
+                ['generating', 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300', 'Images are being generated right now'],
+                ['assembling', 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300', 'Slideshow/video is being assembled'],
+                ['ready', 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300', 'All images done, ready to publish or download'],
+                ['published', 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300', 'Posted to the target platform'],
+                ['failed', 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300', 'Something went wrong — check error message'],
               ].map(([status, color, desc]) => (
                 <div key={status} className="flex items-start gap-2">
                   <Badge label={status} color={color} />
-                  <span className="text-xs text-gray-500">{desc}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{desc}</span>
                 </div>
               ))}
             </div>
@@ -765,7 +765,7 @@ export function CarouselGuideContent() {
         </Section>
 
         {/* Footer */}
-        <div className="text-center py-6 text-xs text-gray-400">
+        <div className="text-center py-6 text-xs text-gray-400 dark:text-gray-500">
           Carousel Builder Guide — Stitch Studios
         </div>
       </div>
@@ -776,19 +776,19 @@ export default function CarouselGuidePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800/50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => navigate('/carousels')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Carousel Builder Guide</h1>
-            <p className="text-xs text-gray-500">Complete reference for every feature and workflow</p>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Carousel Builder Guide</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Complete reference for every feature and workflow</p>
           </div>
         </div>
       </div>

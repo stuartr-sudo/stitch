@@ -19,20 +19,20 @@ import {
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
       >
         <Icon className="w-5 h-5 text-[#2C666E] shrink-0" />
-        <span className="font-semibold text-gray-900 flex-1">{title}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{title}</span>
         {open
-          ? <ChevronDown className="w-4 h-4 text-gray-400" />
-          : <ChevronRight className="w-4 h-4 text-gray-400" />
+          ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         }
       </button>
       {open && (
-        <div className="px-5 pb-5 bg-white border-t border-gray-100">
+        <div className="px-5 pb-5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
           {children}
         </div>
       )}
@@ -45,8 +45,8 @@ function Step({ number, title, children }) {
     <div className="flex gap-4 mt-4">
       <div className="shrink-0 w-8 h-8 rounded-full bg-[#2C666E] text-white flex items-center justify-center text-sm font-bold">{number}</div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-        <div className="text-sm text-gray-600 space-y-2">{children}</div>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{title}</h4>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">{children}</div>
       </div>
     </div>
   );
@@ -54,7 +54,7 @@ function Step({ number, title, children }) {
 
 function Tip({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex gap-2">
       <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -63,7 +63,7 @@ function Tip({ children }) {
 
 function Warning({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 flex gap-2">
       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -72,7 +72,7 @@ function Warning({ children }) {
 
 function InfoBox({ children }) {
   return (
-    <div className="mt-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex gap-2">
+    <div className="mt-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200 flex gap-2">
       <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -81,18 +81,18 @@ function InfoBox({ children }) {
 
 function ModelCard({ name, badge, description, features, limitations, cost }) {
   return (
-    <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-white">
+    <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-800">
       <div className="flex items-center gap-2 mb-2">
-        <h4 className="font-bold text-gray-900">{name}</h4>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge === 'Budget' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
+        <h4 className="font-bold text-gray-900 dark:text-gray-100">{name}</h4>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge === 'Budget' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>
           {badge}
         </span>
       </div>
-      <p className="text-sm text-gray-600 mb-3">{description}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{description}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Features</p>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Features</p>
+          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
             {features.map((f, i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
@@ -102,8 +102,8 @@ function ModelCard({ name, badge, description, features, limitations, cost }) {
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Limitations</p>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Limitations</p>
+          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
             {limitations.map((l, i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
@@ -112,7 +112,7 @@ function ModelCard({ name, badge, description, features, limitations, cost }) {
             ))}
           </ul>
           {cost && (
-            <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+            <div className="mt-2 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
               <DollarSign className="w-3 h-3" />
               <span>{cost}</span>
             </div>
@@ -125,10 +125,10 @@ function ModelCard({ name, badge, description, features, limitations, cost }) {
 
 function ExampleCard({ title, scenario, steps, result }) {
   return (
-    <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-gray-50">
-      <h4 className="font-bold text-gray-900 mb-1">{title}</h4>
-      <p className="text-sm text-gray-500 italic mb-3">{scenario}</p>
-      <ol className="text-sm text-gray-600 space-y-1.5 list-decimal list-inside">
+    <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50">
+      <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">{title}</h4>
+      <p className="text-sm text-gray-500 dark:text-gray-400 italic mb-3">{scenario}</p>
+      <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5 list-decimal list-inside">
         {steps.map((s, i) => <li key={i}>{s}</li>)}
       </ol>
       <div className="mt-3 px-3 py-2 bg-[#2C666E]/5 border border-[#2C666E]/15 rounded-lg text-sm text-[#07393C]">
@@ -145,12 +145,12 @@ export function MotionTransferGuideContent() {
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
       {/* Hero */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-purple-50 border border-purple-200 rounded-full mb-4">
-          <Film className="w-5 h-5 text-purple-600" />
-          <span className="text-sm font-bold text-purple-700">Motion Transfer Guide</span>
+        <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800 rounded-full mb-4">
+          <Film className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Motion Transfer Guide</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Motion Transfer & Motion Control</h1>
-        <p className="text-gray-500 max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">Motion Transfer & Motion Control</h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
           Transfer motion from any reference video onto a still character image. Your character performs
           the exact movements from the reference — dance moves, gestures, actions — while keeping your
           own visual style, branding, and character design.
@@ -159,7 +159,7 @@ export function MotionTransferGuideContent() {
 
       {/* ── What is Motion Transfer ────────────────────────────────── */}
       <Section icon={Wand2} title="What is Motion Transfer?" defaultOpen>
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Motion Transfer (also called Motion Control) is an AI technique that extracts movement patterns
             from a reference video and applies them to a still image. The result is a new video where your
@@ -172,23 +172,23 @@ export function MotionTransferGuideContent() {
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <ImageIcon className="w-8 h-8 text-[#2C666E] mx-auto mb-2" />
-              <p className="text-xs font-semibold text-gray-700">Character Image</p>
-              <p className="text-[10px] text-gray-400 mt-1">Your still image (the subject)</p>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Character Image</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Your still image (the subject)</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col items-center justify-center">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
               <ArrowRight className="w-6 h-6 text-purple-500 mb-1" />
-              <p className="text-[10px] text-gray-400">+ Motion Video</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500">+ Motion Video</p>
             </div>
-            <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-              <Play className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-purple-700">Output Video</p>
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/40 rounded-xl border border-purple-200 dark:border-purple-800">
+              <Play className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-purple-700 dark:text-purple-300">Output Video</p>
               <p className="text-[10px] text-purple-400 mt-1">Your character performing the motion</p>
             </div>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-5">Key concepts</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-5">Key concepts</h4>
           <ul className="space-y-2">
             <li><strong>Character Image</strong> — A still image of your subject (photo, illustration, 3D render). This is what the AI renders in the output.</li>
             <li><strong>Motion Reference Video</strong> — Any video containing the movement you want to copy. The AI extracts the motion skeleton and applies it to your character.</li>
@@ -200,7 +200,7 @@ export function MotionTransferGuideContent() {
 
       {/* ── Two Models ───────────────────────────────────────────── */}
       <Section icon={Layers} title="Available Models">
-        <div className="mt-3 text-sm text-gray-600">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
           <p>Two motion transfer models are available, each with different strengths:</p>
 
           <ModelCard
@@ -256,34 +256,34 @@ export function MotionTransferGuideContent() {
 
       {/* ── Character Orientation ────────────────────────────────── */}
       <Section icon={RotateCcw} title="Character Orientation (Kling V3 Pro only)">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Character Orientation is a Kling V3 Pro exclusive feature that controls how your character's body
             is positioned relative to the reference video's movement.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
-              <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+            <div className="p-4 border border-blue-200 dark:border-blue-800 rounded-xl bg-blue-50 dark:bg-blue-950/40">
+              <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4" /> Match Image (Default)
               </h4>
-              <p className="text-sm text-blue-800 mb-2">
+              <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
                 The character keeps its original pose from the still image. Motion is applied on top — like puppeting your character.
               </p>
-              <ul className="text-xs text-blue-700 space-y-1">
+              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
                 <li>Max duration: <strong>10 seconds</strong></li>
                 <li>Best for: front-facing characters, consistent branding</li>
                 <li>Example: Character illustration faces camera, dances in place</li>
               </ul>
             </div>
-            <div className="p-4 border border-green-200 rounded-xl bg-green-50">
-              <h4 className="font-bold text-green-900 mb-2 flex items-center gap-2">
+            <div className="p-4 border border-green-200 dark:border-green-800 rounded-xl bg-green-50 dark:bg-green-950/40">
+              <h4 className="font-bold text-green-900 dark:text-green-200 mb-2 flex items-center gap-2">
                 <Video className="w-4 h-4" /> Match Video
               </h4>
-              <p className="text-sm text-green-800 mb-2">
+              <p className="text-sm text-green-800 dark:text-green-200 mb-2">
                 The character adjusts its body to match the reference video's orientation. More natural for complex movements.
               </p>
-              <ul className="text-xs text-green-700 space-y-1">
+              <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
                 <li>Max duration: <strong>30 seconds</strong></li>
                 <li>Best for: full-body actions, turns, complex choreography</li>
                 <li>Example: Character turns, walks away, does a full dance routine</li>
@@ -301,7 +301,7 @@ export function MotionTransferGuideContent() {
 
       {/* ── Video Trimming ───────────────────────────────────────── */}
       <Section icon={Scissors} title="Video Trimming">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             The built-in video trimmer lets you select a specific segment of your reference video.
             This is essential when working with longer clips where you only want a particular movement.
@@ -341,26 +341,26 @@ export function MotionTransferGuideContent() {
 
       {/* ── Keep Original Sound ──────────────────────────────────── */}
       <Section icon={Volume2} title="Keep Original Sound">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             When using Kling V3 Pro, you can optionally preserve the audio from the reference video in the output.
             This is useful when the reference video has music, dialogue, or sound effects you want to keep.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="p-4 border border-gray-200 rounded-xl">
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
               <div className="flex items-center gap-2 mb-2">
                 <Volume2 className="w-4 h-4 text-[#2C666E]" />
-                <h4 className="font-semibold text-gray-900">Sound ON</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Sound ON</h4>
               </div>
-              <p className="text-sm text-gray-600">The output video includes the reference video's original audio track. Great for music videos, dance clips, or dialogue scenes.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">The output video includes the reference video's original audio track. Great for music videos, dance clips, or dialogue scenes.</p>
             </div>
-            <div className="p-4 border border-gray-200 rounded-xl">
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
               <div className="flex items-center gap-2 mb-2">
-                <VolumeX className="w-4 h-4 text-gray-400" />
-                <h4 className="font-semibold text-gray-900">Sound OFF</h4>
+                <VolumeX className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Sound OFF</h4>
               </div>
-              <p className="text-sm text-gray-600">The output video is silent. You'll add your own voiceover, music, or sound effects later. This is the default for Shorts Workbench.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">The output video is silent. You'll add your own voiceover, music, or sound effects later. This is the default for Shorts Workbench.</p>
             </div>
           </div>
 
@@ -378,15 +378,15 @@ export function MotionTransferGuideContent() {
 
       {/* ── Where to Use It ──────────────────────────────────────── */}
       <Section icon={Monitor} title="Where to Use Motion Transfer">
-        <div className="mt-3 text-sm text-gray-600 space-y-4">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
           <p>Motion Transfer is available in three places, each with slightly different behavior:</p>
 
           {/* VideoAdvertCreator */}
-          <div className="border border-gray-200 rounded-xl p-4">
-            <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-[#2C666E]" /> Video Ad Creator — Motion Transfer Modal
             </h4>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               The standalone Motion Transfer tool. Open it from the Video Ad Creator page. This is the simplest
               way to generate a single motion transfer video.
             </p>
@@ -415,11 +415,11 @@ export function MotionTransferGuideContent() {
           </div>
 
           {/* Shorts Workbench */}
-          <div className="border border-gray-200 rounded-xl p-4">
-            <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
               <Film className="w-4 h-4 text-[#2C666E]" /> Shorts Workbench — Per-Scene Motion Reference
             </h4>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               In the Shorts Workbench, Motion Transfer is an optional override per scene. Any scene can use MT
               instead of the global FLF/I2V video generation mode.
             </p>
@@ -463,11 +463,11 @@ export function MotionTransferGuideContent() {
           </div>
 
           {/* Storyboard */}
-          <div className="border border-gray-200 rounded-xl p-4">
-            <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#2C666E]" /> Storyboard — Per-Frame Motion Reference
             </h4>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               In the Storyboard tool, Motion Transfer is a per-frame override. Any frame can use MT instead
               of the storyboard's global video model.
             </p>
@@ -567,8 +567,8 @@ export function MotionTransferGuideContent() {
 
       {/* ── Best Practices ───────────────────────────────────────── */}
       <Section icon={CheckCircle2} title="Best Practices">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
-          <h4 className="font-semibold text-gray-900">For the character image:</h4>
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">For the character image:</h4>
           <ul className="space-y-1.5 ml-4">
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> Use a clear, well-lit image with the character prominently visible</li>
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> Full-body shots work better than close-ups for full-body movements</li>
@@ -576,7 +576,7 @@ export function MotionTransferGuideContent() {
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> The character's initial pose should be compatible with the target motion</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-4">For the reference video:</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">For the reference video:</h4>
           <ul className="space-y-1.5 ml-4">
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> Trim to just the movement you want — shorter = better quality</li>
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> Single-person videos work best; multi-person can confuse the motion extraction</li>
@@ -585,7 +585,7 @@ export function MotionTransferGuideContent() {
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> MP4 format is most reliable; MOV and WebM also work</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-4">For prompts:</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">For prompts:</h4>
           <ul className="space-y-1.5 ml-4">
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> The prompt is optional but helps with scene context</li>
             <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> Describe the environment, lighting, and mood — not the movement (that comes from the video)</li>
@@ -596,9 +596,9 @@ export function MotionTransferGuideContent() {
 
       {/* ── Troubleshooting ──────────────────────────────────────── */}
       <Section icon={AlertTriangle} title="Troubleshooting">
-        <div className="mt-3 text-sm text-gray-600 space-y-4">
-          <div className="border-l-4 border-red-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">"Motion transfer submit failed: 422"</h4>
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
+          <div className="border-l-4 border-red-300 dark:border-red-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">"Motion transfer submit failed: 422"</h4>
             <p className="mt-1">
               The reference video may be too long for the selected model/orientation. Check the duration limits:
               WAN 2.2 has no strict limit but works best under 6s; Kling Match Image maxes at 10s; Kling Match Video maxes at 30s.
@@ -606,8 +606,8 @@ export function MotionTransferGuideContent() {
             </p>
           </div>
 
-          <div className="border-l-4 border-red-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">"No video URL from motion transfer"</h4>
+          <div className="border-l-4 border-red-300 dark:border-red-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">"No video URL from motion transfer"</h4>
             <p className="mt-1">
               The generation completed but didn't produce output. This can happen if the character image is too
               low resolution, the reference video is corrupted, or there's a content policy issue. Try a different
@@ -615,8 +615,8 @@ export function MotionTransferGuideContent() {
             </p>
           </div>
 
-          <div className="border-l-4 border-amber-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">Character doesn't move naturally</h4>
+          <div className="border-l-4 border-amber-300 dark:border-amber-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character doesn't move naturally</h4>
             <p className="mt-1">
               Try switching between "Match Image" and "Match Video" orientation. If your character is facing a different
               direction than the reference person, "Match Video" lets the AI adjust the orientation. Also ensure
@@ -624,8 +624,8 @@ export function MotionTransferGuideContent() {
             </p>
           </div>
 
-          <div className="border-l-4 border-amber-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">Output looks blurry or distorted</h4>
+          <div className="border-l-4 border-amber-300 dark:border-amber-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Output looks blurry or distorted</h4>
             <p className="mt-1">
               Use a higher resolution character image (at least 512px on the shortest side). If using WAN 2.2, try
               switching to Kling V3 Pro for better quality. Adding a descriptive prompt about the desired visual
@@ -633,8 +633,8 @@ export function MotionTransferGuideContent() {
             </p>
           </div>
 
-          <div className="border-l-4 border-amber-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">Trim button doesn't appear</h4>
+          <div className="border-l-4 border-amber-300 dark:border-amber-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Trim button doesn't appear</h4>
             <p className="mt-1">
               The video must load in the browser preview before trimming is available. If the video URL returns
               a non-video content type or is behind authentication, the preview won't load. Try using a direct
@@ -642,8 +642,8 @@ export function MotionTransferGuideContent() {
             </p>
           </div>
 
-          <div className="border-l-4 border-blue-300 pl-4 py-2">
-            <h4 className="font-semibold text-gray-900">Shorts clip has audio I don't want</h4>
+          <div className="border-l-4 border-blue-300 dark:border-blue-700 pl-4 py-2">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Shorts clip has audio I don't want</h4>
             <p className="mt-1">
               Shorts Workbench always forces audio OFF for MT clips. If you hear audio, it's from the voiceover
               or music layers added during assembly, not from the motion reference. Check your voiceover and music
@@ -655,31 +655,31 @@ export function MotionTransferGuideContent() {
 
       {/* ── Cost & Processing Time ───────────────────────────────── */}
       <Section icon={DollarSign} title="Cost & Processing Time">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">Model</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">Cost</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">Processing Time</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">Max Duration</th>
+                <tr className="bg-gray-50 dark:bg-gray-800/50">
+                  <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Model</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Cost</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Processing Time</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Max Duration</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t border-gray-100">
+                <tr className="border-t border-gray-100 dark:border-gray-700">
                   <td className="px-4 py-2">WAN 2.2</td>
                   <td className="px-4 py-2">~$0.02-0.04</td>
                   <td className="px-4 py-2">30-60 seconds</td>
                   <td className="px-4 py-2">~6 seconds</td>
                 </tr>
-                <tr className="border-t border-gray-100 bg-gray-50/50">
+                <tr className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
                   <td className="px-4 py-2">Kling V3 Pro (Match Image)</td>
                   <td className="px-4 py-2">~$0.06-0.08</td>
                   <td className="px-4 py-2">60-120 seconds</td>
                   <td className="px-4 py-2">10 seconds</td>
                 </tr>
-                <tr className="border-t border-gray-100">
+                <tr className="border-t border-gray-100 dark:border-gray-700">
                   <td className="px-4 py-2">Kling V3 Pro (Match Video)</td>
                   <td className="px-4 py-2">~$0.06-0.08</td>
                   <td className="px-4 py-2">60-120 seconds</td>
@@ -703,8 +703,8 @@ export function MotionTransferGuideContent() {
 
       {/* ── Technical Reference ──────────────────────────────────── */}
       <Section icon={Settings} title="Technical Reference">
-        <div className="mt-3 text-sm text-gray-600 space-y-3">
-          <h4 className="font-semibold text-gray-900">API Endpoints</h4>
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">API Endpoints</h4>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-xs space-y-2 overflow-x-auto">
             <p><span className="text-green-400">POST</span> /api/motion-transfer/generate</p>
             <p className="text-gray-500 ml-4">Generate a motion transfer video (server-side polling)</p>
@@ -714,7 +714,7 @@ export function MotionTransferGuideContent() {
             <p className="text-gray-500 ml-4">Generate a Shorts clip using motion transfer</p>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Motion Reference Data Shape</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Motion Reference Data Shape</h4>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-xs overflow-x-auto">
             <pre>{`{
   videoUrl: "https://...",         // Original video URL
@@ -729,25 +729,25 @@ export function MotionTransferGuideContent() {
 }`}</pre>
           </div>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Model Registry Keys</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Model Registry Keys</h4>
           <ul className="space-y-1 ml-4 font-mono text-xs">
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded">wan_motion</code> — fal-ai/wan/v2.2-14b/animate/move</li>
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded">kling_motion_control</code> — fal-ai/kling-video/v3/pro/motion-control</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">wan_motion</code> — fal-ai/wan/v2.2-14b/animate/move</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">kling_motion_control</code> — fal-ai/kling-video/v3/pro/motion-control</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 mt-4">Files</h4>
-          <ul className="space-y-1 ml-4 text-xs text-gray-500">
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">api/lib/motionTransferRegistry.js</code> — Model configs + generateMotionTransfer() dispatcher</li>
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">api/video/trim.js</code> — Video trim endpoint (local FFmpeg)</li>
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">src/components/MotionReferenceInput.jsx</code> — Shared motion reference UI</li>
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">src/components/VideoTrimmer.jsx</code> — Video trimmer range slider</li>
-            <li><code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">src/components/modals/MotionTransferModal.jsx</code> — Standalone modal (VideoAdvertCreator)</li>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Files</h4>
+          <ul className="space-y-1 ml-4 text-xs text-gray-500 dark:text-gray-400">
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">api/lib/motionTransferRegistry.js</code> — Model configs + generateMotionTransfer() dispatcher</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">api/video/trim.js</code> — Video trim endpoint (local FFmpeg)</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">src/components/MotionReferenceInput.jsx</code> — Shared motion reference UI</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">src/components/VideoTrimmer.jsx</code> — Video trimmer range slider</li>
+            <li><code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">src/components/modals/MotionTransferModal.jsx</code> — Standalone modal (VideoAdvertCreator)</li>
           </ul>
         </div>
       </Section>
 
       {/* Footer */}
-      <div className="text-center py-8 text-xs text-gray-400">
+      <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
         Motion Transfer powered by FAL.ai (WAN 2.2 + Kling V3 Pro Motion Control)
       </div>
     </div>
@@ -756,7 +756,7 @@ export function MotionTransferGuideContent() {
 
 export default function MotionTransferGuidePage() {
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950 min-h-screen">
       <MotionTransferGuideContent />
     </div>
   );
