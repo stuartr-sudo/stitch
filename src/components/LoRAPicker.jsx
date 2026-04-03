@@ -84,7 +84,8 @@ export default function LoRAPicker({ value = [], onChange, brandUsername }) {
     } else {
       const entry = type === 'prebuilt'
         ? { id: lora.id, type: 'prebuilt', url: lora.hf_repo_id, triggerWord: lora.recommended_trigger_word || null, scale: lora.default_scale || 0.8 }
-        : { id: lora.id, type: 'custom', url: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: 1.0 };
+        : { id: lora.id, type: 'custom', url: lora.fal_model_url, triggerWord: lora.trigger_word || null, scale: 1.0,
+            highNoiseUrl: lora.high_noise_lora_url || null, trainingModel: lora.training_model || null };
       onChange([...value, entry]);
     }
   }

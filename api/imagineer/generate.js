@@ -134,6 +134,9 @@ export default async function handler(req, res) {
     if (model === 'fal-flux') {
       return handleFalFlux(req, res, enhancedPrompt, dimensions, req.body.loraUrl);
     }
+    if (model === 'wan22-t2i') {
+      return handleWan22T2I(req, res, enhancedPrompt, dimensions);
+    }
     if (model === 'seedream') {
       return handleSeedream(req, res, enhancedPrompt, dimensions);
     }
@@ -291,9 +294,13 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
   };
 
   // Support both single loraUrl (legacy) and loras array (stacking)
-  const lorasFromBody = req.body.loras; // [{ url, scale }]
+  const lorasFromBody = req.body.loras; // [{ url, scale, transformer? }]
   if (lorasFromBody?.length) {
-    payload.loras = lorasFromBody.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
+    payload.loras = lorasFromBody.map(l => {
+      const entry = { path: l.url, scale: l.scale ?? 1.0 };
+      if (l.transformer) entry.transformer = l.transformer;
+      return entry;
+    });
   } else if (loraUrl) {
     payload.loras = [{ path: loraUrl, scale: 1 }];
   }
@@ -335,6 +342,77 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
   }
 
   return res.status(500).json({ error: 'Unexpected Flux response' });
+}
+
+async function handleWan22T2I(req, res, enhancedPrompt, dimensions) {
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai key not configured.' });
+
+  const sizeMap = {
+    '16:9': 'landscape_16_9',
+    '9:16': 'portrait_16_9',
+    '1:1': 'square_hd',
+    '4:3': 'landscape_4_3',
+    '3:4': 'portrait_4_3',
+  };
+
+  const payload = {
+    prompt: enhancedPrompt,
+    image_size: sizeMap[dimensions] || 'square_hd',
+    num_inference_steps: 27,
+    guidance_scale: 3.5,
+    guidance_scale_2: 4.0,
+  };
+
+  // LoRA support with transformer targeting (Wan 2.2 dual-transformer)
+  const lorasFromBody = req.body.loras; // [{ url, scale, transformer }]
+  if (lorasFromBody?.length) {
+    payload.loras = lorasFromBody.map(l => {
+      const entry = { path: l.url, scale: l.scale ?? 1.0 };
+      if (l.transformer) entry.transformer = l.transformer;
+      return entry;
+    });
+  }
+
+  const response = await fetch('https://queue.fal.run/fal-ai/wan/v2.2-a14b/text-to-image/lora', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return res.status(response.status).json({ error: 'Wan 2.2 T2I API error', details: errorText });
+  }
+
+  const data = await response.json();
+
+  // Direct result (synchronous)
+  if (data.image?.url) {
+    const imageUrl = data.image.url;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, imageUrl, {
+      model_name: 'wan22-t2i',
+      visual_style: req.body.style || null,
+    });
+    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
+  }
+
+  // Queue-based (async)
+  if (data.request_id) {
+    return res.status(200).json({
+      success: true,
+      requestId: data.request_id,
+      model: 'wan22-t2i',
+      status: 'processing',
+      pollEndpoint: '/api/imagineer/result',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected Wan 2.2 T2I response' });
 }
 
 async function handleKlingImageO3(req, res, enhancedPrompt, dimensions) {

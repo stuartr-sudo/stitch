@@ -289,8 +289,11 @@ export function selectModelForScene(sceneRole, modelPrefs, loraConfigs) {
   const hasLoras = loraConfigs?.length > 0;
   const preferred = modelPrefs?.image_model;
 
-  // LoRAs constrain us to FLUX 2 (only fal model supporting LoRA weights)
-  if (hasLoras) return 'fal_flux';
+  // LoRAs constrain model choice — Wan 2.2 LoRAs need fal_wan22_t2i, all others use fal_flux
+  if (hasLoras) {
+    const hasWan22 = loraConfigs.some(c => c.transformer);
+    return hasWan22 ? 'fal_wan22_t2i' : 'fal_flux';
+  }
 
   switch (sceneRole) {
     case 'hook':
@@ -325,7 +328,11 @@ export function selectModelForScene(sceneRole, modelPrefs, loraConfigs) {
 export async function generateImage(prompt, aspectRatio, keys, supabase, model, loraConfig = null) {
   const loraConfigs = !loraConfig ? [] : Array.isArray(loraConfig) ? loraConfig : [loraConfig];
   const hasLoras = loraConfigs.length > 0;
-  const lorasPayload = loraConfigs.filter(c => c.loraUrl).map(c => ({ path: c.loraUrl, scale: c.scale ?? 1.0 }));
+  const lorasPayload = loraConfigs.filter(c => c.loraUrl).map(c => {
+    const entry = { path: c.loraUrl, scale: c.scale ?? 1.0 };
+    if (c.transformer) entry.transformer = c.transformer;
+    return entry;
+  });
 
   // Prepend trigger words
   const triggerPrefix = loraConfigs.map(c => c.triggerWord).filter(Boolean).join(', ');
@@ -335,7 +342,8 @@ export async function generateImage(prompt, aspectRatio, keys, supabase, model, 
   let modelKey = model;
   if (!modelKey) {
     if (hasLoras) {
-      modelKey = 'fal_flux';
+      const hasWan22 = loraConfigs.some(c => c.transformer);
+      modelKey = hasWan22 ? 'fal_wan22_t2i' : 'fal_flux';
     } else if (keys.wavespeedKey) {
       modelKey = 'wavespeed';
     } else {

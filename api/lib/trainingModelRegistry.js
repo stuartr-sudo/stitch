@@ -194,6 +194,10 @@ export const TRAINING_MODELS = {
     parseResult(data) {
       return data?.diffusers_lora_file?.url ?? data?.high_noise_lora?.url ?? null;
     },
+    // Wan 2.2 dual-transformer: returns the high-noise LoRA URL (separate from diffusers_lora_file)
+    parseHighNoiseLora(data) {
+      return data?.high_noise_lora?.url ?? null;
+    },
   },
 
   'qwen-image': {

@@ -116,6 +116,9 @@ async function checkAndFinalizeTraining(supabase, lora) {
       }
     }
 
+    // Wan 2.2 dual-transformer: also extract the high-noise LoRA
+    let highNoiseUrl = model?.parseHighNoiseLora?.(resultData) ?? null;
+
     if (!modelUrl) {
       console.error(`[LoRA Poller] No model URL in result for ${id}`);
       await supabase.from('brand_loras').update({ status: 'failed' }).eq('id', id);
@@ -150,14 +153,42 @@ async function checkAndFinalizeTraining(supabase, lora) {
       console.warn(`[LoRA Poller] Upload error (keeping FAL URL): ${uploadErr.message}`);
     }
 
+    // Upload high-noise LoRA to permanent storage (Wan 2.2 dual-transformer)
+    let permanentHighNoiseUrl = highNoiseUrl;
+    if (highNoiseUrl) {
+      try {
+        console.log(`[LoRA Poller] Uploading high-noise LoRA for ${id}...`);
+        const hnResponse = await fetch(highNoiseUrl);
+        if (hnResponse.ok) {
+          const hnBuffer = Buffer.from(await hnResponse.arrayBuffer());
+          const hnFileName = `lora-${id}-high-${Date.now()}.safetensors`;
+          const hnFilePath = `lora-models/${hnFileName}`;
+          const { error: hnUploadError } = await supabase.storage
+            .from('media')
+            .upload(hnFilePath, hnBuffer, {
+              contentType: 'application/octet-stream',
+              upsert: false,
+            });
+          if (!hnUploadError) {
+            const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(hnFilePath);
+            permanentHighNoiseUrl = publicUrl;
+            console.log(`[LoRA Poller] High-noise saved: ${permanentHighNoiseUrl}`);
+          } else {
+            console.warn(`[LoRA Poller] High-noise upload failed (keeping FAL URL): ${hnUploadError.message}`);
+          }
+        }
+      } catch (hnErr) {
+        console.warn(`[LoRA Poller] High-noise upload error: ${hnErr.message}`);
+      }
+    }
+
     // Update DB
-    await supabase
-      .from('brand_loras')
-      .update({ fal_model_url: permanentUrl, status: 'ready', updated_at: new Date().toISOString() })
-      .eq('id', id);
+    const updatePayload = { fal_model_url: permanentUrl, status: 'ready', updated_at: new Date().toISOString() };
+    if (permanentHighNoiseUrl) updatePayload.high_noise_lora_url = permanentHighNoiseUrl;
+    await supabase.from('brand_loras').update(updatePayload).eq('id', id);
 
     await updateLinkedSubject(supabase, id, 'ready', permanentUrl);
-    console.log(`[LoRA Poller] LoRA ${id} finalized — status: ready`);
+    console.log(`[LoRA Poller] LoRA ${id} finalized — status: ready${permanentHighNoiseUrl ? ' (dual-LoRA)' : ''}`);
 
   } else if (statusData.status === 'FAILED') {
     console.log(`[LoRA Poller] Training FAILED for ${id}`);

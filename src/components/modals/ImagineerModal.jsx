@@ -314,6 +314,21 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
 
   const handleModeChange = (newMode) => { setMode(newMode); setStep(0); setT2iMultiResults([]); };
 
+  // Expand LoRA picker values into FAL-ready format, auto-expanding Wan 2.2 dual-LoRAs
+  const expandLoras = (loraValues) => {
+    const result = [];
+    for (const l of loraValues) {
+      if (!l.url) continue;
+      if (l.trainingModel === 'wan-22-image' && l.highNoiseUrl) {
+        result.push({ url: l.url, scale: l.scale ?? 1.0, transformer: 'low' });
+        result.push({ url: l.highNoiseUrl, scale: l.scale ?? 1.0, transformer: 'high' });
+      } else {
+        result.push({ url: l.url, scale: l.scale ?? 1.0 });
+      }
+    }
+    return result;
+  };
+
   // ═══════════════════════════════════════════════════════════════════════
   // T2I Handlers
   // ═══════════════════════════════════════════════════════════════════════
@@ -414,11 +429,12 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
     if (stylesToGenerate.length === 1) {
       setGenerating(true);
       try {
-        const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+        const loras = expandLoras(generateLoras);
+        const hasWan22 = generateLoras.some(l => l.trainingModel === 'wan-22-image' && l.highNoiseUrl);
         const cohesivePrompt = await buildCohesivePrompt('imagineer', { style: stylesToGenerate[0].key });
         await onGenerate({
           prompt: cohesivePrompt, style: stylesToGenerate[0].key, dimensions,
-          model: loras.length > 0 ? 'fal-flux' : selectedModel,
+          model: loras.length > 0 ? (hasWan22 ? 'wan22-t2i' : 'fal-flux') : selectedModel,
           loras: loras.length > 0 ? loras : undefined,
         });
         onClose();
@@ -446,12 +462,13 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
         if (!mountedRef.current) return;
         updateSlot(index, { status: 'generating' });
 
-        const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+        const loras = expandLoras(generateLoras);
+        const hasWan22 = generateLoras.some(l => l.trainingModel === 'wan-22-image' && l.highNoiseUrl);
         const res = await apiFetch('/api/imagineer/generate', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: cohesivePrompt, style: styleKey, dimensions,
-            model: loras.length > 0 ? 'fal-flux' : selectedModel,
+            model: loras.length > 0 ? (hasWan22 ? 'wan22-t2i' : 'fal-flux') : selectedModel,
             loras: loras.length > 0 ? loras : undefined,
           }),
         });
@@ -566,7 +583,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
             updateSlot(index, { status: 'completed', imageUrl: url });
           }
         } else {
-          const loraPayload = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+          const loraPayload = expandLoras(i2iLoras);
           const allUrls = i2iImages.map(img => img.url);
           const isMultiImage = I2I_MODELS.find(m => m.value === i2iModel)?.multiImage;
           const res = await apiFetch('/api/imagineer/edit', {
@@ -757,7 +774,7 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
           updateSlot({ status: 'completed', imageUrl: url });
         }
       } else {
-        const loraPayload = i2iLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale }));
+        const loraPayload = expandLoras(i2iLoras);
         const allUrls = i2iImages.map(img => img.url);
         const isMultiImage = I2I_MODELS.find(m => m.value === i2iModel)?.multiImage;
         const res = await apiFetch('/api/imagineer/edit', {
@@ -859,12 +876,13 @@ export default function ImagineerModal({ isOpen, onClose, onGenerate, isEmbedded
       if (!mountedRef.current) return;
       updateSlot({ status: 'generating' });
 
-      const loras = generateLoras.filter(l => l.url).map(l => ({ url: l.url, scale: l.scale ?? 1.0 }));
+      const loras = expandLoras(generateLoras);
+      const hasWan22 = generateLoras.some(l => l.trainingModel === 'wan-22-image' && l.highNoiseUrl);
       const res = await apiFetch('/api/imagineer/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: cohesivePrompt, style: result.styleKey, dimensions,
-          model: loras.length > 0 ? 'fal-flux' : selectedModel,
+          model: loras.length > 0 ? (hasWan22 ? 'wan22-t2i' : 'fal-flux') : selectedModel,
           loras: loras.length > 0 ? loras : undefined,
         }),
       });

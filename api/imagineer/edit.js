@@ -45,7 +45,11 @@ export default async function handler(req, res) {
         };
         if (mask_url) p.mask_url = mask_url;
         if (loras?.length) {
-          p.loras = loras.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
+          p.loras = loras.map(l => {
+            const entry = { path: l.url, scale: l.scale ?? 1.0 };
+            if (l.transformer) entry.transformer = l.transformer;
+            return entry;
+          });
         }
         return p;
       },

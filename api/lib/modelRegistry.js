@@ -67,6 +67,23 @@ export const IMAGE_MODELS = {
     parseResult: (output) => output?.images?.[0]?.url,
     pollConfig: { maxRetries: 120, delayMs: 2000 },
   },
+  fal_wan22_t2i: {
+    provider: 'fal',
+    label: 'Wan 2.2 T2I (LoRA)',
+    endpoint: 'fal-ai/wan/v2.2-a14b/text-to-image/lora',
+    supportsLora: true,
+    sizeMap: { '9:16': 'portrait_16_9', '1:1': 'square_hd', '16:9': 'landscape_16_9', '2:3': 'portrait_4_3' },
+    buildBody: (prompt, size, opts) => ({
+      prompt,
+      image_size: size,
+      num_inference_steps: 27,
+      guidance_scale: 3.5,
+      guidance_scale_2: 4.0,
+      ...(opts.loras?.length && { loras: opts.loras }),
+    }),
+    parseResult: (output) => output?.image?.url,
+    pollConfig: { maxRetries: 120, delayMs: 2000 },
+  },
   fal_seedream: {
     provider: 'fal',
     label: 'SeedDream v4.5',

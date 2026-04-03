@@ -399,7 +399,7 @@ const MODELS = {
           image_size: dims,
           strength: 0.85,
           num_images: 1,
-          ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+          ...(loraList?.length ? { loras: loraList.map(l => { const e = { path: l.url, scale: l.scale ?? 1.0 }; if (l.transformer) e.transformer = l.transformer; return e; }) } : {}),
           ...(negPrompt ? { negative_prompt: negPrompt } : {}),
         };
       }
@@ -407,7 +407,7 @@ const MODELS = {
         prompt,
         image_size: dims,
         num_images: 1,
-        ...(loraList?.length ? { loras: loraList.map(l => ({ path: l.url, scale: l.scale ?? 1.0 })) } : {}),
+        ...(loraList?.length ? { loras: loraList.map(l => { const e = { path: l.url, scale: l.scale ?? 1.0 }; if (l.transformer) e.transformer = l.transformer; return e; }) } : {}),
         ...(negPrompt ? { negative_prompt: negPrompt } : {}),
       };
     },

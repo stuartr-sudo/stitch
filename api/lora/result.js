@@ -66,6 +66,9 @@ export default async function handler(req, res) {
       console.error('[LoRA Result] Could not extract model URL from response. Model:', modelId, 'Keys:', Object.keys(resultData));
     }
 
+    // Wan 2.2 dual-transformer: also extract the high-noise LoRA
+    let highNoiseUrl = registryModel?.parseHighNoiseLora?.(resultData) ?? null;
+
     let permanentUrl = modelUrl; // default to FAL URL, will be overwritten if Supabase upload succeeds
 
     if (loraId) {
@@ -98,10 +101,41 @@ export default async function handler(req, res) {
           console.warn('[LoRA Result] Failed to upload model to permanent storage:', uploadErr.message);
         }
 
-        // Update the brand_loras record with permanent URL
+        // Upload high-noise LoRA to permanent storage (Wan 2.2 dual-transformer)
+        let permanentHighNoiseUrl = highNoiseUrl;
+        if (highNoiseUrl) {
+          try {
+            console.log('[LoRA Result] Uploading high-noise LoRA to permanent storage...');
+            const hnResponse = await fetch(highNoiseUrl);
+            if (hnResponse.ok) {
+              const hnBuffer = Buffer.from(await hnResponse.arrayBuffer());
+              const hnFileName = `lora-${loraId}-high-${Date.now()}.safetensors`;
+              const hnFilePath = `lora-models/${hnFileName}`;
+              const { error: hnUploadError } = await supabase.storage
+                .from('media')
+                .upload(hnFilePath, hnBuffer, {
+                  contentType: 'application/octet-stream',
+                  upsert: false,
+                });
+              if (!hnUploadError) {
+                const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(hnFilePath);
+                permanentHighNoiseUrl = publicUrl;
+                console.log('[LoRA Result] High-noise LoRA saved:', permanentHighNoiseUrl);
+              } else {
+                console.warn('[LoRA Result] High-noise upload failed:', hnUploadError.message);
+              }
+            }
+          } catch (hnErr) {
+            console.warn('[LoRA Result] High-noise upload error:', hnErr.message);
+          }
+        }
+
+        // Update the brand_loras record with permanent URL(s)
+        const updatePayload = { fal_model_url: permanentUrl, status: 'ready' };
+        if (permanentHighNoiseUrl) updatePayload.high_noise_lora_url = permanentHighNoiseUrl;
         await supabase
           .from('brand_loras')
-          .update({ fal_model_url: permanentUrl, status: 'ready' })
+          .update(updatePayload)
           .eq('id', loraId);
 
         // Auto-update linked visual subject if one exists

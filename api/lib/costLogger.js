@@ -28,6 +28,7 @@ const PRICING = {
   'minimax-music':    { input: 0, output: 0, per_track: 0.05 },
   'flux-2-lora':      { input: 0, output: 0, per_image: 0.035 },
   'flux-2-lora-edit': { input: 0, output: 0, per_image: 0.035 },
+  'wan22-t2i-lora':   { input: 0, output: 0, per_image: 0.05 },
   'lora-training':    { input: 0, output: 0, per_training: 0.50 },
   'elevenlabs-tts':   { input: 0, output: 0, per_character: 0.00030 },
   'whisper':          { input: 0, output: 0, per_audio_sec: 0.0001 },
