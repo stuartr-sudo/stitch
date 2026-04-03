@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { id } = req.params;
-  const { regenerate_copy, regenerate_image, style_preset } = req.body || {};
+  const { regenerate_copy, regenerate_image, style_preset, custom_prompt } = req.body || {};
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -145,9 +145,13 @@ export default async function handler(req, res) {
       brandKit = bk;
     } catch {}
 
-    // Build a rich prompt via GPT, referencing previous prompt for improvement
+    // If the user provided a custom prompt (edited in the UI), use it directly
+    // Otherwise, build a rich prompt via GPT, referencing previous prompt for improvement
     let imagePrompt = '';
-    try {
+    if (custom_prompt && custom_prompt.trim()) {
+      imagePrompt = custom_prompt.trim();
+      console.log(`[ads/regenerate] Using custom prompt: ${imagePrompt.slice(0, 120)}...`);
+    } else try {
       const sections = [];
       sections.push('PURPOSE: Generate an improved advertising image for a paid ad campaign.');
       sections.push(`PLATFORM: ${variation.platform} — ${platformContextMap[variation.platform] || 'advertising'}`);

@@ -118,6 +118,8 @@ export default function AdCampaignEditor() {
     setRegeneratingId(variationId);
     setShowStylePicker(null);
     try {
+      // Send the current local image_prompt so user edits are used directly
+      const currentVariation = variations.find(v => v.id === variationId);
       const res = await apiFetch(`/api/ads/variations/${variationId}/regenerate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,6 +127,7 @@ export default function AdCampaignEditor() {
           regenerate_copy: !imageOnly,
           regenerate_image: imageOnly,
           style_preset: stylePreset || undefined,
+          custom_prompt: imageOnly ? currentVariation?.image_prompt : undefined,
         }),
       });
       const data = await res.json();

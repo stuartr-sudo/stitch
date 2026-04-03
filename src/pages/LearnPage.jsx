@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
-  Sun, Moon, Video, GitBranch,
+  Sun, Moon, Video, GitBranch, Share2,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -20,6 +20,7 @@ import { MotionTransferGuideContent } from './MotionTransferGuidePage';
 import { VideoProductionGuideContent } from './VideoProductionGuidePage';
 import { ShortsWorkbenchGuideContent } from './ShortsWorkbenchGuidePage';
 import { AutomationFlowsGuideContent } from './AutomationFlowsGuidePage';
+import { LinkedInGuideContent } from './LinkedInGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -69,6 +70,7 @@ const TABS = [
   { id: 'turnaround',  label: 'Turnaround',     Icon: RotateCcw },
   { id: 'carousels',   label: 'Carousels',      Icon: LayoutGrid },
   { id: 'ads',         label: 'Ads Manager',    Icon: Target },
+  { id: 'linkedin',    label: 'LinkedIn',       Icon: Share2 },
   { id: 'motion',      label: 'Motion',         Icon: Play },
   { id: 'video',       label: 'Video Production', Icon: Film },
   { id: 'shorts',      label: 'Shorts',           Icon: Video },
@@ -248,6 +250,11 @@ export default function LearnPage() {
         {activeTab === 'ads' && (
           <div className="bg-gray-50 dark:bg-gray-900 min-h-full">
             <AdsManagerGuideContent />
+          </div>
+        )}
+        {activeTab === 'linkedin' && (
+          <div className="bg-gray-50 dark:bg-gray-900 min-h-full">
+            <LinkedInGuideContent />
           </div>
         )}
         {activeTab === 'imagineer' && (

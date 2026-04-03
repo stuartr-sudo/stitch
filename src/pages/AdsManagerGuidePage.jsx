@@ -471,6 +471,38 @@ export function AdsManagerGuideContent() {
           than just change colour. Try "Editorial Photography", "Studio Product Shot", or
           "Corporate Clean" for B2B ads.
         </Tip>
+
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mt-5 mb-2">Editing the Image Prompt</h4>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            Every generated image has an underlying AI prompt that you can view and edit directly.
+            This gives you full control over what the image looks like.
+          </p>
+        </div>
+        <Step number="1" title="View the prompt">
+          <p>
+            Below each ad image, click <strong>"View image prompt"</strong> to expand a text area
+            showing the current prompt used to generate the image.
+          </p>
+        </Step>
+        <Step number="2" title="Edit the prompt">
+          <p>
+            Modify the prompt text however you like — add specific visual details, change the setting,
+            adjust colours or composition. The more specific and vivid the prompt, the better the result.
+          </p>
+        </Step>
+        <Step number="3" title="Regenerate with your prompt">
+          <p>
+            Click the <strong>regenerate</strong> button (refresh icon on the image). Your edited prompt
+            will be used <strong>directly</strong> — the AI won't rewrite it, it will generate exactly what
+            you described.
+          </p>
+        </Step>
+        <Tip>
+          If you regenerate <strong>without</strong> editing the prompt, the AI will automatically improve
+          on the previous prompt — taking a different creative angle while keeping the core concept.
+          Edit the prompt when you want precise control; leave it alone for AI-driven variety.
+        </Tip>
       </Section>
 
       {/* ── Split Testing ── */}
