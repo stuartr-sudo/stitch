@@ -133,6 +133,13 @@ app.post('/api/trip/restyle', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Production Queue routes
+app.all('/api/queue*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('queue/queue.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Video Analyzer route (with auth)
 app.post('/api/analyze/video', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('analyze/video.js');
@@ -694,6 +701,13 @@ app.get('/api/voices/library', authenticateToken, (await import('./api/voices/li
 // Shorts Workbench — Ideas Agent (bulk topic generation)
 app.post('/api/workbench/generate-ideas', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('workbench/generate-ideas.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Shorts Workbench — Repurpose (multi-platform metadata + landscape conversion)
+app.post('/api/workbench/repurpose', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/repurpose.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });

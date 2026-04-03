@@ -46,6 +46,7 @@ import {
   ListChecks,
   Calendar,
   Search,
+  ListOrdered,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -807,6 +808,17 @@ export default function VideoAdvertCreator() {
                       <span className="text-xs font-medium text-gray-800">Workbench</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">Shorts workbench</p>
+                  </div>
+
+                  <div
+                    onClick={() => navigate('/queue')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ListOrdered className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Queue</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Production queue</p>
                   </div>
 
                   <div

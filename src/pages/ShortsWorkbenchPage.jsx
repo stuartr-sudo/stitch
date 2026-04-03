@@ -16,6 +16,7 @@ import LibraryModal from '@/components/modals/LibraryModal';
 import MotionReferenceInput from '@/components/MotionReferenceInput';
 import CameraControlPanel from '@/components/shorts/CameraControlPanel';
 import CharacterPicker from '@/components/ui/CharacterPicker';
+import RepurposePanel from '@/components/shorts/RepurposePanel';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -2260,6 +2261,11 @@ export default function ShortsWorkbenchPage() {
                 </div>
               </div>
             </Panel>
+
+            {/* Repurpose panel — shown after assembly completes */}
+            {finalUrl && draftId && (
+              <RepurposePanel draftId={draftId} videoUrl={finalUrl} />
+            )}
 
             <div className="flex justify-between">
               <button onClick={() => goTo('clips')} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
