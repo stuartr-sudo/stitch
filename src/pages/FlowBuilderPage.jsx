@@ -1,0 +1,213 @@
+// State management: nodes/edges live here (single source of truth) using
+// React Flow's useNodesState/useEdgesState hooks. FlowCanvas is controlled.
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useNodesState, useEdgesState, addEdge } from '@xyflow/react';
+import { apiFetch } from '@/lib/api';
+import FlowCanvas from '@/components/flows/FlowCanvas';
+import NodePalette from '@/components/flows/NodePalette';
+import NodeConfigPanel from '@/components/flows/NodeConfigPanel';
+import ExecutionLog from '@/components/flows/ExecutionLog';
+
+export default function FlowBuilderPage() {
+  const { id, executionId } = useParams();
+  const navigate = useNavigate();
+  const [flow, setFlow] = useState(null);
+  const [nodeTypesMap, setNodeTypesMap] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [execution, setExecution] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const pollRef = useRef(null);
+  const saveTimeout = useRef(null);
+
+  // Load node types
+  useEffect(() => {
+    apiFetch('/api/flows/node-types').then(data => {
+      if (data?.nodeTypes) setNodeTypesMap(data.nodeTypes);
+    });
+  }, []);
+
+  // Load flow
+  useEffect(() => {
+    if (id && id !== 'new') {
+      apiFetch(`/api/flows/${id}`).then(data => {
+        if (data?.flow) {
+          setFlow(data.flow);
+          setNodes(data.flow.graph_json?.nodes || []);
+          setEdges(data.flow.graph_json?.edges || []);
+        }
+      });
+    }
+  }, [id]);
+
+  // Poll execution status
+  useEffect(() => {
+    if (!executionId) { setExecution(null); return; }
+    const poll = async () => {
+      const data = await apiFetch(`/api/flows/executions/${executionId}`);
+      if (data?.execution) {
+        setExecution(data.execution);
+        if (['completed', 'failed', 'cancelled'].includes(data.execution.status)) {
+          clearInterval(pollRef.current);
+        }
+      }
+    };
+    poll();
+    pollRef.current = setInterval(poll, 2000);
+    return () => clearInterval(pollRef.current);
+  }, [executionId]);
+
+  // Save flow (uses current nodes/edges from state)
+  const saveFlow = useCallback(async () => {
+    if (!flow?.id) return;
+    setSaving(true);
+    const graph_json = {
+      nodes: nodes.map(n => ({
+        id: n.id, type: n.type, position: n.position,
+        data: { ...n.data, stepState: undefined }
+      })),
+      edges
+    };
+    await apiFetch(`/api/flows/${flow.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ graph_json })
+    });
+    setSaving(false);
+  }, [flow, nodes, edges]);
+
+  // Auto-save on any change (debounced 1.5s)
+  useEffect(() => {
+    if (!flow?.id) return;
+    clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => saveFlow(), 1500);
+    return () => clearTimeout(saveTimeout.current);
+  }, [nodes, edges, saveFlow]);
+
+  // Connect handler — validates port type compatibility before adding edge
+  const onConnect = useCallback((params) => {
+    // Look up source and target node types to validate port compatibility
+    const sourceNode = nodes.find(n => n.id === params.source);
+    const targetNode = nodes.find(n => n.id === params.target);
+    if (sourceNode?.data?.nodeType && targetNode?.data?.nodeType) {
+      const sourcePort = sourceNode.data.nodeType.outputs?.find(o => o.id === params.sourceHandle);
+      const targetPort = targetNode.data.nodeType.inputs?.find(i => i.id === params.targetHandle);
+      if (sourcePort && targetPort) {
+        // string is universal — any type can connect to string. Otherwise must match.
+        const compatible = targetPort.type === 'string' || sourcePort.type === targetPort.type;
+        if (!compatible) return; // silently reject incompatible connection
+      }
+    }
+    setEdges(eds => addEdge({
+      ...params,
+      animated: false,
+      style: { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5 }
+    }, eds));
+  }, [setEdges, nodes]);
+
+  // Handle drop from palette
+  const handleDrop = useCallback((event) => {
+    const data = event.dataTransfer.getData('application/reactflow');
+    if (!data) return;
+    const nodeType = JSON.parse(data);
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const position = {
+      x: event.clientX - bounds.left - 90,
+      y: event.clientY - bounds.top - 20,
+    };
+    const newNode = {
+      id: `node_${Date.now()}`,
+      type: 'stitch',
+      position,
+      data: { nodeType, config: {} },
+    };
+    setNodes(prev => [...prev, newNode]);
+  }, [setNodes]);
+
+  // Config change — also stores errorHandling at the node level for the executor
+  const handleConfigChange = useCallback((nodeId, config) => {
+    setNodes(prev => prev.map(n =>
+      n.id === nodeId ? {
+        ...n,
+        data: { ...n.data, config },
+        // Mirror errorHandling to node level so executor reads it correctly
+        errorHandling: config.errorHandling || 'stop'
+      } : n
+    ));
+  }, [setNodes]);
+
+  // Run flow
+  const handleRun = async () => {
+    if (!flow?.id) return;
+    await saveFlow();
+    const data = await apiFetch(`/api/flows/${flow.id}/execute`, { method: 'POST' });
+    if (data?.execution) {
+      navigate(`/flows/${flow.id}/run/${data.execution.id}`);
+    }
+  };
+
+  // Pause/Cancel
+  const handlePause = async () => {
+    if (!executionId) return;
+    await apiFetch(`/api/flows/executions/${executionId}/pause`, { method: 'POST' });
+  };
+  const handleCancel = async () => {
+    if (!executionId) return;
+    await apiFetch(`/api/flows/executions/${executionId}/cancel`, { method: 'POST' });
+  };
+
+  const selectedNodeType = selectedNode?.data?.nodeType;
+  const isExecuting = !!executionId;
+
+  return (
+    <div className="h-screen flex flex-col bg-[#0a0a0f]">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-black/30">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/flows')} className="text-gray-500 hover:text-gray-300 text-sm">← Flows</button>
+          <span className="text-sm font-semibold text-white">{flow?.name || 'New Flow'}</span>
+          {saving && <span className="text-[11px] text-gray-500">Saving...</span>}
+          {!saving && flow?.id && <span className="text-[11px] text-emerald-500/70 bg-emerald-500/10 px-2 py-0.5 rounded">Saved</span>}
+        </div>
+        <div className="flex gap-2">
+          {isExecuting ? (
+            <>
+              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-md">⏸ Pause</button>
+              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-500/15 border border-red-500/30 text-red-300 rounded-md">✕ Cancel</button>
+            </>
+          ) : (
+            <>
+              <button className="px-3 py-1.5 text-xs bg-white/[0.06] border border-white/10 text-gray-400 rounded-md">Schedule</button>
+              <button onClick={handleRun} className="px-4 py-1.5 text-xs bg-indigo-500/80 text-white font-semibold rounded-md">▶ Run Flow</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex flex-1 overflow-hidden">
+        {!isExecuting && <NodePalette nodeTypes={nodeTypesMap} />}
+        <FlowCanvas
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeSelect={setSelectedNode}
+          onDrop={handleDrop}
+          stepStates={execution?.step_states}
+        />
+        {isExecuting ? (
+          <ExecutionLog execution={execution} />
+        ) : (
+          <NodeConfigPanel
+            node={selectedNode}
+            nodeType={selectedNodeType}
+            onConfigChange={handleConfigChange}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
