@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
 import StoryboardAnimatic from '@/components/storyboard/StoryboardAnimatic';
+import MotionReferenceInput from '@/components/MotionReferenceInput';
 
 // ── Beat colors for narrative arc visualization ──
 
@@ -186,6 +187,10 @@ function FrameCard({ frame, isSelected, onClick, isDragOver, onDragStart, onDrag
         {/* Video status indicator */}
         {frame.generation_status === 'done' && (
           <div className="absolute bottom-1 left-1 p-0.5 rounded bg-emerald-500 text-white"><CheckCircle2 size={10} /></div>
+        )}
+        {/* MT badge */}
+        {(frame.motion_ref?.videoUrl || frame.motion_ref?.trimmedUrl) && (
+          <div className="absolute top-1 right-1 px-1 py-0.5 rounded text-[7px] font-bold text-white bg-purple-500">MT</div>
         )}
       </div>
       {/* Text */}
@@ -370,6 +375,25 @@ function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
         )}
         <Field label="Image Direction" field="preview_image_prompt" icon={ImageIcon} multiline />
         <Field label="Motion Direction" field="motion_prompt" icon={Camera} />
+
+        {/* Motion Reference (optional) */}
+        <div className="px-0 mt-2 mb-3">
+          {!frame.motion_ref?.videoUrl ? (
+            <button
+              onClick={() => !frame.locked && onUpdate(frame.id, { motion_ref: { model: 'kling_motion_control' } })}
+              className={`text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-1 ${frame.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={frame.locked}
+            >
+              <Film size={10} /> Add Motion Reference
+            </button>
+          ) : (
+            <MotionReferenceInput
+              motionRef={frame.motion_ref}
+              onChange={(ref) => onUpdate(frame.id, { motion_ref: ref })}
+              onClear={() => onUpdate(frame.id, { motion_ref: null })}
+            />
+          )}
+        </div>
 
         {/* Visual prompt (collapsed) */}
         {frame.visual_prompt && (

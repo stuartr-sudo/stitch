@@ -104,6 +104,46 @@ function getRegistryKey(modelId) {
  * @returns {{ videoUrl: string, lastFrameUrl: string|null }}
  */
 async function generateFrameVideo(frame, config, prevLastFrame, keys, supabase) {
+  // MT override: if frame has a motion reference, use MT regardless of global model
+  if (frame.motion_ref?.videoUrl || frame.motion_ref?.trimmedUrl) {
+    const { generateMotionTransfer } = await import('../lib/motionTransferRegistry.js');
+    const motionVideoUrl = frame.motion_ref.trimmedUrl || frame.motion_ref.videoUrl;
+    const imageUrl = prevLastFrame || config.startFrameUrl || frame.start_frame_url || frame.preview_image_url;
+
+    if (!imageUrl) throw new Error(`Frame ${frame.frame_number}: No image for motion transfer`);
+
+    console.log(`[Producer] Frame ${frame.frame_number}: MT mode (${frame.motion_ref.model || 'kling_motion_control'})`);
+
+    const result = await generateMotionTransfer(
+      frame.motion_ref.model || 'kling_motion_control',
+      imageUrl,
+      motionVideoUrl,
+      {
+        character_orientation: frame.motion_ref.characterOrientation || 'image',
+        prompt: frame.motion_ref.prompt || frame.visual_prompt || '',
+        keep_original_sound: frame.motion_ref.keepOriginalSound ?? true,
+        elements: frame.motion_ref.elements,
+      },
+      keys.falKey,
+      supabase,
+    );
+
+    // Extract last frame for chaining to next scene
+    let lastFrameUrl = null;
+    try {
+      lastFrameUrl = await extractLastFrame(result.videoUrl, frame.duration_seconds || 4, keys.falKey);
+      if (lastFrameUrl) {
+        lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/storyboard');
+      }
+      console.log(`[Producer] Frame ${frame.frame_number}: MT last frame extracted`);
+    } catch (err) {
+      console.warn(`[Producer] Frame ${frame.frame_number}: MT last frame extraction failed:`, err.message);
+    }
+
+    return { videoUrl: result.videoUrl, lastFrameUrl };
+  }
+
+  // Normal strategy dispatch (existing code continues unchanged)
   const strategy = getModelStrategy(config.model);
   let startImage = prevLastFrame || config.startFrameUrl || frame.start_frame_url || frame.preview_image_url;
 
