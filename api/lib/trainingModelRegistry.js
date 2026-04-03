@@ -43,7 +43,7 @@ export const TRAINING_MODELS = {
     category: 'image',
     pricing: '$0.0024/step',
     supportsStyle: false,
-    supportsMasks: false,
+    supportsMasks: true,
     hasLearningRate: true,
     defaults: {
       steps: 2500,
@@ -51,7 +51,7 @@ export const TRAINING_MODELS = {
     },
     stepRange: [1, 10000],
     buildBody(params) {
-      const { zipUrl, trigger_word, steps, learning_rate } = params;
+      const { zipUrl, trigger_word, steps, learning_rate, create_masks } = params;
       return {
         images_data_url: zipUrl,
         trigger_phrase: trigger_word,
@@ -59,6 +59,7 @@ export const TRAINING_MODELS = {
         learning_rate,
         multiresolution_training: true,
         subject_crop: true,
+        create_masks: create_masks ?? false,
       };
     },
     parseResult(data) {
@@ -356,6 +357,64 @@ export const TRAINING_MODELS = {
     baseModel: 'FLUX.2 [dev]',
     category: 'image',
     pricing: '$0.0255/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 1000,
+      learning_rate: 0.00005,
+    },
+    stepRange: [100, 10000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'flux-2-klein-4b': {
+    id: 'flux-2-klein-4b',
+    name: 'FLUX.2 Klein 4B Trainer',
+    endpoint: 'fal-ai/flux-2-klein-4b-base-trainer',
+    baseModel: 'FLUX.2 Klein 4B',
+    category: 'image',
+    pricing: '$0.005/step',
+    supportsStyle: false,
+    supportsMasks: false,
+    hasLearningRate: true,
+    defaults: {
+      steps: 1000,
+      learning_rate: 0.00005,
+    },
+    stepRange: [100, 10000],
+    buildBody(params) {
+      const { zipUrl, steps, learning_rate, default_caption } = params;
+      return {
+        image_data_url: zipUrl,
+        steps,
+        learning_rate,
+        default_caption,
+      };
+    },
+    parseResult(data) {
+      return data?.diffusers_lora_file?.url ?? null;
+    },
+  },
+
+  'flux-2-klein-9b': {
+    id: 'flux-2-klein-9b',
+    name: 'FLUX.2 Klein 9B Trainer',
+    endpoint: 'fal-ai/flux-2-klein-9b-base-trainer',
+    baseModel: 'FLUX.2 Klein 9B',
+    category: 'image',
+    pricing: '$0.0086/step',
     supportsStyle: false,
     supportsMasks: false,
     hasLearningRate: true,

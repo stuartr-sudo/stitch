@@ -134,6 +134,9 @@ export default async function handler(req, res) {
     if (model === 'fal-flux') {
       return handleFalFlux(req, res, enhancedPrompt, dimensions, req.body.loraUrl);
     }
+    if (model === 'klein-4b' || model === 'klein-9b') {
+      return handleKlein(req, res, enhancedPrompt, dimensions, model);
+    }
     if (model === 'wan22-t2i') {
       return handleWan22T2I(req, res, enhancedPrompt, dimensions);
     }
@@ -342,6 +345,64 @@ async function handleFalFlux(req, res, enhancedPrompt, dimensions, loraUrl) {
   }
 
   return res.status(500).json({ error: 'Unexpected Flux response' });
+}
+
+async function handleKlein(req, res, enhancedPrompt, dimensions, model) {
+  const { falKey: FAL_KEY } = await getUserKeys(req.user.id, req.user.email);
+  if (!FAL_KEY) return res.status(400).json({ error: 'Fal.ai key not configured.' });
+
+  const ENDPOINTS = {
+    'klein-4b': 'fal-ai/flux-2/klein/4b/base/lora',
+    'klein-9b': 'fal-ai/flux-2/klein/9b/base/lora',
+  };
+
+  const sizeMap = {
+    '16:9': 'landscape_16_9', '9:16': 'portrait_16_9',
+    '1:1': 'square_hd', '4:3': 'landscape_4_3', '3:4': 'portrait_4_3',
+  };
+
+  const payload = {
+    prompt: enhancedPrompt,
+    image_size: sizeMap[dimensions] || 'square_hd',
+    num_inference_steps: 28,
+    guidance_scale: 5,
+    num_images: 1,
+  };
+
+  const lorasFromBody = req.body.loras;
+  if (lorasFromBody?.length) {
+    payload.loras = lorasFromBody.map(l => ({ path: l.url, scale: l.scale ?? 1.0 }));
+  }
+
+  const endpoint = ENDPOINTS[model];
+  const response = await fetch(`https://queue.fal.run/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return res.status(response.status).json({ error: `Klein ${model} API error`, details: errorText });
+  }
+
+  const data = await response.json();
+
+  if (data.images?.[0]?.url) {
+    const imageUrl = data.images[0].url;
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    writeMediaMetadata(sb, req.user?.id, imageUrl, { model_name: model, visual_style: req.body.style || null });
+    return res.status(200).json({ success: true, imageUrl, status: 'completed' });
+  }
+
+  if (data.request_id) {
+    return res.status(200).json({
+      success: true, requestId: data.request_id, model,
+      status: 'processing', pollEndpoint: '/api/imagineer/result',
+    });
+  }
+
+  return res.status(500).json({ error: 'Unexpected Klein response' });
 }
 
 async function handleWan22T2I(req, res, enhancedPrompt, dimensions) {

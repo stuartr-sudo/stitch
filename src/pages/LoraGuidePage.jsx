@@ -4,7 +4,7 @@ import {
   ArrowLeft, BookOpen, Upload, Sparkles, Zap, Settings, Image, Video,
   ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Info, Lightbulb,
   Layers, Palette, User, Camera, Clock, DollarSign, HelpCircle, FileText,
-  Brain, Target, Wand2, FolderOpen, Repeat, Shield, Lock, TrendingUp,
+  Brain, Target, Wand2, FolderOpen, Repeat, Lock, TrendingUp,
 } from 'lucide-react';
 
 function PasswordGate({ children }) {
@@ -149,7 +149,9 @@ export function LoraGuideContent() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-4">
 
-        {/* Quick Start */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 1: Quick Start
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Zap} title="Quick Start — Train Your First LoRA in 5 Minutes" defaultOpen={true}>
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -220,7 +222,9 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Understanding Training Types */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 2: Training Types
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Target} title="Training Types — Subject vs Style vs Character">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -286,7 +290,129 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Image Dataset Guide */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 3: Photography for Super Realistic LoRAs (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={Camera} title="Photography for Super Realistic LoRAs">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              Your training images are <strong>90-95% of your LoRA quality</strong>. No amount of parameter tuning will fix a bad dataset.
+              This section covers how to photograph or source images that produce hyper-realistic results.
+            </p>
+
+            <div className="border border-[#2C666E]/20 rounded-xl p-5 bg-[#2C666E]/5 space-y-4">
+              <h4 className="font-semibold text-sm text-gray-900">The "Rotten Egg" Principle</h4>
+              <p className="text-xs text-gray-700">
+                One bad image in a dataset of 20 has an <strong>outsized negative impact</strong> on the entire LoRA.
+                A single blurry, watermarked, or low-quality image will degrade every generation the LoRA produces.
+                Manual curation is essential — <strong>15 perfect images will always outperform 50 mediocre ones</strong>.
+              </p>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Lighting</h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Outdoor:</strong> Shoot on a sunny day <em>in the shade</em>, or on an overcast day. This gives you soft, even light with no harsh shadows — ideal for face training.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Reflector:</strong> Use a white or silver reflector disc to bounce light onto the face. Even a cheap $15 reflector dramatically improves results. This eliminates the dark shadows under eyes, nose, and chin that confuse the model.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Indoor:</strong> Use a large window as your key light, with a reflector or white surface opposite. Avoid overhead fluorescent lighting.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Vary it:</strong> Include 2-3 different lighting conditions across your dataset. This teaches the model that lighting is variable, not part of the subject's identity.</span>
+              </div>
+            </div>
+
+            <Warning>
+              <strong>Avoid mixed lighting.</strong> Combining daylight with fluorescent or tungsten produces color casts that confuse the model.
+              Each image should have one dominant, clean light source.
+            </Warning>
+
+            <h4 className="font-semibold text-sm text-gray-900">Facial Expressions (for Character LoRAs)</h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Relaxed, natural smile</strong> — this is your "default face". Include it in at least half your images.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Visible teeth</strong> in 3-4 shots. The model needs to learn how teeth look — otherwise it generates blurry mouths or avoids showing teeth entirely.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Eyes clearly visible</strong> in all shots. No sunglasses, no squinting, no hair covering eyes.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                <span><strong>Avoid extreme expressions</strong> (laughing hard, scrunching, wide-open mouth). These become the "default" face if overrepresented. 1-2 expressive shots is fine, but most should be neutral/mild smile.</span>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Composition & Cropping</h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Face close-ups:</strong> Crop to 1:1 (square), centered on the face with minimal shoulder visible. 5+ close-ups in your dataset.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Portraits:</strong> 3:4 aspect ratio for head-and-shoulders and waist-up shots.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Center the subject</strong> — the model learns what's at the center of attention. Don't crop them to the edge.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Resolution:</strong> 1024x1024 is optimal for FLUX models. Minimum 512x512. Higher resolution originals can be resized down during training — this naturally eliminates compression artifacts.</span>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">File Format</h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>PNG preferred</strong> — lossless, no compression artifacts. TIFF also works.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>JPEG is acceptable</strong> at high quality (90%+). Heavily compressed JPEGs introduce noise the model will learn.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Upscale small images</strong> to at least 1024x1024 using Topaz or a similar AI upscaler before including them in your dataset.</span>
+              </div>
+            </div>
+
+            <Warning>
+              <strong>Images that will RUIN your LoRA:</strong>
+              <ul className="mt-1 space-y-1 list-disc pl-4">
+                <li><strong>Watermarks or logos</strong> — the LoRA WILL hallucinate watermarks into every single generation. This is the #1 mistake.</li>
+                <li><strong>Text overlays</strong> — same problem as watermarks. The model learns to reproduce the text.</li>
+                <li><strong>Heavy Instagram filters</strong> or color grading — the model learns the filter as part of the subject.</li>
+                <li><strong>Blurry or out-of-focus shots</strong> — the model learns blur as a feature.</li>
+                <li><strong>Noisy/grainy images</strong> — noise becomes part of the learned concept.</li>
+                <li><strong>Multiple subjects in frame</strong> — the model doesn't know which one is "you".</li>
+                <li><strong>Screenshots from video</strong> — motion blur and compression artifacts are destructive.</li>
+              </ul>
+            </Warning>
+
+            <Tip>
+              <strong>You don't need expensive gear.</strong> A smartphone in good lighting with a $15 reflector disc produces
+              excellent LoRA training data. The key is soft, even light and clean, sharp images — not megapixel count or lens quality.
+            </Tip>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 4: Image Dataset Guide (EXPANDED)
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Image} title="Preparing Your Training Images — The 20-Image Formula">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -337,6 +463,63 @@ export function LoraGuideContent() {
               </div>
             </div>
 
+            <h4 className="font-semibold text-sm text-gray-900">Dataset Recipes by Goal</h4>
+            <div className="grid gap-3">
+              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
+                <h5 className="font-medium text-xs text-purple-900 mb-2">Face Consistency Recipe (20 images)</h5>
+                <div className="text-xs text-gray-700 space-y-1">
+                  <p>5 close-up face shots (different angles, expressions)</p>
+                  <p>5 head-and-shoulder portraits (varied lighting)</p>
+                  <p>5 waist-up shots (different outfits)</p>
+                  <p>5 full-body shots (different backgrounds)</p>
+                  <p className="text-gray-500 italic mt-1">Minimum: 3 outfits, 3 backgrounds, 3 lighting setups</p>
+                </div>
+              </div>
+              <div className="border border-amber-200 rounded-lg p-4 bg-amber-50/30">
+                <h5 className="font-medium text-xs text-amber-900 mb-2">Product Photography Recipe (20 images)</h5>
+                <div className="text-xs text-gray-700 space-y-1">
+                  <p>8 angles on clean background (front, back, sides, top, bottom, 3/4 views)</p>
+                  <p>4 lifestyle/context shots (product in use, in setting)</p>
+                  <p>4 detail/macro shots (textures, labels, unique features)</p>
+                  <p>4 in-use shots (held, worn, displayed)</p>
+                </div>
+              </div>
+              <div className="border border-teal-200 rounded-lg p-4 bg-teal-50/30">
+                <h5 className="font-medium text-xs text-teal-900 mb-2">Style Recipe (15-25 images)</h5>
+                <div className="text-xs text-gray-700 space-y-1">
+                  <p>All images must share the <strong>same visual style</strong></p>
+                  <p>Content should be as diverse as possible: landscapes, portraits, still life, architecture, abstract</p>
+                  <p>Cherry-pick ruthlessly — a curated set of 16 consistently outperforms a messy set of 100+</p>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Resolution Recommendations per Model</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Model Family</th>
+                    <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Optimal Resolution</th>
+                    <th className="text-left py-1.5 font-semibold text-gray-700">Minimum</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600">
+                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX (all trainers)</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Z-Image Turbo</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Qwen Image</td><td className="py-1.5 pr-3">1024x1024</td><td className="py-1.5">512x512</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3">768x768</td><td className="py-1.5">512x512</td></tr>
+                  <tr><td className="py-1.5 pr-3 font-medium text-gray-900">Video models (Wan I2V, etc.)</td><td className="py-1.5 pr-3">720p equivalent</td><td className="py-1.5">480p</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <InfoBox>
+              <strong>More images = more steps needed.</strong> A 10-image dataset trains well at 600-800 steps.
+              A 50-image dataset needs 1200-1800 steps. The model needs enough passes to learn from every image.
+              See the Advanced Settings section for the step count table.
+            </InfoBox>
+
             <Tip>
               <strong>Resolution consistency:</strong> Use the same resolution for all training images when possible.
               Mixed resolutions can cause aspect ratio bucket errors during training.
@@ -356,7 +539,9 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Trigger Words */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 5: Trigger Words
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Wand2} title="Trigger Words — How They Work">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -412,11 +597,14 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Auto-Captioning */}
-        <Section icon={FileText} title="Auto-Captioning — AI-Powered Image Descriptions">
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 6: Captioning Deep Dive (EXPANDED)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={FileText} title="Captioning Deep Dive — AI Captions, Formats & The Two-Caption Method">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
-              Every training image needs a text caption file. Stitch offers two modes:
+              Every training image needs a text caption file. Captions are the second most important factor
+              after image quality — they determine what the trigger word learns vs what stays flexible.
             </p>
 
             <div className="grid gap-3">
@@ -456,6 +644,66 @@ export function LoraGuideContent() {
               </div>
             </div>
 
+            <h4 className="font-semibold text-sm text-gray-900">Natural Language vs Tag-Based Captioning</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                <p className="text-xs font-semibold text-green-800 mb-1">Natural Language (Preferred for FLUX)</p>
+                <div className="bg-white border border-green-200 rounded p-2 mt-1">
+                  <p className="text-[10px] font-mono text-gray-600">zk_sarah, standing in a park with trees in the background, wearing a blue denim jacket, natural sunlight from the left, three-quarter angle</p>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">Produces richer, more detailed LoRAs. FLUX models strongly prefer this format.</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-gray-800 mb-1">Tag-Based (Acceptable for Qwen/Z-Image)</p>
+                <div className="bg-gray-50 border border-gray-200 rounded p-2 mt-1">
+                  <p className="text-[10px] font-mono text-gray-600">zk_sarah, park, trees, blue denim jacket, sunlight, three-quarter angle</p>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">Shorter, more keyword-focused. Qwen and Z-Image models handle both formats equally well.</p>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Caption Format Examples by Training Type</h4>
+            <div className="space-y-2">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 mb-1">SUBJECT CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700">rxsneaker, a red running shoe photographed at a 45-degree angle on a marble surface, soft studio lighting from above, shallow depth of field, white background</p>
+                <p className="text-[10px] text-gray-500 mt-1">Describes: angle, surface, lighting, background. Omits: shoe brand, design details, color specifics (trigger word absorbs these).</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-teal-700 mb-1">CHARACTER CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700">zk_sarah, sitting at a wooden desk in a home office, wearing a cream knit sweater, warm window light from the right, looking slightly to the left, medium close-up</p>
+                <p className="text-[10px] text-gray-500 mt-1">Describes: pose, clothing, setting, lighting, angle. Omits: hair color, eye color, face shape, skin tone (trigger word absorbs these).</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-amber-700 mb-1">STYLE CAPTION:</p>
+                <p className="text-xs font-mono text-gray-700">a mountain lake surrounded by pine trees with a small wooden boat at the shore, morning fog rising from the water, distant snow-capped peaks</p>
+                <p className="text-[10px] text-gray-500 mt-1">Describes: content/subject matter ONLY. Omits: brushstrokes, color palette, texture, mood, artistic technique (trigger word absorbs the entire visual style).</p>
+              </div>
+            </div>
+
+            <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/30">
+              <h4 className="font-semibold text-sm text-amber-900 mb-2">The Two-Caption Method (Advanced — for Style LoRAs on FLUX)</h4>
+              <p className="text-xs text-gray-700 mb-2">
+                This technique from the FLUX community strengthens style absorption and weakens subject association. It's built into Stitch's
+                auto-captioning when you select "Style" training type, but understanding it helps you write better manual captions.
+              </p>
+              <div className="space-y-2 text-xs text-gray-700">
+                <p><strong>How it works:</strong></p>
+                <p>1. <strong>Long caption:</strong> Detailed content description (what's in the image) — "a sunset over a mountain lake with pine trees, a small boat near the shore, golden hour reflections on the water"</p>
+                <p>2. <strong>Short caption:</strong> Just the trigger phrase — "in the style of aqua_wash"</p>
+                <p>3. The model trains on both versions of each image. The long caption teaches it that content is variable (not part of the style).
+                   The short caption reinforces that the trigger word = the visual treatment.</p>
+                <p className="text-gray-500 italic mt-1">Result: Stronger style LoRAs that can be applied to any content without the model trying to reproduce the training image subjects.</p>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">When to Write Manual Captions</h4>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-5">
+              <li>If auto-captions are describing features you want the trigger word to absorb (e.g., describing the art style in a style LoRA)</li>
+              <li>If your dataset has unusual content the AI might miscaption (niche products, abstract art)</li>
+              <li>If you want maximum precision for a commercial character LoRA</li>
+            </ul>
+
             <Tip>
               <strong>Always use auto-captioning.</strong> Per-image AI captions produce dramatically better LoRAs
               than generic templates. The cost is minimal (GPT-4o-mini vision at low detail, ~$0.01 for 20 images).
@@ -463,15 +711,17 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Training Models */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 7: Training Models
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Layers} title="Training Models — Complete Reference">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
-              16 training models are available across 2 categories (12 image, 4 video). Each produces a LoRA compatible with its base model family.
+              18 training models are available across 2 categories (14 image, 4 video). Each produces a LoRA compatible with its base model family.
             </p>
 
             <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-              <Image className="w-4 h-4 text-purple-600" /> Image Models (12)
+              <Image className="w-4 h-4 text-purple-600" /> Image Models (14)
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModelCard
@@ -489,7 +739,7 @@ export function LoraGuideContent() {
                 base="FLUX.1 [dev]"
                 category="image"
                 pricing="$0.0024/step"
-                features={['Multi-resolution', 'Subject crop']}
+                features={['Multi-resolution', 'Subject crop', 'Face masks']}
                 bestFor="Portrait/face-focused LoRAs with automatic subject cropping."
                 stepRange={[1, 10000]}
                 defaultSteps={2500}
@@ -561,6 +811,26 @@ export function LoraGuideContent() {
                 pricing="$0.0255/step"
                 features={['Edit pairs']}
                 bestFor="Premium FLUX.2 trainer. Highest quality, most expensive."
+                stepRange={[100, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="FLUX.2 Klein 4B"
+                base="FLUX.2 Klein 4B"
+                category="image"
+                pricing="$0.005/step"
+                features={['Budget', 'Fast inference']}
+                bestFor="Cheapest FLUX.2 trainer. Smaller model, faster + cheaper inference."
+                stepRange={[100, 10000]}
+                defaultSteps={1000}
+              />
+              <ModelCard
+                name="FLUX.2 Klein 9B"
+                base="FLUX.2 Klein 9B"
+                category="image"
+                pricing="$0.0086/step"
+                features={['Mid-tier', 'Fast inference']}
+                bestFor="Mid-range FLUX.2 trainer. Better quality than 4B, cheaper than full Dev."
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
@@ -648,10 +918,141 @@ export function LoraGuideContent() {
               For style LoRAs, <strong>Z-Image Turbo</strong> or <strong>FLUX LoRA Fast</strong> are good choices.
               For the cheapest per-step training, try <strong>Z-Image V2</strong> ($0.0008/step) or <strong>Qwen 2512 V2</strong> ($0.0009/step).
             </InfoBox>
+
+            <Warning>
+              <strong>Generation compatibility matters!</strong> Currently, only <strong>FLUX 2 Dev (LoRA)</strong> accepts LoRA weights for image generation in Stitch.
+              Z-Image and Qwen LoRAs can be trained but have no generation endpoint yet. For maximum compatibility across all Stitch tools, <strong>train on a FLUX-family model</strong>.
+              See the "Generating Images with Your LoRA" section below for the full compatibility matrix.
+            </Warning>
           </div>
         </Section>
 
-        {/* Advanced Settings */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 8: Model-Specific Parameter Recipes (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={TrendingUp} title="Model-Specific Parameter Recipes">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              Concrete starting configurations per model family, optimized for realistic output. These are battle-tested defaults —
+              start here and adjust based on results.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Model</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Learning Rate</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Steps (Style)</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Steps (Character)</th>
+                    <th className="text-left py-2 font-semibold text-gray-900">Key Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600">
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX LoRA Fast</td>
+                    <td className="py-2 pr-2 font-mono text-gray-400">Internal</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2">$2 flat. Best default — start here.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX Portrait</td>
+                    <td className="py-2 pr-2 font-mono">0.00009</td>
+                    <td className="py-2 pr-2 text-gray-400">N/A</td>
+                    <td className="py-2 pr-2">2000-3000</td>
+                    <td className="py-2">Face specialist. Auto-crops to subject.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Turbo FLUX</td>
+                    <td className="py-2 pr-2 font-mono">0.00115</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">800-1500</td>
+                    <td className="py-2">Aggressive LR. Face crop built in.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Dev V2</td>
+                    <td className="py-2 pr-2 font-mono">0.00005</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">800-1500</td>
+                    <td className="py-2">Premium. Very conservative LR — start low.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image Turbo</td>
+                    <td className="py-2 pr-2 font-mono">0.0001</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">1000-1500</td>
+                    <td className="py-2">Small model, sensitive. Start conservative.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image V2</td>
+                    <td className="py-2 pr-2 font-mono">0.0005</td>
+                    <td className="py-2 pr-2">1500-2500</td>
+                    <td className="py-2 pr-2">2000-3000</td>
+                    <td className="py-2">Cheapest. Needs more steps at higher LR.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Wan 2.2 T2I</td>
+                    <td className="py-2 pr-2 font-mono">0.0007</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">800-1500</td>
+                    <td className="py-2">Highest default LR. Style + mask support.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Qwen (all)</td>
+                    <td className="py-2 pr-2 font-mono">0.0005</td>
+                    <td className="py-2 pr-2">800-1200</td>
+                    <td className="py-2 pr-2">800-1500</td>
+                    <td className="py-2">Works from small datasets (even 8-10 images).</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-medium text-gray-900">Video (Wan I2V)</td>
+                    <td className="py-2 pr-2 font-mono">0.0002</td>
+                    <td className="py-2 pr-2">300-500</td>
+                    <td className="py-2 pr-2">300-500</td>
+                    <td className="py-2">Lower LR + steps. Requires video clips.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="border border-[#2C666E]/20 rounded-xl p-4 bg-[#2C666E]/5">
+              <h4 className="font-semibold text-sm text-gray-900 mb-2">FAL.ai Sweet Spot Research</h4>
+              <p className="text-xs text-gray-700">
+                From FAL.ai's own blog posts and community testing:
+              </p>
+              <div className="mt-2 space-y-2 text-xs text-gray-700">
+                <div className="flex gap-3 items-start">
+                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0">500 steps</span>
+                  <span>Insufficient — style barely learned, character unrecognizable</span>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0">1000 steps</span>
+                  <span>Sweet spot for style LoRAs. Good results at ~1500 for characters, peak quality around 2500-3000</span>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0">2000+ steps</span>
+                  <span>Diminishing returns for styles. Characters can go higher but watch for overfitting above 3000</span>
+                </div>
+              </div>
+            </div>
+
+            <Tip>
+              <strong>For photorealistic character LoRAs:</strong> Start with FLUX LoRA Fast at 1000 steps. If the likeness is too weak,
+              try Turbo FLUX at 1200 steps (its aggressive LR captures detail faster). FLUX Portrait at 2500 steps is the nuclear option
+              for maximum face accuracy, but it's slower and more expensive.
+            </Tip>
+
+            <Tip>
+              <strong>Single trigger words work best for Qwen models.</strong> Avoid multi-word triggers like "my character" —
+              use <CodeBlock>mychar_v1</CodeBlock> instead.
+            </Tip>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 9: Advanced Settings
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Settings} title="Advanced Settings — Steps, Learning Rate, Masks (Deep Dive)">
           <div className="mt-4 space-y-6">
             <p className="text-sm text-gray-700">
@@ -806,7 +1207,7 @@ export function LoraGuideContent() {
                       </tr>
                     </thead>
                     <tbody className="text-gray-600">
-                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono text-gray-400">N/A</td><td className="py-1.5 pr-3 font-mono text-gray-400">—</td><td className="py-1.5">Internally calibrated. Not adjustable.</td></tr>
+                      <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX LoRA Fast</td><td className="py-1.5 pr-3 font-mono text-gray-400">N/A</td><td className="py-1.5 pr-3 font-mono text-gray-400">&mdash;</td><td className="py-1.5">Internally calibrated. Not adjustable.</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">FLUX Portrait</td><td className="py-1.5 pr-3 font-mono">0.00009</td><td className="py-1.5 pr-3 font-mono">0.00005 - 0.0002</td><td className="py-1.5">Lower — portrait is more sensitive</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.1/2.2 I2V</td><td className="py-1.5 pr-3 font-mono">0.0002</td><td className="py-1.5 pr-3 font-mono">0.0001 - 0.0005</td><td className="py-1.5">Video models need lower LR</td></tr>
                       <tr className="border-b border-gray-100"><td className="py-1.5 pr-3 font-medium text-gray-900">Wan 2.2 T2I</td><td className="py-1.5 pr-3 font-mono">0.0007</td><td className="py-1.5 pr-3 font-mono">0.0003 - 0.001</td><td className="py-1.5">Image variant tolerates higher LR</td></tr>
@@ -905,10 +1306,6 @@ export function LoraGuideContent() {
                     <li><strong>Your character has distinctive facial features</strong> — unique eye shape, freckles, scars, facial hair that need precise reproduction</li>
                     <li><strong>You want face consistency across varied scenes</strong> — masks help the model learn "this face" vs "this entire image"</li>
                   </ul>
-                  <div className="mt-2 p-2 bg-white rounded border border-green-200">
-                    <p className="text-[10px] text-green-800 font-medium mb-1">Example scenario (masks ON):</p>
-                    <p className="text-[10px] text-green-700">Training "zk_sarah" with 20 images. Some images show her full body in complex scenes. Without masks, the model might associate her background environments with the trigger word. With masks, the model knows: "Focus on this face — the background is context, not identity."</p>
-                  </div>
                 </div>
 
                 <div className="border border-red-200 rounded-lg p-4 bg-red-50/50">
@@ -919,10 +1316,6 @@ export function LoraGuideContent() {
                     <li><strong>Training non-human subjects</strong> — pets, vehicles, buildings, logos. Face detection won't find them.</li>
                     <li><strong>Your images don't have clear, visible faces</strong> — back-of-head shots, silhouettes, or heavily stylized art may confuse the face detector</li>
                   </ul>
-                  <div className="mt-2 p-2 bg-white rounded border border-red-200">
-                    <p className="text-[10px] text-red-800 font-medium mb-1">Example scenario (masks OFF):</p>
-                    <p className="text-[10px] text-red-700">Training "morisot_style" with 18 paintings. The model needs to learn brushstroke technique, color palette, and composition across the entire canvas — not just faces. Masks would make the model over-focus on faces in paintings and ignore the style of landscapes, still lifes, etc.</p>
-                  </div>
                 </div>
               </div>
 
@@ -1025,7 +1418,9 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Training Process */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 10: Training Process
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Clock} title="What Happens During Training">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -1060,56 +1455,467 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Using Your LoRA */}
-        <Section icon={Wand2} title="Using Your Trained LoRA">
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 11: Generating Images with Your LoRA (NEW — BIGGEST GAP)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={Sparkles} title="Generating Images with Your LoRA — Complete Guide" defaultOpen={true}>
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
-              Once training completes, your LoRA appears in the <strong>LoRA Picker</strong> component across all generation tools.
+              This is the most important section. Training a LoRA is only half the battle — you need to know
+              <strong> which generation model to use</strong>, how to configure scale, and how to write prompts that get realistic results.
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">Where You Can Use LoRAs</h4>
-              <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-5">
-                <li><strong>Imagineer</strong> — Text-to-Image and Image-to-Image generation</li>
-                <li><strong>Turnaround Sheet</strong> — Character reference sheet generation</li>
-                <li><strong>JumpStart Video Studio</strong> — Video generation from images</li>
-                <li><strong>Shorts Workbench</strong> — Keyframe image generation</li>
-                <li><strong>Storyboard</strong> — Preview image generation</li>
-              </ul>
-            </div>
+            <h4 className="font-semibold text-sm text-gray-900">Model Compatibility Matrix</h4>
+            <p className="text-xs text-gray-600 mb-2">
+              LoRAs only work with generation models from the <strong>same model family</strong> they were trained on.
+              A FLUX LoRA will not work with a Wan generator, and vice versa.
+            </p>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">Prompting with Your LoRA</h4>
-              <p className="text-xs text-gray-600 mb-2">Always include the trigger word in your prompt:</p>
-              <div className="bg-white border border-gray-200 rounded p-3 text-xs font-mono text-gray-700">
-                "rxsneaker on a marble countertop, dramatic studio lighting, macro photography"
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                The trigger word tells the model "use the learned concept here". Without it, the LoRA has no effect.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">LoRA Scale</h4>
-              <p className="text-xs text-gray-600">
-                When selecting a LoRA in the picker, you can adjust the <strong>scale</strong> (0.0 - 1.0).
-                This controls how strongly the LoRA's learned concept is applied.
-              </p>
-              <ul className="text-xs text-gray-600 mt-2 space-y-1 list-disc pl-5">
-                <li><strong>1.0:</strong> Full strength — strong likeness but may reduce prompt flexibility</li>
-                <li><strong>0.7-0.8:</strong> Good balance of likeness and creativity (recommended)</li>
-                <li><strong>0.3-0.5:</strong> Subtle influence — hints of the learned concept</li>
-              </ul>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Trained On</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Compatible Generator</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Type</th>
+                    <th className="text-left py-2 font-semibold text-gray-900">Works In</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600">
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.1 trainers (Fast, Portrait, Turbo, Kontext)</td>
+                    <td className="py-2 pr-2">FLUX 2 Dev (LoRA)</td>
+                    <td className="py-2 pr-2">Image</td>
+                    <td className="py-2">Imagineer, Turnaround, Storyboard, Shorts, Campaigns</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Dev V2</td>
+                    <td className="py-2 pr-2">FLUX 2 Dev (LoRA)</td>
+                    <td className="py-2 pr-2">Image</td>
+                    <td className="py-2">Same as above</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Klein 4B</td>
+                    <td className="py-2 pr-2">Klein 4B (LoRA)</td>
+                    <td className="py-2 pr-2">Image</td>
+                    <td className="py-2">Imagineer (cheapest inference at $0.016/MP)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">FLUX.2 Klein 9B</td>
+                    <td className="py-2 pr-2">Klein 9B (LoRA)</td>
+                    <td className="py-2 pr-2">Image</td>
+                    <td className="py-2">Imagineer (mid-tier at $0.02/MP)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-green-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Wan 2.2 T2I</td>
+                    <td className="py-2 pr-2">Wan 2.2 T2I (LoRA)</td>
+                    <td className="py-2 pr-2">Image</td>
+                    <td className="py-2">Imagineer, pipelines (dual-LoRA auto-detected)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-red-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Z-Image (all)</td>
+                    <td className="py-2 pr-2 text-red-600 italic">No generation endpoint yet</td>
+                    <td className="py-2 pr-2">—</td>
+                    <td className="py-2 text-gray-400">Future support</td>
+                  </tr>
+                  <tr className="bg-red-50/30">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Qwen (all)</td>
+                    <td className="py-2 pr-2 text-red-600 italic">No generation endpoint yet</td>
+                    <td className="py-2 pr-2">—</td>
+                    <td className="py-2 text-gray-400">Future support</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <Warning>
-              <strong>Model compatibility:</strong> A LoRA trained on FLUX will only work with FLUX-based generation models.
-              A Wan LoRA only works with Wan models. Make sure you select a compatible generation model when using your LoRA.
+              <strong>For maximum compatibility, train on a FLUX-family model.</strong> FLUX LoRAs work across all Stitch image generation tools
+              (Imagineer, Turnaround, Storyboard, Shorts, Campaigns). Wan 2.2 and Klein LoRAs also have working generation endpoints but are
+              limited to Imagineer for now. Z-Image and Qwen LoRAs can be trained but have <strong>no generation endpoint currently</strong>.
+              On a budget? Klein 4B ($0.005/step training + $0.016/image) is the cheapest full pipeline. For best quality, use FLUX LoRA Fast ($2 flat).
+            </Warning>
+
+            <h4 className="font-semibold text-sm text-gray-900">Step-by-Step: Generating Your First LoRA Image</h4>
+            <div className="space-y-3">
+              <div className="flex gap-3 items-start">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">1</span>
+                <div>
+                  <p className="font-medium text-sm text-gray-900">Open a Generation Tool</p>
+                  <p className="text-xs text-gray-600">Open <strong>Imagineer</strong> (Text-to-Image mode) — this is the best place to test your LoRA before using it in pipelines.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">2</span>
+                <div>
+                  <p className="font-medium text-sm text-gray-900">Select the Right Model</p>
+                  <p className="text-xs text-gray-600">Choose a LoRA-compatible generation model: <strong>Flux 2 Dev (LoRA)</strong> for FLUX-trained LoRAs, <strong>Klein 4B/9B</strong> for Klein-trained LoRAs, or <strong>Wan 2.2 T2I</strong> for Wan-trained LoRAs. If you select a non-LoRA model (Nano Banana, SeedDream, Imagen, etc.), the LoRA will have no effect. Wan 2.2 dual-LoRA is auto-detected — just select the LoRA and the right model is chosen for you.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">3</span>
+                <div>
+                  <p className="font-medium text-sm text-gray-900">Select Your LoRA</p>
+                  <p className="text-xs text-gray-600">Expand the LoRA section and click to select your trained LoRA. You can select multiple LoRAs for stacking. Custom LoRAs default to scale 1.0, pre-built library LoRAs default to 0.8.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">4</span>
+                <div>
+                  <p className="font-medium text-sm text-gray-900">Write Your Prompt WITH the Trigger Word</p>
+                  <p className="text-xs text-gray-600">Place the trigger word at the <strong>beginning</strong> of your prompt:</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2.5 mt-1">
+                    <p className="text-xs font-mono text-gray-700">soph_x7, sitting at a modern cafe, wearing a white linen blouse, warm afternoon sunlight, Canon EOS R5, 85mm f/1.4, shallow depth of field</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#2C666E] text-white text-xs font-bold shrink-0">5</span>
+                <div>
+                  <p className="font-medium text-sm text-gray-900">Generate & Iterate</p>
+                  <p className="text-xs text-gray-600">Click generate. If the likeness is too weak, increase LoRA scale to 1.0-1.2. If the output is too rigid or shows artifacts, decrease to 0.6-0.8. See the Scale & Stacking section below for detailed guidance.</p>
+                </div>
+              </div>
+            </div>
+
+            <InfoBox>
+              <strong>Smart routing in pipelines:</strong> When LoRAs are active in Storyboard, Shorts, or Campaign pipelines,
+              the system automatically selects the right LoRA-compatible model — FLUX 2 Dev for FLUX LoRAs, Wan 2.2 T2I for Wan dual-LoRAs.
+              Wan 2.2 dual-LoRA files are auto-expanded (both low-noise and high-noise transformers). You don't need to manually select models in automated workflows.
+            </InfoBox>
+
+            <Tip>
+              <strong>Always test in Imagineer first.</strong> Before deploying a LoRA in automated Storyboard or Campaign pipelines,
+              validate it in Imagineer where you have full control over the prompt, scale, and model. This saves time and money.
+            </Tip>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 12: LoRA Scale & Stacking Guide (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={Layers} title="LoRA Scale & Stacking Guide">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              The <strong>scale</strong> slider (0.1 - 1.5) controls how strongly the LoRA's learned concept is applied.
+              You can also <strong>stack</strong> multiple LoRAs for combined effects.
+            </p>
+
+            <h4 className="font-semibold text-sm text-gray-900">Understanding Scale Values</h4>
+            <div className="space-y-2">
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.1-0.3</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Barely perceptible.</strong> Extremely subtle influence — you might not even notice the LoRA is active. Useful for light style hints that shouldn't overpower the prompt.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.4-0.6</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Moderate influence.</strong> Subject becomes recognizable but the base model still has significant creative freedom. Good for blending a LoRA concept with creative, varied prompts.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.7-0.8</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Recommended balance.</strong> Strong likeness/style while preserving prompt flexibility. Pre-built library LoRAs default to 0.8. This is where most LoRAs work best.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">0.9-1.0</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Full strength.</strong> Strong likeness but reduced prompt flexibility. Custom-trained LoRAs default to 1.0. Outputs closely match training data characteristics.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.1-1.3</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Over-strength.</strong> Amplifies the LoRA effect beyond its training weight. Can be useful for style LoRAs that are too subtle at 1.0, but introduces artifacts for character LoRAs. Use with caution.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded shrink-0 w-14 text-center">1.4-1.5</span>
+                <div className="text-xs text-gray-700">
+                  <p><strong>Maximum — experimental only.</strong> High risk of artifacts, distortion, color blowout, and "uncanny valley" effects. Only for edge-case experimentation.</p>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Realism-Specific Scale Guidance</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                <p className="text-xs font-semibold text-green-800 mb-1.5">For Photorealistic Characters</p>
+                <ul className="text-xs text-green-700 space-y-0.5 list-disc pl-4">
+                  <li>Start at <strong>0.8</strong></li>
+                  <li>Increase to 1.0 only if likeness is insufficient</li>
+                  <li>Above 1.0 tends to produce "uncanny valley" — faces look too perfect, skin too smooth, eyes too sharp</li>
+                </ul>
+              </div>
+              <div className="border border-purple-200 rounded-lg p-3 bg-purple-50/50">
+                <p className="text-xs font-semibold text-purple-800 mb-1.5">For Character + Style Blend</p>
+                <ul className="text-xs text-purple-700 space-y-0.5 list-disc pl-4">
+                  <li>Character LoRA at <strong>0.7</strong></li>
+                  <li>Style LoRA at <strong>0.3-0.4</strong></li>
+                  <li>Combined: ~1.0-1.1 total (safe range)</li>
+                </ul>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">LoRA Stacking</h4>
+            <p className="text-xs text-gray-700">
+              You can select multiple LoRAs simultaneously in the LoRA picker. They're sent as an array to the generation model.
+            </p>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Combined strength should stay below ~1.2</strong> (e.g., two LoRAs at 0.6 each = 1.2 total). Going higher causes artifacts.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Practical combo:</strong> Character LoRA (0.7) + Style LoRA (0.4) = your character rendered in a specific visual style.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <span><strong>Order matters:</strong> The first LoRA in the picker list takes priority when weights compete.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                <span><strong>Diminishing returns:</strong> More than 2-3 LoRAs rarely improves results and significantly increases generation cost and time.</span>
+              </div>
+            </div>
+
+            <Warning>
+              <strong>If two LoRAs together look worse than either alone,</strong> your combined strength likely exceeds 1.2.
+              Reduce individual scales — try 0.5 + 0.5 instead of 0.8 + 0.8.
             </Warning>
           </div>
         </Section>
 
-        {/* Troubleshooting */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 13: Prompting with LoRAs for Realism (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={Wand2} title="Prompting with LoRAs for Realism">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              How you write your prompt dramatically affects the realism of LoRA-generated images.
+              These techniques are specific to getting photorealistic output.
+            </p>
+
+            <h4 className="font-semibold text-sm text-gray-900">Trigger Word Placement</h4>
+            <p className="text-xs text-gray-700 mb-2">
+              Always place the trigger word at the <strong>beginning</strong> of your prompt. This matches how the training data was
+              structured (trigger word prepended to captions) and gives it the strongest influence.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                <p className="text-xs font-semibold text-green-800 mb-1">Correct</p>
+                <p className="text-[10px] font-mono text-green-700"><strong>soph_x7</strong>, professional portrait, studio lighting, Canon EOS R5</p>
+              </div>
+              <div className="border border-red-200 rounded-lg p-3 bg-red-50/50">
+                <p className="text-xs font-semibold text-red-800 mb-1">Avoid</p>
+                <p className="text-[10px] font-mono text-red-700">professional portrait of a woman called <strong>soph_x7</strong> in studio</p>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">The Realism Prompt Formula</h4>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-xs font-mono text-gray-700 leading-relaxed">
+                <span className="text-purple-600 font-bold">{'{trigger_word}'}</span>,{' '}
+                <span className="text-blue-600">[action/pose]</span>,{' '}
+                <span className="text-teal-600">[clothing/appearance]</span>,{' '}
+                <span className="text-amber-600">[setting/location]</span>,{' '}
+                <span className="text-orange-600">[lighting description]</span>,{' '}
+                <span className="text-red-600">[camera + lens]</span>,{' '}
+                <span className="text-gray-500">[quality modifiers]</span>
+              </p>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Example Prompts for Photorealism</h4>
+            <div className="space-y-2">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 mb-1">CHARACTER — Outdoor Portrait</p>
+                <p className="text-xs font-mono text-gray-700">soph_x7, sitting at a sidewalk cafe in Paris, wearing a cream knit sweater, warm golden hour sunlight from the left, shallow depth of field, Canon EOS R5, 85mm f/1.4, sharp focus, photorealistic</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-purple-700 mb-1">CHARACTER — Studio Headshot</p>
+                <p className="text-xs font-mono text-gray-700">soph_x7, professional headshot, slight smile, dark gray studio background, Rembrandt lighting with fill, medium close-up, 105mm f/2, 8K, sharp detail on eyes and skin texture</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-amber-700 mb-1">PRODUCT — Lifestyle</p>
+                <p className="text-xs font-mono text-gray-700">rxsnkr_v1, placed on a wet concrete surface with city lights reflecting, night scene, moody blue and orange neon lighting, low angle shot, product photography, 50mm macro, crisp detail</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-teal-700 mb-1">STYLE — Applied to New Content</p>
+                <p className="text-xs font-mono text-gray-700">aqua_wash, a mountain village at sunset with smoke rising from chimneys, winding cobblestone path, warm and cool color contrast</p>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-gray-900">Prompting Anti-Patterns</h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                <span><strong>Don't re-describe what the LoRA already knows.</strong> If your character LoRA learned "blonde woman with blue eyes", don't write "soph_x7, blonde woman with blue eyes" — this creates conflicts. Just use the trigger word and describe the <em>new</em> context (pose, setting, clothing).</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                <span><strong>Don't combine conflicting style prompts with a style LoRA.</strong> If your style LoRA is "watercolor", don't prompt "photorealistic, 8K, sharp detail" — the style LoRA and prompt will fight each other.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                <span><strong>Don't add "no watermark" to negative prompts</strong> unless your training data actually contained watermarks. In clean-trained LoRAs, mentioning "watermark" (even negatively) can paradoxically introduce them.</span>
+              </div>
+            </div>
+
+            <Tip>
+              <strong>Photography terms unlock realism.</strong> Include camera body (Canon EOS R5, Sony A7 IV), lens (85mm f/1.4, 50mm f/2),
+              and lighting terms (Rembrandt, butterfly, loop lighting). These activate the base model's photorealism knowledge
+              and combine beautifully with character LoRAs.
+            </Tip>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 14: Where LoRAs Work in Stitch (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={FolderOpen} title="Where LoRAs Work in Stitch">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              LoRAs are available across multiple Stitch tools. Here's where and how to access them in each.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">Tool</th>
+                    <th className="text-left py-2 pr-2 font-semibold text-gray-900">How to Access LoRA</th>
+                    <th className="text-left py-2 font-semibold text-gray-900">Generation Model</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600">
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Imagineer (T2I)</td>
+                    <td className="py-2 pr-2">LoRA picker in generation panel. Must select "Flux 2 Dev" model.</td>
+                    <td className="py-2">FLUX 2 Dev (LoRA)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Imagineer (I2I)</td>
+                    <td className="py-2 pr-2">LoRA picker in I2I panel. Must select "Flux 2 Dev" model.</td>
+                    <td className="py-2">FLUX 2 Dev (LoRA)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Turnaround Sheet</td>
+                    <td className="py-2 pr-2">Available when using the Flux 2 model option.</td>
+                    <td className="py-2">FLUX 2 Dev (LoRA)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Video Ad Creator</td>
+                    <td className="py-2 pr-2">Brand Assets panel. LoRA config saved per campaign template.</td>
+                    <td className="py-2">FLUX 2 (images) + Wavespeed WAN (video)</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-medium text-gray-900">Storyboard</td>
+                    <td className="py-2 pr-2">Resolved from template config or brand kit defaults.</td>
+                    <td className="py-2">FLUX 2 Dev (auto-selected when LoRAs present)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-medium text-gray-900">Shorts Workbench</td>
+                    <td className="py-2 pr-2">Resolved via brand kit defaults or visual subject avatar.</td>
+                    <td className="py-2">FLUX 2 Dev (auto-selected when LoRAs present)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <InfoBox>
+              <strong>LoRA resolution chain:</strong> In automated pipelines (Storyboard, Shorts, Campaigns), LoRAs are resolved
+              in this priority order: <strong>1.</strong> Template-level LoRA config → <strong>2.</strong> Visual subject avatar →
+              <strong>3.</strong> Brand kit default LoRAs. The first non-empty source wins.
+            </InfoBox>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 15: Overfitting, Underfitting & Style Bleed (NEW)
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Section icon={AlertTriangle} title="Overfitting, Underfitting & Style Bleed — Diagnosis Guide">
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-700">
+              The three most common LoRA problems, how to identify them, and how to fix them.
+            </p>
+
+            <div className="border border-red-200 rounded-xl p-5 bg-red-50/30 space-y-3">
+              <h4 className="font-semibold text-sm text-red-900">Overfitting</h4>
+              <div className="space-y-2 text-xs text-gray-700">
+                <p><strong>Symptoms:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Generated images look like <strong>exact copies</strong> of training photos</li>
+                  <li>Same backgrounds/poses appear regardless of prompt instructions</li>
+                  <li>Model <strong>ignores prompt directions</strong> (e.g., "standing" still produces sitting poses from training data)</li>
+                  <li>Outputs look artificially sharp and hyper-detailed</li>
+                </ul>
+                <p className="mt-2"><strong>Causes:</strong> Too many training steps, too few images, dataset lacks variety</p>
+                <p><strong>Fix:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Reduce steps by 25-50% (e.g., 2000 → 1200)</li>
+                  <li>Lower learning rate by 50% (e.g., 0.0005 → 0.00025)</li>
+                  <li>Add more diverse training images (different poses, backgrounds, outfits)</li>
+                  <li>Lower LoRA scale when generating (0.6-0.7 instead of 1.0)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border border-yellow-200 rounded-xl p-5 bg-yellow-50/30 space-y-3">
+              <h4 className="font-semibold text-sm text-yellow-900">Underfitting</h4>
+              <div className="space-y-2 text-xs text-gray-700">
+                <p><strong>Symptoms:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Subject is <strong>not recognizable</strong> — vague resemblance at best</li>
+                  <li>Faces are generic, lacking distinctive features</li>
+                  <li>Trigger word has <strong>minimal visible effect</strong> on output</li>
+                  <li>Output looks almost the same with or without the trigger word</li>
+                </ul>
+                <p className="mt-2"><strong>Causes:</strong> Too few steps, learning rate too low, poor quality images</p>
+                <p><strong>Fix:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Increase steps by 50% (e.g., 600 → 1000)</li>
+                  <li>Increase learning rate by 1.5x (e.g., 0.0001 → 0.00015)</li>
+                  <li>Improve dataset quality — more close-ups, clearer images, better lighting</li>
+                  <li>Increase LoRA scale when generating (1.0-1.2)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border border-purple-200 rounded-xl p-5 bg-purple-50/30 space-y-3">
+              <h4 className="font-semibold text-sm text-purple-900">Style Bleed</h4>
+              <div className="space-y-2 text-xs text-gray-700">
+                <p><strong>Symptoms:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>The learned visual style appears <strong>even without the trigger word</strong> in the prompt</li>
+                  <li>Colors, textures, or artistic elements from training data contaminate unrelated generations</li>
+                  <li>Other LoRAs or the base model's behavior changes when this LoRA is active (even at low scale)</li>
+                </ul>
+                <p className="mt-2"><strong>Causes:</strong> Overtrained style LoRA, captions described the style instead of omitting it</p>
+                <p><strong>Fix:</strong></p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Re-train with <strong>correct training type set to "Style"</strong> (ensures captions omit aesthetic details)</li>
+                  <li>Reduce training steps — style bleed is often caused by overtraining</li>
+                  <li>Use lower LoRA scale (0.3-0.5) to reduce the bleed while still getting style influence</li>
+                  <li>Test: Generate WITHOUT the trigger word. If the style still appears, it's bleeding.</li>
+                </ul>
+              </div>
+            </div>
+
+            <Tip>
+              <strong>Quick diagnosis test:</strong> Generate 3 images — one with trigger word at scale 1.0, one with trigger word at scale 0.3,
+              and one without the trigger word at all. Compare them. If 1.0 and "no trigger" look the same = style bleed. If 0.3 and "no trigger"
+              look the same = the LoRA is too weak (underfitting). If 1.0 looks like a training photo copy = overfitting.
+            </Tip>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 16: Troubleshooting (EXPANDED)
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={HelpCircle} title="Troubleshooting — Common Issues">
           <div className="mt-4 space-y-3">
             {[
@@ -1131,7 +1937,7 @@ export function LoraGuideContent() {
               },
               {
                 q: 'The LoRA has no visible effect when generating',
-                a: 'Make sure you\'re including the trigger word in your prompt. Also check the LoRA scale — if it\'s too low (< 0.3), the effect is barely visible.',
+                a: 'Three things to check: (1) Is the trigger word in your prompt? Without it, the LoRA has no effect. (2) Is the LoRA scale above 0.3? Lower values are barely visible. (3) Are you using FLUX 2 Dev as the generation model? LoRAs only work with compatible generators.',
               },
               {
                 q: 'LoRA works for images but not video',
@@ -1145,6 +1951,26 @@ export function LoraGuideContent() {
                 q: 'The training model dropdown is empty/loading',
                 a: 'The models API may have failed to load. Refresh the page and reopen the modal. The dropdown will show "Loading models..." while fetching.',
               },
+              {
+                q: 'I see watermarks in my generated images',
+                a: 'Your training images likely contained watermarks. The model learned to reproduce them. This is irreversible — you need to re-train with clean, watermark-free images. Always remove watermarks before training.',
+              },
+              {
+                q: 'My LoRA works in Imagineer but not in Storyboard/Campaigns',
+                a: 'The LoRA must be assigned to the brand. In automated pipelines, LoRAs are resolved from the template\'s lora_config or the brand kit\'s default_loras. Make sure the LoRA is linked to your brand in Brand Assets.',
+              },
+              {
+                q: 'LoRA scale above 1.0 produces artifacts or distortion',
+                a: 'This is expected behavior. Scale > 1.0 amplifies the LoRA beyond its training weight. For photorealistic output, stay at 0.7-1.0. Only go above 1.0 for style LoRAs that are too subtle at default strength.',
+              },
+              {
+                q: 'I trained on Z-Image or Qwen but can\'t use it to generate images',
+                a: 'Currently only FLUX-family LoRAs are usable for image generation in Stitch (via the FLUX 2 Dev LoRA endpoint). Z-Image and Qwen generation endpoints don\'t support LoRA weights yet. For maximum compatibility, retrain on FLUX LoRA Fast ($2).',
+              },
+              {
+                q: 'Two LoRAs together produce worse results than either alone',
+                a: 'Combined strength likely exceeds 1.2. Reduce individual scales — try 0.5 + 0.5 instead of 0.8 + 0.8. Also check that the LoRAs aren\'t conflicting (e.g., two different character LoRAs).',
+              },
             ].map(({ q, a }, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-3">
                 <p className="font-medium text-sm text-gray-900 mb-1">{q}</p>
@@ -1154,7 +1980,9 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Cost Reference */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 17: Cost Reference
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={DollarSign} title="Cost Reference">
           <div className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
@@ -1208,92 +2036,9 @@ export function LoraGuideContent() {
           </div>
         </Section>
 
-        {/* Technical Architecture */}
-        <Section icon={Shield} title="Technical Architecture (For Developers)">
-          <div className="mt-4 space-y-4">
-            <p className="text-sm text-gray-700">
-              Reference for how the system works under the hood.
-            </p>
-
-            <div className="space-y-3">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">File Structure</h4>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap">{`Frontend:
-  src/components/modals/BrandAssetsModal.jsx  — 3-step training wizard
-  src/components/LoRAPicker.jsx               — Multi-select LoRA component
-
-Backend:
-  api/lora/train.js      — Training submission (ZIP + FAL dispatch)
-  api/lora/result.js     — Poll training status
-  api/lora/caption.js    — AI auto-captioning (GPT-4o-mini)
-  api/lora/models.js     — Available models list for frontend
-  api/lora/library.js    — Pre-built LoRA library
-  api/lib/trainingModelRegistry.js  — Declarative model config (16 models)
-  api/lib/resolveLoraConfigs.js     — Multi-LoRA resolution chain
-
-Database:
-  brand_loras            — Training metadata + result URLs
-  visual_subjects        — Character avatars linked to LoRAs
-  lora_library           — Pre-built HuggingFace LoRAs`}</pre>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">API Endpoints</h4>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap">{`POST /api/lora/train     — Start training (requires auth)
-POST /api/lora/result    — Poll training result
-POST /api/lora/caption   — Auto-caption images
-GET  /api/lora/models    — List available training models
-GET  /api/lora/library   — Browse pre-built LoRAs`}</pre>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">ZIP Archive Format</h4>
-                <p className="text-xs text-gray-600 mb-2">
-                  The training ZIP contains paired files — each image with a matching caption:
-                </p>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap">{`image_000.jpg     image_000.txt
-image_001.png     image_001.txt
-image_002.webp    image_002.txt
-...`}</pre>
-                <p className="text-xs text-gray-600 mt-2">
-                  Caption files contain the trigger word + description. Example:
-                </p>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap bg-white border border-gray-200 rounded p-2 mt-1">
-{`zk_sarah, standing in a park with trees in the background,
-wearing a blue denim jacket, natural sunlight from the left,
-three-quarter angle facing camera`}</pre>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">FAL Field Name Differences</h4>
-                <Warning>
-                  Different FAL models use different field names. The Training Model Registry handles this automatically via <CodeBlock>buildBody()</CodeBlock> — never construct FAL payloads manually.
-                </Warning>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap mt-2">{`ZIP URL field:
-  images_data_url   — FLUX Fast, Turbo FLUX, Hunyuan
-  image_data_url    — Kontext, Qwen, Z-Image, FLUX.2 V2
-  training_data_url — Wan models, LTX-2
-
-Trigger word field:
-  trigger_word      — FLUX Fast, Hunyuan
-  trigger_phrase    — Portrait, Turbo FLUX, Wan, Qwen`}</pre>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-900 mb-2">Upload Flow</h4>
-                <p className="text-xs text-gray-600 mb-2">
-                  Training images are zipped with captions, then uploaded to FAL CDN via a two-step flow:
-                </p>
-                <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap">{`1. POST rest.fal.ai/storage/upload/initiate
-   → returns { upload_url, file_url }
-2. PUT upload_url with zip bytes
-   → file_url is the permanent CDN link passed to training`}</pre>
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* Pro Tips */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 18: Pro Tips (EXPANDED)
+            ═══════════════════════════════════════════════════════════════════ */}
         <Section icon={Lightbulb} title="Pro Tips — Get Better Results">
           <div className="mt-4 space-y-3">
             {[
@@ -1315,15 +2060,31 @@ Trigger word field:
               },
               {
                 title: 'Separate LoRAs for image and video',
-                desc: 'A FLUX LoRA generates images, a Wan LoRA generates videos. For a full character pipeline, train both: FLUX for keyframes, Wan for animation.',
+                desc: 'A FLUX LoRA generates images, a Wan LoRA generates videos. For a full character pipeline, train both: FLUX for keyframes, Wan for animation. Use the same trigger word for both.',
               },
               {
-                title: 'LoRA scale of 0.75 is often better than 1.0',
-                desc: 'Full scale (1.0) can make outputs rigid. Backing off to 0.7-0.8 lets the base model contribute more creativity while still maintaining likeness.',
+                title: 'Start at scale 0.8, not 1.0',
+                desc: 'Full scale (1.0) can make outputs rigid or produce uncanny valley effects. Starting at 0.7-0.8 gives you a balance of likeness and natural-looking flexibility. Only increase to 1.0+ if the likeness is insufficient.',
               },
               {
                 title: 'Re-train if quality is poor — don\'t just adjust steps',
                 desc: 'Bad datasets produce bad LoRAs regardless of steps. If results are poor after 2-3 step adjustments, revisit your training images (more variety, better quality).',
+              },
+              {
+                title: 'Include 3-4 flat-lit neutral background shots',
+                desc: 'For photorealistic character LoRAs, include some images shot in flat, even lighting against a plain background. This gives the model a clean reference without environmental contamination.',
+              },
+              {
+                title: 'Use photography terms in your generation prompts',
+                desc: 'Camera body names (Canon EOS R5, Sony A7 IV), lens specs (85mm f/1.4), and lighting terms (Rembrandt, butterfly) activate the base model\'s photorealism knowledge. They combine powerfully with character LoRAs.',
+              },
+              {
+                title: 'For product LoRAs, mix studio + lifestyle shots',
+                desc: 'Include both studio white-background shots AND lifestyle context shots. The model needs to learn the product independent of environment, while also understanding how it looks in real-world settings.',
+              },
+              {
+                title: 'Test with Imagineer before deploying to pipelines',
+                desc: 'Always validate your LoRA in Imagineer first where you have full control. Once you\'re happy with the results, deploy it in Storyboard or Campaign pipelines. This saves both time and money.',
               },
             ].map(({ title, desc }, i) => (
               <div key={i} className="flex gap-3 items-start">
@@ -1363,7 +2124,7 @@ export default function LoraGuidePage() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">LoRA Training Studio Guide</h1>
-                <p className="text-xs text-gray-500">Complete reference for training custom AI models</p>
+                <p className="text-xs text-gray-500">Complete reference for training and generating with custom AI models</p>
               </div>
             </div>
           </div>

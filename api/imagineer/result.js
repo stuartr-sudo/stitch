@@ -20,6 +20,8 @@ const ENDPOINT_MAP = {
   'fal-flux':              'fal-ai/flux-2/lora',
   'fal-flux-edit':         'fal-ai/flux-2/lora/edit',
   'wan22-t2i':             'fal-ai/wan/v2.2-a14b/text-to-image/lora',
+  'klein-4b':              'fal-ai/flux-2/klein/4b/base/lora',
+  'klein-9b':              'fal-ai/flux-2/klein/9b/base/lora',
   'seedream':              'fal-ai/bytedance/seedream/v4/text-to-image',
   'seedream-generate':     'fal-ai/bytedance/seedream/v4/text-to-image',
   // Inpaint
