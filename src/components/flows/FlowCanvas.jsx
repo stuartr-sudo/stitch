@@ -25,6 +25,7 @@ export default function FlowCanvas({
   onEdgesChange,
   onConnect,
   onNodeSelect,
+  onNodeDoubleClick,
   onDrop,
   stepStates,
 }) {
@@ -65,6 +66,7 @@ export default function FlowCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}

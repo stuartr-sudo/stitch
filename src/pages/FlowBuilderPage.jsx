@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import FlowCanvas from '@/components/flows/FlowCanvas';
 import NodePalette from '@/components/flows/NodePalette';
 import NodeConfigPanel from '@/components/flows/NodeConfigPanel';
+import NodeConfigModal from '@/components/flows/NodeConfigModal';
 import ExecutionLog from '@/components/flows/ExecutionLog';
 
 export default function FlowBuilderPage() {
@@ -22,11 +23,31 @@ export default function FlowBuilderPage() {
   const pollRef = useRef(null);
   const saveTimeout = useRef(null);
 
+  // Modal state for double-click config
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [configModalNode, setConfigModalNode] = useState(null);
+
+  // Brand kits + connected accounts for config modal
+  const [brandKits, setBrandKits] = useState([]);
+  const [connections, setConnections] = useState([]);
+
   // Load node types
   useEffect(() => {
     apiFetch('/api/flows/node-types').then(r => r.json()).then(data => {
       if (data?.nodeTypes) setNodeTypesMap(data.nodeTypes);
     });
+  }, []);
+
+  // Load brand kits and connected accounts
+  useEffect(() => {
+    apiFetch('/api/brand/kit').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setBrandKits(data);
+      else if (data?.brand_kit) setBrandKits(Array.isArray(data.brand_kit) ? data.brand_kit : [data.brand_kit]);
+    }).catch(() => {});
+    apiFetch('/api/accounts/connections').then(r => r.json()).then(data => {
+      if (data?.connections) setConnections(data.connections);
+      else if (Array.isArray(data)) setConnections(data);
+    }).catch(() => {});
   }, []);
 
   // Load flow
@@ -122,6 +143,26 @@ export default function FlowBuilderPage() {
     setNodes(prev => [...prev, newNode]);
   }, [setNodes]);
 
+  // Double-click handler — opens the rich config modal
+  const handleNodeDoubleClick = useCallback((event, node) => {
+    setConfigModalNode(node);
+    setConfigModalOpen(true);
+  }, []);
+
+  // Modal config change — updates the node in the graph
+  const handleModalConfigChange = useCallback((newConfig) => {
+    if (!configModalNode) return;
+    setNodes(prev => prev.map(n =>
+      n.id === configModalNode.id ? {
+        ...n,
+        data: { ...n.data, config: newConfig },
+        errorHandling: newConfig.errorHandling || 'stop'
+      } : n
+    ));
+    // Keep modal node in sync
+    setConfigModalNode(prev => prev ? { ...prev, data: { ...prev.data, config: newConfig } } : prev);
+  }, [configModalNode, setNodes]);
+
   // Config change — also stores errorHandling at the node level for the executor
   const handleConfigChange = useCallback((nodeId, config) => {
     setNodes(prev => prev.map(n =>
@@ -192,6 +233,7 @@ export default function FlowBuilderPage() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeSelect={setSelectedNode}
+          onNodeDoubleClick={handleNodeDoubleClick}
           onDrop={handleDrop}
           stepStates={execution?.step_states}
         />
@@ -205,6 +247,17 @@ export default function FlowBuilderPage() {
           />
         )}
       </div>
+
+      {/* Rich config modal — opens on double-click */}
+      <NodeConfigModal
+        open={configModalOpen}
+        onOpenChange={setConfigModalOpen}
+        node={configModalNode}
+        config={configModalNode?.data?.config || {}}
+        onConfigChange={handleModalConfigChange}
+        brandKits={brandKits}
+        connections={connections}
+      />
     </div>
   );
 }
