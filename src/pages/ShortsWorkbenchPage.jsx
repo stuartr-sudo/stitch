@@ -13,6 +13,7 @@ import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 import { FRAMEWORK_CARDS, getFrameworksForNiche } from '@/lib/videoStyleFrameworks';
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 import LibraryModal from '@/components/modals/LibraryModal';
+import MotionReferenceInput from '@/components/MotionReferenceInput';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -463,6 +464,18 @@ export default function ShortsWorkbenchPage() {
   const [scenePrompts, setScenePrompts] = useState({}); // { sceneIdx: { startPrompt, endPrompt, motionPrompt } }
   const [sceneRefs, setSceneRefs] = useState({}); // { sceneIdx: { url, source } } — per-scene reference images for I2I
   const [libraryForScene, setLibraryForScene] = useState(null); // sceneIdx when library picker is open
+  const [sceneMotionRefs, setSceneMotionRefs] = useState({}); // { sceneIdx: motionRef }
+
+  const updateSceneMotionRef = (sceneIdx, motionRef) => {
+    setSceneMotionRefs(prev => ({ ...prev, [sceneIdx]: motionRef }));
+  };
+  const clearSceneMotionRef = (sceneIdx) => {
+    setSceneMotionRefs(prev => {
+      const next = { ...prev };
+      delete next[sceneIdx];
+      return next;
+    });
+  };
 
   // ── Step 4: Clips ───────────────────────────────────────────────
   const [clips, setClips] = useState({}); // { sceneIdx: { url, actualDuration, status } }
@@ -490,7 +503,7 @@ export default function ShortsWorkbenchPage() {
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
     sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
-    frames, scenePrompts, sceneRefs, clips, finalVideoUrl: finalUrl,
+    frames, scenePrompts, sceneRefs, sceneMotionRefs, clips, finalVideoUrl: finalUrl,
     // Avatar mode
     avatarMode, avatarSubjectId, avatarSubjectName,
     avatarPortraitUrl, avatarVideoUrl, avatarLipsyncUrl,
@@ -538,7 +551,7 @@ export default function ShortsWorkbenchPage() {
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
       setAspectRatio(s.aspectRatio || '9:16');
-      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setClips(s.clips || {});
+      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setSceneMotionRefs(s.sceneMotionRefs || {}); setClips(s.clips || {});
       setFinalUrl(s.finalVideoUrl || null);
       // Restore avatar state
       setAvatarMode(s.avatarMode || false);
@@ -783,26 +796,39 @@ export default function ShortsWorkbenchPage() {
   const generateClip = async (sceneIdx) => {
     const block = blocks[sceneIdx];
     const sceneFrames = frames[sceneIdx];
+    const sceneMode = sceneMotionRefs[sceneIdx]?.videoUrl ? 'mt' : mode; // per-scene override
     if (!sceneFrames?.start) { toast.error(`Scene ${sceneIdx + 1}: no start frame`); return; }
-    if (mode === 'flf' && !sceneFrames?.end) { toast.error(`Scene ${sceneIdx + 1}: no end frame`); return; }
+    if (sceneMode === 'flf' && !sceneFrames?.end) { toast.error(`Scene ${sceneIdx + 1}: no end frame`); return; }
 
     setClipLoading(sceneIdx);
     setClips(prev => ({ ...prev, [sceneIdx]: { ...prev[sceneIdx], status: 'generating' } }));
 
     try {
       const promptData = scenePrompts[sceneIdx] || {};
+      const motionRef = sceneMotionRefs[sceneIdx];
       const res = await apiFetch('/api/workbench/generate-clip', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode,
+          mode: sceneMode,
           video_model: videoModel,
           start_frame_url: sceneFrames.start,
-          end_frame_url: mode === 'flf' ? sceneFrames.end : undefined,
+          end_frame_url: sceneMode === 'flf' ? sceneFrames.end : undefined,
           motion_prompt: promptData.motionPrompt || 'Smooth cinematic movement',
           video_style: videoStyle,
           duration: block.clipDuration,
           aspect_ratio: aspectRatio,
           scene_index: sceneIdx,
+          ...(sceneMode === 'mt' && motionRef ? {
+            motion_ref: {
+              video_url: motionRef.videoUrl,
+              trimmed_url: motionRef.trimmedUrl,
+              model: motionRef.model || 'kling_motion_control',
+              character_orientation: motionRef.characterOrientation || 'image',
+              keep_original_sound: false,
+              elements: motionRef.elements,
+              prompt: motionRef.prompt,
+            },
+          } : {}),
         }),
       });
       const data = await parseApiResponse(res);
@@ -812,8 +838,8 @@ export default function ShortsWorkbenchPage() {
         [sceneIdx]: { url: data.video_url, actualDuration: data.actual_duration, status: 'done' },
       }));
 
-      // For I2V mode: store extracted last frame + vision analysis for next scene
-      if (mode === 'i2v' && data.last_frame_url) {
+      // For I2V or MT mode: store extracted last frame + vision analysis for next scene
+      if ((sceneMode === 'i2v' || sceneMode === 'mt') && data.last_frame_url) {
         setFrames(prev => ({
           ...prev,
           [sceneIdx]: { ...prev[sceneIdx], extractedLastFrame: data.last_frame_url, visionAnalysis: data.vision_analysis || '' },
@@ -1595,6 +1621,11 @@ export default function ShortsWorkbenchPage() {
               {mode === 'flf'
                 ? 'Generate START + END frame per scene. Approve pairs, then videos fire in parallel. Each scene\'s end frame becomes the next scene\'s start.'
                 : 'Generate one frame per scene. Videos are sequential — each clip\'s last frame is extracted and becomes the next scene\'s input.'}
+              {Object.keys(sceneMotionRefs).length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded font-semibold">
+                  + {Object.keys(sceneMotionRefs).length} Motion Transfer scene{Object.keys(sceneMotionRefs).length > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
 
             {/* Generate All / scene actions */}
@@ -1609,7 +1640,9 @@ export default function ShortsWorkbenchPage() {
             {/* Scene frames */}
             {blocks.map((block, i) => {
               const sceneFrames = frames[i] || {};
-              const isCurrentInI2V = mode === 'i2v' && i > 0 && !clips[i - 1]?.url && !sceneFrames.start;
+              const sceneMode = sceneMotionRefs[i]?.videoUrl ? 'mt' : mode;
+              const prevIsSequential = mode === 'i2v' || sceneMotionRefs[i - 1]?.videoUrl;
+              const isCurrentInI2V = prevIsSequential && i > 0 && !clips[i - 1]?.url && !sceneFrames.start;
               const loading = frameLoading?.startsWith(`scene-${i}`);
 
               return (
@@ -1617,9 +1650,9 @@ export default function ShortsWorkbenchPage() {
                   title={<span className="inline-flex items-center gap-2">
                     <span className="w-6 h-6 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
                     {block.frameworkLabel || 'Scene'} <Tag>{block.clipDuration}s</Tag>
-                    {sceneFrames.start && (mode === 'i2v' || sceneFrames.end) && <Tag color="teal">✓ Ready</Tag>}
+                    {sceneFrames.start && (sceneMode === 'i2v' || sceneMode === 'mt' || sceneFrames.end) && <Tag color="teal">✓ Ready</Tag>}
                   </span>}
-                  right={<CostBadge amount={mode === 'flf' ? '0.04' : '0.02'} label="per scene" />}
+                  right={<CostBadge amount={sceneMode === 'flf' ? '0.04' : sceneMode === 'mt' ? '0.06' : '0.02'} label="per scene" />}
                 >
                   <div className="text-[11px] text-slate-500 italic mb-3 bg-slate-50 p-2 rounded-lg">
                     "{block.narration?.slice(0, 150)}{block.narration?.length > 150 ? '...' : ''}"
@@ -1703,6 +1736,26 @@ export default function ShortsWorkbenchPage() {
                       )}
                     </>
                   )}
+
+                  {/* Motion Reference (optional) */}
+                  {!isCurrentInI2V && (
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      {!sceneMotionRefs[i] ? (
+                        <button
+                          onClick={() => updateSceneMotionRef(i, { model: 'kling_motion_control' })}
+                          className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-1"
+                        >
+                          <Film className="w-3 h-3" /> Add Motion Reference
+                        </button>
+                      ) : (
+                        <MotionReferenceInput
+                          motionRef={sceneMotionRefs[i]}
+                          onChange={(ref) => updateSceneMotionRef(i, ref)}
+                          onClear={() => clearSceneMotionRef(i)}
+                        />
+                      )}
+                    </div>
+                  )}
                 </Panel>
               );
             })}
@@ -1737,16 +1790,20 @@ export default function ShortsWorkbenchPage() {
               {blocks.map((block, i) => {
                 const clip = clips[i] || {};
                 const sceneFrames = frames[i] || {};
-                const canGenerate = mode === 'flf'
+                const sceneMode = sceneMotionRefs[i]?.videoUrl ? 'mt' : mode;
+                const canGenerate = sceneMode === 'flf'
                   ? sceneFrames.start && sceneFrames.end
                   : sceneFrames.start;
-                const isWaiting = mode === 'i2v' && i > 0 && !clips[i - 1]?.url;
+                const isWaiting = (sceneMode === 'i2v' || sceneMode === 'mt') && i > 0 && !clips[i - 1]?.url;
 
                 return (
                   <div key={i} className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl mb-2">
                     <div className="w-7 h-7 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
                     <div className="flex-1">
-                      <div className="text-xs font-semibold text-slate-700">{block.frameworkLabel || 'Scene'}</div>
+                      <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        {block.frameworkLabel || 'Scene'}
+                        {sceneMode === 'mt' && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">MT</span>}
+                      </div>
                       <div className="text-[10px] text-slate-400">{block.clipDuration}s planned</div>
                     </div>
                     {clip.status === 'done' && (

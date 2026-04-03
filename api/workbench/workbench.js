@@ -328,6 +328,44 @@ Rules:
           if (!videoUrl) throw new Error('No video URL from FLF');
           videoUrl = await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/workbench');
 
+        } else if (mode === 'mt') {
+          // Motion Transfer mode
+          const { motion_ref } = req.body;
+          if (!motion_ref?.video_url && !motion_ref?.trimmed_url) {
+            return res.status(400).json({ error: 'motion_ref with video_url or trimmed_url required for MT mode' });
+          }
+
+          const { generateMotionTransfer } = await import('../lib/motionTransferRegistry.js');
+          const motionVideoUrl = motion_ref.trimmed_url || motion_ref.video_url;
+
+          const result = await generateMotionTransfer(
+            motion_ref.model || 'kling_motion_control',
+            start_frame_url,
+            motionVideoUrl,
+            {
+              character_orientation: motion_ref.character_orientation || 'image',
+              prompt: motion_ref.prompt || fullPrompt,
+              keep_original_sound: false, // Shorts: always false — has its own voiceover + music
+              elements: motion_ref.elements,
+            },
+            keys.falKey,
+            supabase,
+          );
+
+          videoUrl = result.videoUrl;
+
+          // Extract last frame for chaining (same as I2V)
+          try {
+            lastFrameUrl = await extractLastFrame(videoUrl, duration, keys.falKey);
+            if (lastFrameUrl) {
+              lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/workbench');
+              // Vision analysis for next-scene prompt continuity
+              const openai = new OpenAI({ apiKey: keys.openaiKey });
+              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai);
+            }
+          } catch (err) {
+            console.warn(`[workbench] MT last frame extraction failed: ${err.message}`);
+          }
         } else {
           // I2V mode
           videoUrl = await animateImageV2(video_model, start_frame_url, fullPrompt, aspect_ratio, duration, keys, supabase, {
@@ -352,7 +390,7 @@ Rules:
         // For now, trust the model's output duration (this is Bug 7 from audit — fix later)
         actualDuration = duration;
 
-        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_clip', model: video_model, metadata: { video_count: 1 } });
+        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_clip', model: mode === 'mt' ? (req.body.motion_ref?.model || 'kling_motion_control') : video_model, metadata: { video_count: 1, mode } });
 
         return res.json({
           video_url: videoUrl,
