@@ -102,7 +102,7 @@ export default function UTMBuilder({ utmParams, onChange, landingUrl, platform }
                 value={params[field.key] || ''}
                 onChange={e => handleChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#2C666E]"
+                className="w-full border rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2C666E]"
               />
             </div>
           ))}

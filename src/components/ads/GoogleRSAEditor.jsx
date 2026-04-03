@@ -158,7 +158,7 @@ export default function GoogleRSAEditor({ variation, onUpdate, onRegenerate, reg
                   onChange={e => updateHeadline(idx, e.target.value)}
                   placeholder={`Headline ${idx + 1}`}
                   maxLength={50}
-                  className={`w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#2C666E] ${
+                  className={`w-full border rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2C666E] ${
                     (headlines[idx]?.length || 0) > MAX_HEADLINE ? 'border-red-300 bg-red-50' : ''
                   }`}
                 />
@@ -201,7 +201,7 @@ export default function GoogleRSAEditor({ variation, onUpdate, onRegenerate, reg
                 onChange={e => updateDescription(idx, e.target.value)}
                 placeholder={`Description ${idx + 1}`}
                 rows={2}
-                className={`flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#2C666E] resize-none ${
+                className={`flex-1 border rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2C666E] resize-none ${
                   (descriptions[idx]?.length || 0) > MAX_DESCRIPTION ? 'border-red-300 bg-red-50' : ''
                 }`}
               />

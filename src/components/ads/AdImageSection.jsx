@@ -6,7 +6,7 @@ import StyleGrid from '@/components/ui/StyleGrid';
  * Shared ad image section with style picker for regeneration.
  * Used by LinkedIn, Meta, and Google editors.
  */
-export default function AdImageSection({ imageUrl, imagePrompt, onRegenerate, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
+export default function AdImageSection({ imageUrl, imagePrompt, onPromptChange, onRegenerate, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
   const [showStyles, setShowStyles] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('');
@@ -52,7 +52,7 @@ export default function AdImageSection({ imageUrl, imagePrompt, onRegenerate, re
         </div>
       )}
 
-      {/* Image prompt (collapsible) */}
+      {/* Image prompt (collapsible, editable) */}
       {imagePrompt && (
         <div className="mt-1">
           <button
@@ -60,10 +60,15 @@ export default function AdImageSection({ imageUrl, imagePrompt, onRegenerate, re
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
           >
             {showPrompt ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {showPrompt ? 'Hide prompt' : 'View image prompt'}
+            {showPrompt ? 'Hide image prompt' : 'View image prompt'}
           </button>
           {showPrompt && (
-            <p className="mt-1 text-xs text-gray-500 bg-gray-50 rounded p-2 leading-relaxed border">{imagePrompt}</p>
+            <textarea
+              value={imagePrompt}
+              onChange={e => onPromptChange?.(e.target.value)}
+              rows={3}
+              className="mt-1 w-full text-xs text-gray-900 bg-gray-50 rounded p-2 leading-relaxed border focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-y"
+            />
           )}
         </div>
       )}

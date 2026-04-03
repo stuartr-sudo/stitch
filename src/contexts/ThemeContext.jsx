@@ -4,6 +4,15 @@ const ThemeContext = createContext(null);
 
 const STORAGE_KEY = 'stitch-theme';
 
+/**
+ * Dark mode is scoped to pages that opt in (e.g. /educate).
+ * Pages that call `useTheme()` and enable dark mode get it applied;
+ * all other pages stay in light mode by default.
+ *
+ * `activateTheme()` applies the stored preference to the document.
+ * `deactivateTheme()` forces light mode (removes `dark` class).
+ * The LearnPage calls activate on mount and deactivate on unmount.
+ */
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try {
@@ -13,9 +22,12 @@ export function ThemeProvider({ children }) {
     }
   });
 
+  // Track whether a dark-mode-capable page is active
+  const [active, setActive] = useState(false);
+
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    if (active && theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
@@ -25,12 +37,18 @@ export function ThemeProvider({ children }) {
     } catch {
       // ignore
     }
-  }, [theme]);
+  }, [theme, active]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
+  /** Call on mount from pages that support dark mode */
+  const activateTheme = () => setActive(true);
+
+  /** Call on unmount to revert to light mode for other pages */
+  const deactivateTheme = () => setActive(false);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, activateTheme, deactivateTheme }}>
       {children}
     </ThemeContext.Provider>
   );

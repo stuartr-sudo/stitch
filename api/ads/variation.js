@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const { id } = req.params;
 
   if (req.method === 'PATCH') {
-    const allowed = ['copy_data', 'image_urls', 'status', 'ad_format'];
+    const allowed = ['copy_data', 'image_urls', 'image_prompt', 'status', 'ad_format'];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];

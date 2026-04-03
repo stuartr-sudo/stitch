@@ -60,7 +60,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
           onChange={e => handleChange('introText', e.target.value)}
           rows={5}
           placeholder="Main post text that appears above the image..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
         />
       </div>
 
@@ -75,7 +75,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
           value={copy.headline || ''}
           onChange={e => handleChange('headline', e.target.value)}
           placeholder="Punchy headline below the image..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
           onChange={e => handleChange('description', e.target.value)}
           rows={2}
           placeholder="Supporting text below the headline..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
         />
       </div>
 
@@ -118,6 +118,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
       <AdImageSection
         imageUrl={variation?.image_urls?.[0]}
         imagePrompt={variation?.image_prompt}
+        onPromptChange={(newPrompt) => onUpdate({ ...variation, image_prompt: newPrompt })}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
         regenerating={regenerating}
         aspectClass="aspect-[1.91/1]"

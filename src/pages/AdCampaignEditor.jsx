@@ -62,7 +62,7 @@ export default function AdCampaignEditor() {
   // Load brand kit for preview (logo, name, etc.)
   useEffect(() => {
     apiFetch('/api/brand/kit').then(r => r.json()).then(d => {
-      setBrand(d.brand || d || null);
+      setBrand(d.brandKit || d.brands?.[0] || null);
     }).catch(() => {});
   }, []);
 
@@ -139,7 +139,30 @@ export default function AdCampaignEditor() {
   };
 
   const handleUpdateVariation = (updated) => {
-    setVariations(prev => prev.map(v => v.id === updated.id ? updated : v));
+    setVariations(prev => {
+      const old = prev.find(v => v.id === updated.id);
+      const next = prev.map(v => v.id === updated.id ? updated : v);
+
+      // If UTM params changed on the first variation of a platform,
+      // propagate to other same-platform variations that have no UTM params set
+      const newUtm = updated.copy_data?.utm_params;
+      const oldUtm = old?.copy_data?.utm_params;
+      const utmChanged = JSON.stringify(newUtm) !== JSON.stringify(oldUtm);
+      if (utmChanged && newUtm) {
+        const sameplatform = next.filter(v => v.platform === updated.platform);
+        const isFirst = sameplatform[0]?.id === updated.id;
+        if (isFirst) {
+          return next.map(v => {
+            if (v.platform !== updated.platform || v.id === updated.id) return v;
+            const existingUtm = v.copy_data?.utm_params || {};
+            const hasCustom = Object.values(existingUtm).some(val => val?.trim());
+            if (hasCustom) return v; // don't overwrite manually set params
+            return { ...v, copy_data: { ...v.copy_data, utm_params: { ...newUtm } } };
+          });
+        }
+      }
+      return next;
+    });
   };
 
   const handleSave = async (variation) => {
@@ -151,6 +174,7 @@ export default function AdCampaignEditor() {
         body: JSON.stringify({
           copy_data: variation.copy_data,
           image_urls: variation.image_urls,
+          image_prompt: variation.image_prompt,
         }),
       });
     } catch {

@@ -78,11 +78,17 @@ const CLI_SUB_TABS = [
 ];
 
 export default function LearnPage() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, activateTheme, deactivateTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = TABS.find((t) => t.id === searchParams.get('tab'))?.id || 'cli';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [cliSubTab, setCliSubTab] = useState('learn');
+
+  // Scope dark mode to this page only
+  useEffect(() => {
+    activateTheme();
+    return () => deactivateTheme();
+  }, [activateTheme, deactivateTheme]);
 
   // CLI Lab progress
   const [progress, setProgress] = useState(() => loadProgress());

@@ -60,7 +60,7 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
           onChange={e => handleChange('primaryText', e.target.value)}
           rows={3}
           placeholder="Main text above the image — first 125 chars shown above fold..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-none"
         />
       </div>
 
@@ -75,7 +75,7 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
           value={copy.headline || ''}
           onChange={e => handleChange('headline', e.target.value)}
           placeholder="Bold text below image..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
           value={copy.description || ''}
           onChange={e => handleChange('description', e.target.value)}
           placeholder="Below headline..."
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
+          className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E]"
         />
       </div>
 
@@ -118,6 +118,7 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, regene
       <AdImageSection
         imageUrl={variation?.image_urls?.[0]}
         imagePrompt={variation?.image_prompt}
+        onPromptChange={(newPrompt) => onUpdate({ ...variation, image_prompt: newPrompt })}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
         regenerating={regenerating}
         aspectClass="aspect-square"
