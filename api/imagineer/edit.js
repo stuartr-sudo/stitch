@@ -1,6 +1,6 @@
 /**
  * Imagineer Edit — Image editing via multiple models.
- * Supports: FLUX 2 (with LoRA), Nano Banana 2, Seedream v4.5
+ * Supports: FLUX 2 (with LoRA), Nano Banana 2, Seedream v4.5, Seedream 5.0 Lite
  */
 
 import { getUserKeys } from '../lib/getUserKeys.js';
@@ -78,6 +78,17 @@ export default async function handler(req, res) {
       }),
       getImageUrl: (data) => data.images?.[0]?.url,
     },
+    'seedream-5-lite': {
+      endpoint: 'fal-ai/bytedance/seedream/v5/lite/edit',
+      sync: true,
+      buildPayload: () => ({
+        image_urls: allImageUrls,
+        prompt,
+        image_size: sizeMap[dimensions] || 'auto_2K',
+        num_images: 1,
+      }),
+      getImageUrl: (data) => data.images?.[0]?.url,
+    },
   };
 
   const config = modelConfig[selectedModel] || modelConfig['fal-flux'];
@@ -132,6 +143,7 @@ export default async function handler(req, res) {
       const pollModel = selectedModel === 'fal-flux' ? 'fal-flux-edit'
         : selectedModel === 'nano-banana-2' ? 'nano-banana-2-edit'
         : selectedModel === 'seedream' ? 'seedream-edit'
+        : selectedModel === 'seedream-5-lite' ? 'seedream-5-lite-edit'
         : selectedModel;
       return res.json({
         success: true,

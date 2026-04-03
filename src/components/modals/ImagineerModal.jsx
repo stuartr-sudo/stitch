@@ -38,6 +38,7 @@ const I2I_MODELS = [
   { value: "fal-flux", label: "Flux 2 Dev (LoRA)", description: "Brand Kits & custom products", multiImage: false, supportsLora: true },
   { value: "nano-banana-2", label: "Nano Banana 2", description: "Fast multi-image composition", multiImage: true },
   { value: "seedream", label: "Seedream v4.5", description: "High detail editing", multiImage: false },
+  { value: "seedream-5-lite", label: "Seedream 5 Lite", description: "Multi-image intelligent editing", multiImage: true },
 ];
 
 // ─── Dropdown Options ────────────────────────────────────────────────────────

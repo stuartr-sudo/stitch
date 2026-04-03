@@ -17,6 +17,7 @@ const ENDPOINT_MAP = {
   'nano-banana-2-edit':    'fal-ai/nano-banana-2/edit',
   'nano-banana-pro-edit':  'fal-ai/nano-banana-pro/edit',
   'seedream-edit':         'fal-ai/bytedance/seedream/v4.5/edit',
+  'seedream-5-lite-edit':  'fal-ai/bytedance/seedream/v5/lite/edit',
   'fal-flux':              'fal-ai/flux-2/lora',
   'fal-flux-edit':         'fal-ai/flux-2/lora/edit',
   'wan22-t2i':             'fal-ai/wan/v2.2-a14b/text-to-image/lora',

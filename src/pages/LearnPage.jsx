@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
-  RotateCcw, LayoutGrid, Target, GraduationCap,
+  RotateCcw, LayoutGrid, Target, GraduationCap, Wand2,
 } from 'lucide-react';
 import LearnTab from '@/components/educate/LearnTab';
 import PracticeTab from '@/components/educate/PracticeTab';
@@ -13,6 +13,7 @@ import { StoryboardGuideContent } from './StoryboardGuidePage';
 import { TurnaroundGuideContent } from './TurnaroundGuidePage';
 import { CarouselGuideContent } from './CarouselGuidePage';
 import { AdsManagerGuideContent } from './AdsManagerGuidePage';
+import { ImagineerGuideContent } from './ImagineerGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -56,6 +57,7 @@ const TOTAL_LESSONS = MODULES.reduce((sum, m) => sum + m.lessons.length, 0);
 
 const TABS = [
   { id: 'cli',         label: 'CLI Lab',        Icon: Terminal },
+  { id: 'imagineer',   label: 'Imagineer',      Icon: Wand2 },
   { id: 'lora',        label: 'LoRA Training',  Icon: Sparkles },
   { id: 'storyboards', label: 'Storyboards',    Icon: Film },
   { id: 'turnaround',  label: 'Turnaround',     Icon: RotateCcw },
@@ -220,6 +222,11 @@ export default function LearnPage() {
         {activeTab === 'ads' && (
           <div className="bg-gray-50 min-h-full">
             <AdsManagerGuideContent />
+          </div>
+        )}
+        {activeTab === 'imagineer' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+            <ImagineerGuideContent />
           </div>
         )}
       </div>
