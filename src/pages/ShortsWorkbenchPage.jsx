@@ -14,6 +14,7 @@ import { FRAMEWORK_CARDS, getFrameworksForNiche } from '@/lib/videoStyleFramewor
 import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 import LibraryModal from '@/components/modals/LibraryModal';
 import MotionReferenceInput from '@/components/MotionReferenceInput';
+import CameraControlPanel from '@/components/shorts/CameraControlPanel';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -465,6 +466,11 @@ export default function ShortsWorkbenchPage() {
   const [sceneRefs, setSceneRefs] = useState({}); // { sceneIdx: { url, source } } — per-scene reference images for I2I
   const [libraryForScene, setLibraryForScene] = useState(null); // sceneIdx when library picker is open
   const [sceneMotionRefs, setSceneMotionRefs] = useState({}); // { sceneIdx: motionRef }
+  const [sceneCameraConfigs, setSceneCameraConfigs] = useState({}); // { sceneIdx: cameraConfig }
+
+  const updateSceneCameraConfig = (sceneIdx, config) => {
+    setSceneCameraConfigs(prev => ({ ...prev, [sceneIdx]: config }));
+  };
 
   const updateSceneMotionRef = (sceneIdx, motionRef) => {
     setSceneMotionRefs(prev => ({ ...prev, [sceneIdx]: motionRef }));
@@ -503,7 +509,7 @@ export default function ShortsWorkbenchPage() {
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
     sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
-    frames, scenePrompts, sceneRefs, sceneMotionRefs, clips, finalVideoUrl: finalUrl,
+    frames, scenePrompts, sceneRefs, sceneMotionRefs, sceneCameraConfigs, clips, finalVideoUrl: finalUrl,
     // Avatar mode
     avatarMode, avatarSubjectId, avatarSubjectName,
     avatarPortraitUrl, avatarVideoUrl, avatarLipsyncUrl,
@@ -551,7 +557,7 @@ export default function ShortsWorkbenchPage() {
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
       setAspectRatio(s.aspectRatio || '9:16');
-      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setSceneMotionRefs(s.sceneMotionRefs || {}); setClips(s.clips || {});
+      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setSceneMotionRefs(s.sceneMotionRefs || {}); setSceneCameraConfigs(s.sceneCameraConfigs || {}); setClips(s.clips || {});
       setFinalUrl(s.finalVideoUrl || null);
       // Restore avatar state
       setAvatarMode(s.avatarMode || false);
@@ -814,6 +820,7 @@ export default function ShortsWorkbenchPage() {
           start_frame_url: sceneFrames.start,
           end_frame_url: sceneMode === 'flf' ? sceneFrames.end : undefined,
           motion_prompt: promptData.motionPrompt || 'Smooth cinematic movement',
+          camera_config: sceneCameraConfigs[sceneIdx] || null,
           video_style: videoStyle,
           duration: block.clipDuration,
           aspect_ratio: aspectRatio,
@@ -1797,33 +1804,43 @@ export default function ShortsWorkbenchPage() {
                 const isWaiting = (sceneMode === 'i2v' || sceneMode === 'mt') && i > 0 && !clips[i - 1]?.url;
 
                 return (
-                  <div key={i} className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl mb-2">
-                    <div className="w-7 h-7 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                        {block.frameworkLabel || 'Scene'}
-                        {sceneMode === 'mt' && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">MT</span>}
+                  <div key={i} className="border border-slate-200 rounded-xl mb-2 overflow-hidden">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-7 h-7 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
+                      <div className="flex-1">
+                        <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          {block.frameworkLabel || 'Scene'}
+                          {sceneMode === 'mt' && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">MT</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-400">{block.clipDuration}s planned</div>
                       </div>
-                      <div className="text-[10px] text-slate-400">{block.clipDuration}s planned</div>
+                      {/* Camera control compact toggle */}
+                      {sceneMode !== 'mt' && (
+                        <CameraControlPanel
+                          value={sceneCameraConfigs[i]}
+                          onChange={(config) => updateSceneCameraConfig(i, config)}
+                          compact
+                        />
+                      )}
+                      {clip.status === 'done' && (
+                        <div className="flex items-center gap-2">
+                          <Tag color="teal">✓ {clip.actualDuration?.toFixed(1)}s actual</Tag>
+                          {clip.url && (
+                            <video src={clip.url} controls className="h-16 rounded-lg" />
+                          )}
+                        </div>
+                      )}
+                      {clip.status === 'generating' && <Tag color="amber"><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Generating...</Tag>}
+                      {clip.status === 'failed' && <Tag color="red">Failed</Tag>}
+                      {!clip.status && isWaiting && <Tag>Waiting for Scene {i}</Tag>}
+                      {!clip.status && !isWaiting && canGenerate && (
+                        <button onClick={() => generateClip(i)} disabled={clipLoading !== null}
+                          className="px-3 py-1.5 bg-[#2C666E] text-white rounded-lg text-[10px] font-semibold disabled:opacity-50">
+                          Generate
+                        </button>
+                      )}
+                      {!clip.status && !canGenerate && !isWaiting && <Tag>Need frames</Tag>}
                     </div>
-                    {clip.status === 'done' && (
-                      <div className="flex items-center gap-2">
-                        <Tag color="teal">✓ {clip.actualDuration?.toFixed(1)}s actual</Tag>
-                        {clip.url && (
-                          <video src={clip.url} controls className="h-16 rounded-lg" />
-                        )}
-                      </div>
-                    )}
-                    {clip.status === 'generating' && <Tag color="amber"><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Generating...</Tag>}
-                    {clip.status === 'failed' && <Tag color="red">Failed</Tag>}
-                    {!clip.status && isWaiting && <Tag>Waiting for Scene {i}</Tag>}
-                    {!clip.status && !isWaiting && canGenerate && (
-                      <button onClick={() => generateClip(i)} disabled={clipLoading !== null}
-                        className="px-3 py-1.5 bg-[#2C666E] text-white rounded-lg text-[10px] font-semibold disabled:opacity-50">
-                        Generate
-                      </button>
-                    )}
-                    {!clip.status && !canGenerate && !isWaiting && <Tag>Need frames</Tag>}
                   </div>
                 );
               })}

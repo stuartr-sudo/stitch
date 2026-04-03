@@ -30,6 +30,7 @@ import {
 import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
 import StoryboardAnimatic from '@/components/storyboard/StoryboardAnimatic';
 import MotionReferenceInput from '@/components/MotionReferenceInput';
+import CameraControlPanel from '@/components/shorts/CameraControlPanel';
 
 // ── Beat colors for narrative arc visualization ──
 
@@ -375,6 +376,15 @@ function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
         )}
         <Field label="Image Direction" field="preview_image_prompt" icon={ImageIcon} multiline />
         <Field label="Motion Direction" field="motion_prompt" icon={Camera} />
+
+        {/* Camera Control */}
+        <div className="mb-3">
+          <CameraControlPanel
+            value={frame.camera_config}
+            onChange={(config) => !frame.locked && onUpdate(frame.id, { camera_config: config })}
+            compact
+          />
+        </div>
 
         {/* Motion Reference (optional) */}
         <div className="px-0 mt-2 mb-3">

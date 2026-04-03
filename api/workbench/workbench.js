@@ -267,7 +267,7 @@ Rules:
       case 'generate-clip': {
         const {
           mode, video_model = 'fal_veo3', start_frame_url, end_frame_url,
-          motion_prompt = 'Smooth cinematic movement', video_style,
+          motion_prompt = 'Smooth cinematic movement', camera_config, video_style,
           duration = 6, aspect_ratio = '9:16', scene_index,
         } = req.body;
 
@@ -278,7 +278,7 @@ Rules:
         let lastFrameUrl = null;
         let visionAnalysis = null;
 
-        const fullPrompt = composeVideoPrompt('', motion_prompt, { videoStyle: video_style, isFLF: mode === 'flf' });
+        const fullPrompt = composeVideoPrompt('', motion_prompt, { videoStyle: video_style, isFLF: mode === 'flf', cameraConfig: camera_config });
 
         if (mode === 'flf') {
           // First-Last-Frame video generation

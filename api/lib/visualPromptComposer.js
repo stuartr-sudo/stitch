@@ -198,6 +198,85 @@ export function composeIndependentPrompt({
   });
 }
 
+// ── Camera Control Vocabulary ─────────────────────────────────────────────────
+
+const MOVEMENT_PROMPTS = {
+  static: 'locked-off static camera, no movement',
+  pan_left: 'smooth pan from right to left',
+  pan_right: 'smooth pan from left to right',
+  tilt_up: 'smooth upward tilt revealing the scene above',
+  tilt_down: 'smooth downward tilt revealing the scene below',
+  dolly_in: 'dolly push forward toward the subject',
+  dolly_out: 'dolly pull backward away from the subject',
+  orbit_left: 'orbiting arc movement circling left around the subject',
+  orbit_right: 'orbiting arc movement circling right around the subject',
+  tracking: 'tracking shot following the subject laterally',
+  crane_up: 'crane shot rising upward with parallax',
+  crane_down: 'crane shot descending downward with parallax',
+  zoom_in: 'slow lens zoom pushing in on the subject',
+  zoom_out: 'slow lens zoom pulling out to reveal the scene',
+  handheld: 'handheld camera with natural organic sway',
+  whip_pan: 'fast whip pan with motion blur',
+};
+
+const SPEED_MODIFIERS = {
+  very_slow: 'glacially slow, barely perceptible',
+  slow: 'gentle and deliberate',
+  medium: 'smooth and steady',
+  fast: 'swift and dynamic',
+};
+
+const ANGLE_PROMPTS = {
+  eye_level: 'eye-level perspective, neutral and intimate',
+  low_angle: 'low-angle shot looking up, conveying power and scale',
+  high_angle: 'high-angle shot looking down, emphasizing vulnerability',
+  dutch: 'tilted Dutch angle creating tension and unease',
+  birds_eye: "overhead bird's eye view from directly above",
+  worms_eye: "worm's eye view from ground level looking up, monumental scale",
+};
+
+const FRAMING_PROMPTS = {
+  extreme_wide: 'extreme wide shot establishing full environment',
+  wide: 'wide shot showing subject in environment',
+  medium: 'medium shot from waist up',
+  close_up: 'close-up shot capturing detail and emotion',
+  extreme_close_up: 'extreme close-up on specific detail',
+};
+
+/**
+ * Build a natural-language camera direction prompt from structured config.
+ *
+ * @param {object} cameraConfig - { movement, speed, angle, framing, customMotion }
+ * @returns {string} Camera direction text ready for video generation prompts
+ */
+export function buildCameraPrompt(cameraConfig) {
+  if (!cameraConfig) return '';
+  if (cameraConfig.customMotion) return cameraConfig.customMotion;
+
+  const parts = [];
+
+  // Movement + speed
+  const movementText = MOVEMENT_PROMPTS[cameraConfig.movement];
+  const speedText = SPEED_MODIFIERS[cameraConfig.speed];
+  if (movementText) {
+    if (speedText && cameraConfig.movement !== 'static') {
+      parts.push(`${speedText} ${movementText}`);
+    } else {
+      parts.push(movementText);
+    }
+  }
+
+  // Angle
+  const angleText = ANGLE_PROMPTS[cameraConfig.angle];
+  if (angleText) parts.push(angleText);
+
+  // Framing
+  const framingText = FRAMING_PROMPTS[cameraConfig.framing];
+  if (framingText) parts.push(framingText);
+
+  return parts.join(', ') || '';
+}
+
 /**
  * Compose the full prompt for video generation (I2V or FLF).
  *
@@ -209,10 +288,17 @@ export function composeIndependentPrompt({
  * @param {object} [options]
  * @param {string} [options.videoStyle] - Video style key from videoStylePresets.js
  * @param {boolean} [options.isFLF] - Is this for a first-last-frame model?
+ * @param {object} [options.cameraConfig] - Structured camera config { movement, speed, angle, framing, customMotion }
  * @returns {string}
  */
 export function composeVideoPrompt(imageContext, motionPrompt, options = {}) {
-  const { videoStyle, isFLF } = options;
+  const { videoStyle, isFLF, cameraConfig } = options;
+
+  // If structured camera config provided, it replaces the motion prompt
+  const cameraDirection = buildCameraPrompt(cameraConfig);
+  if (cameraDirection) {
+    motionPrompt = cameraDirection;
+  }
 
   // Get the video style preset's motion DNA
   const fullVideoStylePrompt = getVideoStylePrompt(videoStyle);

@@ -37,6 +37,7 @@ import {
   buildMusicPrompt,
 } from '../lib/pipelineHelpers.js';
 import { burnCaptions } from '../lib/captionBurner.js';
+import { buildCameraPrompt } from '../lib/visualPromptComposer.js';
 import { generateSpeech, generateStoryboardVoiceover } from '../lib/storyboardVoiceover.js';
 import { applyStoryboardLipsync } from '../lib/storyboardLipsync.js';
 import { VIDEO_MODELS, veoDuration } from '../lib/modelRegistry.js';
@@ -167,7 +168,12 @@ async function generateFrameVideo(frame, config, prevLastFrame, keys, supabase) 
     throw new Error(`Frame ${frame.frame_number}: No start image available`);
   }
 
-  const prompt = frame.visual_prompt || '';
+  // Build prompt — inject camera direction if camera_config is set
+  let prompt = frame.visual_prompt || '';
+  const cameraDirection = buildCameraPrompt(frame.camera_config);
+  if (cameraDirection) {
+    prompt = `${cameraDirection}. ${prompt}`;
+  }
   const duration = frame.duration_seconds || config.frameInterval || 4;
   const aspectRatio = config.aspectRatio || '16:9';
 
