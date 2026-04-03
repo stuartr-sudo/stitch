@@ -271,6 +271,13 @@ app.post('/api/video/extract-frame', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Video trimming (with auth)
+app.post('/api/video/trim', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('video/trim.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Lens route (with auth)
 app.post('/api/lens/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('lens/generate.js');
