@@ -147,6 +147,12 @@ app.all('/api/autopilot*', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Automation Flows — catch-all
+app.all('/api/flows*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/flows/flows.js')).default;
+  return handler(req, res);
+});
+
 // Video Analyzer route (with auth)
 app.post('/api/analyze/video', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('analyze/video.js');
@@ -1313,5 +1319,9 @@ app.listen(PORT, () => {
 
     // Start LoRA training background poller (checks every 60s)
     startLoraPoller();
+
+    // Recover interrupted flow executions
+    const serviceSupabase = createClient(supabaseUrl, supabaseServiceKey);
+    import('./api/lib/flowExecutor.js').then(m => m.recoverInterruptedExecutions(serviceSupabase));
   }
 });
