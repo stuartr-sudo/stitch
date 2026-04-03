@@ -243,7 +243,6 @@ export default function FlowBuilderPage() {
           <NodeConfigPanel
             node={selectedNode}
             nodeType={selectedNodeType}
-            onConfigChange={handleConfigChange}
           />
         )}
       </div>
