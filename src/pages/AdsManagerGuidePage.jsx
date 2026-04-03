@@ -576,6 +576,36 @@ export function AdsManagerGuideContent() {
         </div>
       </Section>
 
+      {/* ── Download Creatives ── */}
+      <Section icon={Download} title="Download Creatives">
+        <div className="mt-3 text-sm text-gray-600 space-y-3">
+          <p>
+            Export all creatives for a campaign as a <strong>ZIP file</strong> for handoff to clients,
+            media buyers, or platform upload. Click the <strong>Download Creatives</strong> button in
+            the campaign editor top bar (appears once variations exist).
+          </p>
+          <h4 className="font-semibold text-gray-900 text-sm mt-3 mb-2">What's in the ZIP</h4>
+          <p>
+            Each variation gets its own folder named <code>{'{platform}-{number}'}</code> (e.g. <code>linkedin-1/</code>,
+            <code> meta-2/</code>, <code>google-1/</code>). Inside each folder:
+          </p>
+          <div className="space-y-2 mt-2">
+            <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+              <Badge icon={ImageIcon} label="Images" color="bg-purple-100 text-purple-700" />
+              <span className="text-xs text-gray-600">All generated images saved as <code>image-1.jpg</code>, <code>image-2.jpg</code>, etc.</span>
+            </div>
+            <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+              <Badge icon={FileText} label="copy.txt" color="bg-amber-100 text-amber-700" />
+              <span className="text-xs text-gray-600">All ad copy text, formatted by platform (headlines, descriptions, CTAs)</span>
+            </div>
+            <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+              <Badge icon={Link2} label="link.txt" color="bg-teal-100 text-teal-700" />
+              <span className="text-xs text-gray-600">Landing URL with UTM parameters pre-applied using platform presets</span>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       {/* ── Platform Connections ── */}
       <Section icon={Globe} title="Platform Connections">
         <div className="mt-3 text-sm text-gray-600 space-y-3">
@@ -1129,6 +1159,36 @@ export default function AdsManagerGuidePage() {
                 You can also set <strong>utm_campaign</strong>, <strong>utm_term</strong>, and <strong>utm_content</strong>
                 manually for each variation. The final UTM string is automatically appended to your landing URL.
               </p>
+            </div>
+          </Section>
+
+          {/* ── Download Creatives ── */}
+          <Section icon={Download} title="Download Creatives">
+            <div className="mt-3 text-sm text-gray-600 space-y-3">
+              <p>
+                Export all creatives for a campaign as a <strong>ZIP file</strong> for handoff to clients,
+                media buyers, or platform upload. Click the <strong>Download Creatives</strong> button in
+                the campaign editor top bar (appears once variations exist).
+              </p>
+              <h4 className="font-semibold text-gray-900 text-sm mt-3 mb-2">What's in the ZIP</h4>
+              <p>
+                Each variation gets its own folder named <code>{'{platform}-{number}'}</code> (e.g. <code>linkedin-1/</code>,
+                <code> meta-2/</code>, <code>google-1/</code>). Inside each folder:
+              </p>
+              <div className="space-y-2 mt-2">
+                <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                  <Badge icon={ImageIcon} label="Images" color="bg-purple-100 text-purple-700" />
+                  <span className="text-xs text-gray-600">All generated images saved as <code>image-1.jpg</code>, <code>image-2.jpg</code>, etc.</span>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                  <Badge icon={FileText} label="copy.txt" color="bg-amber-100 text-amber-700" />
+                  <span className="text-xs text-gray-600">All ad copy text, formatted by platform (headlines, descriptions, CTAs)</span>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                  <Badge icon={Link2} label="link.txt" color="bg-teal-100 text-teal-700" />
+                  <span className="text-xs text-gray-600">Landing URL with UTM parameters pre-applied using platform presets</span>
+                </div>
+              </div>
             </div>
           </Section>
 
