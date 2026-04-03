@@ -257,6 +257,8 @@ export default function FlowBuilderPage() {
         onConfigChange={handleModalConfigChange}
         brandKits={brandKits}
         connections={connections}
+        edges={edges}
+        nodes={nodes}
       />
     </div>
   );

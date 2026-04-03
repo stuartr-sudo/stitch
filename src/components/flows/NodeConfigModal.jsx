@@ -1,220 +1,116 @@
-import { useState, useEffect } from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Zap, ChevronDown, Sparkles, Film, Mic, FileText, Share2, Settings, Type } from 'lucide-react';
+import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
+import StyleGrid from '@/components/ui/StyleGrid';
+import BrandStyleGuideSelector from '@/components/ui/BrandStyleGuideSelector';
+import LoRAPicker from '@/components/LoRAPicker';
+import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
+import { CAPTION_STYLES } from '@/lib/captionStylePresets';
 
-// ── Niche labels ──────────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
+
 const NICHE_LABELS = {
-  ai_tech_news: 'AI & Tech News',
-  finance_money: 'Finance & Money',
-  motivation: 'Motivation',
-  scary_horror: 'Scary & Horror',
-  history: 'History & Did You Know',
-  true_crime: 'True Crime',
-  science_nature: 'Science & Nature',
-  relationships: 'Relationships & Dating',
-  health_fitness: 'Health & Fitness',
-  gaming_popculture: 'Gaming & Pop Culture',
-  conspiracy_mystery: 'Conspiracy & Mystery',
-  business: 'Business',
-  food_cooking: 'Food & Cooking',
-  travel_adventure: 'Travel & Adventure',
-  psychology: 'Psychology',
-  space_cosmos: 'Space & Cosmos',
-  animals_wildlife: 'Animals & Wildlife',
-  sports: 'Sports',
-  education: 'Education',
-  paranormal_ufo: 'Paranormal & UFO',
+  ai_tech_news: 'AI & Tech News', finance_money: 'Finance & Money',
+  motivation: 'Motivation', scary_horror: 'Scary & Horror',
+  history: 'History & Did You Know', true_crime: 'True Crime',
+  science_nature: 'Science & Nature', relationships: 'Relationships & Dating',
+  health_fitness: 'Health & Fitness', gaming_popculture: 'Gaming & Pop Culture',
+  conspiracy_mystery: 'Conspiracy & Mystery', business: 'Business',
+  food_cooking: 'Food & Cooking', travel_adventure: 'Travel & Adventure',
+  psychology: 'Psychology', space_cosmos: 'Space & Cosmos',
+  animals_wildlife: 'Animals & Wildlife', sports: 'Sports',
+  education: 'Education', paranormal_ufo: 'Paranormal & UFO',
 };
 
-// ── Image model options ───────────────────────────────────────────────────────
 const IMAGE_MODELS = [
-  { id: 'nano-banana-2', label: 'Nano Banana 2', description: 'Fastest, great all-rounder' },
-  { id: 'fal-flux', label: 'FLUX 2', description: 'High quality, LoRA support' },
-  { id: 'fal-flux-klein-4b', label: 'FLUX Klein 4B', description: 'Fast FLUX variant' },
-  { id: 'fal-flux-klein-9b', label: 'FLUX Klein 9B', description: 'Balanced FLUX variant' },
-  { id: 'seeddream-v4', label: 'SeedDream v4.5', description: 'Excellent detail & composition' },
-  { id: 'imagen-4', label: 'Imagen 4', description: 'Google, strong text rendering' },
-  { id: 'kling-image-v3', label: 'Kling Image v3', description: 'Character consistency' },
-  { id: 'grok-imagine', label: 'Grok Imagine', description: 'xAI, creative styles' },
-  { id: 'ideogram-v2', label: 'Ideogram v2', description: 'Best text-in-image' },
-  { id: 'wavespeed', label: 'Wavespeed', description: 'Budget-friendly' },
-  { id: 'wan-22-t2i', label: 'Wan 2.2 T2I', description: 'LoRA support' },
+  { id: 'nano-banana-2', label: 'Nano Banana 2', desc: 'Fastest, great all-rounder' },
+  { id: 'fal-flux', label: 'FLUX 2', desc: 'High quality, LoRA support' },
+  { id: 'seeddream-v4', label: 'SeedDream v4.5', desc: 'Excellent detail & composition' },
+  { id: 'imagen-4', label: 'Imagen 4', desc: 'Google, strong text rendering' },
+  { id: 'kling-image-v3', label: 'Kling Image v3', desc: 'Character consistency' },
+  { id: 'grok-imagine', label: 'Grok Imagine', desc: 'xAI, creative styles' },
+  { id: 'ideogram-v2', label: 'Ideogram v2', desc: 'Best text-in-image' },
+  { id: 'wavespeed', label: 'Wavespeed', desc: 'Budget-friendly' },
+  { id: 'wan-22-t2i', label: 'Wan 2.2 T2I', desc: 'LoRA support' },
 ];
 
-// ── Video model options ───────────────────────────────────────────────────────
 const VIDEO_MODELS = [
-  { id: 'kling-2.0-master', label: 'Kling 2.0 Master', description: 'Great all-rounder, 5-10s' },
-  { id: 'kling-v3-pro', label: 'Kling V3 Pro', description: 'Multi-shot, high quality' },
-  { id: 'kling-o3-pro', label: 'Kling O3 Pro', description: 'R2V capable, top tier' },
-  { id: 'veo-2', label: 'Veo 2', description: 'Google, cinematic quality' },
-  { id: 'veo-3.1-fast', label: 'Veo 3.1', description: 'Best quality, FLF support' },
-  { id: 'veo-3.1-lite', label: 'Veo 3.1 Lite', description: '60% cheaper, good quality' },
-  { id: 'pixverse-v6', label: 'PixVerse V6', description: 'Audio generation support' },
-  { id: 'pixverse-v4.5', label: 'PixVerse v4.5', description: 'Reliable, fast' },
-  { id: 'wan-2.5', label: 'Wan 2.5', description: 'Open source, versatile' },
-  { id: 'wan-pro', label: 'Wan Pro', description: 'Premium Wan variant' },
-  { id: 'hailuo', label: 'Hailuo (MiniMax)', description: 'Smooth motion' },
-  { id: 'grok-imagine-i2v', label: 'Grok I2V', description: 'xAI, with audio' },
-  { id: 'wavespeed-wan', label: 'Wavespeed WAN', description: 'Budget-friendly' },
+  { id: 'kling-2.0-master', label: 'Kling 2.0 Master', desc: '5-10s, great all-rounder' },
+  { id: 'kling-v3-pro', label: 'Kling V3 Pro', desc: 'Multi-shot, high quality' },
+  { id: 'kling-o3-pro', label: 'Kling O3 Pro', desc: 'R2V capable, top tier' },
+  { id: 'veo-2', label: 'Veo 2', desc: 'Google, cinematic quality' },
+  { id: 'veo-3.1-fast', label: 'Veo 3.1', desc: 'Best quality, FLF support' },
+  { id: 'veo-3.1-lite', label: 'Veo 3.1 Lite', desc: '60% cheaper' },
+  { id: 'pixverse-v6', label: 'PixVerse V6', desc: 'Audio generation' },
+  { id: 'pixverse-v4.5', label: 'PixVerse v4.5', desc: 'Reliable, fast' },
+  { id: 'wan-2.5', label: 'Wan 2.5', desc: 'Open source, versatile' },
+  { id: 'wan-pro', label: 'Wan Pro', desc: 'Premium Wan variant' },
+  { id: 'hailuo', label: 'Hailuo (MiniMax)', desc: 'Smooth motion' },
+  { id: 'grok-imagine-i2v', label: 'Grok I2V', desc: 'xAI, with audio' },
+  { id: 'wavespeed-wan', label: 'Wavespeed WAN', desc: 'Budget-friendly' },
 ];
 
-// ── Voice options ─────────────────────────────────────────────────────────────
-const VOICE_OPTIONS = [
-  { id: 'Kore', label: 'Kore', description: 'Strong, firm female' },
-  { id: 'Puck', label: 'Puck', description: 'Upbeat, lively male' },
-  { id: 'Charon', label: 'Charon', description: 'Calm, professional male' },
-  { id: 'Zephyr', label: 'Zephyr', description: 'Bright, clear female' },
-  { id: 'Aoede', label: 'Aoede', description: 'Warm, melodic female' },
-  { id: 'Achernar', label: 'Achernar', description: 'Deep, resonant' },
-  { id: 'Achird', label: 'Achird', description: 'Gentle, measured' },
-  { id: 'Algenib', label: 'Algenib', description: 'Energetic, bright' },
-  { id: 'Algieba', label: 'Algieba', description: 'Warm, conversational' },
-  { id: 'Alnilam', label: 'Alnilam', description: 'Steady, authoritative' },
-  { id: 'Autonoe', label: 'Autonoe', description: 'Soft, thoughtful' },
-  { id: 'Callirrhoe', label: 'Callirrhoe', description: 'Clear, articulate' },
-  { id: 'Despina', label: 'Despina', description: 'Light, airy' },
-  { id: 'Enceladus', label: 'Enceladus', description: 'Rich, dramatic' },
-  { id: 'Erinome', label: 'Erinome', description: 'Crisp, professional' },
-  { id: 'Fenrir', label: 'Fenrir', description: 'Bold, commanding' },
-  { id: 'Gacrux', label: 'Gacrux', description: 'Smooth, reassuring' },
-  { id: 'Iapetus', label: 'Iapetus', description: 'Neutral, versatile' },
-  { id: 'Laomedeia', label: 'Laomedeia', description: 'Melodious, flowing' },
-  { id: 'Leda', label: 'Leda', description: 'Quiet, intimate' },
-  { id: 'Orus', label: 'Orus', description: 'Strong, grounded' },
-  { id: 'Pulcherrima', label: 'Pulcherrima', description: 'Elegant, refined' },
-  { id: 'Rasalgethi', label: 'Rasalgethi', description: 'Deep, sonorous' },
-  { id: 'Sadachbia', label: 'Sadachbia', description: 'Cheerful, warm' },
-  { id: 'Sadaltager', label: 'Sadaltager', description: 'Measured, precise' },
-  { id: 'Schedar', label: 'Schedar', description: 'Bright, enthusiastic' },
-  { id: 'Sulafat', label: 'Sulafat', description: 'Calm, soothing' },
-  { id: 'Umbriel', label: 'Umbriel', description: 'Low, mysterious' },
-  { id: 'Vindemiatrix', label: 'Vindemiatrix', description: 'Clear, confident' },
-  { id: 'Zubenelgenubi', label: 'Zubenelgenubi', description: 'Animated, expressive' },
+const AUDIO_CAPABLE_MODELS = new Set([
+  'kling-v3-pro', 'kling-o3-pro', 'veo-3.1-fast', 'veo-3.1-lite', 'grok-imagine-i2v', 'pixverse-v6',
+]);
+
+const CAROUSEL_STYLES = [
+  { id: 'modern-clean', label: 'Modern Clean' }, { id: 'bold-impact', label: 'Bold Impact' },
+  { id: 'gradient-wave', label: 'Gradient Wave' }, { id: 'minimal-zen', label: 'Minimal Zen' },
+  { id: 'corporate-blue', label: 'Corporate Blue' }, { id: 'creative-pop', label: 'Creative Pop' },
+  { id: 'dark-luxe', label: 'Dark Luxe' }, { id: 'organic-natural', label: 'Organic Natural' },
 ];
 
-// ── Caption style options ─────────────────────────────────────────────────────
-const CAPTION_STYLES = [
-  { id: 'word_pop', label: 'Word Pop', description: 'Words appear one at a time with scale animation' },
-  { id: 'karaoke_glow', label: 'Karaoke Glow', description: 'Words highlight as spoken' },
-  { id: 'word_highlight', label: 'Word Highlight', description: 'Subtle purple highlight on current word' },
-  { id: 'news_ticker', label: 'News Ticker', description: 'Scrolling lower-third bar' },
-];
-
-// ── Carousel style descriptions ───────────────────────────────────────────────
-const CAROUSEL_STYLE_DESCRIPTIONS = {
-  'modern-clean': 'Clean lines, minimal layout',
-  'bold-impact': 'Strong typography, high contrast',
-  'gradient-wave': 'Gradient backgrounds, flowing shapes',
-  'minimal-zen': 'Minimalist, lots of whitespace',
-  'corporate-blue': 'Professional, corporate tones',
-  'creative-pop': 'Colorful, playful design',
-  'dark-luxe': 'Dark backgrounds, luxury feel',
-  'organic-natural': 'Earth tones, organic shapes',
+const CATEGORY_ICONS = {
+  input: Type, image: Sparkles, video: Film, audio: Mic,
+  content: FileText, publish: Share2, utility: Settings,
 };
 
-// ── Shared helper components ──────────────────────────────────────────────────
+// ── Shared UI Helpers ────────────────────────────────────────────────────────
 
-function Section({ title, children }) {
+const INPUT = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] transition-colors bg-white';
+const SELECT = INPUT + ' cursor-pointer';
+const TEXTAREA = INPUT + ' resize-y';
+
+function Panel({ title, description, children, className = '' }) {
   return (
-    <div className="mb-6">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{title}</h3>
+    <div className={`bg-white border border-slate-200 rounded-xl p-5 ${className}`}>
+      {title && <h3 className="text-sm font-semibold text-slate-800 mb-1">{title}</h3>}
+      {description && <p className="text-xs text-slate-500 mb-3">{description}</p>}
+      {!description && title && <div className="mb-3" />}
       {children}
     </div>
   );
 }
 
-function CardSelect({ options, value, onChange, columns = 3 }) {
-  const gridClass = columns === 2 ? 'grid-cols-2' : 'grid-cols-3';
+function Label({ children, className = '' }) {
+  return <label className={`text-xs font-medium text-slate-600 block mb-1.5 ${className}`}>{children}</label>;
+}
+
+function WiredBanner({ portName }) {
   return (
-    <div className={`grid ${gridClass} gap-2`}>
-      {options.map(opt => (
-        <button
-          key={opt.id}
-          onClick={() => onChange(opt.id)}
-          className={`text-left px-3 py-2.5 rounded-lg border transition-all ${
-            value === opt.id
-              ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
-              : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20'
-          }`}
-        >
-          {opt.icon && <span className="text-base mr-1.5">{opt.icon}</span>}
-          <span className="text-sm font-medium text-gray-200 block">{opt.label}</span>
-          {opt.description && <span className="text-[11px] text-gray-500 block mt-0.5 leading-snug">{opt.description}</span>}
-        </button>
-      ))}
+    <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-teal-50 border border-teal-200">
+      <Zap className="w-4 h-4 text-teal-600 flex-shrink-0" />
+      <p className="text-sm text-teal-700">Connected via <span className="font-semibold">{portName}</span> input port — value flows from upstream node</p>
     </div>
   );
 }
 
-function LabeledTextarea({ label, value, onChange, placeholder, rows = 3, description }) {
+function PillGroup({ options, value, onChange, columns = 4 }) {
   return (
-    <div className="mb-4">
-      <label className="text-xs font-medium text-gray-400 block mb-1.5">{label}</label>
-      <textarea
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full bg-white/[0.06] border border-white/[0.12] rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-y"
-      />
-      {description && <p className="text-[11px] text-gray-600 mt-1">{description}</p>}
-    </div>
-  );
-}
-
-function LabeledInput({ label, value, onChange, placeholder, description }) {
-  return (
-    <div className="mb-4">
-      <label className="text-xs font-medium text-gray-400 block mb-1.5">{label}</label>
-      <input
-        type="text"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-white/[0.06] border border-white/[0.12] rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-      />
-      {description && <p className="text-[11px] text-gray-600 mt-1">{description}</p>}
-    </div>
-  );
-}
-
-function LabeledSelect({ label, value, onChange, options, description }) {
-  return (
-    <div className="mb-4">
-      <label className="text-xs font-medium text-gray-400 block mb-1.5">{label}</label>
-      <select
-        value={value || (typeof options[0] === 'string' ? options[0] : options[0]?.id)}
-        onChange={e => onChange(e.target.value)}
-        className="w-full bg-white/[0.06] border border-white/[0.12] rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
-      >
-        {options.map(opt => {
-          const id = typeof opt === 'string' ? opt : opt.id;
-          const optLabel = typeof opt === 'string' ? opt : opt.label;
-          return <option key={id} value={id} className="bg-gray-900">{optLabel}</option>;
-        })}
-      </select>
-      {description && <p className="text-[11px] text-gray-600 mt-1">{description}</p>}
-    </div>
-  );
-}
-
-function PillSelect({ options, value, onChange }) {
-  return (
-    <div className="flex flex-wrap gap-2">
+    <div className={`grid grid-cols-${columns} gap-2`}>
       {options.map(opt => {
         const id = typeof opt === 'string' ? opt : opt.id;
         const label = typeof opt === 'string' ? opt : opt.label;
+        const desc = typeof opt === 'object' ? opt.desc : null;
+        const sel = value === id;
         return (
-          <button
-            key={id}
-            onClick={() => onChange(id)}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all ${
-              value === id
-                ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/30'
-                : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.06] hover:border-white/20'
-            }`}
-          >
+          <button key={id} onClick={() => onChange(id)}
+            className={`text-left px-3 py-2 rounded-lg border text-sm transition-all ${sel
+              ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E] font-medium ring-1 ring-[#2C666E]/20'
+              : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}>
             {label}
+            {desc && <span className="block text-[11px] text-slate-400 mt-0.5">{desc}</span>}
           </button>
         );
       })}
@@ -222,883 +118,1159 @@ function PillSelect({ options, value, onChange }) {
   );
 }
 
-function AspectRatioSelect({ value, onChange, options }) {
-  const ratios = options || ['16:9', '9:16', '1:1', '4:5', '3:2'];
-  const icons = {
-    '16:9': { w: 'w-7', h: 'h-4' },
-    '9:16': { w: 'w-4', h: 'h-7' },
-    '1:1': { w: 'w-5', h: 'h-5' },
-    '4:5': { w: 'w-5', h: 'h-6' },
-    '3:2': { w: 'w-6', h: 'h-4' },
-  };
+function ModelGrid({ models, value, onChange, columns = 2 }) {
   return (
-    <div className="flex gap-2">
-      {ratios.map(ratio => (
-        <button
-          key={ratio}
-          onClick={() => onChange(ratio)}
-          className={`flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-lg border transition-all ${
-            value === ratio
-              ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
-              : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20'
-          }`}
-        >
-          <div className={`${icons[ratio]?.w || 'w-5'} ${icons[ratio]?.h || 'h-5'} border-2 rounded-sm ${
-            value === ratio ? 'border-indigo-400' : 'border-gray-500'
-          }`} />
-          <span className={`text-[11px] font-medium ${value === ratio ? 'text-indigo-300' : 'text-gray-500'}`}>{ratio}</span>
-        </button>
-      ))}
+    <div className={`grid grid-cols-${columns} gap-2`}>
+      {models.map(m => {
+        const sel = value === m.id;
+        return (
+          <button key={m.id} onClick={() => onChange(m.id)}
+            className={`text-left px-4 py-3 rounded-lg border transition-all ${sel
+              ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+              : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}>
+            <span className={`text-sm font-medium block ${sel ? 'text-[#2C666E]' : 'text-slate-800'}`}>{m.label}</span>
+            <span className="text-[11px] text-slate-400 block mt-0.5">{m.desc}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CollapsiblePanel({ title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="flex items-center justify-between w-full px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+        <span className="text-sm font-semibold text-slate-700">{title}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="p-5 border-t border-slate-200">{children}</div>}
+    </div>
+  );
+}
+
+function AspectRatioButtons({ value, onChange }) {
+  const ratios = ['16:9', '9:16', '1:1', '4:5', '3:2'];
+  const dims = { '16:9': [28, 16], '9:16': [16, 28], '1:1': [20, 20], '4:5': [20, 24], '3:2': [24, 16] };
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {ratios.map(r => {
+        const [w, h] = dims[r] || [20, 20];
+        const sel = value === r;
+        return (
+          <button key={r} onClick={() => onChange(r)}
+            className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg border transition-all ${sel
+              ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+              : 'border-slate-200 hover:bg-slate-50'}`}>
+            <div style={{ width: w, height: h }} className={`border-2 rounded-sm ${sel ? 'border-[#2C666E]' : 'border-slate-300'}`} />
+            <span className={`text-[11px] font-medium ${sel ? 'text-[#2C666E]' : 'text-slate-500'}`}>{r}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 
-// ── Category-specific forms ───────────────────────────────────────────────────
+// ── ImageForm (Imagineer Generate, Imagineer Edit, Turnaround, Upscale, Smoosh) ──
 
-function ImageForm({ config, updateConfig, nodeType, brandKits }) {
+function ImageForm({ config, u, nodeType, wired }) {
   const nodeId = nodeType.id;
-  const schema = nodeType.configSchema || {};
-
-  // Determine which model list to use — full list for imagineer-generate/turnaround, otherwise from schema
-  const showFullModels = nodeId === 'imagineer-generate' || nodeId === 'turnaround-sheet';
-  const modelOptions = showFullModels
-    ? IMAGE_MODELS
-    : schema.model?.options
-      ? IMAGE_MODELS.filter(m => schema.model.options.includes(m.id))
-      : [];
-
   return (
-    <>
-      {schema.model && modelOptions.length > 0 && (
-        <Section title="Model">
-          <CardSelect
-            options={modelOptions}
-            value={config.model || schema.model?.default || modelOptions[0]?.id}
-            onChange={v => updateConfig('model', v)}
-          />
-        </Section>
+    <div className="space-y-5">
+      {/* Prompt */}
+      {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
+        <Panel title="Prompt" description="Describe what you want to generate">
+          <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
+            placeholder="A cinematic wide shot of..." rows={4} className={TEXTAREA} />
+        </Panel>
       )}
 
-      {nodeId === 'imagineer-generate' && (
-        <Section title="Prompt">
-          <LabeledTextarea
-            label="Default Prompt"
-            value={config.prompt}
-            onChange={v => updateConfig('prompt', v)}
-            placeholder="Connected via input port, or set default here..."
-            rows={3}
-            description="Will be used if no prompt is connected via input port."
-          />
-        </Section>
-      )}
+      {/* Model */}
+      <Panel title="Model">
+        <ModelGrid models={IMAGE_MODELS} value={config.model || 'nano-banana-2'} onChange={v => u('model', v)} />
+      </Panel>
 
-      {schema.aspect_ratio && (
-        <Section title="Aspect Ratio">
-          <AspectRatioSelect
-            value={config.aspect_ratio || schema.aspect_ratio?.default || '16:9'}
-            onChange={v => updateConfig('aspect_ratio', v)}
-            options={schema.aspect_ratio.options}
-          />
-        </Section>
-      )}
+      {/* Visual Style */}
+      <Panel title="Visual Style" description="Select one or more styles to guide generation">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)}
+          maxHeight="20rem" columns="grid-cols-4" multiple />
+      </Panel>
 
-      {nodeId === 'imagineer-generate' && (
-        <Section title="Style & Brand">
-          {brandKits && brandKits.length > 0 && (
-            <LabeledSelect
-              label="Brand Kit"
-              value={config.brand_kit || ''}
-              onChange={v => updateConfig('brand_kit', v)}
-              options={[{ id: '', label: 'None' }, ...brandKits.map(bk => ({ id: bk.id, label: bk.brand_name || bk.id }))]}
-            />
-          )}
-          <LabeledTextarea
-            label="Negative Prompt"
-            value={config.negative_prompt}
-            onChange={v => updateConfig('negative_prompt', v)}
-            placeholder="Things to avoid..."
-            rows={2}
-          />
-        </Section>
-      )}
+      {/* Aspect Ratio */}
+      <Panel title="Aspect Ratio">
+        <AspectRatioButtons value={config.aspect_ratio || '1:1'} onChange={v => u('aspect_ratio', v)} />
+      </Panel>
 
-      {nodeId === 'turnaround-sheet' && schema.pose_set && (
-        <Section title="Pose Set">
-          <CardSelect
-            options={schema.pose_set.options.map(id => ({
-              id,
-              label: { 'standard-24': 'Standard 24', '3d-angles': '3D Angles', '3d-action': '3D Action', 'r2v-reference': 'R2V Reference' }[id] || id,
-              description: { 'standard-24': 'Classic turnaround, 4x6 grid', '3d-angles': 'Orthographic views, 2x2', '3d-action': 'Dynamic poses, 2x2', 'r2v-reference': 'R2V-optimized, 3x2' }[id] || '',
-            }))}
-            value={config.pose_set || schema.pose_set?.default || 'standard-24'}
-            onChange={v => updateConfig('pose_set', v)}
-            columns={2}
-          />
-        </Section>
-      )}
+      {/* Lighting */}
+      <Panel title="Lighting">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { id: '', label: 'Auto' }, { id: 'natural', label: 'Natural' }, { id: 'golden_hour', label: 'Golden Hour' },
+            { id: 'studio', label: 'Studio' }, { id: 'dramatic', label: 'Dramatic' }, { id: 'neon', label: 'Neon' },
+            { id: 'soft', label: 'Soft' }, { id: 'backlit', label: 'Backlit' }, { id: 'cinematic', label: 'Cinematic' },
+            { id: 'moody', label: 'Moody' }, { id: 'flat', label: 'Flat' },
+          ].map(o => {
+            const sel = (config.lighting || '') === o.id;
+            return (
+              <button key={o.id} onClick={() => u('lighting', o.id)}
+                className={`px-3 py-2 rounded-lg border text-sm transition-all ${sel
+                  ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E] font-medium'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
 
-      {nodeId === 'turnaround-sheet' && schema.background_mode && (
-        <Section title="Background Mode">
-          <CardSelect
-            options={[
-              { id: 'white', label: 'White', description: 'Clean white background' },
-              { id: 'gray', label: 'Gray', description: 'Industry standard for production' },
-              { id: 'scene', label: 'Scene', description: 'Contextual environment for R2V' },
-            ]}
-            value={config.background_mode || schema.background_mode?.default || 'white'}
-            onChange={v => updateConfig('background_mode', v)}
-          />
-        </Section>
-      )}
+      {/* Camera Angle */}
+      <Panel title="Camera Angle">
+        <select value={config.camera_angle || ''} onChange={e => u('camera_angle', e.target.value)} className={SELECT}>
+          <option value="">Auto</option>
+          <option value="front">Front-facing</option>
+          <option value="three_quarter">3/4 View</option>
+          <option value="side">Side / Profile</option>
+          <option value="birds_eye">Bird's Eye</option>
+          <option value="low_angle">Low Angle (hero)</option>
+          <option value="dutch_angle">Dutch Angle</option>
+          <option value="close_up">Close-up</option>
+          <option value="extreme_close_up">Extreme Close-up</option>
+          <option value="wide_shot">Wide / Establishing</option>
+          <option value="over_shoulder">Over the Shoulder</option>
+        </select>
+      </Panel>
 
-      {nodeId === 'upscale-image' && schema.upscale_factor && (
-        <Section title="Upscale Factor">
-          <PillSelect
-            options={schema.upscale_factor.options.map(v => ({ id: v, label: `${v}x` }))}
-            value={config.upscale_factor || schema.upscale_factor?.default || '2'}
-            onChange={v => updateConfig('upscale_factor', v)}
-          />
-        </Section>
-      )}
+      {/* Mood */}
+      <Panel title="Mood / Atmosphere">
+        <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
+          placeholder="e.g. ethereal and dreamlike, dark and gritty, vibrant and energetic" rows={2} className={TEXTAREA} />
+      </Panel>
 
-      {nodeId === 'smoosh' && schema.blend_prompt && (
-        <Section title="Blend Instructions">
-          <LabeledTextarea
-            label="Blend Prompt"
-            value={config.blend_prompt}
-            onChange={v => updateConfig('blend_prompt', v)}
-            placeholder="e.g. blend these images together seamlessly, matching lighting and perspective"
-            rows={3}
-          />
-        </Section>
-      )}
-    </>
-  );
-}
+      {/* Color Palette */}
+      <Panel title="Color Palette">
+        <textarea value={config.color_palette || ''} onChange={e => u('color_palette', e.target.value)}
+          placeholder="e.g. warm earth tones, neon pink and cyan, muted pastels" rows={2} className={TEXTAREA} />
+      </Panel>
 
-function VideoForm({ config, updateConfig, nodeType }) {
-  const schema = nodeType.configSchema || {};
+      {/* Brand Guide */}
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
 
-  // Filter VIDEO_MODELS to only those in the schema
-  const modelOptions = schema.model?.options
-    ? VIDEO_MODELS.filter(m => schema.model.options.includes(m.id))
-    : [];
+      {/* LoRA */}
+      <Panel title="LoRA Models" description="Select trained LoRA models to apply">
+        <LoRAPicker value={config.loras || []} onChange={v => u('loras', v)} />
+      </Panel>
 
-  const durationOptions = schema.duration?.options || [];
+      {/* Negative Prompt */}
+      <Panel title="Negative Prompt">
+        <textarea value={config.negative_prompt || ''} onChange={e => u('negative_prompt', e.target.value)}
+          placeholder="Things to avoid..." rows={2} className={TEXTAREA} />
+      </Panel>
 
-  return (
-    <>
-      {schema.model && modelOptions.length > 0 && (
-        <Section title="Model">
-          <CardSelect
-            options={modelOptions}
-            value={config.model || schema.model?.default || modelOptions[0]?.id}
-            onChange={v => updateConfig('model', v)}
-          />
-        </Section>
-      )}
-
-      {schema.duration && durationOptions.length > 0 && (
-        <Section title="Duration">
-          <PillSelect
-            options={durationOptions.map(d => ({ id: d, label: `${d}s` }))}
-            value={config.duration || schema.duration?.default || durationOptions[0]}
-            onChange={v => updateConfig('duration', v)}
-          />
-        </Section>
-      )}
-
-      {schema.aspect_ratio && (
-        <Section title="Aspect Ratio">
-          <AspectRatioSelect
-            value={config.aspect_ratio || schema.aspect_ratio?.default || '16:9'}
-            onChange={v => updateConfig('aspect_ratio', v)}
-            options={schema.aspect_ratio.options}
-          />
-        </Section>
-      )}
-    </>
-  );
-}
-
-function AudioForm({ config, updateConfig, nodeType }) {
-  const nodeId = nodeType.id;
-  const schema = nodeType.configSchema || {};
-
-  if (nodeId === 'voiceover') {
-    return (
-      <>
-        <Section title="Voice">
-          <div className="max-h-[400px] overflow-y-auto pr-1">
-            <CardSelect
-              options={VOICE_OPTIONS}
-              value={config.voice || schema.voice?.default || 'Kore'}
-              onChange={v => updateConfig('voice', v)}
-              columns={2}
-            />
+      {/* Advanced */}
+      <CollapsiblePanel title="Advanced Settings">
+        <div className="space-y-4">
+          <div>
+            <Label>Seed</Label>
+            <input type="number" value={config.seed || ''} onChange={e => u('seed', e.target.value)}
+              placeholder="Random" className={INPUT} />
           </div>
-        </Section>
-        <Section title="Speed">
-          <PillSelect
-            options={[
-              { id: '1.0', label: '1.0x (Normal)' },
-              { id: '1.15', label: '1.15x (Recommended)' },
-              { id: '1.3', label: '1.3x (Fast)' },
-            ]}
-            value={config.speed || schema.speed?.default || '1.15'}
-            onChange={v => updateConfig('speed', v)}
-          />
-        </Section>
-        <Section title="Style Instructions">
-          <LabeledTextarea
-            label="Voice Direction"
-            value={config.style_instructions}
-            onChange={v => updateConfig('style_instructions', v)}
-            placeholder="e.g. Speak with dramatic tension and pauses"
-            rows={3}
-          />
-        </Section>
-      </>
-    );
-  }
+          <div>
+            <Label>Guidance Scale</Label>
+            <div className="flex items-center gap-3">
+              <input type="range" min="1" max="20" step="0.5" value={config.guidance_scale || 7}
+                onChange={e => u('guidance_scale', parseFloat(e.target.value))}
+                className="flex-1 accent-[#2C666E]" />
+              <span className="text-sm text-slate-600 w-8 text-right">{config.guidance_scale || 7}</span>
+            </div>
+          </div>
+          {nodeId === 'imagineer-edit' && (
+            <div>
+              <Label>Strength</Label>
+              <div className="flex items-center gap-3">
+                <input type="range" min="0.1" max="1" step="0.05" value={config.strength || 0.75}
+                  onChange={e => u('strength', parseFloat(e.target.value))}
+                  className="flex-1 accent-[#2C666E]" />
+                <span className="text-sm text-slate-600 w-10 text-right">{config.strength || 0.75}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </CollapsiblePanel>
 
-  if (nodeId === 'music') {
-    return (
-      <>
-        <Section title="Mood">
-          <LabeledTextarea
-            label="Music Mood"
-            value={config.mood}
-            onChange={v => updateConfig('mood', v)}
-            placeholder="e.g. cinematic tension, lo-fi chill, upbeat electronic"
-            rows={3}
-          />
-        </Section>
-        <Section title="Duration">
-          <PillSelect
-            options={(schema.duration?.options || ['10', '15', '20', '30', '45', '60', '90']).map(d => ({ id: d, label: `${d}s` }))}
-            value={config.duration || schema.duration?.default || '30'}
-            onChange={v => updateConfig('duration', v)}
-          />
-        </Section>
-      </>
-    );
-  }
+      {/* Turnaround-specific */}
+      {nodeId === 'turnaround-sheet' && (
+        <>
+          <Panel title="Pose Set">
+            <PillGroup
+              options={[
+                { id: 'standard-24', label: 'Standard 24', desc: 'Classic 4x6 grid' },
+                { id: '3d-angles', label: '3D Angles', desc: 'Orthographic 2x2' },
+                { id: '3d-action', label: '3D Action', desc: 'Dynamic 2x2' },
+                { id: 'r2v-reference', label: 'R2V Reference', desc: '3x2 grid for R2V' },
+              ]}
+              value={config.pose_set || 'standard-24'} onChange={v => u('pose_set', v)} columns={2}
+            />
+          </Panel>
+          <Panel title="Background">
+            <PillGroup
+              options={[
+                { id: 'white', label: 'White' }, { id: 'gray', label: 'Gray (production)' }, { id: 'scene', label: 'Scene (for R2V)' },
+              ]}
+              value={config.background_mode || 'white'} onChange={v => u('background_mode', v)} columns={3}
+            />
+          </Panel>
+        </>
+      )}
 
-  if (nodeId === 'captions') {
-    return (
-      <>
-        <Section title="Caption Style">
-          <CardSelect
-            options={CAPTION_STYLES}
-            value={config.style || schema.style?.default || 'word_pop'}
-            onChange={v => updateConfig('style', v)}
-            columns={2}
-          />
-        </Section>
-        <Section title="Font Size">
-          <PillSelect
-            options={[
-              { id: 'small', label: 'Small' },
-              { id: 'medium', label: 'Medium' },
-              { id: 'large', label: 'Large' },
-            ]}
-            value={config.font_size || schema.font_size?.default || 'medium'}
-            onChange={v => updateConfig('font_size', v)}
-          />
-        </Section>
-        <Section title="Position">
-          <PillSelect
-            options={[
-              { id: 'bottom', label: 'Bottom' },
-              { id: 'center', label: 'Center' },
-              { id: 'top', label: 'Top' },
-            ]}
-            value={config.position || schema.position?.default || 'bottom'}
-            onChange={v => updateConfig('position', v)}
-          />
-        </Section>
-      </>
-    );
-  }
+      {/* Upscale */}
+      {nodeId === 'upscale-image' && (
+        <Panel title="Scale Factor">
+          <PillGroup options={[{ id: '2', label: '2x' }, { id: '4', label: '4x' }]}
+            value={config.upscale_factor || '2'} onChange={v => u('upscale_factor', v)} columns={2} />
+        </Panel>
+      )}
 
-  // Fallback — generic schema-based form
-  return <GenericSchemaForm config={config} updateConfig={updateConfig} schema={schema} />;
+      {/* Smoosh */}
+      {nodeId === 'smoosh' && (
+        <Panel title="Blend Instructions">
+          <textarea value={config.blend_prompt || ''} onChange={e => u('blend_prompt', e.target.value)}
+            placeholder="e.g. blend these images seamlessly, matching lighting and perspective" rows={3} className={TEXTAREA} />
+        </Panel>
+      )}
+    </div>
+  );
 }
 
-function ContentForm({ config, updateConfig, nodeType }) {
-  const nodeId = nodeType.id;
+
+// ── VideoForm ────────────────────────────────────────────────────────────────
+
+function VideoForm({ config, u, nodeType, wired }) {
   const schema = nodeType.configSchema || {};
+  const nodeId = nodeType.id;
+  const modelOptions = schema.model?.options ? VIDEO_MODELS.filter(m => schema.model.options.includes(m.id)) : VIDEO_MODELS;
+  const selectedModel = config.model || schema.model?.default || modelOptions[0]?.id;
+
+  return (
+    <div className="space-y-5">
+      {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
+        <Panel title="Prompt" description="Describe the motion and scene">
+          <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
+            placeholder="A cinematic slow-motion shot of..." rows={4} className={TEXTAREA} />
+        </Panel>
+      )}
+
+      <Panel title="Model">
+        <ModelGrid models={modelOptions} value={selectedModel} onChange={v => u('model', v)} />
+      </Panel>
+
+      {schema.duration?.options && (
+        <Panel title="Duration">
+          <PillGroup options={schema.duration.options.map(d => ({ id: d, label: `${d}s` }))}
+            value={config.duration || schema.duration?.default || schema.duration.options[0]}
+            onChange={v => u('duration', v)} columns={schema.duration.options.length} />
+        </Panel>
+      )}
+
+      {AUDIO_CAPABLE_MODELS.has(selectedModel) && (
+        <Panel title="Audio">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={config.generate_audio || false} onChange={e => u('generate_audio', e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-[#2C666E] focus:ring-[#2C666E]/30" />
+            <span className="text-sm text-slate-700">Generate audio with video</span>
+          </label>
+        </Panel>
+      )}
+
+      {schema.aspect_ratio && (
+        <Panel title="Aspect Ratio">
+          <AspectRatioButtons value={config.aspect_ratio || '16:9'} onChange={v => u('aspect_ratio', v)} />
+        </Panel>
+      )}
+
+      <Panel title="Visual Style">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-4" multiple />
+      </Panel>
+
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
+
+      {nodeId === 'video-extend' && (
+        <Panel title="Extension Duration">
+          <PillGroup options={['2','4','6','8','10'].map(d => ({ id: d, label: `${d}s` }))}
+            value={config.extend_duration || '6'} onChange={v => u('extend_duration', v)} columns={5} />
+        </Panel>
+      )}
+
+      {nodeId === 'video-restyle' && (
+        <Panel title="Restyle Strength">
+          <div className="flex items-center gap-3">
+            <input type="range" min="0.1" max="1" step="0.05" value={config.restyle_strength || 0.6}
+              onChange={e => u('restyle_strength', parseFloat(e.target.value))} className="flex-1 accent-[#2C666E]" />
+            <span className="text-sm text-slate-600 w-10 text-right">{config.restyle_strength || 0.6}</span>
+          </div>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+
+// ── VoiceoverForm ────────────────────────────────────────────────────────────
+
+function VoiceoverForm({ config, u, wired }) {
+  const [showAll, setShowAll] = useState(false);
+  const featured = GEMINI_VOICES.filter(v => FEATURED_VOICES.includes(v.id));
+  const remaining = GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id));
+  const sel = config.voice || 'Kore';
+
+  return (
+    <div className="space-y-5">
+      {wired.has('script') ? <WiredBanner portName="script" /> : (
+        <Panel title="Script">
+          <textarea value={config.script || ''} onChange={e => u('script', e.target.value)}
+            placeholder="Enter voiceover script..." rows={5} className={TEXTAREA} />
+        </Panel>
+      )}
+
+      <Panel title="Voice" description="Select a voice for the narration">
+        <p className="text-xs font-medium text-slate-500 mb-2">Featured</p>
+        <div className="grid grid-cols-5 gap-2 mb-3">
+          {featured.map(v => (
+            <button key={v.id} onClick={() => u('voice', v.id)}
+              className={`text-left px-3 py-2.5 rounded-lg border transition-all ${sel === v.id
+                ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+                : 'border-slate-200 hover:bg-slate-50'}`}>
+              <span className={`text-sm font-medium block ${sel === v.id ? 'text-[#2C666E]' : 'text-slate-800'}`}>{v.label}</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">{v.description}</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowAll(!showAll)} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors mb-2">
+          <ChevronDown className={`w-3 h-3 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+          {showAll ? 'Hide' : 'Show all'} {remaining.length} voices
+        </button>
+        {showAll && (
+          <div className="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto">
+            {remaining.map(v => (
+              <button key={v.id} onClick={() => u('voice', v.id)}
+                className={`text-left px-3 py-2.5 rounded-lg border transition-all ${sel === v.id
+                  ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+                  : 'border-slate-200 hover:bg-slate-50'}`}>
+                <span className={`text-sm font-medium block ${sel === v.id ? 'text-[#2C666E]' : 'text-slate-800'}`}>{v.label}</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{v.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Voice Speed">
+        <div className="flex items-center gap-3">
+          <input type="range" min="0.8" max="1.5" step="0.05" value={config.speed || 1.15}
+            onChange={e => u('speed', parseFloat(e.target.value))} className="flex-1 accent-[#2C666E]" />
+          <span className="text-sm font-medium text-slate-700 w-12 text-right">{config.speed || 1.15}x</span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">1.15x recommended for Shorts</p>
+      </Panel>
+
+      <Panel title="Style Instructions">
+        <textarea value={config.style_instructions || ''} onChange={e => u('style_instructions', e.target.value)}
+          placeholder="e.g. Speak with dramatic tension, emphasize key points, pause before reveals..." rows={3} className={TEXTAREA} />
+      </Panel>
+    </div>
+  );
+}
+
+
+// ── CaptionsForm ─────────────────────────────────────────────────────────────
+
+function CaptionsForm({ config, u }) {
+  const selStyle = config.caption_style || config.style || 'word_pop';
+  return (
+    <div className="space-y-5">
+      <Panel title="Caption Style" description="Choose how captions appear on screen">
+        <div className="grid grid-cols-4 gap-3">
+          {CAPTION_STYLES.map(cs => {
+            const sel = selStyle === cs.key;
+            return (
+              <button key={cs.key} onClick={() => { u('caption_style', cs.key); u('style', cs.key); }}
+                className={`text-left rounded-xl border overflow-hidden transition-all ${sel
+                  ? 'border-[#2C666E] ring-2 ring-[#2C666E]/20'
+                  : 'border-slate-200 hover:border-slate-300'}`}>
+                <div className={`${cs.preview.bg} px-4 py-6 flex items-center justify-center`}>
+                  <span className={cs.preview.style} style={cs.preview.textStroke ? { WebkitTextStroke: cs.preview.textStroke } : undefined}>
+                    {cs.preview.text}
+                  </span>
+                </div>
+                <div className={`px-3 py-2 ${sel ? 'bg-[#2C666E]/5' : 'bg-white'}`}>
+                  <span className={`text-sm font-medium block ${sel ? 'text-[#2C666E]' : 'text-slate-800'}`}>{cs.label}</span>
+                  <span className="text-[11px] text-slate-400 block">{cs.description}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
+
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Font">
+          <select value={config.font || 'Inter'} onChange={e => u('font', e.target.value)} className={SELECT}>
+            {['Inter', 'Montserrat', 'Poppins', 'Roboto', 'Open Sans', 'Playfair Display', 'Space Mono', 'DM Sans'].map(f =>
+              <option key={f} value={f}>{f}</option>
+            )}
+          </select>
+        </Panel>
+        <Panel title="Position">
+          <PillGroup options={[{ id: 'top', label: 'Top' }, { id: 'center', label: 'Center' }, { id: 'bottom', label: 'Bottom' }]}
+            value={config.position || 'bottom'} onChange={v => u('position', v)} columns={3} />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+
+// ── MusicForm ────────────────────────────────────────────────────────────────
+
+function MusicForm({ config, u }) {
+  return (
+    <div className="space-y-5">
+      <Panel title="Mood" description="Describe the music mood (always instrumental)">
+        <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
+          placeholder="e.g. cinematic tension, lo-fi chill, upbeat electronic, dark ambient" rows={3} className={TEXTAREA} />
+      </Panel>
+      <Panel title="Duration">
+        <PillGroup options={['10','15','20','30','45','60','90'].map(d => ({ id: d, label: `${d}s` }))}
+          value={config.duration || '30'} onChange={v => u('duration', v)} columns={7} />
+      </Panel>
+    </div>
+  );
+}
+
+
+// ── AudioForm router ─────────────────────────────────────────────────────────
+
+function AudioForm({ config, u, nodeType, wired }) {
+  if (nodeType.id === 'voiceover') return <VoiceoverForm config={config} u={u} wired={wired} />;
+  if (nodeType.id === 'captions') return <CaptionsForm config={config} u={u} />;
+  if (nodeType.id === 'music') return <MusicForm config={config} u={u} />;
+  return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
+}
+
+
+// ── ShortsCreateForm ─────────────────────────────────────────────────────────
+
+function ShortsCreateForm({ config, u, wired }) {
+  const [showAllVoices, setShowAllVoices] = useState(false);
+  const featured = GEMINI_VOICES.filter(v => FEATURED_VOICES.includes(v.id));
+  const remaining = GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id));
+  const selVoice = config.voice || 'Kore';
+
+  return (
+    <div className="space-y-5">
+      {/* Script & Topic */}
+      <Panel title="Niche">
+        <select value={config.niche || 'ai_tech_news'} onChange={e => u('niche', e.target.value)} className={SELECT}>
+          {Object.entries(NICHE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+      </Panel>
+
+      {wired.has('topic') ? <WiredBanner portName="topic" /> : (
+        <Panel title="Topic">
+          <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
+            placeholder="What should the short be about?" rows={3} className={TEXTAREA} />
+        </Panel>
+      )}
+
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Duration">
+          <PillGroup options={['30','45','60','90'].map(d => ({ id: d, label: `${d}s` }))}
+            value={config.duration || '60'} onChange={v => u('duration', v)} columns={4} />
+        </Panel>
+        <Panel title="Tone">
+          <select value={config.tone || 'dramatic'} onChange={e => u('tone', e.target.value)} className={SELECT}>
+            {['casual','professional','dramatic','humorous','educational','urgent','conversational'].map(t =>
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            )}
+          </select>
+        </Panel>
+      </div>
+
+      {/* Voice */}
+      <Panel title="Voice" description="Select a Gemini TTS voice">
+        <p className="text-xs font-medium text-slate-500 mb-2">Featured</p>
+        <div className="grid grid-cols-5 gap-2 mb-3">
+          {featured.map(v => (
+            <button key={v.id} onClick={() => u('voice', v.id)}
+              className={`text-left px-3 py-2.5 rounded-lg border transition-all ${selVoice === v.id
+                ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+                : 'border-slate-200 hover:bg-slate-50'}`}>
+              <span className={`text-sm font-medium block ${selVoice === v.id ? 'text-[#2C666E]' : 'text-slate-800'}`}>{v.label}</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">{v.description}</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowAllVoices(!showAllVoices)} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-2">
+          <ChevronDown className={`w-3 h-3 transition-transform ${showAllVoices ? 'rotate-180' : ''}`} />
+          {showAllVoices ? 'Hide' : 'Show all'} {remaining.length} voices
+        </button>
+        {showAllVoices && (
+          <div className="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto">
+            {remaining.map(v => (
+              <button key={v.id} onClick={() => u('voice', v.id)}
+                className={`text-left px-3 py-2.5 rounded-lg border transition-all ${selVoice === v.id
+                  ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+                  : 'border-slate-200 hover:bg-slate-50'}`}>
+                <span className={`text-sm font-medium block ${selVoice === v.id ? 'text-[#2C666E]' : 'text-slate-800'}`}>{v.label}</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{v.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Voice Speed">
+          <div className="flex items-center gap-3">
+            <input type="range" min="0.8" max="1.5" step="0.05" value={config.voice_speed || 1.15}
+              onChange={e => u('voice_speed', parseFloat(e.target.value))} className="flex-1 accent-[#2C666E]" />
+            <span className="text-sm font-medium text-slate-700 w-12 text-right">{config.voice_speed || 1.15}x</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">1.15x recommended</p>
+        </Panel>
+        <Panel title="Voice Style Instructions">
+          <textarea value={config.voice_style_instructions || ''} onChange={e => u('voice_style_instructions', e.target.value)}
+            placeholder="e.g. Speak with dramatic tension..." rows={2} className={TEXTAREA} />
+        </Panel>
+      </div>
+
+      {/* Models */}
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Image Model (Keyframes)">
+          <ModelGrid models={IMAGE_MODELS} value={config.image_model || 'nano-banana-2'} onChange={v => u('image_model', v)} columns={1} />
+        </Panel>
+        <Panel title="Video Model (Clips)">
+          <ModelGrid models={VIDEO_MODELS} value={config.video_model || 'kling-2.0-master'} onChange={v => u('video_model', v)} columns={1} />
+        </Panel>
+      </div>
+
+      {/* Visual Style */}
+      <Panel title="Visual Style">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+      </Panel>
+
+      {/* Captions */}
+      <Panel title="Caption Style" description="Choose how captions appear on screen">
+        <div className="grid grid-cols-4 gap-3">
+          {CAPTION_STYLES.map(cs => {
+            const sel = (config.caption_style || 'word_pop') === cs.key;
+            return (
+              <button key={cs.key} onClick={() => u('caption_style', cs.key)}
+                className={`text-left rounded-xl border overflow-hidden transition-all ${sel
+                  ? 'border-[#2C666E] ring-2 ring-[#2C666E]/20'
+                  : 'border-slate-200 hover:border-slate-300'}`}>
+                <div className={`${cs.preview.bg} px-3 py-4 flex items-center justify-center`}>
+                  <span className={cs.preview.style} style={cs.preview.textStroke ? { WebkitTextStroke: cs.preview.textStroke } : undefined}>{cs.preview.text}</span>
+                </div>
+                <div className={`px-2.5 py-1.5 ${sel ? 'bg-[#2C666E]/5' : 'bg-white'}`}>
+                  <span className={`text-xs font-medium ${sel ? 'text-[#2C666E]' : 'text-slate-700'}`}>{cs.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
+
+      {/* Music */}
+      <Panel title="Background Music Mood" description="Leave empty for niche default. Always instrumental.">
+        <textarea value={config.music_mood || ''} onChange={e => u('music_mood', e.target.value)}
+          placeholder="e.g. dark ambient, cinematic tension, upbeat electronic" rows={2} className={TEXTAREA} />
+      </Panel>
+
+      {/* Brand & LoRA */}
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
+      <Panel title="LoRA Models">
+        <LoRAPicker value={config.loras || []} onChange={v => u('loras', v)} />
+      </Panel>
+    </div>
+  );
+}
+
+
+// ── StoryboardCreateForm ─────────────────────────────────────────────────────
+
+function StoryboardCreateForm({ config, u, wired }) {
+  return (
+    <div className="space-y-5">
+      <Panel title="Name">
+        <input type="text" value={config.name || ''} onChange={e => u('name', e.target.value)}
+          placeholder="Storyboard name..." className={INPUT} />
+      </Panel>
+
+      {wired.has('description') ? <WiredBanner portName="description" /> : (
+        <Panel title="Brief / Description" description="Describe the video you want to create">
+          <textarea value={config.description || ''} onChange={e => u('description', e.target.value)}
+            placeholder="Narrative, purpose, key scenes, visual direction..." rows={4} className={TEXTAREA} />
+        </Panel>
+      )}
+
+      <div className="grid grid-cols-3 gap-5">
+        <Panel title="Duration">
+          <PillGroup options={['15','30','60','90'].map(d => ({ id: d, label: `${d}s` }))}
+            value={config.duration || '30'} onChange={v => u('duration', v)} columns={2} />
+        </Panel>
+        <Panel title="Tone">
+          <select value={config.tone || 'cinematic'} onChange={e => u('tone', e.target.value)} className={SELECT}>
+            {['cinematic','documentary','commercial','artistic','educational','dramatic','playful','minimal'].map(t =>
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            )}
+          </select>
+        </Panel>
+        <Panel title="Mood / Atmosphere">
+          <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
+            placeholder="e.g. cinematic, mysterious" rows={2} className={TEXTAREA} />
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Image Model (Previews)">
+          <ModelGrid models={IMAGE_MODELS} value={config.image_model || 'nano-banana-2'} onChange={v => u('image_model', v)} columns={1} />
+        </Panel>
+        <Panel title="Video Model (Production)">
+          <ModelGrid models={VIDEO_MODELS} value={config.video_model || 'kling-2.0-master'} onChange={v => u('video_model', v)} columns={1} />
+        </Panel>
+      </div>
+
+      <Panel title="Visual Style">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+      </Panel>
+
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
+      <Panel title="LoRA Models">
+        <LoRAPicker value={config.loras || []} onChange={v => u('loras', v)} />
+      </Panel>
+
+      <CollapsiblePanel title="Characters">
+        <textarea value={config.characters || ''} onChange={e => u('characters', e.target.value)}
+          placeholder="Describe recurring characters — name, appearance, clothing, personality..." rows={3} className={TEXTAREA} />
+        <p className="text-xs text-slate-400 mt-1">Used for consistent character rendering across scenes</p>
+      </CollapsiblePanel>
+    </div>
+  );
+}
+
+
+// ── CarouselCreateForm ───────────────────────────────────────────────────────
+
+function CarouselCreateForm({ config, u }) {
+  return (
+    <div className="space-y-5">
+      <Panel title="Platform">
+        <PillGroup
+          options={[
+            { id: 'instagram', label: 'Instagram', desc: '1:1 square' },
+            { id: 'linkedin', label: 'LinkedIn', desc: '1:1 or 4:5' },
+            { id: 'tiktok', label: 'TikTok', desc: '9:16 vertical' },
+            { id: 'facebook', label: 'Facebook', desc: '1:1 square' },
+          ]}
+          value={config.platform || 'instagram'} onChange={v => u('platform', v)} columns={4}
+        />
+      </Panel>
+
+      <Panel title="Content Topic">
+        <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
+          placeholder="What should the carousel be about?" rows={3} className={TEXTAREA} />
+      </Panel>
+
+      <Panel title="Carousel Style">
+        <PillGroup options={CAROUSEL_STYLES} value={config.style || 'modern-clean'} onChange={v => u('style', v)} columns={4} />
+      </Panel>
+
+      <Panel title="Visual Style">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+      </Panel>
+
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
+    </div>
+  );
+}
+
+
+// ── AdsGenerateForm ──────────────────────────────────────────────────────────
+
+function AdsGenerateForm({ config, u }) {
+  return (
+    <div className="space-y-5">
+      <Panel title="Platform">
+        <PillGroup options={[{ id: 'linkedin', label: 'LinkedIn' }, { id: 'google', label: 'Google' }, { id: 'meta', label: 'Meta' }]}
+          value={config.platform || 'linkedin'} onChange={v => u('platform', v)} columns={3} />
+      </Panel>
+
+      <Panel title="Objective">
+        <PillGroup options={[
+          { id: 'traffic', label: 'Traffic', desc: 'Drive visitors' },
+          { id: 'conversions', label: 'Conversions', desc: 'Maximize sales' },
+          { id: 'awareness', label: 'Awareness', desc: 'Reach audiences' },
+          { id: 'leads', label: 'Leads', desc: 'Collect contacts' },
+        ]} value={config.objective || 'traffic'} onChange={v => u('objective', v)} columns={4} />
+      </Panel>
+
+      <div className="grid grid-cols-2 gap-5">
+        <Panel title="Product Description">
+          <textarea value={config.product_description || ''} onChange={e => u('product_description', e.target.value)}
+            placeholder="What are you advertising?" rows={3} className={TEXTAREA} />
+        </Panel>
+        <Panel title="Target Audience">
+          <textarea value={config.target_audience || ''} onChange={e => u('target_audience', e.target.value)}
+            placeholder="e.g. SaaS founders, 25-45, US/UK" rows={3} className={TEXTAREA} />
+        </Panel>
+      </div>
+
+      <Panel title="Landing URL">
+        <input type="text" value={config.landing_url || ''} onChange={e => u('landing_url', e.target.value)}
+          placeholder="https://..." className={INPUT} />
+      </Panel>
+
+      <Panel title="Visual Style">
+        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+      </Panel>
+
+      <Panel title="Brand Guide">
+        <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+      </Panel>
+    </div>
+  );
+}
+
+
+// ── ContentForm router ───────────────────────────────────────────────────────
+
+function ContentForm({ config, u, nodeType, wired }) {
+  const nodeId = nodeType.id;
+
+  if (nodeId === 'shorts-create') return <ShortsCreateForm config={config} u={u} wired={wired} />;
+  if (nodeId === 'storyboard-create') return <StoryboardCreateForm config={config} u={u} wired={wired} />;
+  if (nodeId === 'carousel-create') return <CarouselCreateForm config={config} u={u} />;
+  if (nodeId === 'ads-generate') return <AdsGenerateForm config={config} u={u} />;
 
   if (nodeId === 'script-generator') {
-    const nicheOptions = (schema.niche?.options || Object.keys(NICHE_LABELS)).map(id => ({
-      id,
-      label: NICHE_LABELS[id] || id,
-    }));
-
     return (
-      <>
-        <Section title="Niche">
-          <div className="max-h-[360px] overflow-y-auto pr-1">
-            <CardSelect
-              options={nicheOptions}
-              value={config.niche || schema.niche?.default || 'ai_tech_news'}
-              onChange={v => updateConfig('niche', v)}
-            />
-          </div>
-        </Section>
-        <Section title="Duration">
-          <PillSelect
-            options={(schema.duration?.options || ['30', '60', '90']).map(d => ({ id: d, label: `${d}s` }))}
-            value={config.duration || schema.duration?.default || '60'}
-            onChange={v => updateConfig('duration', v)}
-          />
-        </Section>
-        <Section title="Tone">
-          <LabeledInput
-            label="Tone"
-            value={config.tone}
-            onChange={v => updateConfig('tone', v)}
-            placeholder="e.g. dramatic, conversational, urgent"
-          />
-        </Section>
-      </>
+      <div className="space-y-5">
+        {wired.has('topic') ? <WiredBanner portName="topic" /> : (
+          <Panel title="Topic">
+            <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
+              placeholder="What should the script be about?" rows={3} className={TEXTAREA} />
+          </Panel>
+        )}
+        <div className="grid grid-cols-3 gap-5">
+          <Panel title="Niche">
+            <select value={config.niche || 'ai_tech_news'} onChange={e => u('niche', e.target.value)} className={SELECT}>
+              {Object.entries(NICHE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </Panel>
+          <Panel title="Duration">
+            <PillGroup options={['30','60','90'].map(d => ({ id: d, label: `${d}s` }))}
+              value={config.duration || '60'} onChange={v => u('duration', v)} columns={3} />
+          </Panel>
+          <Panel title="Tone">
+            <select value={config.tone || 'dramatic'} onChange={e => u('tone', e.target.value)} className={SELECT}>
+              {['casual','professional','dramatic','humorous','educational','urgent','conversational'].map(t =>
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              )}
+            </select>
+          </Panel>
+        </div>
+      </div>
     );
   }
 
-  if (nodeId === 'ads-generate') {
+  if (nodeId === 'text-transform') {
     return (
-      <>
-        <Section title="Platform">
-          <CardSelect
-            options={[
-              { id: 'linkedin', label: 'LinkedIn', icon: '\uD83D\uDCBC' },
-              { id: 'google', label: 'Google', icon: '\uD83D\uDCCA' },
-              { id: 'meta', label: 'Meta', icon: '\uD83D\uDCF1' },
-            ]}
-            value={config.platform || schema.platform?.default || 'linkedin'}
-            onChange={v => updateConfig('platform', v)}
-          />
-        </Section>
-        <Section title="Objective">
-          <CardSelect
-            options={[
-              { id: 'traffic', label: 'Traffic', description: 'Drive visitors to your site' },
-              { id: 'conversions', label: 'Conversions', description: 'Maximize purchases or signups' },
-              { id: 'awareness', label: 'Awareness', description: 'Reach new audiences' },
-              { id: 'leads', label: 'Leads', description: 'Collect contact information' },
-            ]}
-            value={config.objective || schema.objective?.default || 'traffic'}
-            onChange={v => updateConfig('objective', v)}
-            columns={2}
-          />
-        </Section>
-        <Section title="Details">
-          <LabeledInput
-            label="Landing URL"
-            value={config.landing_url}
-            onChange={v => updateConfig('landing_url', v)}
-            placeholder="https://..."
-          />
-          <LabeledTextarea
-            label="Target Audience"
-            value={config.target_audience}
-            onChange={v => updateConfig('target_audience', v)}
-            placeholder="e.g. SaaS founders, 25-45, US/UK"
-            rows={2}
-          />
-        </Section>
-      </>
-    );
-  }
-
-  if (nodeId === 'carousel-create') {
-    const carouselStyles = (schema.style?.options || Object.keys(CAROUSEL_STYLE_DESCRIPTIONS)).map(id => ({
-      id,
-      label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      description: CAROUSEL_STYLE_DESCRIPTIONS[id] || '',
-    }));
-
-    return (
-      <>
-        <Section title="Platform">
-          <CardSelect
-            options={[
-              { id: 'instagram', label: 'Instagram', description: '1:1 square slides' },
-              { id: 'linkedin', label: 'LinkedIn', description: '1:1 or 4:5 slides' },
-              { id: 'tiktok', label: 'TikTok', description: '9:16 vertical slides' },
-              { id: 'facebook', label: 'Facebook', description: '1:1 square slides' },
-            ]}
-            value={config.platform || schema.platform?.default || 'instagram'}
-            onChange={v => updateConfig('platform', v)}
-            columns={2}
-          />
-        </Section>
-        <Section title="Style">
-          <CardSelect
-            options={carouselStyles}
-            value={config.style || schema.style?.default || 'modern-clean'}
-            onChange={v => updateConfig('style', v)}
-            columns={2}
-          />
-        </Section>
-      </>
+      <div className="space-y-5">
+        {wired.has('input') ? <WiredBanner portName="input" /> : (
+          <Panel title="Input Text">
+            <textarea value={config.input_text || ''} onChange={e => u('input_text', e.target.value)}
+              placeholder="Text to transform..." rows={4} className={TEXTAREA} />
+          </Panel>
+        )}
+        <Panel title="Operation">
+          <PillGroup options={[
+            { id: 'uppercase', label: 'UPPERCASE' }, { id: 'lowercase', label: 'lowercase' },
+            { id: 'trim', label: 'Trim' }, { id: 'extract_first_line', label: 'First Line' },
+            { id: 'add_prefix', label: 'Add Prefix' }, { id: 'add_suffix', label: 'Add Suffix' },
+          ]} value={config.transform || 'trim'} onChange={v => u('transform', v)} columns={3} />
+          {(config.transform === 'add_prefix' || config.transform === 'add_suffix') && (
+            <div className="mt-3">
+              <Label>Value</Label>
+              <input type="text" value={config.value || ''} onChange={e => u('value', e.target.value)}
+                placeholder={config.transform === 'add_prefix' ? 'Text to prepend...' : 'Text to append...'} className={INPUT} />
+            </div>
+          )}
+        </Panel>
+      </div>
     );
   }
 
   if (nodeId === 'prompt-builder') {
     return (
-      <Section title="About This Node">
-        <div className="px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-          <p className="text-sm text-gray-400 leading-relaxed">
-            This node assembles a cohesive prompt from connected inputs (description, style, props). Connect other nodes to its input ports.
-          </p>
-        </div>
-      </Section>
+      <Panel title="About" description="Assembles a cohesive prompt from connected inputs (description, style, props, brand guide). Connect nodes to its input ports.">
+        <p className="text-sm text-slate-500">No manual configuration needed — outputs a single optimized generation prompt from connected inputs.</p>
+      </Panel>
     );
   }
 
-  // shorts-create, storyboard-create, or any other content node — use schema-based form
-  if (nodeId === 'shorts-create') {
-    const nicheOptions = (schema.niche?.options || Object.keys(NICHE_LABELS)).map(id => ({
-      id,
-      label: NICHE_LABELS[id] || id,
-    }));
-
+  if (nodeId === 'linkedin-post') {
     return (
-      <>
-        <Section title="Niche">
-          <div className="max-h-[360px] overflow-y-auto pr-1">
-            <CardSelect
-              options={nicheOptions}
-              value={config.niche || schema.niche?.default || 'ai_tech_news'}
-              onChange={v => updateConfig('niche', v)}
-            />
-          </div>
-        </Section>
-        <Section title="Duration">
-          <PillSelect
-            options={(schema.duration?.options || ['30', '45', '60', '90']).map(d => ({ id: d, label: `${d}s` }))}
-            value={config.duration || schema.duration?.default || '60'}
-            onChange={v => updateConfig('duration', v)}
-          />
-        </Section>
-        {schema.video_model && (
-          <Section title="Video Model">
-            <CardSelect
-              options={VIDEO_MODELS.filter(m => schema.video_model.options.includes(m.id))}
-              value={config.video_model || schema.video_model?.default || 'kling-2.0-master'}
-              onChange={v => updateConfig('video_model', v)}
-            />
-          </Section>
+      <div className="space-y-5">
+        {wired.has('text') ? <WiredBanner portName="text" /> : (
+          <Panel title="Post Topic">
+            <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
+              placeholder="What should the post be about?" rows={3} className={TEXTAREA} />
+          </Panel>
         )}
-      </>
+        <Panel title="Writing Style">
+          <PillGroup options={[
+            { id: 'professional', label: 'Professional' }, { id: 'thought_leader', label: 'Thought Leader' },
+            { id: 'conversational', label: 'Conversational' }, { id: 'storytelling', label: 'Storytelling' },
+            { id: 'educational', label: 'Educational' }, { id: 'provocative', label: 'Provocative' },
+          ]} value={config.writing_style || 'professional'} onChange={v => u('writing_style', v)} columns={3} />
+        </Panel>
+        <Panel title="Brand Guide">
+          <BrandStyleGuideSelector value={config.brand_kit || null} onChange={v => u('brand_kit', v)} />
+        </Panel>
+      </div>
     );
   }
 
-  // Fallback for storyboard-create and others
-  return <GenericSchemaForm config={config} updateConfig={updateConfig} schema={schema} />;
+  return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
 }
 
-function PublishForm({ config, updateConfig, nodeType, connections }) {
-  const schema = nodeType.configSchema || {};
 
-  // Map node type to platform
-  const platformMap = {
-    'youtube-upload': 'youtube',
-    'tiktok-publish': 'tiktok',
-    'instagram-post': 'instagram',
-    'facebook-post': 'facebook',
-    'linkedin-post': 'linkedin',
-  };
+// ── PublishForm ───────────────────────────────────────────────────────────────
+
+function PublishForm({ config, u, nodeType, connections, wired }) {
+  const platformMap = { 'youtube-upload': 'youtube', 'tiktok-publish': 'tiktok', 'instagram-post': 'instagram', 'facebook-post': 'facebook' };
   const platform = platformMap[nodeType.id];
-  const connection = connections?.find(c => c.platform === platform);
+  const conn = connections?.find(c => c.platform === platform);
 
   return (
-    <>
-      <Section title="Account Status">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-          {connection?.connected ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-              <div>
-                <p className="text-sm text-emerald-300 font-medium">Connected</p>
-                {connection.account_name && (
-                  <p className="text-[11px] text-gray-500 mt-0.5">{connection.account_name}</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
-              <div>
-                <p className="text-sm text-red-300 font-medium">Not connected</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Connect in Settings &rarr; Connected Accounts</p>
-              </div>
-            </>
-          )}
-        </div>
-      </Section>
-
-      {nodeType.id === 'youtube-upload' && schema.privacy && (
-        <Section title="Settings">
-          <LabeledSelect
-            label="Privacy"
-            value={config.privacy || schema.privacy?.default || 'private'}
-            onChange={v => updateConfig('privacy', v)}
-            options={[
-              { id: 'public', label: 'Public' },
-              { id: 'unlisted', label: 'Unlisted' },
-              { id: 'private', label: 'Private' },
-            ]}
-          />
-        </Section>
-      )}
-
-      {nodeType.id !== 'youtube-upload' && (
-        <Section title="Settings">
-          <div className="px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Configure via the node's input ports. Connect text, image, or video nodes to set the post content.
-            </p>
+    <div className="space-y-5">
+      {platform && (
+        <Panel title="Account Status">
+          <div className="flex items-center gap-3">
+            {conn?.connected ? (
+              <>
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-700">Connected</p>
+                  {conn.account_name && <p className="text-xs text-slate-500">{conn.account_name}</p>}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div>
+                  <p className="text-sm font-medium text-red-700">Not connected</p>
+                  <p className="text-xs text-slate-500">Connect in Settings &rarr; Connected Accounts</p>
+                </div>
+              </>
+            )}
           </div>
-        </Section>
+        </Panel>
       )}
-    </>
+
+      {nodeType.id === 'youtube-upload' && (
+        <>
+          {wired.has('video') && <WiredBanner portName="video" />}
+          <div className="grid grid-cols-2 gap-5">
+            <Panel title="Title">
+              <input type="text" value={config.title || ''} onChange={e => u('title', e.target.value)}
+                placeholder="Video title..." className={INPUT} />
+            </Panel>
+            <Panel title="Privacy">
+              <PillGroup options={[{ id: 'public', label: 'Public' }, { id: 'unlisted', label: 'Unlisted' }, { id: 'private', label: 'Private' }]}
+                value={config.privacy || 'private'} onChange={v => u('privacy', v)} columns={3} />
+            </Panel>
+          </div>
+          <Panel title="Description">
+            <textarea value={config.description || ''} onChange={e => u('description', e.target.value)}
+              placeholder="Video description..." rows={3} className={TEXTAREA} />
+          </Panel>
+          <Panel title="Tags">
+            <input type="text" value={config.tags || ''} onChange={e => u('tags', e.target.value)}
+              placeholder="tag1, tag2, tag3" className={INPUT} />
+            <p className="text-xs text-slate-400 mt-1">Comma-separated</p>
+          </Panel>
+        </>
+      )}
+
+      {nodeType.id === 'save-to-library' && (
+        <Panel title="About">
+          <p className="text-sm text-slate-600">Saves media to your permanent library. FAL CDN URLs expire within hours — always save generated media here.</p>
+        </Panel>
+      )}
+
+      {!['youtube-upload', 'save-to-library'].includes(nodeType.id) && (
+        <Panel title="Post Content">
+          <p className="text-sm text-slate-500">Connect text, image, or video nodes to the input ports to set the post content.</p>
+        </Panel>
+      )}
+    </div>
   );
 }
 
-function UtilityForm({ config, updateConfig, nodeType }) {
+
+// ── UtilityForm ──────────────────────────────────────────────────────────────
+
+function UtilityForm({ config, u, nodeType, wired }) {
   const nodeId = nodeType.id;
   const schema = nodeType.configSchema || {};
 
-  const descriptions = {
-    'save-to-library': 'Saves media to your permanent library. FAL URLs expire -- always save!',
-    'video-trim': 'Trim a video to a specific time range.',
-    'extract-frame': 'Extract a single frame from a video.',
-    'text-transform': 'Transform text with various operations.',
-    'delay': 'Wait a specified number of seconds before continuing.',
-    'conditional': 'Route data based on a condition check.',
-  };
+  if (nodeId === 'delay') {
+    return (
+      <Panel title="Delay Duration">
+        <PillGroup options={(schema.seconds?.options || ['5','10','30','60']).map(s => ({ id: s, label: `${s}s` }))}
+          value={config.seconds || '10'} onChange={v => u('seconds', v)} columns={4} />
+      </Panel>
+    );
+  }
 
-  return (
-    <>
-      {descriptions[nodeId] && (
-        <Section title="About">
-          <div className="px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-            <p className="text-sm text-gray-400 leading-relaxed">{descriptions[nodeId]}</p>
-          </div>
-        </Section>
-      )}
-
-      {nodeId === 'save-to-library' && Object.keys(schema).length === 0 && (
-        <Section title="Configuration">
-          <div className="px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-            <p className="text-sm text-gray-500 leading-relaxed">
-              No configuration needed. Connect a URL to the input port and the file will be saved to your library.
-            </p>
-          </div>
-        </Section>
-      )}
-
-      {nodeId === 'video-trim' && (
-        <Section title="Time Range">
-          <LabeledInput
-            label="Start Time (seconds)"
-            value={config.start_time}
-            onChange={v => updateConfig('start_time', v)}
-            placeholder="0"
-          />
-          <LabeledInput
-            label="End Time (seconds)"
-            value={config.end_time}
-            onChange={v => updateConfig('end_time', v)}
-            placeholder="10"
-          />
-        </Section>
-      )}
-
-      {nodeId === 'extract-frame' && schema.frame_type && (
-        <Section title="Frame Type">
-          <PillSelect
-            options={[
-              { id: 'first', label: 'First' },
-              { id: 'middle', label: 'Middle' },
-              { id: 'last', label: 'Last' },
-            ]}
-            value={config.frame_type || schema.frame_type?.default || 'first'}
-            onChange={v => updateConfig('frame_type', v)}
-          />
-        </Section>
-      )}
-
-      {nodeId === 'text-transform' && (
-        <Section title="Transform">
-          <LabeledSelect
-            label="Operation"
-            value={config.transform || schema.transform?.default || 'trim'}
-            onChange={v => updateConfig('transform', v)}
-            options={(schema.transform?.options || []).map(id => ({
-              id,
-              label: { uppercase: 'UPPERCASE', lowercase: 'lowercase', trim: 'Trim whitespace', extract_first_line: 'Extract first line', add_prefix: 'Add prefix', add_suffix: 'Add suffix' }[id] || id,
-            }))}
-          />
-          {(config.transform === 'add_prefix' || config.transform === 'add_suffix') && (
-            <LabeledInput
-              label="Value"
-              value={config.value}
-              onChange={v => updateConfig('value', v)}
-              placeholder={config.transform === 'add_prefix' ? 'Text to prepend...' : 'Text to append...'}
-            />
-          )}
-        </Section>
-      )}
-
-      {nodeId === 'delay' && schema.seconds && (
-        <Section title="Delay">
-          <PillSelect
-            options={(schema.seconds?.options || []).map(s => ({ id: s, label: `${s}s` }))}
-            value={config.seconds || schema.seconds?.default || '10'}
-            onChange={v => updateConfig('seconds', v)}
-          />
-        </Section>
-      )}
-
-      {nodeId === 'conditional' && (
-        <Section title="Condition">
-          <LabeledSelect
-            label="Check"
-            value={config.condition || schema.condition?.default || 'not_empty'}
-            onChange={v => updateConfig('condition', v)}
-            options={[
-              { id: 'not_empty', label: 'Not empty' },
-              { id: 'contains', label: 'Contains' },
-              { id: 'equals', label: 'Equals' },
-            ]}
-          />
+  if (nodeId === 'conditional') {
+    return (
+      <div className="space-y-5">
+        <Panel title="Condition">
+          <PillGroup options={[{ id: 'not_empty', label: 'Not Empty' }, { id: 'contains', label: 'Contains' }, { id: 'equals', label: 'Equals' }]}
+            value={config.condition || 'not_empty'} onChange={v => u('condition', v)} columns={3} />
           {(config.condition === 'contains' || config.condition === 'equals') && (
-            <LabeledInput
-              label="Compare Value"
-              value={config.compare_value}
-              onChange={v => updateConfig('compare_value', v)}
-              placeholder="Value to compare against..."
-            />
+            <div className="mt-3">
+              <Label>Compare Value</Label>
+              <input type="text" value={config.compare_value || ''} onChange={e => u('compare_value', e.target.value)}
+                placeholder="Value to compare against..." className={INPUT} />
+            </div>
           )}
-        </Section>
-      )}
-    </>
-  );
-}
+        </Panel>
+      </div>
+    );
+  }
 
-function InputForm({ config, updateConfig, nodeType }) {
-  const schema = nodeType.configSchema || {};
-  const inputType = config.inputType || schema.inputType?.default || 'string';
-
-  return (
-    <>
-      <Section title="Input Type">
-        <CardSelect
-          options={[
-            { id: 'string', label: 'Text', description: 'Plain text or prompt' },
-            { id: 'image', label: 'Image', description: 'Image URL' },
-            { id: 'video', label: 'Video', description: 'Video URL' },
-          ]}
-          value={inputType}
-          onChange={v => updateConfig('inputType', v)}
-        />
-      </Section>
-
-      <Section title="Default Value">
-        {inputType === 'string' ? (
-          <LabeledTextarea
-            label="Default Value"
-            value={config.defaultValue}
-            onChange={v => updateConfig('defaultValue', v)}
-            placeholder="Enter default text..."
-            rows={4}
-          />
-        ) : (
-          <LabeledInput
-            label="URL"
-            value={config.defaultValue}
-            onChange={v => updateConfig('defaultValue', v)}
-            placeholder={`Paste ${inputType} URL`}
-          />
+  if (nodeId === 'image-search') {
+    return (
+      <div className="space-y-5">
+        {wired.has('query') ? <WiredBanner portName="query" /> : (
+          <Panel title="Search Query">
+            <textarea value={config.query || ''} onChange={e => u('query', e.target.value)}
+              placeholder="What images are you looking for?" rows={2} className={TEXTAREA} />
+          </Panel>
         )}
-      </Section>
+        <Panel title="Result Count">
+          <input type="number" min="1" max="20" value={config.count || 5} onChange={e => u('count', parseInt(e.target.value) || 5)} className={INPUT} />
+        </Panel>
+      </div>
+    );
+  }
 
-      <Section title="Label">
-        <LabeledInput
-          label="Display Label"
-          value={config.label}
-          onChange={v => updateConfig('label', v)}
-          placeholder="e.g. Topic, Reference Image..."
-        />
-      </Section>
-    </>
+  if (nodeId === 'video-trim') {
+    return (
+      <Panel title="Time Range">
+        <div className="grid grid-cols-2 gap-4">
+          <div><Label>Start (seconds)</Label><input type="number" value={config.start_time || '0'} onChange={e => u('start_time', e.target.value)} className={INPUT} /></div>
+          <div><Label>End (seconds)</Label><input type="number" value={config.end_time || '10'} onChange={e => u('end_time', e.target.value)} className={INPUT} /></div>
+        </div>
+      </Panel>
+    );
+  }
+
+  if (nodeId === 'extract-frame') {
+    return (
+      <Panel title="Frame Type">
+        <PillGroup options={[{ id: 'first', label: 'First' }, { id: 'middle', label: 'Middle' }, { id: 'last', label: 'Last' }]}
+          value={config.frame_type || 'first'} onChange={v => u('frame_type', v)} columns={3} />
+      </Panel>
+    );
+  }
+
+  if (nodeId === 'viewer3d') {
+    return (
+      <Panel title="About">
+        <p className="text-sm text-slate-600">Converts an image to a 3D model via Hunyuan 3D Pro. Connect an image input for the front view.</p>
+      </Panel>
+    );
+  }
+
+  return <GenericForm config={config} u={u} schema={schema} />;
+}
+
+
+// ── InputForm ────────────────────────────────────────────────────────────────
+
+function InputForm({ config, u }) {
+  const inputType = config.inputType || 'string';
+  return (
+    <div className="space-y-5">
+      <Panel title="Input Type">
+        <PillGroup options={[
+          { id: 'string', label: 'Text', desc: 'Plain text or prompt' },
+          { id: 'image', label: 'Image', desc: 'Image URL' },
+          { id: 'video', label: 'Video', desc: 'Video URL' },
+        ]} value={inputType} onChange={v => u('inputType', v)} columns={3} />
+      </Panel>
+      <Panel title="Default Value">
+        {inputType === 'string' ? (
+          <textarea value={config.defaultValue || ''} onChange={e => u('defaultValue', e.target.value)}
+            placeholder="Enter default text..." rows={5} className={TEXTAREA} />
+        ) : (
+          <input type="text" value={config.defaultValue || ''} onChange={e => u('defaultValue', e.target.value)}
+            placeholder={`Paste ${inputType} URL...`} className={INPUT} />
+        )}
+      </Panel>
+      <Panel title="Display Label">
+        <input type="text" value={config.label || ''} onChange={e => u('label', e.target.value)}
+          placeholder="e.g. Topic, Reference Image..." className={INPUT} />
+        <p className="text-xs text-slate-400 mt-1">Shown as the node label on the canvas</p>
+      </Panel>
+    </div>
   );
 }
 
-// Generic fallback form for any schema
-function GenericSchemaForm({ config, updateConfig, schema }) {
-  const TEXTAREA_KEYS = ['prompt', 'description', 'text', 'script', 'topic', 'instructions', 'style'];
 
+// ── Generic fallback ─────────────────────────────────────────────────────────
+
+function GenericForm({ config, u, schema }) {
+  const TEXTAREA_KEYS = ['prompt', 'description', 'text', 'script', 'topic', 'instructions', 'style'];
   if (!schema || Object.keys(schema).length === 0) {
     return (
-      <Section title="Configuration">
-        <div className="px-4 py-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-          <p className="text-sm text-gray-500 leading-relaxed">
-            No configuration options for this node. Connect inputs via the canvas.
-          </p>
-        </div>
-      </Section>
+      <Panel title="Configuration">
+        <p className="text-sm text-slate-500">No configuration options — connect inputs via the canvas.</p>
+      </Panel>
     );
   }
 
   return (
-    <Section title="Configuration">
-      {Object.entries(schema).map(([key, fieldSchema]) => {
-        const value = config[key] ?? fieldSchema.default ?? '';
+    <div className="space-y-5">
+      {Object.entries(schema).map(([key, fs]) => {
+        const value = config[key] ?? fs.default ?? '';
         const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-        if (fieldSchema.type === 'select' && fieldSchema.options) {
+        if (fs.type === 'select' && fs.options) {
           return (
-            <LabeledSelect
-              key={key}
-              label={label}
-              value={value}
-              onChange={v => updateConfig(key, v)}
-              options={fieldSchema.options}
-              description={fieldSchema.description}
-            />
+            <Panel key={key} title={label}>
+              <select value={value} onChange={e => u(key, e.target.value)} className={SELECT}>
+                {fs.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+              {fs.description && <p className="text-xs text-slate-400 mt-1">{fs.description}</p>}
+            </Panel>
           );
         }
 
         if (TEXTAREA_KEYS.some(k => key.toLowerCase().includes(k))) {
           return (
-            <LabeledTextarea
-              key={key}
-              label={label}
-              value={value}
-              onChange={v => updateConfig(key, v)}
-              placeholder={`Enter ${label.toLowerCase()}...`}
-              rows={3}
-              description={fieldSchema.description}
-            />
+            <Panel key={key} title={label}>
+              <textarea value={value} onChange={e => u(key, e.target.value)}
+                placeholder={`Enter ${label.toLowerCase()}...`} rows={3} className={TEXTAREA} />
+              {fs.description && <p className="text-xs text-slate-400 mt-1">{fs.description}</p>}
+            </Panel>
           );
         }
 
         return (
-          <LabeledInput
-            key={key}
-            label={label}
-            value={value}
-            onChange={v => updateConfig(key, v)}
-            placeholder={`Enter ${label.toLowerCase()}...`}
-            description={fieldSchema.description}
-          />
+          <Panel key={key} title={label}>
+            <input type="text" value={value} onChange={e => u(key, e.target.value)}
+              placeholder={`Enter ${label.toLowerCase()}...`} className={INPUT} />
+            {fs.description && <p className="text-xs text-slate-400 mt-1">{fs.description}</p>}
+          </Panel>
         );
       })}
-    </Section>
+    </div>
   );
 }
 
 
-// ── Main modal component ──────────────────────────────────────────────────────
+// ── Main Modal ───────────────────────────────────────────────────────────────
 
-export default function NodeConfigModal({ open, onOpenChange, node, config: initialConfig, onConfigChange, brandKits, connections }) {
+export default function NodeConfigModal({
+  open, onOpenChange, node, config: initialConfig, onConfigChange,
+  brandKits, connections, edges, nodes,
+}) {
   const [config, setConfig] = useState(initialConfig || {});
   const nodeType = node?.data?.nodeType;
 
-  // Sync when node changes
-  useEffect(() => {
-    setConfig(initialConfig || {});
-  }, [initialConfig, node?.id]);
+  useEffect(() => { setConfig(initialConfig || {}); }, [initialConfig, node?.id]);
 
-  const updateConfig = (key, value) => {
+  const u = (key, value) => {
     const next = { ...config, [key]: value };
     setConfig(next);
     onConfigChange(next);
   };
 
+  const wired = useMemo(() => {
+    const set = new Set();
+    if (edges && node) edges.forEach(e => { if (e.target === node.id && e.targetHandle) set.add(e.targetHandle); });
+    return set;
+  }, [edges, node]);
+
   if (!node || !nodeType) return null;
 
-  const categoryLabel = nodeType.category.charAt(0).toUpperCase() + nodeType.category.slice(1);
+  const IconComp = CATEGORY_ICONS[nodeType.category] || Settings;
+
+  const renderForm = () => {
+    const props = { config, u, nodeType, wired, connections };
+    switch (nodeType.category) {
+      case 'image': return <ImageForm {...props} />;
+      case 'video': return <VideoForm {...props} />;
+      case 'audio': return <AudioForm {...props} />;
+      case 'content': return <ContentForm {...props} />;
+      case 'publish': return <PublishForm {...props} />;
+      case 'utility': return <UtilityForm {...props} />;
+      case 'input': return <InputForm config={config} u={u} />;
+      default: return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
+    }
+  };
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-300" />
-        <DialogPrimitive.Content
-          onPointerDownOutside={(e) => {
-            const target = e.detail?.originalEvent?.target || e.target;
-            if (
-              target?.closest?.('.fixed.bottom-6') ||
-              target?.closest?.('[data-sonner-toast]') ||
-              target?.closest?.('[role="status"]')
-            ) {
-              e.preventDefault();
-            }
-          }}
-          className="fixed inset-y-0 right-0 z-50 flex flex-col w-[600px] max-w-[90vw] bg-[#0f0f17] shadow-2xl border-l border-white/10 data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right duration-300 outline-none"
-        >
-          {/* Header */}
-          <div className="flex-shrink-0 px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center text-xl">
-                {nodeType.icon}
-              </div>
-              <div>
-                <DialogPrimitive.Title className="text-base font-semibold text-gray-100">
-                  {nodeType.label}
-                </DialogPrimitive.Title>
-                <DialogPrimitive.Description className="text-xs text-gray-500 mt-0.5">
-                  {categoryLabel} Configuration
-                </DialogPrimitive.Description>
-              </div>
-            </div>
-            <DialogPrimitive.Close className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
-            </DialogPrimitive.Close>
-          </div>
+    <SlideOverPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title={nodeType.label}
+      subtitle={`Configure ${nodeType.category} node settings`}
+      icon={<IconComp className="w-5 h-5" />}
+      width="95vw"
+    >
+      <SlideOverBody className="p-6 bg-slate-50">
+        <div className="max-w-5xl mx-auto">
+          {renderForm()}
 
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            {nodeType.category === 'image' && (
-              <ImageForm config={config} updateConfig={updateConfig} nodeType={nodeType} brandKits={brandKits} />
-            )}
-            {nodeType.category === 'video' && (
-              <VideoForm config={config} updateConfig={updateConfig} nodeType={nodeType} />
-            )}
-            {nodeType.category === 'audio' && (
-              <AudioForm config={config} updateConfig={updateConfig} nodeType={nodeType} />
-            )}
-            {nodeType.category === 'content' && (
-              <ContentForm config={config} updateConfig={updateConfig} nodeType={nodeType} />
-            )}
-            {nodeType.category === 'publish' && (
-              <PublishForm config={config} updateConfig={updateConfig} nodeType={nodeType} connections={connections} />
-            )}
-            {nodeType.category === 'utility' && (
-              <UtilityForm config={config} updateConfig={updateConfig} nodeType={nodeType} />
-            )}
-            {nodeType.category === 'input' && (
-              <InputForm config={config} updateConfig={updateConfig} nodeType={nodeType} />
-            )}
+          {/* Error Handling — always shown */}
+          <div className="mt-5">
+            <Panel title="Error Handling">
+              <PillGroup options={[
+                { id: 'stop', label: 'Stop flow on error' },
+                { id: 'skip', label: 'Skip and continue' },
+                { id: 'retry', label: 'Retry (3 attempts)' },
+              ]} value={config.errorHandling || 'stop'} onChange={v => u('errorHandling', v)} columns={3} />
+            </Panel>
           </div>
+        </div>
+      </SlideOverBody>
 
-          {/* Footer */}
-          <div className="flex-shrink-0 px-6 py-3 border-t border-white/[0.08]">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="w-full px-4 py-2.5 bg-indigo-500/80 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+      <SlideOverFooter>
+        <div className="flex justify-end">
+          <button onClick={() => onOpenChange(false)}
+            className="px-6 py-2.5 bg-[#2C666E] hover:bg-[#07393C] text-white text-sm font-semibold rounded-lg transition-colors">
+            Save Configuration
+          </button>
+        </div>
+      </SlideOverFooter>
+    </SlideOverPanel>
   );
 }
