@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
-  Sun, Moon, Video,
+  Sun, Moon, Video, GitBranch,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -19,6 +19,7 @@ import { ImagineerGuideContent } from './ImagineerGuidePage';
 import { MotionTransferGuideContent } from './MotionTransferGuidePage';
 import { VideoProductionGuideContent } from './VideoProductionGuidePage';
 import { ShortsWorkbenchGuideContent } from './ShortsWorkbenchGuidePage';
+import { AutomationFlowsGuideContent } from './AutomationFlowsGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -71,6 +72,7 @@ const TABS = [
   { id: 'motion',      label: 'Motion',         Icon: Play },
   { id: 'video',       label: 'Video Production', Icon: Film },
   { id: 'shorts',      label: 'Shorts',           Icon: Video },
+  { id: 'flows',       label: 'Automation Flows', Icon: GitBranch },
 ];
 
 const CLI_SUB_TABS = [
@@ -266,6 +268,11 @@ export default function LearnPage() {
         {activeTab === 'shorts' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <ShortsWorkbenchGuideContent />
+          </div>
+        )}
+        {activeTab === 'flows' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <AutomationFlowsGuideContent />
           </div>
         )}
       </div>
