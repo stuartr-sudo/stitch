@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock, Copy, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock, Copy, FlaskConical, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -38,6 +38,7 @@ export default function AdCampaignEditor() {
   const [brand, setBrand] = useState(null);
   const [showStylePicker, setShowStylePicker] = useState(null); // variation id when open
   const [selectedStyle, setSelectedStyle] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const brandName = brand?.brand_name || '';
 
@@ -69,6 +70,25 @@ export default function AdCampaignEditor() {
 
   const platformVariations = variations.filter(v => v.platform === activePlatform);
   const selectedVariation = platformVariations[selectedVariationIdx] || null;
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await apiFetch(`/api/ads/campaigns/${id}/export`);
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(campaign.name || 'campaign').replace(/\s+/g, '-').toLowerCase()}-creatives.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('Failed to export creatives');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!campaign) return;
@@ -222,6 +242,17 @@ export default function AdCampaignEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {variations.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
+              Download Creatives
+            </Button>
+          )}
           {selectedVariation && (
             <Button
               variant="outline"
