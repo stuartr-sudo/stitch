@@ -37,8 +37,10 @@ const NODE_TYPES = {
       { id: 'image_url', type: 'image' }
     ],
     configSchema: {
-      model: { type: 'select', options: ['nano-banana-2', 'fal-flux', 'seeddream-v4'], default: 'nano-banana-2' },
-      aspect_ratio: { type: 'select', options: ['16:9', '9:16', '1:1', '4:5', '3:2'], default: '16:9' }
+      model: { type: 'select', options: ['nano-banana-2', 'fal-flux', 'fal-flux-klein-4b', 'fal-flux-klein-9b', 'seeddream-v4', 'imagen-4', 'kling-image-v3', 'grok-imagine', 'ideogram-v2', 'wavespeed', 'wan-22-t2i'], default: 'nano-banana-2' },
+      aspect_ratio: { type: 'select', options: ['16:9', '9:16', '1:1', '4:5', '3:2'], default: '16:9' },
+      negative_prompt: { type: 'text', default: '' },
+      brand_kit: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
       const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}` : inputs.prompt;
@@ -64,13 +66,14 @@ const NODE_TYPES = {
       { id: 'video_url', type: 'video' }
     ],
     configSchema: {
-      model: { type: 'select', options: ['kling-2.0-master', 'veo-3.1-fast', 'wan-2.5'], default: 'kling-2.0-master' },
-      duration: { type: 'select', options: ['5', '10'], default: '5' }
+      model: { type: 'select', options: ['kling-2.0-master', 'kling-v3-pro', 'kling-o3-pro', 'veo-2', 'veo-3.1-fast', 'veo-3.1-lite', 'pixverse-v6', 'pixverse-v4.5', 'wan-2.5', 'wan-pro', 'hailuo', 'grok-imagine-i2v', 'wavespeed-wan'], default: 'kling-2.0-master' },
+      duration: { type: 'select', options: ['3', '4', '5', '6', '7', '8', '10', '15'], default: '5' },
+      aspect_ratio: { type: 'select', options: ['16:9', '9:16', '1:1'], default: '16:9' }
     },
     async run(inputs, config, context) {
       const videoUrl = await animateImageV2(
         config.model, inputs.image, inputs.prompt || '',
-        '16:9', parseInt(config.duration),
+        config.aspect_ratio || '16:9', parseInt(config.duration),
         context.apiKeys, context.supabase, {}
       );
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'jumpstart-animate', model: config.model });
@@ -109,7 +112,7 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'image_url', type: 'image' }],
     configSchema: {
-      model: { type: 'select', options: ['nano-banana-2', 'seeddream-v4', 'wavespeed-nano-ultra'], default: 'nano-banana-2' }
+      model: { type: 'select', options: ['nano-banana-2', 'seeddream-v4', 'wavespeed-nano-ultra', 'qwen-image-edit'], default: 'nano-banana-2' }
     },
     async run(inputs, config, context) {
       const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}` : inputs.prompt;
@@ -131,7 +134,8 @@ const NODE_TYPES = {
     outputs: [{ id: 'image_url', type: 'image' }],
     configSchema: {
       model: { type: 'select', options: ['nano-banana-2', 'fal-flux', 'seeddream-v4'], default: 'nano-banana-2' },
-      pose_set: { type: 'select', options: ['standard-24', '3d-angles', '3d-action', 'r2v-reference'], default: 'standard-24' }
+      pose_set: { type: 'select', options: ['standard-24', '3d-angles', '3d-action', 'r2v-reference'], default: 'standard-24' },
+      background_mode: { type: 'select', options: ['white', 'gray', 'scene'], default: 'white' }
     },
     async run(inputs, config, context) {
       const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}, character turnaround sheet` : `${inputs.prompt}, character turnaround sheet`;
@@ -152,33 +156,14 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'image_url', type: 'image' }],
     configSchema: {
-      model: { type: 'select', options: ['nano-banana-2', 'wavespeed-nano-ultra'], default: 'nano-banana-2' }
+      model: { type: 'select', options: ['nano-banana-2', 'wavespeed-nano-ultra'], default: 'nano-banana-2' },
+      blend_prompt: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      const imageUrl = await generateImageV2(config.model, 'blend these images together seamlessly', '1:1', context.apiKeys, context.supabase, { image_urls: [inputs.image, inputs.image2] });
+      const blendInstructions = config.blend_prompt || 'blend these images together seamlessly';
+      const imageUrl = await generateImageV2(config.model, blendInstructions, '1:1', context.apiKeys, context.supabase, { image_urls: [inputs.image, inputs.image2] });
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'smoosh', model: config.model });
       return { image_url: imageUrl };
-    }
-  },
-
-  'animate-image': {
-    id: 'animate-image',
-    label: 'Animate Image',
-    category: 'video',
-    icon: '🎞️',
-    inputs: [
-      { id: 'image', type: 'image', required: true },
-      { id: 'prompt', type: 'string', required: false }
-    ],
-    outputs: [{ id: 'video_url', type: 'video' }],
-    configSchema: {
-      model: { type: 'select', options: ['kling-2.0-master', 'veo-3.1-fast', 'wan-2.5', 'hailuo'], default: 'kling-2.0-master' },
-      duration: { type: 'select', options: ['5', '10'], default: '5' }
-    },
-    async run(inputs, config, context) {
-      const videoUrl = await animateImageV2(config.model, inputs.image, inputs.prompt || '', '16:9', parseInt(config.duration), context.apiKeys, context.supabase, {});
-      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'animate-image', model: config.model });
-      return { video_url: videoUrl };
     }
   },
 
@@ -210,8 +195,9 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'audio_url', type: 'audio' }],
     configSchema: {
-      voice: { type: 'select', options: ['Kore', 'Charon', 'Fenrir', 'Aoede', 'Puck'], default: 'Kore' },
-      speed: { type: 'select', options: ['1.0', '1.15', '1.3'], default: '1.15' }
+      voice: { type: 'select', options: ['Kore', 'Puck', 'Charon', 'Zephyr', 'Aoede', 'Achernar', 'Achird', 'Algenib', 'Algieba', 'Alnilam', 'Autonoe', 'Callirrhoe', 'Despina', 'Enceladus', 'Erinome', 'Fenrir', 'Gacrux', 'Iapetus', 'Laomedeia', 'Leda', 'Orus', 'Pulcherrima', 'Rasalgethi', 'Sadachbia', 'Sadaltager', 'Schedar', 'Sulafat', 'Umbriel', 'Vindemiatrix', 'Zubenelgenubi'], default: 'Kore' },
+      speed: { type: 'select', options: ['1.0', '1.15', '1.3'], default: '1.15' },
+      style_instructions: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
       const result = await generateGeminiVoiceover(inputs.text, config.voice, parseFloat(config.speed), context.apiKeys.FAL_KEY);
@@ -230,10 +216,12 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'audio_url', type: 'audio' }],
     configSchema: {
-      duration: { type: 'select', options: ['15', '30', '60'], default: '30' }
+      duration: { type: 'select', options: ['10', '15', '20', '30', '45', '60', '90'], default: '30' },
+      mood: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      const result = await generateMusic(inputs.mood || 'upbeat instrumental', parseInt(config.duration), context.apiKeys.FAL_KEY, context.supabase);
+      const moodValue = inputs.mood || config.mood || 'upbeat instrumental';
+      const result = await generateMusic(moodValue, parseInt(config.duration), context.apiKeys.FAL_KEY, context.supabase);
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'music', model: 'elevenlabs-music' });
       return { audio_url: result };
     }
@@ -249,7 +237,9 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'video_url', type: 'video' }],
     configSchema: {
-      style: { type: 'select', options: ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker'], default: 'word_pop' }
+      style: { type: 'select', options: ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker'], default: 'word_pop' },
+      font_size: { type: 'select', options: ['small', 'medium', 'large'], default: 'medium' },
+      position: { type: 'select', options: ['bottom', 'center', 'top'], default: 'bottom' }
     },
     async run(inputs, config, context) {
       const result = await burnCaptions(inputs.video, config.style, context.apiKeys.FAL_KEY, context.supabase);
@@ -269,10 +259,13 @@ const NODE_TYPES = {
     ],
     outputs: [{ id: 'script', type: 'json' }],
     configSchema: {
-      duration: { type: 'select', options: ['30', '60', '90'], default: '60' }
+      duration: { type: 'select', options: ['30', '60', '90'], default: '60' },
+      niche: { type: 'select', options: ['ai_tech_news', 'finance_money', 'motivation', 'scary_horror', 'history', 'true_crime', 'science_nature', 'relationships', 'health_fitness', 'gaming_popculture', 'conspiracy_mystery', 'business', 'food_cooking', 'travel_adventure', 'psychology', 'space_cosmos', 'animals_wildlife', 'sports', 'education', 'paranormal_ufo'], default: 'ai_tech_news' },
+      tone: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      const result = await generateScript(inputs.topic, inputs.niche || 'general', parseInt(config.duration), context.apiKeys);
+      const nicheValue = inputs.niche || config.niche || 'general';
+      const result = await generateScript(inputs.topic, nicheValue, parseInt(config.duration), context.apiKeys);
       await context.logCost({ username: context.userEmail, category: 'openai', operation: 'script-generator', model: 'gpt-4.1-mini' });
       return { script: result };
     }
@@ -401,6 +394,260 @@ const NODE_TYPES = {
       const imageUrl = await extractFirstFrame(inputs.video, context.apiKeys.FAL_KEY, config.frame_type || 'first');
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'extract-frame', model: 'extract-frame' });
       return { image_url: imageUrl };
+    }
+  },
+
+  // --- New node types ---
+
+  'upscale-image': {
+    id: 'upscale-image',
+    label: 'Upscale Image',
+    category: 'image',
+    icon: '🔍',
+    inputs: [
+      { id: 'image', type: 'image', required: true }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {
+      upscale_factor: { type: 'select', options: ['2', '4'], default: '2' }
+    },
+    async run(inputs, config, context) {
+      const { request_id } = await pollFalQueue('fal-ai/topaz/upscale/image', {
+        image_url: inputs.image,
+        model: 'Standard V2',
+        upscale_factor: parseInt(config.upscale_factor),
+        face_enhancement: false
+      }, context.apiKeys.FAL_KEY);
+      const result = await pollFalQueue(`fal-ai/topaz/upscale/image`, null, context.apiKeys.FAL_KEY, request_id);
+      const imageUrl = await uploadUrlToSupabase(result.image.url || result.output.url || result.url, context.supabase, 'media/upscaled');
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'upscale-image', model: 'topaz' });
+      return { image_url: imageUrl };
+    }
+  },
+
+  'video-extend': {
+    id: 'video-extend',
+    label: 'Video Extend',
+    category: 'video',
+    icon: '⏩',
+    inputs: [
+      { id: 'video', type: 'video', required: true },
+      { id: 'prompt', type: 'string', required: false }
+    ],
+    outputs: [{ id: 'video_url', type: 'video' }],
+    configSchema: {
+      model: { type: 'select', options: ['seedance-1.5-pro', 'veo-3.1-extend', 'grok-extend'], default: 'veo-3.1-extend' },
+      duration: { type: 'select', options: ['4', '6', '8', '10'], default: '6' }
+    },
+    async run(inputs, config, context) {
+      return { video_url: inputs.video };
+    }
+  },
+
+  'video-restyle': {
+    id: 'video-restyle',
+    label: 'Video Restyle',
+    category: 'video',
+    icon: '🎭',
+    inputs: [
+      { id: 'video', type: 'video', required: true },
+      { id: 'style_prompt', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'video_url', type: 'video' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      return { video_url: inputs.video };
+    }
+  },
+
+  'linkedin-post': {
+    id: 'linkedin-post',
+    label: 'LinkedIn Post',
+    category: 'publish',
+    icon: '💼',
+    inputs: [
+      { id: 'text', type: 'string', required: true },
+      { id: 'image', type: 'image', required: false }
+    ],
+    outputs: [{ id: 'post_id', type: 'string' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      return { post_id: `li_placeholder_${Date.now()}` };
+    }
+  },
+
+  'carousel-create': {
+    id: 'carousel-create',
+    label: 'Carousel Create',
+    category: 'content',
+    icon: '📊',
+    inputs: [
+      { id: 'topic', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'carousel_id', type: 'string' }],
+    configSchema: {
+      platform: { type: 'select', options: ['instagram', 'linkedin', 'tiktok', 'facebook'], default: 'instagram' },
+      style: { type: 'select', options: ['modern-clean', 'bold-impact', 'gradient-wave', 'minimal-zen', 'corporate-blue', 'creative-pop', 'dark-luxe', 'organic-natural'], default: 'modern-clean' }
+    },
+    async run(inputs, config, context) {
+      return { carousel_id: `placeholder_${Date.now()}` };
+    }
+  },
+
+  'ads-generate': {
+    id: 'ads-generate',
+    label: 'Ads Generate',
+    category: 'content',
+    icon: '📢',
+    inputs: [
+      { id: 'product_description', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'campaign_id', type: 'string' }],
+    configSchema: {
+      platform: { type: 'select', options: ['linkedin', 'google', 'meta'], default: 'linkedin' },
+      objective: { type: 'select', options: ['traffic', 'conversions', 'awareness', 'leads'], default: 'traffic' },
+      landing_url: { type: 'text', default: '' },
+      target_audience: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      return { campaign_id: `placeholder_${Date.now()}` };
+    }
+  },
+
+  'shorts-create': {
+    id: 'shorts-create',
+    label: 'Shorts Create',
+    category: 'content',
+    icon: '📱',
+    inputs: [
+      { id: 'topic', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'draft_id', type: 'string' }],
+    configSchema: {
+      niche: { type: 'select', options: ['ai_tech_news', 'finance_money', 'motivation', 'scary_horror', 'history', 'true_crime', 'science_nature', 'relationships', 'health_fitness', 'gaming_popculture', 'conspiracy_mystery', 'business', 'food_cooking', 'travel_adventure', 'psychology', 'space_cosmos', 'animals_wildlife', 'sports', 'education', 'paranormal_ufo'], default: 'ai_tech_news' },
+      duration: { type: 'select', options: ['30', '45', '60', '90'], default: '60' },
+      video_model: { type: 'select', options: ['kling-2.0-master', 'veo-3.1-fast', 'wan-2.5'], default: 'kling-2.0-master' }
+    },
+    async run(inputs, config, context) {
+      return { draft_id: `placeholder_${Date.now()}` };
+    }
+  },
+
+  'storyboard-create': {
+    id: 'storyboard-create',
+    label: 'Storyboard Create',
+    category: 'content',
+    icon: '🎬',
+    inputs: [
+      { id: 'topic', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'storyboard_id', type: 'string' }],
+    configSchema: {
+      duration: { type: 'select', options: ['15', '30', '60', '90'], default: '30' },
+      style: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      return { storyboard_id: `placeholder_${Date.now()}` };
+    }
+  },
+
+  'image-search': {
+    id: 'image-search',
+    label: 'Image Search',
+    category: 'input',
+    icon: '🔎',
+    inputs: [
+      { id: 'query', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      return { image_url: '' };
+    }
+  },
+
+  'text-transform': {
+    id: 'text-transform',
+    label: 'Text Transform',
+    category: 'utility',
+    icon: '🔤',
+    inputs: [
+      { id: 'text', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'text', type: 'string' }],
+    configSchema: {
+      transform: { type: 'select', options: ['uppercase', 'lowercase', 'trim', 'extract_first_line', 'add_prefix', 'add_suffix'], default: 'trim' },
+      value: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      let text = inputs.text || '';
+      switch (config.transform) {
+        case 'uppercase': text = text.toUpperCase(); break;
+        case 'lowercase': text = text.toLowerCase(); break;
+        case 'trim': text = text.trim(); break;
+        case 'extract_first_line': text = text.split('\n')[0]; break;
+        case 'add_prefix': text = (config.value || '') + text; break;
+        case 'add_suffix': text = text + (config.value || ''); break;
+      }
+      return { text };
+    }
+  },
+
+  'delay': {
+    id: 'delay',
+    label: 'Delay',
+    category: 'utility',
+    icon: '⏱️',
+    inputs: [
+      { id: 'passthrough', type: 'string', required: false }
+    ],
+    outputs: [{ id: 'passthrough', type: 'string' }],
+    configSchema: {
+      seconds: { type: 'select', options: ['5', '10', '30', '60', '120', '300'], default: '10' }
+    },
+    async run(inputs, config, context) {
+      await new Promise(r => setTimeout(r, parseInt(config.seconds) * 1000));
+      return { passthrough: inputs.passthrough || '' };
+    }
+  },
+
+  'conditional': {
+    id: 'conditional',
+    label: 'Conditional',
+    category: 'utility',
+    icon: '🔀',
+    inputs: [
+      { id: 'value', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'result', type: 'string' }],
+    configSchema: {
+      condition: { type: 'select', options: ['not_empty', 'contains', 'equals'], default: 'not_empty' },
+      compare_value: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      const value = inputs.value || '';
+      let conditionMet = false;
+      switch (config.condition) {
+        case 'not_empty': conditionMet = value.length > 0; break;
+        case 'contains': conditionMet = value.includes(config.compare_value || ''); break;
+        case 'equals': conditionMet = value === (config.compare_value || ''); break;
+      }
+      return { result: conditionMet ? value : '' };
+    }
+  },
+
+  'viewer3d': {
+    id: 'viewer3d',
+    label: '3D Viewer',
+    category: 'image',
+    icon: '🧊',
+    inputs: [
+      { id: 'image', type: 'image', required: true }
+    ],
+    outputs: [{ id: 'model_url', type: 'string' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      return { model_url: `placeholder_${Date.now()}` };
     }
   }
 };

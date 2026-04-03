@@ -100,11 +100,7 @@ export default function FlowBuilderPage() {
         if (!compatible) return; // silently reject incompatible connection
       }
     }
-    setEdges(eds => addEdge({
-      ...params,
-      animated: false,
-      style: { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5 }
-    }, eds));
+    setEdges(eds => addEdge(params, eds));
   }, [setEdges, nodes]);
 
   // Handle drop from palette

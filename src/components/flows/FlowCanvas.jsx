@@ -7,12 +7,16 @@ import {
   MiniMap,
   Controls,
   Background,
-  addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import StitchNode from './nodes/StitchNode';
 
 const nodeTypes = { stitch: StitchNode };
+
+const defaultEdgeOptions = {
+  style: { stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1.5 },
+  animated: false,
+};
 
 export default function FlowCanvas({
   nodes,
@@ -38,6 +42,11 @@ export default function FlowCanvas({
     if (onNodeSelect) onNodeSelect(node);
   }, [onNodeSelect]);
 
+  // Deselect node when clicking on empty canvas
+  const handlePaneClick = useCallback(() => {
+    if (onNodeSelect) onNodeSelect(null);
+  }, [onNodeSelect]);
+
   // Merge step states into node data for status overlays
   const nodesWithStatus = nodes.map(node => ({
     ...node,
@@ -56,7 +65,10 @@ export default function FlowCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        deleteKeyCode={['Backspace', 'Delete']}
         fitView
         proOptions={{ hideAttribution: true }}
         style={{ background: '#0a0a0f' }}
