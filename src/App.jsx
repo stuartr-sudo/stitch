@@ -33,6 +33,7 @@ import LoraGuidePage from './pages/LoraGuidePage';
 import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
 import AdsManagerGuidePage from './pages/AdsManagerGuidePage';
+import MotionTransferGuidePage from './pages/MotionTransferGuidePage';
 import SetupKeys from './pages/SetupKeys';
 import EducatePage from './pages/EducatePage';
 import LearnPage from './pages/LearnPage';
@@ -290,6 +291,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Motion Transfer guide — also accessible via /learn?tab=motion */}
+          <Route path="/motion" element={<Navigate to="/learn?tab=motion" replace />} />
 
           {/* Redirects from old guide routes to /learn */}
           <Route path="/lora" element={<Navigate to="/learn?tab=lora" replace />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
-  RotateCcw, LayoutGrid, Target, GraduationCap, Wand2,
+  RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
 } from 'lucide-react';
 import LearnTab from '@/components/educate/LearnTab';
 import PracticeTab from '@/components/educate/PracticeTab';
@@ -14,6 +14,7 @@ import { TurnaroundGuideContent } from './TurnaroundGuidePage';
 import { CarouselGuideContent } from './CarouselGuidePage';
 import { AdsManagerGuideContent } from './AdsManagerGuidePage';
 import { ImagineerGuideContent } from './ImagineerGuidePage';
+import { MotionTransferGuideContent } from './MotionTransferGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -63,6 +64,7 @@ const TABS = [
   { id: 'turnaround',  label: 'Turnaround',     Icon: RotateCcw },
   { id: 'carousels',   label: 'Carousels',      Icon: LayoutGrid },
   { id: 'ads',         label: 'Ads Manager',    Icon: Target },
+  { id: 'motion',      label: 'Motion',         Icon: Play },
 ];
 
 const CLI_SUB_TABS = [
@@ -227,6 +229,11 @@ export default function LearnPage() {
         {activeTab === 'imagineer' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
             <ImagineerGuideContent />
+          </div>
+        )}
+        {activeTab === 'motion' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 min-h-full">
+            <MotionTransferGuideContent />
           </div>
         )}
       </div>
