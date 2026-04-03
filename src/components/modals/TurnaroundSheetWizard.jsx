@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   RotateCcw, Loader2, Download, Upload, CheckCircle2, AlertCircle,
   X, Grid3X3, Scissors, Sparkles, ArrowLeft, ChevronRight,
-  Pencil, Trash2, Eye, Save, RotateCw, Check, XCircle, FolderOpen
+  Pencil, Trash2, Eye, Save, RotateCw, Check, XCircle, FolderOpen, Film
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1040,6 +1040,62 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
     }
   };
 
+  // ─── Generate R2V Video from turnaround cells ─────────────────────────────
+  const handleGenerateR2V = async () => {
+    const keepCells = cellImages.filter(c => !c.deleted);
+    if (keepCells.length < 2) { toast.error('Need at least 2 cells for R2V references.'); return; }
+
+    const grid = getGridForSheet(activeSheet?.poseSet);
+    const isR2VPoseSet = activeSheet?.poseSet === 'r2v-reference';
+
+    // Upload cells to get hosted URLs (data URLs won't work for R2V)
+    setSavingForLora(true);
+    const hostedUrls = [];
+    try {
+      for (const cell of keepCells) {
+        const res = await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: cell.url,
+            type: 'image',
+            title: `Turnaround R2V — ${cell.label}`,
+            source: 'turnaround-r2v',
+          }),
+        });
+        const data = await res.json();
+        hostedUrls.push(data.url || data.thumbnail_url);
+      }
+    } catch (err) {
+      toast.error('Failed to upload cells: ' + err.message);
+      setSavingForLora(false);
+      return;
+    }
+    setSavingForLora(false);
+
+    // Build reference image list for JumpStart R2V
+    // R2V Reference pose set (3x2): Row 1 = full body [0,1,2], Row 2 = portraits [3,4,5]
+    // Other pose sets: use all cells as references, first cell as frontal
+    let referenceImages;
+    if (isR2VPoseSet && hostedUrls.length >= 6) {
+      // Front portrait as the primary image, all full-body angles as references
+      referenceImages = [hostedUrls[3], hostedUrls[0], hostedUrls[4], hostedUrls[1], hostedUrls[5], hostedUrls[2]];
+    } else {
+      referenceImages = hostedUrls;
+    }
+
+    // Close turnaround wizard and open JumpStart with R2V model + references
+    onClose();
+    window.dispatchEvent(new CustomEvent('open-tool', {
+      detail: {
+        tool: 'jumpstart',
+        imageUrl: referenceImages[0],
+        model: 'kling-r2v-pro',
+        referenceImages,
+      },
+    }));
+  };
+
   // Legacy: save from grid overlay
   const handleSaveSelectedForLora = async () => {
     const saveUrl = sheetImageUrl;
@@ -1940,6 +1996,34 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                   </div>
                 ))}
               </div>
+              {/* R2V Video Generation */}
+              {activeCells.length >= 2 && (
+                <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-purple-800 flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5" />
+                        Generate R2V Video
+                      </p>
+                      <p className="text-[10px] text-purple-600 mt-0.5">
+                        {activeSheet?.poseSet === 'r2v-reference'
+                          ? 'Use these R2V-optimized cells as multi-angle character references for Kling O3 video generation.'
+                          : 'Use these cells as character references for Kling O3 Reference-to-Video.'}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleGenerateR2V}
+                      disabled={savingForLora || activeCells.length < 2}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-xs"
+                    >
+                      {savingForLora
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Preparing...</>
+                        : <><Film className="w-3.5 h-3.5" /> Open in JumpStart R2V</>}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Reassembled Sheet Preview */}

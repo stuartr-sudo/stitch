@@ -53,6 +53,8 @@ export default async function handler(req, res) {
     cameraDirection,
     videoStylePrompt,
     colorGrade,
+    // Model-aware prompt optimization
+    targetModel,
   } = req.body;
 
   if (!description && !referenceDescription) {
@@ -111,7 +113,9 @@ export default async function handler(req, res) {
     if (bsg.length > 0) sections.push(`BRAND STYLE GUIDE:\n${bsg.join('\n')}`);
   }
 
-  const systemPrompt = getSystemPrompt(tool);
+  if (targetModel) sections.push(`TARGET VIDEO MODEL: ${targetModel}`);
+
+  const systemPrompt = getSystemPrompt(tool, targetModel);
 
   try {
     const response = await openai.chat.completions.create({
@@ -137,7 +141,36 @@ export default async function handler(req, res) {
   }
 }
 
-function getSystemPrompt(tool) {
+function getModelGuidance(targetModel) {
+  if (!targetModel) return '';
+  const m = targetModel.toLowerCase();
+  if (m.includes('kling')) {
+    return `\n\nMODEL-SPECIFIC OPTIMIZATION (Kling):
+- Structure the prompt in this order: CAMERA → SUBJECT → ACTION → ENVIRONMENT → LIGHTING → TEXTURE
+- Kling responds well to explicit camera descriptions (e.g., "medium tracking shot", "slow push-in", "deliberate 360° orbit")
+- Describe the subject's action in present continuous tense ("is walking", "is reaching for")
+- Include environmental atmosphere details (steam, dust, rain) for realism
+- For dialogue scenes, describe speaking actions and emotions explicitly`;
+  }
+  if (m.includes('veo')) {
+    return `\n\nMODEL-SPECIFIC OPTIMIZATION (Veo 3.1):
+- Lead with the overall scene description and mood
+- Veo excels with cinematic language: "establishing shot", "dolly zoom", "rack focus"
+- Describe lighting conditions in photographic terms (golden hour, rim lighting, motivated lighting)
+- Include subtle motion details — Veo handles nuanced micro-movements well
+- Avoid overly complex multi-character interactions in a single shot`;
+  }
+  if (m.includes('wan')) {
+    return `\n\nMODEL-SPECIFIC OPTIMIZATION (Wan):
+- Keep prompts concise and action-focused
+- Wan works best with clear single-subject actions
+- Describe the primary motion explicitly
+- Simple, direct scene descriptions outperform complex narratives`;
+  }
+  return '';
+}
+
+function getSystemPrompt(tool, targetModel) {
   const base = `You are an expert AI image prompt engineer. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for an AI image generator.
 
 Rules:
@@ -184,7 +217,7 @@ Rules:
 - Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, Cocomelon, Studio Ghibli, etc.) — describe the visual style characteristics instead
 - Keep the prompt under 200 words — concise but vivid
 - Do NOT include any "AVOID:" or negative prompt section — video models handle negatives separately
-- Focus entirely on what the scene SHOULD look like and how it should MOVE`;
+- Focus entirely on what the scene SHOULD look like and how it should MOVE${getModelGuidance(targetModel)}`;
   }
 
   if (tool === 'storyboard') {
@@ -201,7 +234,7 @@ Rules:
 - Keep the prompt under 300 words — concise but vivid
 - If a video style direction is provided, integrate its cinematography naturally
 - Do NOT include any "AVOID:" or negative prompt section — video models handle negatives separately
-- Focus entirely on what the scene SHOULD look like, not what to avoid`;
+- Focus entirely on what the scene SHOULD look like, not what to avoid${getModelGuidance(targetModel)}`;
   }
 
   return base; // imagineer default

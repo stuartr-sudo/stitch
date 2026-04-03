@@ -185,6 +185,54 @@ export async function animateImageV2(modelKey, imageUrl, motionPrompt, aspectRat
 }
 
 /**
+ * Multi-shot video generation via Kling V3/O3.
+ * Sends an array of scene prompts with individual durations as a single API call.
+ * Returns a single video with all shots composited by the model.
+ *
+ * @param {string} modelKey - Registry key (fal_kling_v3 or fal_kling_o3)
+ * @param {string|null} imageUrl - Optional start frame image
+ * @param {Array<{prompt: string, duration: string}>} multiPrompt - Per-shot prompts + durations
+ * @param {number} totalDuration - Total video duration in seconds
+ * @param {string} aspectRatio - e.g. '9:16'
+ * @param {object} keys - API keys
+ * @param {object} supabase - Supabase client
+ * @param {object} opts - Extra options (generate_audio, shot_type)
+ */
+export async function animateMultiShot(modelKey, imageUrl, multiPrompt, totalDuration, aspectRatio, keys, supabase, opts = {}) {
+  const model = VIDEO_MODELS[modelKey];
+  if (!model) throw new MediaGenerationError(modelKey, 'video', `Unknown model: ${modelKey}`);
+  if (!model.buildMultiShotBody) throw new MediaGenerationError(modelKey, 'video', `Model ${modelKey} does not support multi-shot`);
+
+  const provider = PROVIDER_CONFIG[model.provider];
+  if (!provider) throw new MediaGenerationError(modelKey, 'video', `Unknown provider: ${model.provider}`);
+
+  const safeImageUrl = imageUrl ? await standardizeImageForVideo(imageUrl, supabase) : undefined;
+
+  const body = model.buildMultiShotBody(safeImageUrl, multiPrompt, totalDuration, aspectRatio, opts);
+
+  const res = await fetch(`${provider.baseUrl}/${model.endpoint}`, {
+    method: 'POST',
+    headers: provider.buildHeaders(keys),
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new MediaGenerationError(modelKey, 'video', errText);
+  }
+
+  const queueData = await res.json();
+
+  const directResult = model.parseResult(queueData);
+  if (directResult) return uploadUrlToSupabase(directResult, supabase, 'pipeline/videos');
+
+  const output = await provider.poll(queueData, model, keys, model.pollConfig);
+  const url = model.parseResult(output);
+  if (!url) throw new MediaGenerationError(modelKey, 'video', 'No URL in response');
+  return uploadUrlToSupabase(url, supabase, 'pipeline/videos');
+}
+
+/**
  * Generate video from reference image via R2V endpoint.
  * Three providers with different body shapes.
  */

@@ -133,6 +133,13 @@ app.post('/api/trip/restyle', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Video Analyzer route (with auth)
+app.post('/api/analyze/video', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/video.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Animate routes (with auth)
 app.post('/api/animate/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('animate/generate.js');
@@ -294,6 +301,13 @@ app.post('/api/viewer3d/generate', authenticateToken, async (req, res) => {
 
 app.post('/api/viewer3d/result', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('viewer3d/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Characters route (with auth)
+app.all('/api/characters*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('characters/characters.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
@@ -676,6 +690,13 @@ app.get('/api/styles/captions', authenticateToken, async (req, res) => {
   res.json({ presets: CAPTION_STYLES });
 });
 app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
+
+// Shorts Workbench — Ideas Agent (bulk topic generation)
+app.post('/api/workbench/generate-ideas', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/generate-ideas.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
 
 // Shorts Workbench (step-by-step pipeline)
 app.all('/api/workbench/:action', authenticateToken, async (req, res) => {

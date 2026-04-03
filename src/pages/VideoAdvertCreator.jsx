@@ -45,6 +45,7 @@ import {
   Megaphone,
   ListChecks,
   Calendar,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -72,6 +73,7 @@ import ThreeDViewerModal from '@/components/modals/ThreeDViewerModal';
 import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import ProviderStatusChip from '@/components/ProviderStatusChip';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
+import VideoAnalyzerModal from '@/components/modals/VideoAnalyzerModal';
 import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -102,6 +104,8 @@ export default function VideoAdvertCreator() {
   const [showAudioStudio, setShowAudioStudio] = useState(false);
   const [lastGeneratedImage, setLastGeneratedImage] = useState(null); // { url, prompt } for action buttons
   const [pendingImage, setPendingImage] = useState(null); // image URL to pass to next modal
+  const [pendingModel, setPendingModel] = useState(null);
+  const [pendingReferenceImages, setPendingReferenceImages] = useState(null);
 
   // Editor & Timeline state
   const [currentTime, setCurrentTime] = useState(0);
@@ -122,12 +126,14 @@ export default function VideoAdvertCreator() {
     navigate(`/storyboards/${storyboardId}`);
   }, [searchParams]);
 
-  // Listen for open-tool events from child modals (e.g., Imagineer Edit result actions)
+  // Listen for open-tool events from child modals (e.g., Imagineer Edit result actions, Turnaround R2V)
   useEffect(() => {
     const handler = (e) => {
-      const { tool, imageUrl } = e.detail || {};
-      if (tool && imageUrl) {
-        setPendingImage(imageUrl);
+      const { tool, imageUrl, model, referenceImages } = e.detail || {};
+      if (tool) {
+        setPendingImage(imageUrl || null);
+        setPendingModel(model || null);
+        setPendingReferenceImages(referenceImages || null);
         setActiveModal(tool);
       }
     };
@@ -706,6 +712,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => setActiveModal('analyzer')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Video Analyzer</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Analyze & remix</p>
+                  </div>
+
+                  <div
                     onClick={() => setActiveModal('library')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -1064,9 +1081,11 @@ export default function VideoAdvertCreator() {
       
       <JumpStartModal
         isOpen={activeModal === 'jumpstart'}
-        onClose={() => { setActiveModal(null); setPendingImage(null); }}
+        onClose={() => { setActiveModal(null); setPendingImage(null); setPendingModel(null); setPendingReferenceImages(null); }}
         onVideoGenerated={handleVideoCreated}
         initialImage={pendingImage}
+        initialModel={pendingModel}
+        initialReferenceImages={pendingReferenceImages}
       />
       
       <JumpStartVideoStudioModal 
@@ -1246,6 +1265,11 @@ export default function VideoAdvertCreator() {
         onClose={() => { setActiveModal(null); setPendingImage(null); }}
         initialImage={pendingImage}
         onImageCreated={(url) => addGeneratedImage(url, 'Turnaround Sheet', 'turnaround')}
+      />
+
+      <VideoAnalyzerModal
+        isOpen={activeModal === 'analyzer'}
+        onClose={() => setActiveModal(null)}
       />
 
       <ApiKeysModal

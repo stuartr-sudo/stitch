@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Check, ChevronDown, ChevronUp,
-  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen, Search, RefreshCw,
+  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen, Search, RefreshCw, Lightbulb, Users,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
@@ -15,10 +15,12 @@ import { TOPIC_SUGGESTIONS } from '@/lib/topicSuggestions';
 import LibraryModal from '@/components/modals/LibraryModal';
 import MotionReferenceInput from '@/components/MotionReferenceInput';
 import CameraControlPanel from '@/components/shorts/CameraControlPanel';
+import CharacterPicker from '@/components/ui/CharacterPicker';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const FLF_MODELS = ['fal_veo3', 'fal_veo3_lite', 'fal_kling_v3', 'fal_kling_o3'];
+const MULTI_SHOT_MODELS = ['fal_kling_v3', 'fal_kling_o3'];
 const SPEED_OPTIONS = [0.75, 0.85, 0.9, 1.0, 1.1, 1.25, 1.3, 1.4];
 
 const NICHE_VISUAL_MOODS = {
@@ -419,6 +421,8 @@ export default function ShortsWorkbenchPage() {
   const [researchedStories, setResearchedStories] = useState([]);
   const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [generatedIdeas, setGeneratedIdeas] = useState([]);
+  const [ideasLoading, setIdeasLoading] = useState(false);
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
@@ -467,6 +471,7 @@ export default function ShortsWorkbenchPage() {
   const [libraryForScene, setLibraryForScene] = useState(null); // sceneIdx when library picker is open
   const [sceneMotionRefs, setSceneMotionRefs] = useState({}); // { sceneIdx: motionRef }
   const [sceneCameraConfigs, setSceneCameraConfigs] = useState({}); // { sceneIdx: cameraConfig }
+  const [sceneCharacters, setSceneCharacters] = useState({}); // { sceneIdx: [character objects] }
 
   const updateSceneCameraConfig = (sceneIdx, config) => {
     setSceneCameraConfigs(prev => ({ ...prev, [sceneIdx]: config }));
@@ -486,6 +491,9 @@ export default function ShortsWorkbenchPage() {
   // ── Step 4: Clips ───────────────────────────────────────────────
   const [clips, setClips] = useState({}); // { sceneIdx: { url, actualDuration, status } }
   const [clipLoading, setClipLoading] = useState(null);
+  const [multiShotMode, setMultiShotMode] = useState(false);
+  const [multiShotLoading, setMultiShotLoading] = useState(false);
+  const [multiShotResult, setMultiShotResult] = useState(null); // { video_url, total_duration }
 
   // ── Step 5: Assembly ────────────────────────────────────────────
   const [finalUrl, setFinalUrl] = useState(null);
@@ -503,13 +511,13 @@ export default function ShortsWorkbenchPage() {
   const lastSaveRef = useRef(null);
 
   const getWorkbenchState = () => ({
-    step, niche, topic, storyContext, framework: framework?.id || null,
+    step, niche, topic, storyContext, framework: framework?.id || null, generatedIdeas,
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
     sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
-    frames, scenePrompts, sceneRefs, sceneMotionRefs, sceneCameraConfigs, clips, finalVideoUrl: finalUrl,
+    frames, scenePrompts, sceneRefs, sceneMotionRefs, sceneCameraConfigs, sceneCharacters, clips, finalVideoUrl: finalUrl,
     // Avatar mode
     avatarMode, avatarSubjectId, avatarSubjectName,
     avatarPortraitUrl, avatarVideoUrl, avatarLipsyncUrl,
@@ -545,7 +553,7 @@ export default function ShortsWorkbenchPage() {
       const s = data.draft?.storyboard_json;
       if (!s) return;
       setDraftId(id);
-      setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || '');
+      setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || ''); setGeneratedIdeas(s.generatedIdeas || []);
       setDuration(s.duration || 60); setScript(s.script || '');
       setGeminiVoice(s.geminiVoice || 'Perseus'); setStyleInstructions(s.styleInstructions || '');
       setVoiceSpeed(s.voiceSpeed || 1.1); setVoiceoverUrl(s.voiceoverUrl || null);
@@ -557,7 +565,7 @@ export default function ShortsWorkbenchPage() {
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
       setAspectRatio(s.aspectRatio || '9:16');
-      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setSceneMotionRefs(s.sceneMotionRefs || {}); setSceneCameraConfigs(s.sceneCameraConfigs || {}); setClips(s.clips || {});
+      setFrames(s.frames || {}); setScenePrompts(s.scenePrompts || {}); setSceneRefs(s.sceneRefs || {}); setSceneMotionRefs(s.sceneMotionRefs || {}); setSceneCameraConfigs(s.sceneCameraConfigs || {}); setSceneCharacters(s.sceneCharacters || {}); setClips(s.clips || {});
       setFinalUrl(s.finalVideoUrl || null);
       // Restore avatar state
       setAvatarMode(s.avatarMode || false);
@@ -639,6 +647,21 @@ export default function ShortsWorkbenchPage() {
       }
     } catch (err) { toast.error(err.message || 'Research failed'); }
     finally { setResearchLoading(false); }
+  };
+
+  const generateIdeas = async () => {
+    if (!niche) { toast.error('Select a niche first'); return; }
+    setIdeasLoading(true);
+    try {
+      const res = await apiFetch('/api/workbench/generate-ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, count: 10 }),
+      });
+      const data = await parseApiResponse(res);
+      setGeneratedIdeas(data.ideas || []);
+    } catch (err) { toast.error(err.message); }
+    finally { setIdeasLoading(false); }
   };
 
   const handleDiscoverTopics = async () => {
@@ -783,6 +806,7 @@ export default function ShortsWorkbenchPage() {
           vision_context: sceneIdx > 0 ? frames[sceneIdx - 1]?.visionAnalysis : null,
           niche,
           use_as_i2i: useAsI2I,
+          characters: sceneCharacters[sceneIdx] || [],
         }),
       });
       const data = await parseApiResponse(res);
@@ -863,6 +887,56 @@ export default function ShortsWorkbenchPage() {
       toast.error(`Scene ${sceneIdx + 1} clip failed: ${err.message}`);
     }
     finally { setClipLoading(null); }
+  };
+
+  // ── Multi-Shot generation (all scenes in one API call) ─────────
+  const generateMultiShot = async () => {
+    if (blocks.length < 2 || blocks.length > 6) {
+      toast.error('Multi-shot requires 2-6 scenes.');
+      return;
+    }
+
+    const totalDur = blocks.reduce((sum, b) => sum + (b.clipDuration || 3), 0);
+    if (totalDur > 15) {
+      toast.error(`Total duration (${totalDur}s) exceeds 15s max for multi-shot.`);
+      return;
+    }
+
+    setMultiShotLoading(true);
+    setMultiShotResult(null);
+
+    try {
+      const scenes = blocks.map((block, i) => ({
+        motionPrompt: scenePrompts[i]?.motionPrompt || 'Smooth cinematic movement',
+        duration: block.clipDuration || 3,
+        videoStyle,
+        cameraConfig: sceneCameraConfigs[i] || null,
+      }));
+
+      const res = await apiFetch('/api/workbench/generate-multishot', {
+        body: JSON.stringify({
+          video_model: videoModel,
+          scenes,
+          start_frame_url: frames[0]?.start || null,
+          aspect_ratio: aspectRatio,
+          video_style: videoStyle,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      setMultiShotResult({ video_url: data.video_url, total_duration: data.total_duration });
+
+      // Store the multi-shot video as the assembled clip for all scenes
+      blocks.forEach((_, i) => {
+        setClips(prev => ({ ...prev, [i]: { url: data.video_url, actualDuration: data.total_duration / blocks.length, status: 'multishot' } }));
+      });
+    } catch (err) {
+      toast.error(`Multi-shot failed: ${err.message}`);
+    } finally {
+      setMultiShotLoading(false);
+    }
   };
 
   const generateAvatarPipeline = async () => {
@@ -1199,6 +1273,55 @@ export default function ShortsWorkbenchPage() {
                           <><Search className="w-4 h-4" /> Find Trending Topics</>
                         )}
                       </button>
+                    </div>
+                  )}
+
+                  {/* Generate Ideas — AI bulk idea generator */}
+                  {niche && (
+                    <div className="mb-3">
+                      <button
+                        onClick={generateIdeas}
+                        disabled={ideasLoading}
+                        className="w-full border border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {ideasLoading ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Generating ideas...</>
+                        ) : (
+                          <><Lightbulb className="w-4 h-4" /> Generate Ideas</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Generated ideas list */}
+                  {generatedIdeas.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">
+                          AI-Generated Ideas
+                        </label>
+                        <button
+                          onClick={() => setGeneratedIdeas([])}
+                          className="text-[10px] text-slate-400 hover:text-red-500 flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> Clear
+                        </button>
+                      </div>
+                      {generatedIdeas.map((idea, i) => (
+                        <button key={i} onClick={() => {
+                          setTopic(idea.topic);
+                          setStoryContext(idea.hook);
+                        }}
+                          className={cn('w-full text-left p-3 border-2 rounded-xl text-xs transition-all',
+                            topic === idea.topic ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
+                          <div className="font-semibold text-slate-800 mb-0.5">{idea.title}</div>
+                          <div className="text-slate-500 mb-1">{idea.hook}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{idea.category}</span>
+                            <span className="text-[10px] text-slate-400">{idea.angle}</span>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   )}
 
@@ -1744,6 +1867,24 @@ export default function ShortsWorkbenchPage() {
                     </>
                   )}
 
+                  {/* Character Cameos (optional) */}
+                  {!isCurrentInI2V && (
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <details className="group">
+                        <summary className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                          <Users className="w-3 h-3" /> Characters {(sceneCharacters[i] || []).length > 0 && <span className="text-[9px] bg-teal-100 text-teal-700 px-1.5 rounded font-semibold">{sceneCharacters[i].length}</span>}
+                        </summary>
+                        <div className="mt-2">
+                          <CharacterPicker
+                            value={sceneCharacters[i] || []}
+                            onChange={(chars) => setSceneCharacters(prev => ({ ...prev, [i]: chars }))}
+                            maxSelect={3}
+                          />
+                        </div>
+                      </details>
+                    </div>
+                  )}
+
                   {/* Motion Reference (optional) */}
                   {!isCurrentInI2V && (
                     <div className="mt-3 border-t border-slate-100 pt-3">
@@ -1787,7 +1928,42 @@ export default function ShortsWorkbenchPage() {
               <CostBadge amount={(blocks.length * (VIDEO_MODELS.find(m => m.value === videoModel)?.costPerClip || 0.5)).toFixed(2)} />
             </span>}>
 
-              {mode === 'flf' && (
+              {/* Multi-Shot toggle (Kling V3/O3 only) */}
+              {MULTI_SHOT_MODELS.includes(videoModel) && blocks.length >= 2 && blocks.length <= 6 && (
+                <div className="flex items-center gap-3 mb-3 p-2.5 bg-purple-50 border border-purple-200 rounded-lg">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={multiShotMode} onChange={(e) => setMultiShotMode(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" />
+                    <span className="text-xs font-semibold text-purple-800">Multi-Shot Mode</span>
+                  </label>
+                  <span className="text-[10px] text-purple-600 flex-1">
+                    Generate all {blocks.length} scenes in a single Kling call with better cross-scene consistency (max 15s total, 6 scenes).
+                  </span>
+                  {blocks.reduce((sum, b) => sum + (b.clipDuration || 3), 0) > 15 && (
+                    <span className="text-[10px] font-bold text-red-600">Total &gt; 15s!</span>
+                  )}
+                </div>
+              )}
+
+              {/* Multi-Shot generate button */}
+              {multiShotMode && MULTI_SHOT_MODELS.includes(videoModel) ? (
+                <div className="mb-4">
+                  {multiShotResult ? (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs font-semibold text-green-800 mb-1">Multi-Shot Video Generated</p>
+                      <p className="text-[10px] text-green-600">{multiShotResult.total_duration}s video with {blocks.length} scenes in one continuous shot.</p>
+                      <video src={multiShotResult.video_url} controls className="w-full max-w-md mt-2 rounded-lg" />
+                    </div>
+                  ) : (
+                    <button onClick={generateMultiShot} disabled={multiShotLoading}
+                      className="px-4 py-2.5 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {multiShotLoading
+                        ? <><Loader2 className="w-3.5 h-3.5 inline mr-1.5 animate-spin" />Generating multi-shot...</>
+                        : <><Film className="w-3.5 h-3.5 inline mr-1.5" />Generate Multi-Shot ({blocks.length} scenes, {blocks.reduce((s, b) => s + (b.clipDuration || 3), 0)}s)</>}
+                    </button>
+                  )}
+                </div>
+              ) : mode === 'flf' && (
                 <button onClick={() => blocks.forEach((_, i) => { if (frames[i]?.start && frames[i]?.end && !clips[i]?.url) generateClip(i); })}
                   className="px-4 py-2 bg-[#2C666E] text-white rounded-lg text-xs font-semibold hover:bg-[#1f4f55] mb-4">
                   <Film className="w-3.5 h-3.5 inline mr-1.5" />Generate All Clips (parallel)

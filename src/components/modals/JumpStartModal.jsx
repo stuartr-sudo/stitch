@@ -366,7 +366,9 @@ export default function JumpStartModal({
   username = 'default',
   onVideoGenerated,
   isEmbedded = false,
-  initialImage = null
+  initialImage = null,
+  initialModel = null,
+  initialReferenceImages = null,
 }) {
   const [activeTab, setActiveTab] = useState('upload');
 
@@ -500,8 +502,15 @@ export default function JumpStartModal({
         setUploadedImage(initialImage);
         setActiveTab('styles');
       }
+      if (initialModel) {
+        setVideoModel(initialModel);
+      }
+      if (initialReferenceImages?.length > 0) {
+        setReferenceImages(initialReferenceImages);
+        setFrontalIndex(0);
+      }
     }
-  }, [isOpen, initialImage]);
+  }, [isOpen, initialImage, initialModel, initialReferenceImages]);
 
   // ─── Helpers ────────────────────────────────────────────────────────────
   const saveToLibrary = async (url, type = 'image', title = '', source = 'jumpstart') => {

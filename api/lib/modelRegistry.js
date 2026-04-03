@@ -214,8 +214,17 @@ export const VIDEO_MODELS = {
     provider: 'fal',
     label: 'Kling V3 Pro',
     endpoint: 'fal-ai/kling-video/v3/pro/image-to-video',
+    supportsMultiShot: true,
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       start_image_url: imageUrl, prompt, duration: klingV3Duration(duration), aspect_ratio: aspectRatio,
+      generate_audio: opts.generate_audio === true,
+    }),
+    buildMultiShotBody: (imageUrl, multiPrompt, totalDuration, aspectRatio, opts = {}) => ({
+      start_image_url: imageUrl,
+      multi_prompt: multiPrompt, // [{ prompt, duration }]
+      shot_type: opts.shot_type || 'customize',
+      duration: klingV3Duration(totalDuration),
+      aspect_ratio: aspectRatio,
       generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
@@ -227,8 +236,17 @@ export const VIDEO_MODELS = {
     label: 'Kling O3 Pro',
     endpoint: 'fal-ai/kling-video/o3/pro/image-to-video',
     r2vEndpoint: 'fal-ai/kling-video/o3/pro/reference-to-video',
+    supportsMultiShot: true,
     buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
       image_url: imageUrl, prompt, duration: klingV3Duration(duration), aspect_ratio: aspectRatio,
+      generate_audio: opts.generate_audio === true,
+    }),
+    buildMultiShotBody: (imageUrl, multiPrompt, totalDuration, aspectRatio, opts = {}) => ({
+      image_url: imageUrl,
+      multi_prompt: multiPrompt, // [{ prompt, duration }]
+      shot_type: opts.shot_type || 'customize',
+      duration: klingV3Duration(totalDuration),
+      aspect_ratio: aspectRatio,
       generate_audio: opts.generate_audio === true,
     }),
     parseResult: (output) => output?.video?.url,
@@ -378,4 +396,9 @@ export function isR2VCapable(modelKey) {
 export function getR2VEndpoint(modelKey) {
   const model = VIDEO_MODELS[modelKey];
   return model?.r2vEndpoint || null;
+}
+
+export function isMultiShotCapable(modelKey) {
+  const model = VIDEO_MODELS[modelKey];
+  return model && !!model.supportsMultiShot;
 }

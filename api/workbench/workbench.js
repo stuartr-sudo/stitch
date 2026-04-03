@@ -19,8 +19,8 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 import { generateGeminiVoiceover } from '../lib/voiceoverGenerator.js';
 import { getWordTimestamps } from '../lib/getWordTimestamps.js';
 import { alignBlocks } from '../lib/blockAligner.js';
-import { generateImageV2, animateImageV2 } from '../lib/mediaGenerator.js';
-import { VIDEO_MODELS, veoDuration } from '../lib/modelRegistry.js';
+import { generateImageV2, animateImageV2, animateMultiShot } from '../lib/mediaGenerator.js';
+import { VIDEO_MODELS, veoDuration, isMultiShotCapable } from '../lib/modelRegistry.js';
 import {
   generateMusic as genMusic, assembleShort, buildMusicPrompt,
   uploadUrlToSupabase, pollFalQueue, extractLastFrame, analyzeFrameContinuity,
@@ -156,6 +156,7 @@ export default async function handler(req, res) {
           prompt, narration, visual_style, visual_style_prompt, video_style,
           image_model = 'fal_nano_banana', aspect_ratio = '9:16',
           reference_image_url, scene_index, frame_type, vision_context, niche,
+          characters = [],
         } = req.body;
 
         if (!prompt && !narration) return res.status(400).json({ error: 'prompt or narration required' });
@@ -167,9 +168,16 @@ export default async function handler(req, res) {
         const nicheTemplate = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche] : null;
         const nicheMood = nicheTemplate?.visual_mood || null;
 
+        // Build character description prefix from assigned characters
+        const charDescriptions = characters
+          .filter(c => c.description)
+          .map(c => `CHARACTER "${c.name}": ${c.description}`)
+          .join('\n');
+
         // Synthesize a proper visual description via LLM (not raw concatenation)
         const openai = new OpenAI({ apiKey: keys.openaiKey });
         const sections = [];
+        if (charDescriptions) sections.push(`CHARACTERS IN THIS SCENE (must appear as described):\n${charDescriptions}`);
         if (nicheMood) sections.push(`ATMOSPHERE & MOOD (CRITICAL — this defines the overall tone): ${nicheMood}`);
         sections.push(`NARRATION/SCENE CONTEXT: ${effectivePrompt}`);
         if (visual_style_prompt) sections.push(`VISUAL STYLE: ${visual_style_prompt}`);
@@ -398,6 +406,62 @@ Rules:
           last_frame_url: lastFrameUrl,
           vision_analysis: visionAnalysis,
         });
+      }
+
+      // ─── Multi-Shot ────────────────────────────────────────────────
+      // Generates all scenes in a single API call using Kling V3/O3 multi_prompt.
+      // Returns a single continuous video with model-handled scene transitions.
+      case 'generate-multishot': {
+        const {
+          video_model = 'fal_kling_v3',
+          scenes, // [{ motionPrompt, duration, videoStyle }]
+          start_frame_url,
+          aspect_ratio = '9:16',
+          camera_config,
+          video_style,
+        } = req.body;
+
+        if (!scenes?.length || scenes.length < 2) {
+          return res.status(400).json({ error: 'Multi-shot requires at least 2 scenes.' });
+        }
+        if (scenes.length > 6) {
+          return res.status(400).json({ error: 'Multi-shot supports a maximum of 6 scenes.' });
+        }
+        if (!isMultiShotCapable(video_model)) {
+          return res.status(400).json({ error: `Model ${video_model} does not support multi-shot.` });
+        }
+
+        // Build multi_prompt array with composed prompts per scene
+        const multiPrompt = scenes.map(scene => {
+          const composed = composeVideoPrompt('', scene.motionPrompt || 'Smooth cinematic movement', {
+            videoStyle: scene.videoStyle || video_style,
+            cameraConfig: scene.cameraConfig || camera_config,
+          });
+          return {
+            prompt: composed,
+            duration: String(Math.max(1, Math.min(15, Math.round(Number(scene.duration) || 3)))),
+          };
+        });
+
+        const totalDuration = multiPrompt.reduce((sum, s) => sum + Number(s.duration), 0);
+        if (totalDuration > 15) {
+          return res.status(400).json({ error: `Total duration (${totalDuration}s) exceeds 15s maximum for multi-shot.` });
+        }
+
+        const videoUrl = await animateMultiShot(
+          video_model,
+          start_frame_url || null,
+          multiPrompt,
+          totalDuration,
+          aspect_ratio,
+          keys,
+          supabase,
+          { generate_audio: false },
+        );
+
+        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_multishot', model: video_model, metadata: { scene_count: scenes.length, total_duration: totalDuration } });
+
+        return res.json({ video_url: videoUrl, total_duration: totalDuration, scene_count: scenes.length });
       }
 
       // ─── Assemble ─────────────────────────────────────────────────
