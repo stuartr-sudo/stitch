@@ -24,7 +24,7 @@ export default function FlowBuilderPage() {
 
   // Load node types
   useEffect(() => {
-    apiFetch('/api/flows/node-types').then(data => {
+    apiFetch('/api/flows/node-types').then(r => r.json()).then(data => {
       if (data?.nodeTypes) setNodeTypesMap(data.nodeTypes);
     });
   }, []);
@@ -32,7 +32,7 @@ export default function FlowBuilderPage() {
   // Load flow
   useEffect(() => {
     if (id && id !== 'new') {
-      apiFetch(`/api/flows/${id}`).then(data => {
+      apiFetch(`/api/flows/${id}`).then(r => r.json()).then(data => {
         if (data?.flow) {
           setFlow(data.flow);
           setNodes(data.flow.graph_json?.nodes || []);
@@ -46,7 +46,7 @@ export default function FlowBuilderPage() {
   useEffect(() => {
     if (!executionId) { setExecution(null); return; }
     const poll = async () => {
-      const data = await apiFetch(`/api/flows/executions/${executionId}`);
+      const data = await apiFetch(`/api/flows/executions/${executionId}`).then(r => r.json());
       if (data?.execution) {
         setExecution(data.execution);
         if (['completed', 'failed', 'cancelled'].includes(data.execution.status)) {
@@ -72,6 +72,7 @@ export default function FlowBuilderPage() {
     };
     await apiFetch(`/api/flows/${flow.id}`, {
       method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ graph_json })
     });
     setSaving(false);
@@ -141,7 +142,7 @@ export default function FlowBuilderPage() {
   const handleRun = async () => {
     if (!flow?.id) return;
     await saveFlow();
-    const data = await apiFetch(`/api/flows/${flow.id}/execute`, { method: 'POST' });
+    const data = await apiFetch(`/api/flows/${flow.id}/execute`, { method: 'POST' }).then(r => r.json());
     if (data?.execution) {
       navigate(`/flows/${flow.id}/run/${data.execution.id}`);
     }
@@ -150,11 +151,11 @@ export default function FlowBuilderPage() {
   // Pause/Cancel
   const handlePause = async () => {
     if (!executionId) return;
-    await apiFetch(`/api/flows/executions/${executionId}/pause`, { method: 'POST' });
+    await apiFetch(`/api/flows/executions/${executionId}/pause`, { method: 'POST' }).then(r => r.json());
   };
   const handleCancel = async () => {
     if (!executionId) return;
-    await apiFetch(`/api/flows/executions/${executionId}/cancel`, { method: 'POST' });
+    await apiFetch(`/api/flows/executions/${executionId}/cancel`, { method: 'POST' }).then(r => r.json());
   };
 
   const selectedNodeType = selectedNode?.data?.nodeType;

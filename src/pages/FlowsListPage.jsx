@@ -18,8 +18,8 @@ export default function FlowsListPage() {
   const loadData = async () => {
     setLoading(true);
     const [flowsData, templatesData] = await Promise.all([
-      apiFetch('/api/flows'),
-      apiFetch('/api/flows/templates'),
+      apiFetch('/api/flows').then(r => r.json()),
+      apiFetch('/api/flows/templates').then(r => r.json()),
     ]);
     if (flowsData?.flows) setFlows(flowsData.flows);
     if (templatesData?.templates) setTemplates(templatesData.templates);
@@ -35,18 +35,19 @@ export default function FlowsListPage() {
   const handleNewFlow = async () => {
     const data = await apiFetch('/api/flows', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Untitled Flow' })
-    });
+    }).then(r => r.json());
     if (data?.flow) navigate(`/flows/${data.flow.id}`);
   };
 
   const handleCloneTemplate = async (templateId) => {
-    const data = await apiFetch(`/api/flows/templates/${templateId}/clone`, { method: 'POST' });
+    const data = await apiFetch(`/api/flows/templates/${templateId}/clone`, { method: 'POST' }).then(r => r.json());
     if (data?.flow) navigate(`/flows/${data.flow.id}`);
   };
 
   const handleRunFlow = async (flowId) => {
-    const data = await apiFetch(`/api/flows/${flowId}/execute`, { method: 'POST' });
+    const data = await apiFetch(`/api/flows/${flowId}/execute`, { method: 'POST' }).then(r => r.json());
     if (data?.execution) navigate(`/flows/${flowId}/run/${data.execution.id}`);
   };
 
