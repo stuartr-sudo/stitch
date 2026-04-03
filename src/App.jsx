@@ -39,6 +39,8 @@ import MotionTransferGuidePage from './pages/MotionTransferGuidePage';
 import SetupKeys from './pages/SetupKeys';
 import EducatePage from './pages/EducatePage';
 import LearnPage from './pages/LearnPage';
+import FlowsListPage from './pages/FlowsListPage';
+import FlowBuilderPage from './pages/FlowBuilderPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -322,6 +324,12 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Automation Flows */}
+          <Route path="/flows" element={<ProtectedRoute><FlowsListPage /></ProtectedRoute>} />
+          <Route path="/flows/new" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
+          <Route path="/flows/:id" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
+          <Route path="/flows/:id/run/:executionId" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

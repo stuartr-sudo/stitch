@@ -48,6 +48,7 @@ import {
   Search,
   ListOrdered,
   Scissors,
+  GitBranch,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -97,6 +98,7 @@ export default function VideoAdvertCreator() {
     yourAssets: false,
     audioTools: true,
     socialTools: true,
+    automationTools: true,
   });
   const [showBrandKit, setShowBrandKit] = useState(false);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
@@ -898,6 +900,33 @@ export default function VideoAdvertCreator() {
                       <span className="text-xs font-medium text-gray-800">Storyboards</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">Plan & produce videos</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Automation Section */}
+            <div>
+              <button
+                onClick={() => toggleSection('automationTools')}
+                className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#2C666E]" /> Automation
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.automationTools ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.automationTools && (
+                <div className="mt-2 space-y-1">
+                  <div
+                    onClick={() => navigate('/flows')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <GitBranch className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Flows</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Build & run automation pipelines</p>
                   </div>
                 </div>
               )}
