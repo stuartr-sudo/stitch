@@ -109,7 +109,7 @@ function CodeBlock({ children }) {
   );
 }
 
-function ModelCard({ name, base, category, pricing, features, bestFor, stepRange, defaultSteps }) {
+function ModelCard({ name, base, category, pricing, features, description, bestFor, stepRange, defaultSteps }) {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-2">
@@ -123,6 +123,9 @@ function ModelCard({ name, base, category, pricing, features, bestFor, stepRange
           {category}
         </span>
       </div>
+      {description && (
+        <p className="text-xs text-gray-600 mb-2">{description}</p>
+      )}
       <div className="space-y-1 text-xs text-gray-600">
         <div className="flex items-center gap-1.5">
           <DollarSign className="w-3 h-3" />
@@ -140,7 +143,9 @@ function ModelCard({ name, base, category, pricing, features, bestFor, stepRange
           </div>
         )}
       </div>
-      <p className="text-xs text-gray-500 mt-2 italic">{bestFor}</p>
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <p className="text-xs font-medium text-[#2C666E]">Best for: <span className="font-normal text-gray-600">{bestFor}</span></p>
+      </div>
     </div>
   );
 }
@@ -730,7 +735,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$2 flat"
                 features={['Style', 'Face masks']}
-                bestFor="Quick, cheap LoRA training. Great default choice."
+                description="The go-to default trainer. Flat $2 pricing regardless of step count means no cost surprises. Supports both subject and style training modes, with automatic face mask detection to preserve facial features. Produces LoRAs compatible with the FLUX 2 Dev inference model, which works across every Stitch tool."
+                bestFor="First-time LoRA trainers, rapid prototyping, character/subject LoRAs where you want predictable cost and broad tool compatibility."
                 stepRange={[1, 10000]}
                 defaultSteps={1000}
               />
@@ -740,7 +746,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0024/step"
                 features={['Multi-resolution', 'Subject crop', 'Face masks']}
-                bestFor="Portrait/face-focused LoRAs with automatic subject cropping."
+                description="Specialized for faces and portraits. Automatically crops and centers subjects in training images, trains at multiple resolutions simultaneously, and uses face detection masks to lock in facial detail. Ideal when your LoRA is primarily about a person's face or likeness rather than full-body poses."
+                bestFor="Headshot-quality face LoRAs, portrait likeness capture, avatar training where facial accuracy is the priority."
                 stepRange={[1, 10000]}
                 defaultSteps={2500}
               />
@@ -750,7 +757,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$2.50/1K steps"
                 features={[]}
-                bestFor="Kontext-compatible LoRAs for the editing model."
+                description="Trains LoRAs specifically for the FLUX Kontext editing model (not the standard generation model). Kontext LoRAs allow you to inject trained concepts into image editing workflows, such as swapping a character into an existing scene or applying a learned style during edits."
+                bestFor="Image editing workflows where you need to inject a trained character or style into existing images, rather than generating from scratch."
                 stepRange={[500, 10000]}
                 defaultSteps={1000}
               />
@@ -760,7 +768,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0045/step"
                 features={['Style', 'Face masks']}
-                bestFor="High-quality image LoRAs on the latest Wan model."
+                description="Trains on the Wan 2.2 dual-transformer architecture, producing TWO LoRA files (low-noise + high-noise) that work together. Stitch auto-detects and auto-expands both files during generation. Particularly strong at learning complex visual concepts and multi-element scenes. Also serves as a bridge to video — Wan 2.2 image LoRAs can influence Wan video generation."
+                bestFor="High-fidelity character LoRAs that need to work in both image and video pipelines, complex multi-element concepts, Wan ecosystem workflows."
                 stepRange={[10, 6000]}
                 defaultSteps={1000}
               />
@@ -770,7 +779,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.002/step"
                 features={[]}
-                bestFor="Training LoRAs for the Qwen image generation model."
+                description="Trains LoRAs for the original Qwen image model. Low per-step cost with adjustable learning rate. Note: Qwen generation endpoints are not yet available in Stitch, so trained LoRAs cannot be used for inference right now."
+                bestFor="Future-proofing — train now at low cost for when Qwen generation is available. Good for experimentation and research."
                 stepRange={[1, 8000]}
                 defaultSteps={1000}
               />
@@ -780,7 +790,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.004/step"
                 features={[]}
-                bestFor="LoRAs for the Qwen image editing model."
+                description="Trains LoRAs for the Qwen image editing model (2511 version). Supports up to 30K steps for deep concept learning. Uses default caption mode instead of trigger words. Note: no Stitch generation endpoint yet — trained LoRAs are stored for future use."
+                bestFor="Future Qwen editing workflows, deep fine-tuning experiments that need high step counts."
                 stepRange={[100, 30000]}
                 defaultSteps={1000}
               />
@@ -790,7 +801,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.00226/step"
                 features={['Style']}
-                bestFor="Fast, lightweight LoRAs. Good for common subjects."
+                description="Lightweight 6B parameter model that trains faster than FLUX. Supports both balanced and style-specific training modes. Good at learning artistic styles and visual aesthetics. Note: no Stitch generation endpoint yet — trained LoRAs are stored for future use."
+                bestFor="Style/aesthetic LoRAs (e.g., 'painterly watercolor', 'vintage film grain'), experimentation at low cost."
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
@@ -800,7 +812,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0024/step"
                 features={['Style', 'Face crop']}
-                bestFor="Blazing fast FLUX trainer. Face cropping + style/subject modes."
+                description="Fast FLUX.1 trainer with automatic face cropping for subject mode and a dedicated style training mode. Same per-step cost as the Portrait trainer but focused on speed over portrait precision. Compatible with FLUX 2 Dev inference across all Stitch tools."
+                bestFor="Quick iteration when testing different training configs, style LoRAs on FLUX, subjects where face cropping (not face masking) is sufficient."
                 stepRange={[1, 10000]}
                 defaultSteps={1000}
               />
@@ -810,7 +823,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0255/step"
                 features={['Edit pairs']}
-                bestFor="Premium FLUX.2 trainer. Highest quality, most expensive."
+                description="Premium FLUX.2 trainer — the highest quality FLUX trainer available but also the most expensive per step. Trains on the latest FLUX.2 architecture with support for edit pairs (before/after image pairs for instruction-based fine-tuning). Produces LoRAs compatible with FLUX 2 Dev inference."
+                bestFor="Maximum quality character/subject LoRAs when cost is not the primary concern, edit-pair fine-tuning for instruction-following LoRAs."
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
@@ -820,7 +834,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.005/step"
                 features={['Budget', 'Fast inference']}
-                bestFor="Cheapest FLUX.2 trainer. Smaller model, faster + cheaper inference."
+                description="Distilled 4B parameter version of FLUX.2 — the smallest and cheapest model in the FLUX.2 family. Trains at $0.005/step and generates images at just $0.016 each (vs $0.035 for full FLUX 2 Dev). The trade-off is slightly lower detail fidelity compared to larger models, especially for complex scenes."
+                bestFor="Budget-conscious production workflows, high-volume generation where per-image cost matters, simple subjects that don't need maximum detail."
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
@@ -830,7 +845,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0086/step"
                 features={['Mid-tier', 'Fast inference']}
-                bestFor="Mid-range FLUX.2 trainer. Better quality than 4B, cheaper than full Dev."
+                description="Mid-size 9B parameter FLUX.2 variant — better quality than Klein 4B at a moderate cost increase. Generates at $0.02/image (43% cheaper than full FLUX 2 Dev). Strikes a balance between quality and cost for teams that need to generate many images."
+                bestFor="Production workflows that need better quality than Klein 4B but at lower cost than FLUX 2 Dev, batch generation with LoRAs."
                 stepRange={[100, 10000]}
                 defaultSteps={1000}
               />
@@ -840,7 +856,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0008/step"
                 features={[]}
-                bestFor="Cheaper V2 Z-Image trainer. Supports up to 40K steps."
+                description="Second-generation Z-Image trainer with the lowest per-step cost of any trainer ($0.0008). Supports up to 40K training steps, allowing extremely deep fine-tuning for difficult concepts. Note: no Stitch generation endpoint yet — trained LoRAs are stored for future use."
+                bestFor="Very long training runs to deeply learn a complex concept at minimal cost, experimenting with high step counts."
                 stepRange={[10, 40000]}
                 defaultSteps={2000}
               />
@@ -850,7 +867,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0015/step"
                 features={[]}
-                bestFor="Newer Qwen 2512 model. Better quality than original Qwen."
+                description="Updated Qwen trainer (December 2025 model). Improved architecture over the original Qwen Image model with better concept learning and sharper results. Supports up to 30K steps. Note: no Stitch generation endpoint yet."
+                bestFor="Future Qwen-based generation, higher quality than original Qwen trainer at similar cost."
                 stepRange={[100, 30000]}
                 defaultSteps={1000}
               />
@@ -860,7 +878,8 @@ export function LoraGuideContent() {
                 category="image"
                 pricing="$0.0009/step"
                 features={[]}
-                bestFor="Cheapest Qwen option. V2 with up to 40K steps."
+                description="The cheapest Qwen trainer and second cheapest overall ($0.0009/step). V2 architecture with support for up to 40K steps — ideal for very deep training runs at minimal cost. Note: no Stitch generation endpoint yet."
+                bestFor="Lowest-cost high-step training, research and experimentation with Qwen architecture."
                 stepRange={[10, 40000]}
                 defaultSteps={2000}
               />
@@ -876,7 +895,8 @@ export function LoraGuideContent() {
                 category="video"
                 pricing="5 credits/run"
                 features={['Auto-scale']}
-                bestFor="Image-to-video LoRAs on Wan 2.1. Good character consistency in motion."
+                description="Trains image-to-video LoRAs on Wan 2.1 (14B parameters). Requires VIDEO CLIPS as training data (not images). Auto-scales input to the correct resolution. The trained LoRA teaches the video model to maintain character appearance, movement style, or visual effects across generated video clips."
+                bestFor="Character consistency in Wan 2.1 video generation, teaching specific motion patterns or visual effects that persist across I2V clips."
                 stepRange={[100, 20000]}
                 defaultSteps={400}
               />
@@ -886,7 +906,8 @@ export function LoraGuideContent() {
                 category="video"
                 pricing="$0.005/step"
                 features={['Auto-scale']}
-                bestFor="Latest Wan video model LoRAs. Best for character consistency in video."
+                description="Latest Wan video trainer — builds on 2.1 with improved temporal coherence and character fidelity. Requires VIDEO CLIPS as training data. Best option for maintaining a character's likeness across video scenes. Works within the Wan ecosystem alongside the Wan 2.2 T2I image trainer."
+                bestFor="Highest-quality character consistency in video, maintaining facial likeness and body proportions in motion, paired with Wan 2.2 T2I for end-to-end image+video LoRA pipelines."
                 stepRange={[100, 20000]}
                 defaultSteps={400}
               />
@@ -896,7 +917,8 @@ export function LoraGuideContent() {
                 category="video"
                 pricing="$5 flat"
                 features={['Auto-caption']}
-                bestFor="Tencent's video model. Fixed price, good for experimentation."
+                description="Tencent's video model trainer at a flat $5 per run regardless of steps. Includes automatic captioning of training data. Requires VIDEO CLIPS. The fixed pricing makes it predictable for budgeting — no per-step cost surprises even at high step counts."
+                bestFor="Experimentation with video LoRAs at predictable cost, learning video styles or effects when you want to try many step counts without worrying about cost."
                 stepRange={[1, 5000]}
                 defaultSteps={1000}
               />
@@ -906,7 +928,8 @@ export function LoraGuideContent() {
                 category="video"
                 pricing="$0.0048/step"
                 features={['Audio', 'Auto-scale']}
-                bestFor="LTX-2 video with audio training support. Good for styles and effects."
+                description="LTX-2 video trainer with audio training support — the only video trainer that can learn audio patterns alongside visual ones. Auto-scales input resolution. Good for training visual effects, motion styles, and transitions that include synchronized sound."
+                bestFor="Video LoRAs that include audio cues (e.g., a branded intro with sound), visual effects with sound design, motion styles and transitions."
                 stepRange={[100, 20000]}
                 defaultSteps={2000}
               />
