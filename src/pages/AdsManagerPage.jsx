@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Megaphone, Loader2, Trash2, ArrowLeft, LayoutGrid, List, Check, X, Clock, Eye, ChevronDown, ChevronUp, Sparkles, Link, BookOpen } from 'lucide-react';
+import { Plus, Megaphone, Loader2, Trash2, ArrowLeft, LayoutGrid, List, Check, X, Clock, Eye, ChevronDown, ChevronUp, Sparkles, Link, BookOpen, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+import AdCloneModal from '@/components/modals/AdCloneModal';
 
 const OBJECTIVE_LABELS = {
   traffic: 'Traffic',
@@ -106,6 +107,7 @@ export default function AdsManagerPage() {
   const [view, setView] = useState('campaigns'); // 'campaigns' or 'canvas'
   const [canvasFilter, setCanvasFilter] = useState('all'); // 'all', 'draft', 'approved', 'published', 'rejected'
   const [canvasPlatform, setCanvasPlatform] = useState('all'); // 'all', 'linkedin', 'google', 'meta'
+  const [showCloneModal, setShowCloneModal] = useState(false);
 
   // New campaign form
   const [form, setForm] = useState({
@@ -304,6 +306,10 @@ export default function AdsManagerPage() {
                 All Ads
               </button>
             </div>
+            <Button variant="outline" onClick={() => setShowCloneModal(true)} className="border-[#2C666E] text-[#2C666E] hover:bg-[#2C666E]/5">
+              <Scissors className="w-4 h-4 mr-2" />
+              Clone Ad
+            </Button>
             <Button onClick={() => setShowCreate(!showCreate)} className="bg-[#2C666E] hover:bg-[#1f4f55]">
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
@@ -654,6 +660,14 @@ export default function AdsManagerPage() {
           </>
         )}
       </div>
+
+      <AdCloneModal
+        isOpen={showCloneModal}
+        onClose={() => setShowCloneModal(false)}
+        onCloneToAds={(campaign) => {
+          loadCampaigns();
+        }}
+      />
     </div>
   );
 }

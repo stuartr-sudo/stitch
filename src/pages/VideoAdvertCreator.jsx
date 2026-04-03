@@ -47,6 +47,7 @@ import {
   Calendar,
   Search,
   ListOrdered,
+  Scissors,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -75,6 +76,7 @@ import ApiKeysModal from '@/components/modals/ApiKeysModal';
 import ProviderStatusChip from '@/components/ProviderStatusChip';
 import MotionTransferModal from '@/components/modals/MotionTransferModal';
 import VideoAnalyzerModal from '@/components/modals/VideoAnalyzerModal';
+import AdCloneModal from '@/components/modals/AdCloneModal';
 import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
@@ -724,6 +726,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => setActiveModal('adClone')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Scissors className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Clone Ad</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Clone viral ads</p>
+                  </div>
+
+                  <div
                     onClick={() => setActiveModal('library')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >
@@ -1281,6 +1294,11 @@ export default function VideoAdvertCreator() {
 
       <VideoAnalyzerModal
         isOpen={activeModal === 'analyzer'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <AdCloneModal
+        isOpen={activeModal === 'adClone'}
         onClose={() => setActiveModal(null)}
       />
 

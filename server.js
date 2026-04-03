@@ -140,9 +140,23 @@ app.all('/api/queue*', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Autopilot routes
+app.all('/api/autopilot*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('autopilot/autopilot.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Video Analyzer route (with auth)
 app.post('/api/analyze/video', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('analyze/video.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Ad Clone Analyzer route (with auth)
+app.post('/api/analyze/clone-ad', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/clone-ad.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
