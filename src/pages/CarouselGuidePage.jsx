@@ -173,6 +173,11 @@ export function CarouselGuideContent() {
               images — a "Cinematic" style produces moody, film-like backgrounds; "Watercolor" produces
               painted textures, etc.
             </p>
+            <Tip>
+              The visual style influences both the <strong>image generation prompts</strong> (style is
+              prioritised at the start and reinforced at the end) and the <strong>scene selection</strong> —
+              the AI picks physical environments and lighting that complement your chosen aesthetic.
+            </Tip>
           </Step>
 
           <Step number="5" title="Choose a carousel style (text layout)">
@@ -453,12 +458,33 @@ export function CarouselGuideContent() {
           <Step number="3" title="Enable Background Music (optional)">
             <p>
               Check the <strong>"Music"</strong> checkbox to generate instrumental background music.
-              The system creates a mood-appropriate track based on the carousel's topic, matched to
-              the total slideshow duration.
+              When enabled, a <strong>mood selector</strong> dropdown appears with these options:
+            </p>
+            <div className="grid grid-cols-2 gap-1 mt-2">
+              {[
+                ['Auto (AI picks)', 'AI analyzes your slide content and picks the best mood'],
+                ['Upbeat & Energetic', 'Driving drums, bright synths, 120+ BPM'],
+                ['Calm & Ambient', 'Soft piano and pads, slow tempo, peaceful'],
+                ['Corporate & Professional', 'Clean acoustic guitar, light percussion, mid-tempo'],
+                ['Dramatic & Cinematic', 'Orchestral strings, dynamic range, epic'],
+                ['Fun & Playful', 'Bouncy ukulele, hand claps, cheerful'],
+                ['Dark & Moody', 'Deep bass drone, sparse percussion, minor key'],
+                ['Inspiring & Uplifting', 'Soaring strings and piano, gradual crescendo'],
+              ].map(([name, desc]) => (
+                <div key={name} className="text-xs">
+                  <span className="font-semibold">{name}</span>
+                  <span className="text-gray-400 dark:text-gray-500"> — {desc}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2">
+              <strong>Auto mode</strong> (default) uses GPT-4.1-mini to analyze your slide headlines, body text,
+              topic, and visual style, then generates a custom music direction. Manual presets let you override
+              if the AI picks the wrong mood.
             </p>
             <KV label="Volume (music only)">50% — prominent but not overpowering</KV>
             <KV label="Volume (with voiceover)">15% — subtle bed behind narration</KV>
-            <KV label="Style">Always instrumental, calm and modern</KV>
+            <KV label="Style">Always instrumental, no vocals</KV>
             <Tip>
               When both Voiceover and Music are enabled, they generate <strong>in parallel</strong> to
               minimize wait time. The music volume automatically drops to 15% so the narration stays clear.
@@ -483,11 +509,18 @@ export function CarouselGuideContent() {
             </p>
           </Step>
 
-          <Step number="5" title="Re-create">
+          <Step number="5" title="Re-create or Rerun Audio">
             <p>
               You can create a new slideshow at any time — it replaces the previous one.
               Change the duration, toggle voiceover/music, pick a different voice, and click
               "Create Slideshow" again.
+            </p>
+            <p className="mt-2">
+              To change <strong>just the audio</strong> without rebuilding the entire slideshow, click
+              the <strong>"Rerun Audio"</strong> button below the video player. This opens inline controls
+              where you can toggle music (with mood selector) and voiceover, then click <strong>"Regenerate"</strong>.
+              It re-assembles the video using the existing slide images with new audio — much faster than
+              a full re-create.
             </p>
           </Step>
         </Section>
