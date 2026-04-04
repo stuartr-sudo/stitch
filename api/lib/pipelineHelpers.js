@@ -626,7 +626,7 @@ export function buildMusicPrompt(musicConfig, category = 'story') {
  * @param {number} durationSeconds
  * @param {object} keys - { falKey }
  * @param {object} supabase
- * @param {string} [model] - 'elevenlabs' | 'minimax' | 'fal_lyria2'
+ * @param {string} [model] - 'elevenlabs' | 'minimax' | 'fal_lyria2' | 'suno'
  * @returns {Promise<string>} public audio URL
  */
 export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supabase, model = 'elevenlabs') {
@@ -702,7 +702,38 @@ export async function generateMusic(moodPrompt, durationSeconds = 30, keys, supa
       return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
     }
 
-    // No other music models — Lyria 2, MiniMax, and ElevenLabs are supported
+    // --- Suno V4 via FAL ---
+    if (model === 'suno') {
+      const sunoDuration = Math.max(10, Math.min(240, clampedDuration));
+      console.log(`[generateMusic] Suno V4: ${sunoDuration}s, prompt: ${moodPrompt.slice(0, 80)}...`);
+      const res = await fetch(`${FAL_BASE}/fal-ai/suno/v4`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `[Instrumental] ${moodPrompt.slice(0, 280)}`,
+          duration: sunoDuration,
+          make_instrumental: true,
+        }),
+      });
+      if (!res.ok) {
+        console.warn('[pipelineHelpers] Suno Music gen failed, falling back to ElevenLabs:', await res.text());
+        return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'elevenlabs');
+      }
+      const queueData = await res.json();
+      if (!queueData.request_id) {
+        console.warn('[pipelineHelpers] Suno returned no request_id, falling back to ElevenLabs');
+        return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'elevenlabs');
+      }
+      const output = await pollFalQueue(queueData.response_url || queueData.request_id, 'fal-ai/suno/v4', keys.falKey, 180, 3000);
+      const audioUrl = output?.audio?.url || output?.audio_url || output?.output?.url;
+      if (!audioUrl) {
+        console.warn('[pipelineHelpers] Suno returned no audio URL, falling back to ElevenLabs');
+        return generateMusic(moodPrompt, durationSeconds, keys, supabase, 'elevenlabs');
+      }
+      return await uploadUrlToSupabase(audioUrl, supabase, 'pipeline/audio');
+    }
+
+    // No other music models — Lyria 2, MiniMax, ElevenLabs, and Suno are supported
     console.warn('[pipelineHelpers] Unknown music model, skipping');
     return null;
   } catch (err) {

@@ -454,6 +454,7 @@ export default function ShortsWorkbenchPage() {
   const [musicApproved, setMusicApproved] = useState(false);
   const [musicVolume, setMusicVolume] = useState(0.2);
   const [enableMusic, setEnableMusic] = useState(true);
+  const [musicModel, setMusicModel] = useState('elevenlabs');
   const [sfxUrl, setSfxUrl] = useState(null);
   const [sfxLoading, setSfxLoading] = useState(false);
   const [sfxVolume, setSfxVolume] = useState(0.3);
@@ -515,7 +516,7 @@ export default function ShortsWorkbenchPage() {
     step, niche, topic, storyContext, framework: framework?.id || null, generatedIdeas,
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
-    blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic,
+    blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic, musicModel,
     sfxUrl, sfxVolume, enableSfx,
     visualStyle, videoStyle, imageModel, videoModel, aspectRatio,
     frames, scenePrompts, sceneRefs, sceneMotionRefs, sceneCameraConfigs, sceneCharacters, clips, finalVideoUrl: finalUrl,
@@ -562,6 +563,7 @@ export default function ShortsWorkbenchPage() {
       setBlocks(s.blocks || []); setTtsDuration(s.rawTtsDuration || s.ttsDuration || null); setRawTtsDuration(s.rawTtsDuration || s.ttsDuration || null);
       setMusicUrl(s.musicUrl || null); setMusicApproved(s.musicApproved || false);
       setMusicVolume(s.musicVolume ?? 0.2); setEnableMusic(s.enableMusic ?? true);
+      setMusicModel(s.musicModel || 'elevenlabs');
       setSfxUrl(s.sfxUrl || null); setSfxVolume(s.sfxVolume ?? 0.3); setEnableSfx(s.enableSfx ?? true);
       setVisualStyle(s.visualStyle || ''); setVideoStyle(s.videoStyle || 'cinematic');
       setImageModel(s.imageModel || 'fal_nano_banana'); setVideoModel(s.videoModel || 'fal_veo3');
@@ -759,7 +761,7 @@ export default function ShortsWorkbenchPage() {
     try {
       const res = await apiFetch('/api/workbench/music', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ framework_id: framework?.id, niche, duration: Math.ceil(effectiveDuration) + 3 }),
+        body: JSON.stringify({ framework_id: framework?.id, niche, duration: Math.ceil(effectiveDuration) + 3, music_model: musicModel }),
       });
       const data = await parseApiResponse(res);
       setMusicUrl(data.audio_url);
@@ -1613,11 +1615,20 @@ export default function ShortsWorkbenchPage() {
 
               {enableMusic && (
                 <>
-                  <button onClick={generateMusic} disabled={musicLoading}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 disabled:opacity-50 mb-3">
-                    {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-1.5" /> : <Music className="w-3.5 h-3.5 inline mr-1.5" />}
-                    Generate Music ($0.05)
-                  </button>
+                  <div className="flex items-center gap-2 mb-3">
+                    <select value={musicModel} onChange={e => setMusicModel(e.target.value)}
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white">
+                      <option value="elevenlabs">ElevenLabs</option>
+                      <option value="minimax">MiniMax</option>
+                      <option value="fal_lyria2">Lyria 2</option>
+                      <option value="suno">Suno</option>
+                    </select>
+                    <button onClick={generateMusic} disabled={musicLoading}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 disabled:opacity-50">
+                      {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-1.5" /> : <Music className="w-3.5 h-3.5 inline mr-1.5" />}
+                      Generate Music ($0.05)
+                    </button>
+                  </div>
 
                   {musicUrl && (
                     <>

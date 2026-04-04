@@ -19,6 +19,7 @@ import LibraryModal from "@/components/modals/LibraryModal";
 import BrandStyleGuideSelector, { extractBrandStyleData } from "@/components/ui/BrandStyleGuideSelector";
 import WizardStepper from "@/components/ui/WizardStepper";
 import { POSE_SETS, getPoseSetById, getPoseSetGrid } from '@/lib/turnaroundPoseSets';
+import CharacterReelPanel from '@/components/imagineer/CharacterReelPanel';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -272,6 +273,10 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
 
   // Reassemble
   const [reassembledUrl, setReassembledUrl] = useState(null);
+
+  // Character Reel
+  const [showReelPanel, setShowReelPanel] = useState(false);
+  const [reelPoseUrls, setReelPoseUrls] = useState([]);
   const [reassembling, setReassembling] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -1094,6 +1099,39 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
         referenceImages,
       },
     }));
+  };
+
+  // ─── Open Character Reel panel with uploaded cell images ──────────────────
+  const handleOpenCharacterReel = async () => {
+    const keepCells = cellImages.filter(c => !c.deleted);
+    if (keepCells.length < 3) { toast.error('Need at least 3 cells for a character reel.'); return; }
+
+    setSavingForLora(true);
+    const hostedUrls = [];
+    try {
+      for (const cell of keepCells) {
+        const res = await apiFetch('/api/library/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: cell.url,
+            type: 'image',
+            title: `Turnaround Reel — ${cell.label}`,
+            source: 'turnaround-reel',
+          }),
+        });
+        const data = await res.json();
+        hostedUrls.push(data.url || data.thumbnail_url);
+      }
+    } catch (err) {
+      toast.error('Failed to upload cells: ' + err.message);
+      setSavingForLora(false);
+      return;
+    }
+    setSavingForLora(false);
+
+    setReelPoseUrls(hostedUrls);
+    setShowReelPanel(true);
   };
 
   // Legacy: save from grid overlay
@@ -2022,6 +2060,45 @@ export default function TurnaroundSheetWizard({ isOpen, onClose, onImageCreated,
                         : <><Film className="w-3.5 h-3.5" /> Open in JumpStart R2V</>}
                     </Button>
                   </div>
+                </div>
+              )}
+
+              {/* Character Reel */}
+              {activeCells.length >= 3 && !showReelPanel && (
+                <div className="mt-3 p-3 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-teal-800 flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5" />
+                        Character Reel
+                      </p>
+                      <p className="text-[10px] text-teal-600 mt-0.5">
+                        Generate animated transitions between poses to create a character showcase reel.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleOpenCharacterReel}
+                      disabled={savingForLora || activeCells.length < 3}
+                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700 text-white gap-1 text-xs"
+                    >
+                      {savingForLora
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
+                        : <><Film className="w-3.5 h-3.5" /> Create Reel</>}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {showReelPanel && reelPoseUrls.length >= 3 && (
+                <div className="mt-3">
+                  <CharacterReelPanel
+                    poseImages={reelPoseUrls}
+                    onReelGenerated={(data) => {
+                      // Reel generated successfully
+                    }}
+                    onClose={() => setShowReelPanel(false)}
+                  />
                 </div>
               )}
             </div>

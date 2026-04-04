@@ -167,6 +167,13 @@ app.post('/api/analyze/clone-ad', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Gemini Deep Video Analyzer route (with auth)
+app.post('/api/analyze/video-gemini', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/video-gemini.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Animate routes (with auth)
 app.post('/api/animate/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('animate/generate.js');
@@ -259,6 +266,26 @@ app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/imagineer/character-reel', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/character-reel.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/character-reel] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+// Prompt templates CRUD (with auth)
+app.all('/api/prompt/templates*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('prompt/templates.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Prompt builder (with auth)
 app.post('/api/prompt/build-cohesive', authenticateToken, async (req, res) => {
   try {
@@ -328,6 +355,13 @@ app.post('/api/viewer3d/generate', authenticateToken, async (req, res) => {
 
 app.post('/api/viewer3d/result', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('viewer3d/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// 3D Product Animation route (with auth)
+app.post('/api/viewer3d/animate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/animate.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });
@@ -667,6 +701,13 @@ app.get('/api/meta/auth', authenticateToken, (await import('./api/meta/auth.js')
 app.get('/api/meta/callback', (await import('./api/meta/callback.js')).default); // No auth — redirect from Meta
 
 // ─── Paid Ads Manager ────────────────────────────────────────────────────
+// Ad Discovery / Spy Tool
+app.post('/api/ads/discover', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('ads/discover.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 app.post('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
 app.get('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
 app.get('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
@@ -718,6 +759,20 @@ app.get('/api/styles/captions', authenticateToken, async (req, res) => {
   res.json({ presets: CAPTION_STYLES });
 });
 app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
+
+// Longform Video Workbench (chapter-based pipeline)
+app.all('/api/longform*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('longform/longform.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Agency Mode
+app.all('/api/agency*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('agency/agency.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
 
 // Shorts Workbench — Ideas Agent (bulk topic generation)
 app.post('/api/workbench/generate-ideas', authenticateToken, async (req, res) => {

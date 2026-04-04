@@ -55,6 +55,9 @@ export default async function handler(req, res) {
     colorGrade,
     // Model-aware prompt optimization
     targetModel,
+    // Prompt template support
+    template,
+    templateVariables,
   } = req.body;
 
   if (!description && !referenceDescription) {
@@ -114,6 +117,41 @@ export default async function handler(req, res) {
   }
 
   if (targetModel) sections.push(`TARGET VIDEO MODEL: ${targetModel}`);
+
+  // Resolve prompt template sections and merge into context.
+  // Template sections provide structured defaults; explicit user inputs above take priority.
+  if (template && template.sections) {
+    const vars = templateVariables || {};
+    const resolvedSections = {};
+    for (const [key, value] of Object.entries(template.sections)) {
+      if (typeof value === 'string') {
+        resolvedSections[key] = value.replace(/\{\{(\w+)\}\}/g, (match, varKey) => {
+          return vars[varKey] !== undefined ? vars[varKey] : match;
+        });
+      }
+    }
+
+    const templateParts = [];
+    if (resolvedSections.camera && !cameraAngle && !cameraDirection) {
+      templateParts.push(`CAMERA (from template): ${resolvedSections.camera}`);
+    }
+    if (resolvedSections.subject && !description) {
+      templateParts.push(`SUBJECT (from template): ${resolvedSections.subject}`);
+    }
+    if (resolvedSections.environment) {
+      templateParts.push(`ENVIRONMENT (from template): ${resolvedSections.environment}`);
+    }
+    if (resolvedSections.motion) {
+      templateParts.push(`MOTION (from template): ${resolvedSections.motion}`);
+    }
+    if (resolvedSections.style && !style) {
+      templateParts.push(`STYLE (from template): ${resolvedSections.style}`);
+    }
+
+    if (templateParts.length > 0) {
+      sections.push(`PROMPT TEMPLATE DIRECTIONS:\n${templateParts.join('\n')}`);
+    }
+  }
 
   const systemPrompt = getSystemPrompt(tool, targetModel);
 

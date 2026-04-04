@@ -126,14 +126,16 @@ export default async function handler(req, res) {
 
       // ─── Music ────────────────────────────────────────────────────
       case 'music': {
-        const { framework_id, niche, duration = 65 } = req.body;
+        const { framework_id, niche, duration = 65, music_model = 'elevenlabs' } = req.body;
         const framework = framework_id ? getFramework(framework_id) : null;
         // Use framework music config first, then fall back to niche-specific music mood
         const nicheMood = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche].music_mood : null;
         const prompt = buildMusicPrompt(framework?.music || framework?.musicMood || nicheMood || 'cinematic background', framework?.category);
-        const audioUrl = await genMusic(prompt, duration, keys, supabase, 'elevenlabs');
+        const validModels = ['elevenlabs', 'minimax', 'fal_lyria2', 'suno'];
+        const selectedModel = validModels.includes(music_model) ? music_model : 'elevenlabs';
+        const audioUrl = await genMusic(prompt, duration, keys, supabase, selectedModel);
         if (!audioUrl) return res.status(500).json({ error: 'Music generation failed' });
-        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: 'elevenlabs', metadata: { track_count: 1 } });
+        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: selectedModel, metadata: { track_count: 1 } });
         return res.json({ audio_url: audioUrl });
       }
 

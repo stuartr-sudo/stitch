@@ -19,6 +19,7 @@ import ShortsDraftPage from './pages/ShortsDraftPage';
 import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
 import BatchQueuePage from './pages/BatchQueuePage';
 import QueuePage from './pages/QueuePage';
+import LongformWorkbenchPage from './pages/LongformWorkbenchPage';
 import PublishQueuePage from './pages/PublishQueuePage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
@@ -41,6 +42,8 @@ import EducatePage from './pages/EducatePage';
 import LearnPage from './pages/LearnPage';
 import FlowsListPage from './pages/FlowsListPage';
 import FlowBuilderPage from './pages/FlowBuilderPage';
+import AdDiscoveryPage from './pages/AdDiscoveryPage';
+import AgencyPage from './pages/AgencyPage';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
@@ -206,6 +209,14 @@ function App() {
             }
           />
           <Route
+            path="/longform/workbench"
+            element={
+              <ProtectedRoute>
+                <LongformWorkbenchPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/publish"
             element={
               <ProtectedRoute>
@@ -278,6 +289,7 @@ function App() {
             }
           />
 
+          <Route path="/ads/discover" element={<ProtectedRoute><AdDiscoveryPage /></ProtectedRoute>} />
           <Route
             path="/ads"
             element={
@@ -324,6 +336,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Agency Mode */}
+          <Route path="/agency" element={<ProtectedRoute><AgencyPage /></ProtectedRoute>} />
 
           {/* Automation Flows */}
           <Route path="/flows" element={<ProtectedRoute><FlowsListPage /></ProtectedRoute>} />

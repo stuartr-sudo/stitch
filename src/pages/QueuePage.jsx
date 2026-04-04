@@ -30,10 +30,13 @@ import {
   ChevronRight,
   Pause,
   RotateCcw,
+  List,
+  LayoutGrid,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { GEMINI_VOICES } from '@/lib/geminiVoices';
+import KanbanBoard from '@/components/queue/KanbanBoard';
 
 // ── Niche options (matches ShortsWorkbenchPage) ────────────────────────────────
 const NICHES = [
@@ -354,6 +357,12 @@ export default function QueuePage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [producing, setProducing] = useState(null); // item id being produced
   const [showSettings, setShowSettings] = useState(false);
+  const [view, setView] = useState(() => localStorage.getItem('queue-view') || 'list');
+
+  const switchView = (v) => {
+    setView(v);
+    localStorage.setItem('queue-view', v);
+  };
 
   // Autopilot state
   const [autopilot, setAutopilot] = useState({ running: false, current_item_id: null, items_processed: 0, items_failed: 0, items_remaining: 0 });
@@ -494,6 +503,25 @@ export default function QueuePage() {
     });
   };
 
+  const handleStatusChange = async (itemId, newStatus) => {
+    // Optimistic update
+    setItems(prev => prev.map(x => x.id === itemId ? { ...x, status: newStatus } : x));
+    try {
+      const res = await apiFetch(`/api/queue/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.error) {
+        toast.error(res.error);
+        fetchItems(); // revert on error
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update status');
+      fetchItems();
+    }
+  };
+
   // Stats
   const stats = {
     total: items.length,
@@ -628,24 +656,52 @@ export default function QueuePage() {
           ))}
         </div>
 
-        {/* Filter row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === 'all' ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            All
-          </button>
-          {ALL_STATUSES.map(s => (
+        {/* Filter row + view toggle */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="w-4 h-4 text-gray-400" />
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === s ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === 'all' ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >
-              {STATUS_CONFIG[s].label}
+              All
             </button>
-          ))}
+            {ALL_STATUSES.map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === s ? 'bg-[#2C666E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {STATUS_CONFIG[s].label}
+              </button>
+            ))}
+          </div>
+
+          {/* View toggle */}
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => switchView('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                view === 'list'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              List
+            </button>
+            <button
+              onClick={() => switchView('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                view === 'kanban'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Kanban
+            </button>
+          </div>
         </div>
 
         {/* Queue items */}
@@ -653,6 +709,16 @@ export default function QueuePage() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-[#2C666E]" />
           </div>
+        ) : view === 'kanban' ? (
+          <KanbanBoard
+            items={filteredItems}
+            onStatusChange={handleStatusChange}
+            onItemClick={(item) => {
+              if (item.status === 'ready' && item.draft_id) {
+                navigate(`/shorts/draft/${item.draft_id}`);
+              }
+            }}
+          />
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <ListOrdered className="w-10 h-10 mx-auto mb-3 opacity-40" />
