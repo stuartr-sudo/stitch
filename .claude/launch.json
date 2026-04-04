@@ -5,7 +5,8 @@
       "name": "api",
       "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": ["server.js"],
-      "port": 3003
+      "port": 3003,
+      "autoPort": false
     },
     {
       "name": "frontend",
