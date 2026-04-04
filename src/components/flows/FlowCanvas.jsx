@@ -10,11 +10,13 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import StitchNode from './nodes/StitchNode';
+import DeletableEdge from './edges/DeletableEdge';
 
 const nodeTypes = { stitch: StitchNode };
+const edgeTypes = { default: DeletableEdge };
 
 const defaultEdgeOptions = {
-  style: { stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1.5 },
+  type: 'default',
   animated: false,
 };
 
@@ -69,6 +71,7 @@ export default function FlowCanvas({
         onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         deleteKeyCode={['Backspace', 'Delete']}
         fitView

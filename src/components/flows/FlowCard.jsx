@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
-export default function FlowCard({ flow, onRun }) {
+export default function FlowCard({ flow, onRun, onDelete }) {
   const navigate = useNavigate();
   const executions = flow.automation_executions || [];
   const runCount = executions.length;
@@ -10,6 +10,13 @@ export default function FlowCard({ flow, onRun }) {
   const handleRun = async (e) => {
     e.stopPropagation();
     if (onRun) onRun(flow.id);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (confirm(`Delete "${flow.name}"? This cannot be undone.`)) {
+      if (onDelete) onDelete(flow.id);
+    }
   };
 
   return (
@@ -35,12 +42,21 @@ export default function FlowCard({ flow, onRun }) {
               <span className="text-[10px] text-gray-600">Last: {new Date(lastRun).toLocaleDateString()}</span>
             )}
           </div>
-          <button
-            onClick={handleRun}
-            className="px-3 py-1 text-[11px] bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 rounded-md hover:bg-indigo-500/25 transition-colors"
-          >
-            ▶ Run
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDelete}
+              className="px-2 py-1 text-[11px] bg-red-500/10 border border-red-500/20 text-red-400 rounded-md hover:bg-red-500/20 transition-colors"
+              title="Delete flow"
+            >
+              Delete
+            </button>
+            <button
+              onClick={handleRun}
+              className="px-3 py-1 text-[11px] bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 rounded-md hover:bg-indigo-500/25 transition-colors"
+            >
+              ▶ Run
+            </button>
+          </div>
         </div>
       </div>
     </div>

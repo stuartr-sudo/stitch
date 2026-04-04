@@ -443,7 +443,7 @@ function VoiceoverForm({ config, u, wired }) {
 
   return (
     <div className="space-y-5">
-      {wired.has('script') ? <WiredBanner portName="script" /> : (
+      {wired.has('text') ? <WiredBanner portName="text" /> : (
         <Panel title="Script">
           <textarea value={config.script || ''} onChange={e => u('script', e.target.value)}
             placeholder="Enter voiceover script..." rows={5} className={TEXTAREA} />
@@ -727,7 +727,7 @@ function StoryboardCreateForm({ config, u, wired }) {
           placeholder="Storyboard name..." className={INPUT} />
       </Panel>
 
-      {wired.has('description') ? <WiredBanner portName="description" /> : (
+      {wired.has('topic') ? <WiredBanner portName="topic" /> : (
         <Panel title="Brief / Description" description="Describe the video you want to create">
           <textarea value={config.description || ''} onChange={e => u('description', e.target.value)}
             placeholder="Narrative, purpose, key scenes, visual direction..." rows={4} className={TEXTAREA} />
@@ -911,7 +911,7 @@ function ContentForm({ config, u, nodeType, wired }) {
   if (nodeId === 'text-transform') {
     return (
       <div className="space-y-5">
-        {wired.has('input') ? <WiredBanner portName="input" /> : (
+        {wired.has('text') ? <WiredBanner portName="text" /> : (
           <Panel title="Input Text">
             <textarea value={config.input_text || ''} onChange={e => u('input_text', e.target.value)}
               placeholder="Text to transform..." rows={4} className={TEXTAREA} />

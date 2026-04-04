@@ -51,6 +51,11 @@ export default function FlowsListPage() {
     if (data?.execution) navigate(`/flows/${flowId}/run/${data.execution.id}`);
   };
 
+  const handleDeleteFlow = async (flowId) => {
+    await apiFetch(`/api/flows/${flowId}`, { method: 'DELETE' });
+    setFlows(prev => prev.filter(f => f.id !== flowId));
+  };
+
   const completedCount = executions.filter(e => e.status === 'completed').length;
   const successRate = executions.length > 0 ? Math.round((completedCount / executions.length) * 100) : 0;
   const scheduledCount = flows.filter(f => f.trigger_type === 'scheduled').length;
@@ -91,7 +96,7 @@ export default function FlowsListPage() {
         ) : tab === 'flows' ? (
           <div className="grid grid-cols-3 gap-4">
             {flows.map(flow => (
-              <FlowCard key={flow.id} flow={flow} onRun={handleRunFlow} />
+              <FlowCard key={flow.id} flow={flow} onRun={handleRunFlow} onDelete={handleDeleteFlow} />
             ))}
             {flows.length === 0 && <p className="text-gray-600 text-sm col-span-3">No flows yet. Create one or start from a template.</p>}
           </div>
