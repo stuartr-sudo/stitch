@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
-  Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard,
+  Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard, Scissors,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -25,6 +25,8 @@ import { BrandKitGuideContent } from './BrandKitGuidePage';
 import { AdDiscoveryGuideContent } from './AdDiscoveryGuidePage';
 import { AgencyGuideContent } from './AgencyGuidePage';
 import { LongformGuideContent } from './LongformGuidePage';
+import { AdCloneGuideContent } from './AdCloneGuidePage';
+import { VideoAnalyzerGuideContent } from './VideoAnalyzerGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -83,6 +85,8 @@ const TABS = [
   { id: 'ad-discovery', label: 'Ad Discovery', Icon: Eye },
   { id: 'agency',    label: 'Agency Mode',      Icon: Briefcase },
   { id: 'longform',  label: 'Longform',         Icon: Clapperboard },
+  { id: 'clone-ad', label: 'Clone Ad',          Icon: Scissors },
+  { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
 ];
 
 const CLI_SUB_TABS = [
@@ -308,6 +312,16 @@ export default function LearnPage() {
         {activeTab === 'longform' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <LongformGuideContent />
+          </div>
+        )}
+        {activeTab === 'clone-ad' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <AdCloneGuideContent />
+          </div>
+        )}
+        {activeTab === 'video-analyzer' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <VideoAnalyzerGuideContent />
           </div>
         )}
       </div>
