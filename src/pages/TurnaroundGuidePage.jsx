@@ -8,6 +8,8 @@ import {
   Monitor, FileImage, Box, Clapperboard, Maximize2, PenTool,
 } from 'lucide-react';
 
+const CDN = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/turnaround/';
+
 /* ─── Reusable components ──────────────────────────────────────────── */
 
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
@@ -62,38 +64,30 @@ function StepBadge({ number }) {
   );
 }
 
-function PoseSetCard({ name, grid, cells, purpose, color = 'teal' }) {
-  const colors = {
-    teal: 'border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/40',
-    purple: 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/40',
-    blue: 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40',
-  };
+function GuideImage({ src, alt, caption }) {
   return (
-    <div className={`border rounded-lg p-4 ${colors[color]}`}>
-      <div className="flex items-center justify-between mb-1">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{name}</h4>
-        <span className="text-xs font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded border dark:border-gray-700">{grid} = {cells} cells</span>
-      </div>
-      <p className="text-xs text-gray-600 dark:text-gray-400">{purpose}</p>
+    <div className="my-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+      <img src={src} alt={alt} className="w-full object-cover" loading="lazy" />
+      {caption && (
+        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/80 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
+          {caption}
+        </div>
+      )}
     </div>
   );
 }
 
-function ModelCard({ name, type, speed, refRequired, bestFor }) {
+function PoseSetRow({ name, grid, cells, bestFor, highlight = false }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{name}</h4>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-          type === 'Edit' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-        }`}>{type}</span>
-      </div>
-      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-        <div className="flex items-center gap-1.5"><Zap className="w-3 h-3" /><span>Speed: {speed}</span></div>
-        <div className="flex items-center gap-1.5"><Image className="w-3 h-3" /><span>Reference: {refRequired}</span></div>
-        <div className="flex items-center gap-1.5"><Sparkles className="w-3 h-3" /><span>Best for: {bestFor}</span></div>
-      </div>
-    </div>
+    <tr className={highlight ? 'bg-purple-50 dark:bg-purple-950/20' : ''}>
+      <td className="px-3 py-2.5 font-medium text-gray-900 dark:text-gray-100">
+        {name}
+        {highlight && <span className="ml-1.5 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold">R2V</span>}
+      </td>
+      <td className="px-3 py-2.5 font-mono text-gray-600 dark:text-gray-400">{grid}</td>
+      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{cells}</td>
+      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{bestFor}</td>
+    </tr>
   );
 }
 
@@ -103,768 +97,417 @@ export function TurnaroundGuideContent() {
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-4">
 
-        {/* ── Overview ── */}
-        <Section icon={BookOpen} title="What Is a Turnaround Sheet?" defaultOpen={true}>
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              A <strong>turnaround sheet</strong> (also called a model sheet or character reference sheet) is a grid of
-              images showing a single character from multiple angles, poses, and expressions. It's the industry-standard
-              tool for maintaining <strong>character consistency</strong> across animation, games, comics, and AI video generation.
-            </p>
-            <p>
-              In the AI video world, turnaround sheets are critical for <strong>Reference-to-Video (R2V)</strong> workflows —
-              you feed the sheet (or individual cells) to video models like Veo 3.1, Kling, or Grok so the AI knows exactly
-              what your character looks like from every angle.
-            </p>
+      {/* ── What Are Turnaround Sheets ── */}
+      <Section icon={BookOpen} title="What Are Turnaround Sheets?" defaultOpen={true}>
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Turnaround sheets are multi-angle character reference sheets. They show a character from multiple
+            positions — front, three-quarter, side, and back — providing the consistent visual reference that
+            AI video models need to generate that character reliably across multiple clips.
+          </p>
+          <p>
+            In AI video workflows, consistency is the hardest problem to solve. Without a reference sheet,
+            every video clip may interpret your character differently — different hair colour, different outfit
+            details, different proportions. A turnaround sheet gives every model a single source of truth.
+          </p>
+          <p>
+            For <strong>Reference-to-Video (R2V)</strong> workflows, turnaround sheets are essential: you feed
+            the individual cells to video models like Veo 3.1, Kling O3, or Grok as reference images so the AI
+            understands your character from every angle before generating motion.
+          </p>
 
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">How the Wizard Works</h4>
-            <p>The wizard walks you through 6 steps, then generates sheets as a <strong>cartesian product</strong> of your selections:</p>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 font-mono text-xs text-gray-700 dark:text-gray-300 border dark:border-gray-700">
-              Total sheets = Characters &times; Styles &times; Pose Sets
-              <br />
-              Example: 2 characters &times; 3 styles &times; 1 pose set = 6 sheets
-            </div>
-            <p>Each sheet is generated as a single image with a grid of cells. After generation, you can slice the sheet
-              into individual cells, edit specific cells, delete unwanted ones, and reassemble.</p>
+          <GuideImage
+            src={`${CDN}01-wizard-overview.jpg`}
+            alt="Turnaround Sheet Wizard — Step 1"
+            caption="The Turnaround wizard opens from the Image Tools section of the studio toolbar."
+          />
 
-            <Tip>
-              Start small (1 character, 1 style, 1 pose set) until you're happy with the results, then scale up.
-              Each combination fires a separate AI generation — costs add up with the cartesian product.
-            </Tip>
-          </div>
-        </Section>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Opening the Wizard</h4>
+          <p>
+            In the studio, click <strong>Image Tools</strong> in the sidebar to expand it, then click
+            <strong> Turnaround</strong>. This opens a 6-step wizard that is completely independent of Imagineer —
+            do not open Imagineer first.
+          </p>
 
-        {/* ── Step 1: Character ── */}
-        <Section icon={User} title="Step 1: Character">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={1} />
-              <p>Define <strong>who</strong> you're drawing. This is the most important step — the character description
-                anchors the AI's understanding of the subject across all cells.</p>
-            </div>
+          <Tip>
+            Start with one character, one style, and one pose set until you have a result you're happy with.
+            Total sheets = Characters &times; Styles &times; Pose Sets — costs scale with the cartesian product.
+          </Tip>
+        </div>
+      </Section>
 
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Name</h4>
-            <p>A short identifier. Used in file names when saving cells and for organizing generated sheets in the gallery.</p>
+      {/* ── The 6-Step Wizard ── */}
+      <Section icon={Settings} title="The 6-Step Wizard">
+        <div className="mt-3 space-y-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
 
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Description</h4>
-            <p>
-              A detailed text description of the character's appearance. This is injected <strong>early in the prompt</strong> (identity-first hierarchy)
-              so the AI prioritizes getting the character right before thinking about layout or style.
-            </p>
-            <Tip>
-              Be specific about distinguishing features: hair color/style, eye color, skin tone, outfit details, accessories,
-              body type, age range. The more specific you are, the more consistent the cells will be.
-            </Tip>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-xs border dark:border-gray-700 space-y-1">
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Good description:</p>
-              <p className="text-gray-600 dark:text-gray-400">"A young woman with waist-length silver hair, bright violet eyes, pointed ears,
-                wearing a dark blue cloak over leather armor with gold trim. She has a scar across her left cheek and carries a
-                glowing staff on her back."</p>
-              <p className="font-semibold text-gray-800 dark:text-gray-200 pt-2">Bad description:</p>
-              <p className="text-gray-600 dark:text-gray-400">"An elf warrior" (too vague — the AI will invent different details for each cell)</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Reference Images</h4>
-            <p>
-              Optional for generate models, <strong>required for edit models</strong>. Upload one or more reference images
-              of your character. The AI will use these as the visual anchor.
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Single reference</strong> — The AI recreates this exact character in each cell</li>
-              <li><strong>Multiple references</strong> — All images are stitched into a single composite (same height, side by side) and sent as one input. The AI studies all views to understand the character from multiple angles</li>
-              <li><strong>Auto-describe</strong> — Click the sparkle icon on a reference image to have GPT-4o mini vision analyze it and auto-fill the character description</li>
-            </ul>
-
-            <InfoBox>
-              You can add multiple characters. Each character generates its own set of sheets (multiplied by styles and pose sets).
-            </InfoBox>
-
-            <Warning>
-              Edit models (Nano Banana 2 Edit, Nano Banana Pro, Seedream) <strong>require at least one reference image</strong>.
-              If you want to generate without a reference, use a Generate model (Seedream Generate, Nano Banana 2, or Flux 2).
-            </Warning>
-          </div>
-        </Section>
-
-        {/* ── Step 2: Style & Model ── */}
-        <Section icon={Palette} title="Step 2: Style & Model">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={2} />
-              <p>Choose the visual style, AI model, and pose set layout. Selecting multiple styles or pose sets multiplies your sheet count.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Visual Styles</h4>
-            <p>
-              The StyleGrid shows 100+ visual style presets. Each preset is a detailed 40-80 word prompt that controls
-              the artistic rendering — things like "3D Pixar-style rendering with subsurface scattering" or
-              "ink wash painting with traditional brushwork." You can select <strong>multiple styles</strong> to generate
-              the same character in different art styles.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">AI Models</h4>
-            <p>Two categories with very different behavior:</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-3">
-              <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40 rounded-lg p-3">
-                <h5 className="font-semibold text-green-800 dark:text-green-200 text-xs mb-2 flex items-center gap-1.5">
-                  <PenTool className="w-3.5 h-3.5" /> EDIT MODELS (Recommended)
-                </h5>
-                <ul className="text-xs text-green-900 dark:text-green-200 space-y-1">
-                  <li>Require a reference image</li>
-                  <li>Synchronous — results return immediately (~30-60s)</li>
-                  <li>Auto-upscaled 2&times; via Topaz after generation</li>
-                  <li>Fallback chain: if one model errors, tries the next</li>
-                  <li>Best for character consistency (guided by your reference)</li>
-                </ul>
-              </div>
-              <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3">
-                <h5 className="font-semibold text-blue-800 dark:text-blue-200 text-xs mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> GENERATE MODELS
-                </h5>
-                <ul className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
-                  <li>No reference image needed (text description only)</li>
-                  <li>Asynchronous — queued, then polled every 3 seconds</li>
-                  <li>No auto-upscale (can upscale individual cells later)</li>
-                  <li>More creative freedom but less control</li>
-                  <li>Flux 2 supports LoRA weights for trained characters</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-3">
-              <ModelCard name="Nano Banana 2 Edit" type="Edit" speed="Fast (~30s)" refRequired="Required" bestFor="General purpose, recommended default" />
-              <ModelCard name="Nano Banana Pro" type="Edit" speed="Medium (~45s)" refRequired="Required" bestFor="Higher quality, premium results" />
-              <ModelCard name="Seedream v4.5" type="Edit" speed="Medium (~45s)" refRequired="Required" bestFor="Photorealistic subjects" />
-              <ModelCard name="Seedream Generate" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="No-reference photorealistic" />
-              <ModelCard name="Nano Banana 2" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="No-reference general purpose" />
-              <ModelCard name="Flux 2" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="LoRA-trained characters" />
-            </div>
-
-            <Tip>
-              <strong>Edit models have a fallback chain.</strong> If Nano Banana 2 Edit returns a server error (502/503/504),
-              it automatically retries with Nano Banana Pro, then Seedream. You don't need to manually retry on transient failures.
-            </Tip>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Pose Sets</h4>
-            <p>
-              The pose set determines your grid layout — how many cells, what angles and poses each cell shows.
-              You can select <strong>multiple pose sets</strong> to generate the same character in different layouts.
-            </p>
-
-            <div className="space-y-2 my-3">
-              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Small Grids (Fewer Cells, Higher Resolution Per Cell)</h5>
-              <PoseSetCard
-                name="3D Reference — Angles"
-                grid="2&times;2"
-                cells={4}
-                purpose="Front, Right, Back, Left — orthographic views for 3D model generation. Clean, symmetrical, technical."
-                color="teal"
-              />
-              <PoseSetCard
-                name="3D Reference — Action"
-                grid="2&times;2"
-                cells={4}
-                purpose="Dynamic action poses for rigging and animation reference. 3/4 action, side action, hero pose."
-                color="teal"
-              />
-              <PoseSetCard
-                name="R2V Reference"
-                grid="3&times;2"
-                cells={6}
-                purpose="Optimized for video generation. Top row: full-body front, 3/4, side. Bottom row: matching portrait close-ups per angle. The portrait row locks facial features for R2V."
-                color="purple"
-              />
-
-              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Full Grids (24 Cells, Comprehensive Coverage)</h5>
-              <PoseSetCard
-                name="Standard 24"
-                grid="4&times;6"
-                cells={24}
-                purpose="Classic turnaround: neutral standing, expressions, walk cycle, action poses, props/interaction, and per-angle portrait close-ups (Row 6). The default choice."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Expressions Focus"
-                grid="4&times;6"
-                cells={24}
-                purpose="16 expression cells (happy, sad, angry, surprised, etc.) plus turnaround views and detail close-ups. For characters where facial acting is critical."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Action Heavy"
-                grid="4&times;6"
-                cells={24}
-                purpose="Combat stances, power poses, dynamic movement, aerial poses. For action/superhero/fighter characters."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Fashion / Outfit"
-                grid="4&times;6"
-                cells={24}
-                purpose="Outfit showcasing, seasonal variations, accessory details, styling poses. For fashion or character design."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Creature / Non-Human"
-                grid="4&times;6"
-                cells={24}
-                purpose="Anatomy views, locomotion, threat/passive displays, scale reference. For animals, monsters, mechs, aliens."
-                color="blue"
-              />
-            </div>
-
-            <InfoBox>
-              <strong>Grid dimensions affect image aspect ratio and resolution:</strong><br />
-              <span className="font-mono">2&times;2</span> &rarr; 1:1 square (2048&times;2048 Seedream, 1536&times;1536 Flux)<br />
-              <span className="font-mono">3&times;2</span> &rarr; 3:2 landscape (2560&times;1440 Seedream, 1536&times;1024 Flux)<br />
-              <span className="font-mono">4&times;6</span> &rarr; 2:3 portrait (1440&times;2560 Seedream, 1024&times;1536 Flux)<br />
-              Smaller grids mean <strong>more pixels per cell</strong> — 2&times;2 gives each cell ~6&times; the pixel area of a 4&times;6 cell.
-            </InfoBox>
-          </div>
-        </Section>
-
-        {/* ── Step 3: Props ── */}
-        <Section icon={Wand2} title="Step 3: Props & Negative Prompt">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={3} />
-              <p>Add props your character should hold/wear, and specify what to avoid.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Props</h4>
-            <p>
-              Select from 9 categories: Vehicles, Weapons, Musical Instruments, Sports Equipment, Tools,
-              Fantasy Items, Everyday Objects, Accessories, and Companion Animals. Props are integrated into
-              relevant poses — the AI decides which cells naturally incorporate them.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Negative Prompt</h4>
-            <p>
-              Tell the AI what to <strong>avoid</strong>. This appears at both the start and end of the generation prompt
-              for maximum effect. Two input methods:
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Quick pills</strong> — Pre-built categories (Quality Issues, Anatomy, Face & Expression, Style, Consistency). Click to toggle.</li>
-              <li><strong>Freeform text</strong> — Type anything additional</li>
-            </ul>
-
-            <Tip>
-              The "Consistency" category pills are especially useful for turnarounds — they prevent outfit changes,
-              color shifts, proportion changes, and style mixing between cells.
-            </Tip>
-
-            <Warning>
-              <strong>Expression conflict resolution:</strong> For Standard 24, if your negative prompt includes emotions
-              (e.g., "angry," "sad"), the system automatically swaps conflicting expression cells in Row 2 with safe alternatives
-              (calm confident, gentle smile, curious). This only applies to the Standard 24 pose set.
-            </Warning>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Brand Style Guide</h4>
-            <p>
-              Optional. If you have a Brand Kit configured, select it here. The brand's visual style, mood, lighting,
-              and composition rules are appended to the prompt, ensuring generated sheets match your brand identity.
-            </p>
-          </div>
-        </Section>
-
-        {/* ── Step 4: Refinements (Background) ── */}
-        <Section icon={Paintbrush} title="Step 4: Refinements & Background">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={4} />
-              <p>Final tuning before generation. The key decision here is <strong>background mode</strong>.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Background Modes</h4>
-            <div className="space-y-2 my-3">
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-white"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">White Background</h5>
-                  <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Default</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Traditional character sheet look. Clean and simple. Works well with Grok R2V and for non-AI usage
-                  (animation, games, art reference).
-                </p>
-              </div>
-
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-gray-400"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">Gray Background</h5>
-                  <span className="text-[10px] bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">Recommended for R2V</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Industry standard for production model sheets. Neutral gray provides clean character-to-background
-                  separation without influencing color perception.
-                </p>
-                <Warning>
-                  <strong>Use gray if your sheets will feed into Veo 3.1 R2V.</strong> Veo 3.1 consistently fails
-                  (422 "no_media_generated") when given reference images with pure white backgrounds — the model
-                  can't distinguish the character from the background. Gray solves this. Grok R2V handles white fine.
-                </Warning>
-              </div>
-
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/30 dark:to-blue-950/30">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-gradient-to-br from-green-300 to-blue-300"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">Scene Environment</h5>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Places your character in a contextual background (forest, beach, city, etc.). Choose from 20+ presets
-                  or type your own. Best for R2V workflows where you want the AI video model to understand the character
-                  in context, not just in isolation.
-                </p>
-                <Tip>
-                  Scene Environment gives the best R2V results because video models understand characters better when
-                  they're shown in context. However, the background may influence the character's appearance slightly.
-                  Use gray for maximum purity, scene for maximum R2V compatibility.
-                </Tip>
-              </div>
+          <div className="flex items-start gap-3">
+            <StepBadge number={1} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Character</p>
+              <p className="mt-0.5">
+                Describe your character in detail — appearance, clothing, distinctive features, art style.
+                The more specific you are, the more consistent the sheet will be across all cells. Both a
+                name and description are required to advance.
+              </p>
             </div>
           </div>
-        </Section>
 
-        {/* ── Step 5: Results ── */}
-        <Section icon={Image} title="Step 5: Results & Gallery">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={5} />
-              <p>Generation happens here. Watch your sheets come in, filter the gallery, retry failures, and pick sheets to edit.</p>
-            </div>
+          <GuideImage
+            src={`${CDN}02-character-input.jpg`}
+            alt="Character description input"
+            caption="Step 1: Character name and detailed appearance description. Be specific about hair, eyes, outfit, and distinguishing features."
+          />
 
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Generation Process</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Concurrency:</strong> Up to 4 sheets generate simultaneously. Others queue and fire as slots free up.</li>
-              <li><strong>Edit models:</strong> Results appear in ~30-60 seconds per sheet. They arrive auto-upscaled (2&times; via Topaz).</li>
-              <li><strong>Generate models:</strong> Queued on FAL.ai, polled every 3 seconds. Usually ~60-90 seconds.</li>
-              <li><strong>Soft warning:</strong> If the cartesian product exceeds 10 sheets, you'll be warned before generation starts.</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Auto-Upscale (Edit Models Only)</h4>
-            <p>
-              After an edit model returns its image, it's automatically sent to <strong>Topaz Standard V2</strong> for 2&times; upscaling.
-              This doubles the resolution without adding AI hallucinations (Topaz preserves details unlike some upscalers).
-              The upscaled image is what you see in the gallery.
-            </p>
-            <InfoBox>
-              Topaz upscale uses <span className="font-mono text-xs">fal-ai/topaz/upscale/image</span> with PNG output,
-              Standard V2 model, 2&times; factor, no face enhancement (to avoid altering character features).
-              It's queue-based — submit, poll up to 2 minutes, then return.
-            </InfoBox>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Gallery Features</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Filter</strong> by character, style, or pose set to narrow results</li>
-              <li><strong>Retry</strong> individual failed sheets or all failures at once</li>
-              <li><strong>Download</strong> any sheet as PNG directly</li>
-              <li><strong>Click</strong> a sheet to select it for the Cell Editor (Step 6)</li>
-              <li>Sheets are grouped by character name for easy comparison</li>
-            </ul>
-          </div>
-        </Section>
-
-        {/* ── Step 6: Cell Editor ── */}
-        <Section icon={Scissors} title="Step 6: Cell Editor">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={6} />
-              <p>Slice your sheet into individual cells, review each one, edit problem cells, and save.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Slicing</h4>
-            <p>
-              The tool knows the grid dimensions from the pose set data. It divides the sheet image into equal cells
-              (width / cols, height / rows) and labels each cell from the pose set definition. You see a grid of individual
-              cell images with their labels.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Reviewing Cells</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Delete</strong> — Mark cells you don't want. They're excluded from reassembly and save.</li>
-              <li><strong>Restore</strong> — Unmark all deleted cells if you change your mind.</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Editing Individual Cells</h4>
-            <p>
-              Click "Edit" on any cell to fix issues. Type an instruction (e.g., "change expression to angry" or
-              "add a sword in the right hand") and the AI will modify that specific cell. The edit uses Flux 2
-              at 512&times;512 resolution.
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Enter your edit instruction</li>
-              <li>Click Edit — the cell uploads to the library, then goes to the image edit API</li>
-              <li>A preview appears alongside the original</li>
-              <li><strong>Accept</strong> to replace the cell, or <strong>Reject</strong> to keep the original</li>
-            </ol>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Saving</h4>
-            <p>Two save paths:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-3">
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <h5 className="font-semibold text-sm dark:text-gray-100 flex items-center gap-1.5 mb-1">
-                  <Save className="w-4 h-4 text-[#2C666E]" /> Save Cells for LoRA
-                </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Saves each non-deleted cell as a separate image to your library. Perfect for feeding into LoRA training —
-                  each cell becomes a training image with auto-generated tags (character name, turnaround, style, pose set).
-                  Set a folder name prefix to organize them.
-                </p>
-              </div>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <h5 className="font-semibold text-sm dark:text-gray-100 flex items-center gap-1.5 mb-1">
-                  <Layers className="w-4 h-4 text-[#2C666E]" /> Reassemble & Save
-                </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Reconstructs a composite sheet from your remaining cells (excluding deleted ones), recalculating the grid
-                  layout. Also saves each individual cell separately. Great for creating a clean final sheet after editing.
-                </p>
-              </div>
+          <div className="flex items-start gap-3">
+            <StepBadge number={2} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Style &amp; Model</p>
+              <p className="mt-0.5">
+                Choose a visual style preset (100+ options) and AI generation model. You can select multiple
+                styles to generate the same character in different art styles. Also select your pose set
+                layout — this determines how many cells and what angles appear in the sheet.
+              </p>
             </div>
           </div>
-        </Section>
 
-        {/* ── Prompt Hierarchy ── */}
-        <Section icon={FileImage} title="How the Prompt Is Built (Identity-First Hierarchy)">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              The order of information in an AI image prompt matters — models pay more attention to tokens that appear early.
-              The turnaround prompt is structured so character identity comes first, before any layout or style instructions.
-              This ensures the AI prioritizes "who" over "how."
-            </p>
+          <GuideImage
+            src={`${CDN}06-style-model.jpg`}
+            alt="Style and Model step"
+            caption="Step 2: Visual style grid, AI model selector, and pose set selection. Selecting multiple styles multiplies your sheet count."
+          />
 
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border dark:border-gray-700 space-y-2">
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-2 py-0.5 rounded shrink-0">1st</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Avoidance Instructions (Negative Prompt)</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"CRITICAL INSTRUCTION — DO NOT include..." — placed first so the model sees constraints before generating anything</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 rounded shrink-0">2nd</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Character Identity</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Your character description — the face, hair, outfit, distinguishing features. This is the anchor.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded shrink-0">3rd</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Reference Image Instructions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">How to use the reference image(s) — "recreate this exact character" or "study all views"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/40 px-2 py-0.5 rounded shrink-0">4th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Grid Layout & Background</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"Professional turnaround sheet, N columns &times; N rows, [white/gray/scene] background"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded shrink-0">5th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Consistency & Alignment Instructions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"Consistent head height, even spacing, uniform framing, relaxed A-pose for standing views, same proportions/features in every cell"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 rounded shrink-0">6th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Style & Props</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Art style rendering instructions + prop integration</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded shrink-0">7th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Row-by-Row Cell Definitions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Each row's label and cell prompts from the pose set — "Row 1: front view, 3/4 view, side profile..."</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded shrink-0">8th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Taxonomy Tags & Avoidance Repeat</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"character reference sheet, turnaround sheet, animation reference" + negative prompt repeated for reinforcement</p>
-                </div>
-              </div>
-            </div>
-
-            <Tip>
-              The negative prompt appears at both the start AND end of the prompt. Research shows that AI models can "forget"
-              early instructions by the time they process long prompts. Repeating constraints at the end reinforces them.
-            </Tip>
-          </div>
-        </Section>
-
-        {/* ── R2V Workflow ── */}
-        <Section icon={Clapperboard} title="Using Turnaround Sheets for R2V (Reference-to-Video)">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              The primary downstream use for turnaround sheets is feeding them into <strong>Reference-to-Video</strong> models
-              (Veo 3.1 R2V, Kling O3 R2V, Grok R2V) to generate videos of your character in motion.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Recommended R2V Workflow</h4>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>
-                <strong>Generate turnaround</strong> using the <strong>R2V Reference</strong> pose set (3&times;2 grid, 6 cells).
-                This is specifically designed for R2V — full body views + matching portrait close-ups lock the face.
-              </li>
-              <li>
-                <strong>Use Gray or Scene background</strong> — never white for Veo 3.1. Gray is safe for all models.
-                Scene gives the best video results but may influence character appearance slightly.
-              </li>
-              <li>
-                <strong>Slice into cells</strong> using the Cell Editor. Save individual cells for use as reference images
-                in JumpStart or the Shorts Workbench.
-              </li>
-              <li>
-                <strong>Feed cells to R2V</strong> — In JumpStart, select a Veo 3.1 R2V or Kling O3 R2V model and upload
-                your turnaround cells as reference images. The video model recreates your character in motion.
-              </li>
-            </ol>
-
-            <Warning>
-              <strong>Veo 3.1 R2V + white backgrounds = failure.</strong> This is the #1 pitfall. Veo 3.1 R2V cannot
-              process reference images with pure white/blank backgrounds — it consistently returns 422 "no_media_generated"
-              after ~90 seconds. Use gray or scene backgrounds. Grok R2V handles white backgrounds fine.
-            </Warning>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Which R2V Model to Use?</h4>
-            <div className="space-y-2 my-2">
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Veo 3.1 R2V</strong> — Highest quality video generation. Needs gray/scene backgrounds. Best for final production.
-              </div>
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Kling O3 R2V</strong> — Good quality, handles multiple reference images (character + element references). Works with any background.
-              </div>
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Grok R2V</strong> — Most forgiving — handles white backgrounds fine. Good fallback when Veo fails. Supports audio generation.
-              </div>
-            </div>
-
-            <Tip>
-              For the best R2V results, provide <strong>3-5 reference images</strong> from different angles rather than
-              the full composite sheet. The full sheet as a single image can confuse some models. Individual cells give
-              clearer signals about the character's appearance.
-            </Tip>
-          </div>
-        </Section>
-
-        {/* ── Tips & Best Practices ── */}
-        <Section icon={CheckCircle2} title="Tips & Best Practices">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Descriptions</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Include <strong>5-8 specific physical details</strong> (hair color/length, eye color, skin tone, build, height)</li>
-              <li>Describe the <strong>complete outfit</strong> (top, bottom, shoes, accessories — colors and materials)</li>
-              <li>Mention <strong>distinguishing features</strong> (scars, tattoos, markings, unique accessories)</li>
-              <li>Use the <strong>auto-describe</strong> feature on reference images to get a starting point, then edit</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Reference Images</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Clear, well-lit reference images produce the best results</li>
-              <li>Multiple angles help — front + side + 3/4 gives the AI more data to maintain consistency</li>
-              <li>Avoid busy backgrounds in reference images — the AI may incorporate background elements</li>
-              <li>Higher resolution references are better (they get stitched and resized, but more detail = more signal)</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Choosing Pose Sets</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>For R2V workflows:</strong> Use R2V Reference (6 cells) — purpose-built for video generation</li>
-              <li><strong>For 3D workflows:</strong> Use 3D Reference — Angles (4 cells, orthographic)</li>
-              <li><strong>For comprehensive reference:</strong> Use Standard 24 — covers everything including expressions and walk cycles</li>
-              <li><strong>For LoRA training:</strong> Standard 24 gives the most diverse training images per generation</li>
-              <li>Smaller grids (2&times;2, 3&times;2) produce higher quality per cell because each cell gets more pixels</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Negative Prompts</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Always enable the <strong>Consistency</strong> pills — they prevent the most common turnaround issue (character drift between cells)</li>
-              <li>Add <strong>"extra limbs, extra fingers"</strong> for action poses — these artifacts are more common in dynamic cells</li>
-              <li>Be careful negating emotions — Standard 24 has expression cells that may conflict (the system auto-resolves this, but keep it in mind)</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">General</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Edit models (especially Nano Banana 2 Edit) give the most consistent results because the reference image anchors every cell</li>
-              <li>If one sheet has a few bad cells but most are good, use the Cell Editor to fix just those cells rather than regenerating the whole thing</li>
-              <li>Save cells for LoRA after a good generation — the diverse angles make excellent training data</li>
-              <li>The auto-upscale on edit models means your cells are already 2&times; resolution — good enough for most downstream uses without additional upscaling</li>
-            </ul>
-          </div>
-        </Section>
-
-        {/* ── Troubleshooting ── */}
-        <Section icon={Shield} title="Troubleshooting">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800/50">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Problem</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Cause</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Solution</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Character looks different in each cell</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Vague description, no reference image</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Use an edit model with a clear reference image. Add more specific details to description. Enable Consistency negative pills.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">R2V video fails with 422 error</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">White background + Veo 3.1 R2V</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Regenerate with Gray or Scene background. Or switch to Grok R2V which handles white fine.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Cells overlap or bleed into each other</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">AI didn't understand grid layout</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Try a different model. Use a smaller pose set (2&times;2 or 3&times;2) — they're much easier for the AI to get right.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Generation takes very long (&gt;3 min)</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Queue congestion on FAL.ai</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Normal during peak hours. Generate models queue on FAL; edit models use sync calls and are usually faster.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Upscale times out</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Topaz queue overloaded</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The original (non-upscaled) image is returned as fallback. You can upscale individual cells later via the 3D viewer or library tools.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Wrong expressions in Standard 24</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Negative prompt conflicts with Row 2 expressions</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The system auto-resolves this (swaps to safe alternatives). If you want specific expressions, remove conflicting negative pills.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Cell edit doesn't match original style</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Cell editor uses Flux 2 at 512&times;512</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The edit model is different from the generation model. Include style notes in your edit prompt (e.g., "in anime style, change...").</td>
-                  </tr>
-                </tbody>
-              </table>
+          <div className="flex items-start gap-3">
+            <StepBadge number={3} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Props</p>
+              <p className="mt-0.5">
+                Add props, accessories, or environment elements. Choose from 9 categories: Vehicles, Weapons,
+                Musical Instruments, Sports Equipment, Tools, Fantasy Items, Everyday Objects, Accessories, and
+                Companion Animals. Props are integrated naturally into relevant poses.
+              </p>
             </div>
           </div>
-        </Section>
 
-        {/* ── Cost Reference ── */}
-        <Section icon={DollarSign} title="Cost Reference">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>Each sheet fires one AI generation call. Edit model sheets also fire one Topaz upscale call.</p>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border dark:border-gray-700 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span>Nano Banana 2 Edit (generation)</span>
-                <span className="font-mono">~$0.03-0.05</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Topaz 2&times; Upscale (auto, edit models only)</span>
-                <span className="font-mono">~$0.02</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Seedream Generate (generation)</span>
-                <span className="font-mono">~$0.04-0.06</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Flux 2 Generate (generation)</span>
-                <span className="font-mono">~$0.03-0.05</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Cell Edit (Flux 2, per edit)</span>
-                <span className="font-mono">~$0.02</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Auto-describe reference (GPT-4o mini)</span>
-                <span className="font-mono">~$0.01</span>
-              </div>
-              <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-semibold">
-                <span>Typical single sheet (edit model + upscale)</span>
-                <span className="font-mono">~$0.05-0.07</span>
-              </div>
-            </div>
-            <InfoBox>
-              Costs scale linearly with the cartesian product. 2 characters &times; 3 styles &times; 2 pose sets = 12 sheets &asymp; $0.60-0.84 total.
-              Start with one combination to verify quality before scaling up.
-            </InfoBox>
-          </div>
-        </Section>
-
-        {/* ── Quick Reference ── */}
-        <Section icon={Maximize2} title="Quick Decision Matrix">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <thead className="bg-[#07393C] text-white">
-                  <tr>
-                    <th className="text-left px-3 py-2">I want to...</th>
-                    <th className="text-left px-3 py-2">Model</th>
-                    <th className="text-left px-3 py-2">Pose Set</th>
-                    <th className="text-left px-3 py-2">Background</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Make a video of my character (R2V)</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">R2V Reference</td>
-                    <td className="px-3 py-2">Gray or Scene</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Train a LoRA on my character</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">Standard 24</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Create a 3D model</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">3D Reference — Angles</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Explore character in different styles</td>
-                    <td className="px-3 py-2">Any (multi-style select)</td>
-                    <td className="px-3 py-2">Standard 24</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Generate without a reference image</td>
-                    <td className="px-3 py-2">Seedream Generate</td>
-                    <td className="px-3 py-2">Any</td>
-                    <td className="px-3 py-2">White or Gray</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Use my trained LoRA character</td>
-                    <td className="px-3 py-2">Flux 2</td>
-                    <td className="px-3 py-2">Any</td>
-                    <td className="px-3 py-2">White or Gray</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Focus on facial expressions</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">Expressions Focus</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Design creature/monster</td>
-                    <td className="px-3 py-2">Seedream Generate</td>
-                    <td className="px-3 py-2">Creature / Non-Human</td>
-                    <td className="px-3 py-2">White or Scene</td>
-                  </tr>
-                </tbody>
-              </table>
+          <div className="flex items-start gap-3">
+            <StepBadge number={4} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Refinements</p>
+              <p className="mt-0.5">
+                Set negative prompts to avoid common issues (anatomy problems, style inconsistency, unwanted
+                emotions) and choose your background mode. The background mode decision is critical for R2V
+                workflows — see the Background Modes section below.
+              </p>
             </div>
           </div>
-        </Section>
+
+          <div className="flex items-start gap-3">
+            <StepBadge number={5} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Results</p>
+              <p className="mt-0.5">
+                Generated sheet images appear here. Up to 4 sheets generate simultaneously, others queue.
+                Edit models return results in ~30–60s (auto-upscaled 2× via Topaz). Generate models queue
+                on FAL.ai and take ~60–90s.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepBadge number={6} />
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Cell Editor</p>
+              <p className="mt-0.5">
+                Select any sheet to slice it into individual cells, review each one, edit problem cells,
+                delete unwanted ones, and save — either as individual library images for LoRA training, or
+                as a reassembled composite sheet.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── All 8 Pose Sets ── */}
+      <Section icon={LayoutGrid} title="All 8 Pose Set Presets">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            The pose set determines your grid layout — how many cells, what angles, and what poses appear.
+            Grid dimensions directly affect resolution per cell: fewer cells on the same canvas means more
+            pixels per cell.
+          </p>
+
+          <GuideImage
+            src={`${CDN}03-pose-set-selector.jpg`}
+            alt="All 8 pose set options"
+            caption="All 8 pose sets visible in the Step 2 selector. Small grids (2×2, 3×2) give higher resolution per cell."
+          />
+
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="w-full text-xs">
+              <thead className="bg-[#07393C] text-white">
+                <tr>
+                  <th className="text-left px-3 py-2.5">Pose Set</th>
+                  <th className="text-left px-3 py-2.5">Grid</th>
+                  <th className="text-left px-3 py-2.5">Cells</th>
+                  <th className="text-left px-3 py-2.5">Best For</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                <PoseSetRow name="Standard 24" grid="4×6" cells="24" bestFor="Complete reference sheets — front/side/back + expressions + walk cycle" />
+                <PoseSetRow name="Expressions Focus" grid="4×6" cells="24" bestFor="Facial expression variety — 16 expression cells plus turnaround views" />
+                <PoseSetRow name="Action Heavy" grid="4×6" cells="24" bestFor="Dynamic action poses, combat stances, power poses" />
+                <PoseSetRow name="Fashion / Outfit" grid="4×6" cells="24" bestFor="Clothing and costume design detail, seasonal variations" />
+                <PoseSetRow name="Creature / Non-Human" grid="4×6" cells="24" bestFor="Non-humanoid characters, animals, creatures, mechs" />
+                <PoseSetRow name="3D Reference — Angles" grid="2×2" cells="4" bestFor="Orthographic 3D reference (6× more pixels per cell than 4×6)" />
+                <PoseSetRow name="3D Reference — Action" grid="2×2" cells="4" bestFor="Dynamic 3D reference for rigging and animation" />
+                <PoseSetRow name="R2V Reference" grid="3×2" cells="6" bestFor="Optimised for video generation workflows" highlight={true} />
+              </tbody>
+            </table>
+          </div>
+
+          <InfoBox>
+            <strong>Grid dimensions affect pixels per cell.</strong> All grids use the same total canvas size.
+            A 2×2 grid gives each cell ~6× the pixel area of a 4×6 grid — meaning much higher detail per cell.
+            Use 2×2 or 3×2 when cell quality matters more than cell count.
+          </InfoBox>
+        </div>
+      </Section>
+
+      {/* ── R2V Reference Pose Set ── */}
+      <Section icon={Clapperboard} title="R2V Reference Pose Set (Deep Detail)">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            The <strong>R2V Reference</strong> pose set is a 3×2 grid — 6 cells specifically designed for
+            video generation workflows. The layout provides exactly what video models need: full-body views
+            for motion planning, plus close-up portrait views for face consistency.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 my-3">
+            <div className="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+              <p className="font-semibold text-xs text-gray-800 dark:text-gray-200 mb-1">Top Row — Full Body</p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                <li>Full body front view</li>
+                <li>Full body 3-quarter view</li>
+                <li>Full body side view</li>
+              </ul>
+            </div>
+            <div className="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+              <p className="font-semibold text-xs text-gray-800 dark:text-gray-200 mb-1">Bottom Row — Portrait Close-ups</p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                <li>Portrait close-up (matching front)</li>
+                <li>Portrait close-up (matching 3-quarter)</li>
+                <li>Portrait close-up (matching side)</li>
+              </ul>
+            </div>
+          </div>
+
+          <p>
+            The portrait row is the key feature: it locks the face for every angle. Video models receive both
+            the full-body view (so they understand how the character moves) and the matching close-up (so they
+            know exactly what the face looks like from that angle). This dramatically improves facial consistency
+            across video clips.
+          </p>
+
+          <GuideImage
+            src={`${CDN}04-r2v-pose-set.jpg`}
+            alt="R2V Reference pose set selected"
+            caption="The R2V Reference pose set (3×2 = 6 cells): full-body front/3-quarter/side in the top row, matching portrait close-ups in the bottom row."
+          />
+
+          <Tip>
+            For the best R2V results, use cells from the R2V Reference set as individual reference images in
+            JumpStart — provide 3–5 separate cells rather than the full composite sheet. Individual cells give
+            clearer signals to the video model than a single stitched image.
+          </Tip>
+        </div>
+      </Section>
+
+      {/* ── Background Modes ── */}
+      <Section icon={Paintbrush} title="Background Modes">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            The background mode is set in Step 4 (Refinements). This choice has significant consequences for
+            downstream R2V workflows — choose carefully based on which video model you intend to use.
+          </p>
+
+          <GuideImage
+            src={`${CDN}05-background-mode.jpg`}
+            alt="Background mode selector showing White, Gray, and Scene Environment options"
+            caption="Step 4: Background mode selection. Gray Background is recommended for most R2V workflows."
+          />
+
+          <div className="space-y-3 my-3">
+            <div className="border dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 rounded border-2 border-gray-300 bg-white shrink-0"></div>
+                <h5 className="font-semibold text-sm dark:text-gray-100">White Background</h5>
+                <span className="text-[10px] bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded">Default</span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Clean neutral background. Standard for illustration and design work. Works fine with Grok R2V
+                and for non-AI downstream uses (animation, games, print). <strong>Avoid for Veo 3.1 R2V</strong> — see warning below.
+              </p>
+            </div>
+
+            <div className="border border-teal-200 dark:border-teal-800 rounded-lg p-4 bg-teal-50 dark:bg-teal-950/20">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 rounded border-2 border-gray-400 bg-gray-400 shrink-0"></div>
+                <h5 className="font-semibold text-sm dark:text-gray-100">Gray Background</h5>
+                <span className="text-[10px] bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded font-medium">Recommended for R2V</span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Industry standard for production reference sheets. Neutral gray provides clean character-to-background
+                separation without influencing colour perception. Safe for all video models including Veo 3.1.
+              </p>
+            </div>
+
+            <div className="border dark:border-gray-700 rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 rounded border-2 border-gray-300 bg-gradient-to-br from-green-300 to-blue-300 shrink-0"></div>
+                <h5 className="font-semibold text-sm dark:text-gray-100">Scene Environment</h5>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Places the character in a contextual scene (forest, city, beach, etc.). Choose from 20+ presets
+                or type your own. Required for Veo 3.1 R2V when you want the character understood in context.
+                May influence character appearance slightly — the background can bleed into rendered details.
+              </p>
+            </div>
+          </div>
+
+          <Warning>
+            <strong>Veo 3.1 R2V + white background = 422 error.</strong> The model rejects reference images with
+            plain white backgrounds. It consistently returns a 422 "no_media_generated" error after ~90 seconds of
+            generation time. Use Gray Background or Scene Environment mode when generating sheets intended for Veo 3.1 R2V.
+            Grok R2V handles white-background references fine.
+          </Warning>
+        </div>
+      </Section>
+
+      {/* ── Auto-Upscale ── */}
+      <Section icon={Maximize2} title="Auto-Upscale via Topaz">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            All edit model results are automatically upscaled 2× via <strong>Topaz Standard V2</strong> before
+            returning to the gallery. This means every cell you see is already at 2× the generation resolution —
+            you do not need to manually upscale edit model output.
+          </p>
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border dark:border-gray-700 text-xs space-y-1">
+            <div className="flex justify-between"><span>Topaz model</span><span className="font-mono">Standard V2</span></div>
+            <div className="flex justify-between"><span>Upscale factor</span><span className="font-mono">2×</span></div>
+            <div className="flex justify-between"><span>Output format</span><span className="font-mono">PNG</span></div>
+            <div className="flex justify-between"><span>Face enhancement</span><span className="font-mono">Off</span></div>
+            <div className="flex justify-between"><span>Applies to</span><span className="font-mono">Edit models only</span></div>
+          </div>
+          <InfoBox>
+            Face enhancement is deliberately disabled on Topaz upscaling. Enabling it would alter the character's
+            facial features, which defeats the purpose of a character reference sheet. Topaz Standard V2 preserves
+            details without adding AI inference artefacts.
+          </InfoBox>
+        </div>
+      </Section>
+
+      {/* ── Cell Editor ── */}
+      <Section icon={Scissors} title="Cell Editor">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Click any sheet in the Results gallery to open it in the Cell Editor. The sheet is sliced into
+            individual cells based on the pose set's grid dimensions. Each cell is labelled with its pose name.
+          </p>
+
+          <GuideImage
+            src={`${CDN}08-cell-editor.jpg`}
+            alt="Cell Editor interface"
+            caption="Step 6: Cell Editor. Click any cell to edit its prompt, regenerate it individually, or delete unwanted cells."
+          />
+
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">What You Can Do</h4>
+          <ul className="list-disc pl-5 space-y-1">
+            <li><strong>Edit a cell</strong> — click any cell, enter an instruction (e.g. "change expression to angry" or "add sword in right hand"), and the AI modifies just that cell</li>
+            <li><strong>Delete a cell</strong> — mark cells you don't want; they are excluded from reassembly and save operations</li>
+            <li><strong>Regenerate a cell</strong> — retry a specific cell without regenerating the whole sheet</li>
+            <li><strong>Accept or reject</strong> — after editing, preview the new version alongside the original and choose which to keep</li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Saving Options</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-2">
+            <div className="border dark:border-gray-700 rounded-lg p-3">
+              <p className="font-semibold text-xs dark:text-gray-100 flex items-center gap-1.5 mb-1">
+                <Save className="w-3.5 h-3.5 text-[#2C666E]" /> Save Cells for LoRA
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Saves each non-deleted cell as a separate image to your library. Each cell gets auto-generated
+                tags (character name, turnaround, style, pose set). Ideal for building LoRA training datasets —
+                the diverse angles make excellent training images.
+              </p>
+            </div>
+            <div className="border dark:border-gray-700 rounded-lg p-3">
+              <p className="font-semibold text-xs dark:text-gray-100 flex items-center gap-1.5 mb-1">
+                <Layers className="w-3.5 h-3.5 text-[#2C666E]" /> Reassemble &amp; Save
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Reconstructs a composite sheet from remaining cells (excluding deleted ones), recalculating the
+                grid layout. Also saves each cell individually. Use this for a clean final sheet after editing
+                out problem cells.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Using Turnarounds as R2V References ── */}
+      <Section icon={Eye} title="Using Turnarounds as R2V References">
+        <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            The primary downstream use for turnaround sheets is feeding them into Reference-to-Video models
+            to generate videos of your character in motion. Different R2V models have different requirements.
+          </p>
+
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Recommended Workflow</h4>
+          <ol className="list-decimal pl-5 space-y-2">
+            <li>Generate a turnaround using the <strong>R2V Reference</strong> pose set (3×2, 6 cells)</li>
+            <li>Use <strong>Gray Background</strong> — safe for all R2V models including Veo 3.1</li>
+            <li>Open the Cell Editor, slice the sheet, save individual cells to your library</li>
+            <li>In JumpStart, select a Veo 3.1 R2V or Kling O3 R2V model and upload 3–5 cells as reference images</li>
+          </ol>
+
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Which R2V Model to Use</h4>
+          <div className="space-y-2 my-2">
+            <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 mb-0.5">Grok R2V</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Works with any background including white. First choice if you have white-background illustration-style
+                sheets. Supports audio generation. Good fallback when Veo fails.
+              </p>
+            </div>
+            <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 mb-0.5">Veo 3.1 R2V</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Highest quality video generation. Requires gray or scene backgrounds — rejects white-background
+                references with a 422 error. Best for final production quality.
+              </p>
+            </div>
+            <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 mb-0.5">Kling O3 R2V</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Strong character reference support, handles multiple reference images (character + element references).
+                Works with most background types. Good balance of quality and reliability.
+              </p>
+            </div>
+          </div>
+
+          <Warning>
+            <strong>Veo 3.1 R2V + white background = 422 error.</strong> Veo 3.1 R2V cannot process reference
+            images with plain white or blank backgrounds — it consistently returns 422 "no_media_generated" after
+            ~90 seconds. Use <strong>Gray Background</strong> or <strong>Scene Environment</strong> mode in the
+            Turnaround wizard when generating sheets intended for Veo 3.1 R2V. Grok R2V handles white-background
+            references fine.
+          </Warning>
+
+          <Tip>
+            Provide 3–5 individual cells as separate reference images rather than the full composite sheet.
+            Video models read individual references more clearly than a single stitched multi-cell image.
+          </Tip>
+        </div>
+      </Section>
 
     </main>
   );
@@ -889,785 +532,13 @@ export default function TurnaroundGuidePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Turnaround Sheet Guide</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Complete reference for character turnaround generation</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Character reference sheets and R2V workflows</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-4">
-
-        {/* ── Overview ── */}
-        <Section icon={BookOpen} title="What Is a Turnaround Sheet?" defaultOpen={true}>
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              A <strong>turnaround sheet</strong> (also called a model sheet or character reference sheet) is a grid of
-              images showing a single character from multiple angles, poses, and expressions. It's the industry-standard
-              tool for maintaining <strong>character consistency</strong> across animation, games, comics, and AI video generation.
-            </p>
-            <p>
-              In the AI video world, turnaround sheets are critical for <strong>Reference-to-Video (R2V)</strong> workflows —
-              you feed the sheet (or individual cells) to video models like Veo 3.1, Kling, or Grok so the AI knows exactly
-              what your character looks like from every angle.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">How the Wizard Works</h4>
-            <p>The wizard walks you through 6 steps, then generates sheets as a <strong>cartesian product</strong> of your selections:</p>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 font-mono text-xs text-gray-700 dark:text-gray-300 border dark:border-gray-700">
-              Total sheets = Characters &times; Styles &times; Pose Sets
-              <br />
-              Example: 2 characters &times; 3 styles &times; 1 pose set = 6 sheets
-            </div>
-            <p>Each sheet is generated as a single image with a grid of cells. After generation, you can slice the sheet
-              into individual cells, edit specific cells, delete unwanted ones, and reassemble.</p>
-
-            <Tip>
-              Start small (1 character, 1 style, 1 pose set) until you're happy with the results, then scale up.
-              Each combination fires a separate AI generation — costs add up with the cartesian product.
-            </Tip>
-          </div>
-        </Section>
-
-        {/* ── Step 1: Character ── */}
-        <Section icon={User} title="Step 1: Character">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={1} />
-              <p>Define <strong>who</strong> you're drawing. This is the most important step — the character description
-                anchors the AI's understanding of the subject across all cells.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Name</h4>
-            <p>A short identifier. Used in file names when saving cells and for organizing generated sheets in the gallery.</p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Description</h4>
-            <p>
-              A detailed text description of the character's appearance. This is injected <strong>early in the prompt</strong> (identity-first hierarchy)
-              so the AI prioritizes getting the character right before thinking about layout or style.
-            </p>
-            <Tip>
-              Be specific about distinguishing features: hair color/style, eye color, skin tone, outfit details, accessories,
-              body type, age range. The more specific you are, the more consistent the cells will be.
-            </Tip>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-xs border dark:border-gray-700 space-y-1">
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Good description:</p>
-              <p className="text-gray-600 dark:text-gray-400">"A young woman with waist-length silver hair, bright violet eyes, pointed ears,
-                wearing a dark blue cloak over leather armor with gold trim. She has a scar across her left cheek and carries a
-                glowing staff on her back."</p>
-              <p className="font-semibold text-gray-800 dark:text-gray-200 pt-2">Bad description:</p>
-              <p className="text-gray-600 dark:text-gray-400">"An elf warrior" (too vague — the AI will invent different details for each cell)</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Reference Images</h4>
-            <p>
-              Optional for generate models, <strong>required for edit models</strong>. Upload one or more reference images
-              of your character. The AI will use these as the visual anchor.
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Single reference</strong> — The AI recreates this exact character in each cell</li>
-              <li><strong>Multiple references</strong> — All images are stitched into a single composite (same height, side by side) and sent as one input. The AI studies all views to understand the character from multiple angles</li>
-              <li><strong>Auto-describe</strong> — Click the sparkle icon on a reference image to have GPT-4o mini vision analyze it and auto-fill the character description</li>
-            </ul>
-
-            <InfoBox>
-              You can add multiple characters. Each character generates its own set of sheets (multiplied by styles and pose sets).
-            </InfoBox>
-
-            <Warning>
-              Edit models (Nano Banana 2 Edit, Nano Banana Pro, Seedream) <strong>require at least one reference image</strong>.
-              If you want to generate without a reference, use a Generate model (Seedream Generate, Nano Banana 2, or Flux 2).
-            </Warning>
-          </div>
-        </Section>
-
-        {/* ── Step 2: Style & Model ── */}
-        <Section icon={Palette} title="Step 2: Style & Model">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={2} />
-              <p>Choose the visual style, AI model, and pose set layout. Selecting multiple styles or pose sets multiplies your sheet count.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Visual Styles</h4>
-            <p>
-              The StyleGrid shows 100+ visual style presets. Each preset is a detailed 40-80 word prompt that controls
-              the artistic rendering — things like "3D Pixar-style rendering with subsurface scattering" or
-              "ink wash painting with traditional brushwork." You can select <strong>multiple styles</strong> to generate
-              the same character in different art styles.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">AI Models</h4>
-            <p>Two categories with very different behavior:</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-3">
-              <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40 rounded-lg p-3">
-                <h5 className="font-semibold text-green-800 dark:text-green-200 text-xs mb-2 flex items-center gap-1.5">
-                  <PenTool className="w-3.5 h-3.5" /> EDIT MODELS (Recommended)
-                </h5>
-                <ul className="text-xs text-green-900 dark:text-green-200 space-y-1">
-                  <li>Require a reference image</li>
-                  <li>Synchronous — results return immediately (~30-60s)</li>
-                  <li>Auto-upscaled 2&times; via Topaz after generation</li>
-                  <li>Fallback chain: if one model errors, tries the next</li>
-                  <li>Best for character consistency (guided by your reference)</li>
-                </ul>
-              </div>
-              <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3">
-                <h5 className="font-semibold text-blue-800 dark:text-blue-200 text-xs mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> GENERATE MODELS
-                </h5>
-                <ul className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
-                  <li>No reference image needed (text description only)</li>
-                  <li>Asynchronous — queued, then polled every 3 seconds</li>
-                  <li>No auto-upscale (can upscale individual cells later)</li>
-                  <li>More creative freedom but less control</li>
-                  <li>Flux 2 supports LoRA weights for trained characters</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-3">
-              <ModelCard name="Nano Banana 2 Edit" type="Edit" speed="Fast (~30s)" refRequired="Required" bestFor="General purpose, recommended default" />
-              <ModelCard name="Nano Banana Pro" type="Edit" speed="Medium (~45s)" refRequired="Required" bestFor="Higher quality, premium results" />
-              <ModelCard name="Seedream v4.5" type="Edit" speed="Medium (~45s)" refRequired="Required" bestFor="Photorealistic subjects" />
-              <ModelCard name="Seedream Generate" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="No-reference photorealistic" />
-              <ModelCard name="Nano Banana 2" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="No-reference general purpose" />
-              <ModelCard name="Flux 2" type="Generate" speed="Queued (~60-90s)" refRequired="Optional" bestFor="LoRA-trained characters" />
-            </div>
-
-            <Tip>
-              <strong>Edit models have a fallback chain.</strong> If Nano Banana 2 Edit returns a server error (502/503/504),
-              it automatically retries with Nano Banana Pro, then Seedream. You don't need to manually retry on transient failures.
-            </Tip>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Pose Sets</h4>
-            <p>
-              The pose set determines your grid layout — how many cells, what angles and poses each cell shows.
-              You can select <strong>multiple pose sets</strong> to generate the same character in different layouts.
-            </p>
-
-            <div className="space-y-2 my-3">
-              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Small Grids (Fewer Cells, Higher Resolution Per Cell)</h5>
-              <PoseSetCard
-                name="3D Reference — Angles"
-                grid="2&times;2"
-                cells={4}
-                purpose="Front, Right, Back, Left — orthographic views for 3D model generation. Clean, symmetrical, technical."
-                color="teal"
-              />
-              <PoseSetCard
-                name="3D Reference — Action"
-                grid="2&times;2"
-                cells={4}
-                purpose="Dynamic action poses for rigging and animation reference. 3/4 action, side action, hero pose."
-                color="teal"
-              />
-              <PoseSetCard
-                name="R2V Reference"
-                grid="3&times;2"
-                cells={6}
-                purpose="Optimized for video generation. Top row: full-body front, 3/4, side. Bottom row: matching portrait close-ups per angle. The portrait row locks facial features for R2V."
-                color="purple"
-              />
-
-              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Full Grids (24 Cells, Comprehensive Coverage)</h5>
-              <PoseSetCard
-                name="Standard 24"
-                grid="4&times;6"
-                cells={24}
-                purpose="Classic turnaround: neutral standing, expressions, walk cycle, action poses, props/interaction, and per-angle portrait close-ups (Row 6). The default choice."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Expressions Focus"
-                grid="4&times;6"
-                cells={24}
-                purpose="16 expression cells (happy, sad, angry, surprised, etc.) plus turnaround views and detail close-ups. For characters where facial acting is critical."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Action Heavy"
-                grid="4&times;6"
-                cells={24}
-                purpose="Combat stances, power poses, dynamic movement, aerial poses. For action/superhero/fighter characters."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Fashion / Outfit"
-                grid="4&times;6"
-                cells={24}
-                purpose="Outfit showcasing, seasonal variations, accessory details, styling poses. For fashion or character design."
-                color="blue"
-              />
-              <PoseSetCard
-                name="Creature / Non-Human"
-                grid="4&times;6"
-                cells={24}
-                purpose="Anatomy views, locomotion, threat/passive displays, scale reference. For animals, monsters, mechs, aliens."
-                color="blue"
-              />
-            </div>
-
-            <InfoBox>
-              <strong>Grid dimensions affect image aspect ratio and resolution:</strong><br />
-              <span className="font-mono">2&times;2</span> &rarr; 1:1 square (2048&times;2048 Seedream, 1536&times;1536 Flux)<br />
-              <span className="font-mono">3&times;2</span> &rarr; 3:2 landscape (2560&times;1440 Seedream, 1536&times;1024 Flux)<br />
-              <span className="font-mono">4&times;6</span> &rarr; 2:3 portrait (1440&times;2560 Seedream, 1024&times;1536 Flux)<br />
-              Smaller grids mean <strong>more pixels per cell</strong> — 2&times;2 gives each cell ~6&times; the pixel area of a 4&times;6 cell.
-            </InfoBox>
-          </div>
-        </Section>
-
-        {/* ── Step 3: Props ── */}
-        <Section icon={Wand2} title="Step 3: Props & Negative Prompt">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={3} />
-              <p>Add props your character should hold/wear, and specify what to avoid.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Props</h4>
-            <p>
-              Select from 9 categories: Vehicles, Weapons, Musical Instruments, Sports Equipment, Tools,
-              Fantasy Items, Everyday Objects, Accessories, and Companion Animals. Props are integrated into
-              relevant poses — the AI decides which cells naturally incorporate them.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Negative Prompt</h4>
-            <p>
-              Tell the AI what to <strong>avoid</strong>. This appears at both the start and end of the generation prompt
-              for maximum effect. Two input methods:
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Quick pills</strong> — Pre-built categories (Quality Issues, Anatomy, Face & Expression, Style, Consistency). Click to toggle.</li>
-              <li><strong>Freeform text</strong> — Type anything additional</li>
-            </ul>
-
-            <Tip>
-              The "Consistency" category pills are especially useful for turnarounds — they prevent outfit changes,
-              color shifts, proportion changes, and style mixing between cells.
-            </Tip>
-
-            <Warning>
-              <strong>Expression conflict resolution:</strong> For Standard 24, if your negative prompt includes emotions
-              (e.g., "angry," "sad"), the system automatically swaps conflicting expression cells in Row 2 with safe alternatives
-              (calm confident, gentle smile, curious). This only applies to the Standard 24 pose set.
-            </Warning>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Brand Style Guide</h4>
-            <p>
-              Optional. If you have a Brand Kit configured, select it here. The brand's visual style, mood, lighting,
-              and composition rules are appended to the prompt, ensuring generated sheets match your brand identity.
-            </p>
-          </div>
-        </Section>
-
-        {/* ── Step 4: Refinements (Background) ── */}
-        <Section icon={Paintbrush} title="Step 4: Refinements & Background">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={4} />
-              <p>Final tuning before generation. The key decision here is <strong>background mode</strong>.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Background Modes</h4>
-            <div className="space-y-2 my-3">
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-white"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">White Background</h5>
-                  <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Default</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Traditional character sheet look. Clean and simple. Works well with Grok R2V and for non-AI usage
-                  (animation, games, art reference).
-                </p>
-              </div>
-
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-gray-400"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">Gray Background</h5>
-                  <span className="text-[10px] bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">Recommended for R2V</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Industry standard for production model sheets. Neutral gray provides clean character-to-background
-                  separation without influencing color perception.
-                </p>
-                <Warning>
-                  <strong>Use gray if your sheets will feed into Veo 3.1 R2V.</strong> Veo 3.1 consistently fails
-                  (422 "no_media_generated") when given reference images with pure white backgrounds — the model
-                  can't distinguish the character from the background. Gray solves this. Grok R2V handles white fine.
-                </Warning>
-              </div>
-
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/30 dark:to-blue-950/30">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded border-2 border-gray-300 bg-gradient-to-br from-green-300 to-blue-300"></div>
-                  <h5 className="font-semibold text-sm dark:text-gray-100">Scene Environment</h5>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Places your character in a contextual background (forest, beach, city, etc.). Choose from 20+ presets
-                  or type your own. Best for R2V workflows where you want the AI video model to understand the character
-                  in context, not just in isolation.
-                </p>
-                <Tip>
-                  Scene Environment gives the best R2V results because video models understand characters better when
-                  they're shown in context. However, the background may influence the character's appearance slightly.
-                  Use gray for maximum purity, scene for maximum R2V compatibility.
-                </Tip>
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* ── Step 5: Results ── */}
-        <Section icon={Image} title="Step 5: Results & Gallery">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={5} />
-              <p>Generation happens here. Watch your sheets come in, filter the gallery, retry failures, and pick sheets to edit.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Generation Process</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Concurrency:</strong> Up to 4 sheets generate simultaneously. Others queue and fire as slots free up.</li>
-              <li><strong>Edit models:</strong> Results appear in ~30-60 seconds per sheet. They arrive auto-upscaled (2&times; via Topaz).</li>
-              <li><strong>Generate models:</strong> Queued on FAL.ai, polled every 3 seconds. Usually ~60-90 seconds.</li>
-              <li><strong>Soft warning:</strong> If the cartesian product exceeds 10 sheets, you'll be warned before generation starts.</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Auto-Upscale (Edit Models Only)</h4>
-            <p>
-              After an edit model returns its image, it's automatically sent to <strong>Topaz Standard V2</strong> for 2&times; upscaling.
-              This doubles the resolution without adding AI hallucinations (Topaz preserves details unlike some upscalers).
-              The upscaled image is what you see in the gallery.
-            </p>
-            <InfoBox>
-              Topaz upscale uses <span className="font-mono text-xs">fal-ai/topaz/upscale/image</span> with PNG output,
-              Standard V2 model, 2&times; factor, no face enhancement (to avoid altering character features).
-              It's queue-based — submit, poll up to 2 minutes, then return.
-            </InfoBox>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Gallery Features</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Filter</strong> by character, style, or pose set to narrow results</li>
-              <li><strong>Retry</strong> individual failed sheets or all failures at once</li>
-              <li><strong>Download</strong> any sheet as PNG directly</li>
-              <li><strong>Click</strong> a sheet to select it for the Cell Editor (Step 6)</li>
-              <li>Sheets are grouped by character name for easy comparison</li>
-            </ul>
-          </div>
-        </Section>
-
-        {/* ── Step 6: Cell Editor ── */}
-        <Section icon={Scissors} title="Step 6: Cell Editor">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="flex items-start gap-3 mb-3">
-              <StepBadge number={6} />
-              <p>Slice your sheet into individual cells, review each one, edit problem cells, and save.</p>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Slicing</h4>
-            <p>
-              The tool knows the grid dimensions from the pose set data. It divides the sheet image into equal cells
-              (width / cols, height / rows) and labels each cell from the pose set definition. You see a grid of individual
-              cell images with their labels.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Reviewing Cells</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Delete</strong> — Mark cells you don't want. They're excluded from reassembly and save.</li>
-              <li><strong>Restore</strong> — Unmark all deleted cells if you change your mind.</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Editing Individual Cells</h4>
-            <p>
-              Click "Edit" on any cell to fix issues. Type an instruction (e.g., "change expression to angry" or
-              "add a sword in the right hand") and the AI will modify that specific cell. The edit uses Flux 2
-              at 512&times;512 resolution.
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Enter your edit instruction</li>
-              <li>Click Edit — the cell uploads to the library, then goes to the image edit API</li>
-              <li>A preview appears alongside the original</li>
-              <li><strong>Accept</strong> to replace the cell, or <strong>Reject</strong> to keep the original</li>
-            </ol>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Saving</h4>
-            <p>Two save paths:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-3">
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <h5 className="font-semibold text-sm dark:text-gray-100 flex items-center gap-1.5 mb-1">
-                  <Save className="w-4 h-4 text-[#2C666E]" /> Save Cells for LoRA
-                </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Saves each non-deleted cell as a separate image to your library. Perfect for feeding into LoRA training —
-                  each cell becomes a training image with auto-generated tags (character name, turnaround, style, pose set).
-                  Set a folder name prefix to organize them.
-                </p>
-              </div>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <h5 className="font-semibold text-sm dark:text-gray-100 flex items-center gap-1.5 mb-1">
-                  <Layers className="w-4 h-4 text-[#2C666E]" /> Reassemble & Save
-                </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Reconstructs a composite sheet from your remaining cells (excluding deleted ones), recalculating the grid
-                  layout. Also saves each individual cell separately. Great for creating a clean final sheet after editing.
-                </p>
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* ── Prompt Hierarchy ── */}
-        <Section icon={FileImage} title="How the Prompt Is Built (Identity-First Hierarchy)">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              The order of information in an AI image prompt matters — models pay more attention to tokens that appear early.
-              The turnaround prompt is structured so character identity comes first, before any layout or style instructions.
-              This ensures the AI prioritizes "who" over "how."
-            </p>
-
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border dark:border-gray-700 space-y-2">
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-2 py-0.5 rounded shrink-0">1st</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Avoidance Instructions (Negative Prompt)</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"CRITICAL INSTRUCTION — DO NOT include..." — placed first so the model sees constraints before generating anything</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 rounded shrink-0">2nd</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Character Identity</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Your character description — the face, hair, outfit, distinguishing features. This is the anchor.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded shrink-0">3rd</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Reference Image Instructions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">How to use the reference image(s) — "recreate this exact character" or "study all views"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/40 px-2 py-0.5 rounded shrink-0">4th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Grid Layout & Background</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"Professional turnaround sheet, N columns &times; N rows, [white/gray/scene] background"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded shrink-0">5th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Consistency & Alignment Instructions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"Consistent head height, even spacing, uniform framing, relaxed A-pose for standing views, same proportions/features in every cell"</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 rounded shrink-0">6th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Style & Props</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Art style rendering instructions + prop integration</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded shrink-0">7th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Row-by-Row Cell Definitions</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Each row's label and cell prompts from the pose set — "Row 1: front view, 3/4 view, side profile..."</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded shrink-0">8th</span>
-                <div>
-                  <p className="font-semibold text-xs text-gray-800 dark:text-gray-200">Taxonomy Tags & Avoidance Repeat</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">"character reference sheet, turnaround sheet, animation reference" + negative prompt repeated for reinforcement</p>
-                </div>
-              </div>
-            </div>
-
-            <Tip>
-              The negative prompt appears at both the start AND end of the prompt. Research shows that AI models can "forget"
-              early instructions by the time they process long prompts. Repeating constraints at the end reinforces them.
-            </Tip>
-          </div>
-        </Section>
-
-        {/* ── R2V Workflow ── */}
-        <Section icon={Clapperboard} title="Using Turnaround Sheets for R2V (Reference-to-Video)">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              The primary downstream use for turnaround sheets is feeding them into <strong>Reference-to-Video</strong> models
-              (Veo 3.1 R2V, Kling O3 R2V, Grok R2V) to generate videos of your character in motion.
-            </p>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Recommended R2V Workflow</h4>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>
-                <strong>Generate turnaround</strong> using the <strong>R2V Reference</strong> pose set (3&times;2 grid, 6 cells).
-                This is specifically designed for R2V — full body views + matching portrait close-ups lock the face.
-              </li>
-              <li>
-                <strong>Use Gray or Scene background</strong> — never white for Veo 3.1. Gray is safe for all models.
-                Scene gives the best video results but may influence character appearance slightly.
-              </li>
-              <li>
-                <strong>Slice into cells</strong> using the Cell Editor. Save individual cells for use as reference images
-                in JumpStart or the Shorts Workbench.
-              </li>
-              <li>
-                <strong>Feed cells to R2V</strong> — In JumpStart, select a Veo 3.1 R2V or Kling O3 R2V model and upload
-                your turnaround cells as reference images. The video model recreates your character in motion.
-              </li>
-            </ol>
-
-            <Warning>
-              <strong>Veo 3.1 R2V + white backgrounds = failure.</strong> This is the #1 pitfall. Veo 3.1 R2V cannot
-              process reference images with pure white/blank backgrounds — it consistently returns 422 "no_media_generated"
-              after ~90 seconds. Use gray or scene backgrounds. Grok R2V handles white backgrounds fine.
-            </Warning>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Which R2V Model to Use?</h4>
-            <div className="space-y-2 my-2">
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Veo 3.1 R2V</strong> — Highest quality video generation. Needs gray/scene backgrounds. Best for final production.
-              </div>
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Kling O3 R2V</strong> — Good quality, handles multiple reference images (character + element references). Works with any background.
-              </div>
-              <div className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 text-xs">
-                <strong>Grok R2V</strong> — Most forgiving — handles white backgrounds fine. Good fallback when Veo fails. Supports audio generation.
-              </div>
-            </div>
-
-            <Tip>
-              For the best R2V results, provide <strong>3-5 reference images</strong> from different angles rather than
-              the full composite sheet. The full sheet as a single image can confuse some models. Individual cells give
-              clearer signals about the character's appearance.
-            </Tip>
-          </div>
-        </Section>
-
-        {/* ── Tips & Best Practices ── */}
-        <Section icon={CheckCircle2} title="Tips & Best Practices">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Character Descriptions</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Include <strong>5-8 specific physical details</strong> (hair color/length, eye color, skin tone, build, height)</li>
-              <li>Describe the <strong>complete outfit</strong> (top, bottom, shoes, accessories — colors and materials)</li>
-              <li>Mention <strong>distinguishing features</strong> (scars, tattoos, markings, unique accessories)</li>
-              <li>Use the <strong>auto-describe</strong> feature on reference images to get a starting point, then edit</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Reference Images</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Clear, well-lit reference images produce the best results</li>
-              <li>Multiple angles help — front + side + 3/4 gives the AI more data to maintain consistency</li>
-              <li>Avoid busy backgrounds in reference images — the AI may incorporate background elements</li>
-              <li>Higher resolution references are better (they get stitched and resized, but more detail = more signal)</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Choosing Pose Sets</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><strong>For R2V workflows:</strong> Use R2V Reference (6 cells) — purpose-built for video generation</li>
-              <li><strong>For 3D workflows:</strong> Use 3D Reference — Angles (4 cells, orthographic)</li>
-              <li><strong>For comprehensive reference:</strong> Use Standard 24 — covers everything including expressions and walk cycles</li>
-              <li><strong>For LoRA training:</strong> Standard 24 gives the most diverse training images per generation</li>
-              <li>Smaller grids (2&times;2, 3&times;2) produce higher quality per cell because each cell gets more pixels</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">Negative Prompts</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Always enable the <strong>Consistency</strong> pills — they prevent the most common turnaround issue (character drift between cells)</li>
-              <li>Add <strong>"extra limbs, extra fingers"</strong> for action poses — these artifacts are more common in dynamic cells</li>
-              <li>Be careful negating emotions — Standard 24 has expression cells that may conflict (the system auto-resolves this, but keep it in mind)</li>
-            </ul>
-
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 pt-2">General</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Edit models (especially Nano Banana 2 Edit) give the most consistent results because the reference image anchors every cell</li>
-              <li>If one sheet has a few bad cells but most are good, use the Cell Editor to fix just those cells rather than regenerating the whole thing</li>
-              <li>Save cells for LoRA after a good generation — the diverse angles make excellent training data</li>
-              <li>The auto-upscale on edit models means your cells are already 2&times; resolution — good enough for most downstream uses without additional upscaling</li>
-            </ul>
-          </div>
-        </Section>
-
-        {/* ── Troubleshooting ── */}
-        <Section icon={Shield} title="Troubleshooting">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800/50">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Problem</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Cause</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">Solution</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Character looks different in each cell</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Vague description, no reference image</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Use an edit model with a clear reference image. Add more specific details to description. Enable Consistency negative pills.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">R2V video fails with 422 error</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">White background + Veo 3.1 R2V</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Regenerate with Gray or Scene background. Or switch to Grok R2V which handles white fine.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Cells overlap or bleed into each other</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">AI didn't understand grid layout</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Try a different model. Use a smaller pose set (2&times;2 or 3&times;2) — they're much easier for the AI to get right.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Generation takes very long (&gt;3 min)</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Queue congestion on FAL.ai</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Normal during peak hours. Generate models queue on FAL; edit models use sync calls and are usually faster.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Upscale times out</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Topaz queue overloaded</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The original (non-upscaled) image is returned as fallback. You can upscale individual cells later via the 3D viewer or library tools.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Wrong expressions in Standard 24</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Negative prompt conflicts with Row 2 expressions</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The system auto-resolves this (swaps to safe alternatives). If you want specific expressions, remove conflicting negative pills.</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-800 dark:text-gray-200">Cell edit doesn't match original style</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">Cell editor uses Flux 2 at 512&times;512</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">The edit model is different from the generation model. Include style notes in your edit prompt (e.g., "in anime style, change...").</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Section>
-
-        {/* ── Cost Reference ── */}
-        <Section icon={DollarSign} title="Cost Reference">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>Each sheet fires one AI generation call. Edit model sheets also fire one Topaz upscale call.</p>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border dark:border-gray-700 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span>Nano Banana 2 Edit (generation)</span>
-                <span className="font-mono">~$0.03-0.05</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Topaz 2&times; Upscale (auto, edit models only)</span>
-                <span className="font-mono">~$0.02</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Seedream Generate (generation)</span>
-                <span className="font-mono">~$0.04-0.06</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Flux 2 Generate (generation)</span>
-                <span className="font-mono">~$0.03-0.05</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Cell Edit (Flux 2, per edit)</span>
-                <span className="font-mono">~$0.02</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Auto-describe reference (GPT-4o mini)</span>
-                <span className="font-mono">~$0.01</span>
-              </div>
-              <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-semibold">
-                <span>Typical single sheet (edit model + upscale)</span>
-                <span className="font-mono">~$0.05-0.07</span>
-              </div>
-            </div>
-            <InfoBox>
-              Costs scale linearly with the cartesian product. 2 characters &times; 3 styles &times; 2 pose sets = 12 sheets &asymp; $0.60-0.84 total.
-              Start with one combination to verify quality before scaling up.
-            </InfoBox>
-          </div>
-        </Section>
-
-        {/* ── Quick Reference ── */}
-        <Section icon={Maximize2} title="Quick Decision Matrix">
-          <div className="mt-3 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <thead className="bg-[#07393C] text-white">
-                  <tr>
-                    <th className="text-left px-3 py-2">I want to...</th>
-                    <th className="text-left px-3 py-2">Model</th>
-                    <th className="text-left px-3 py-2">Pose Set</th>
-                    <th className="text-left px-3 py-2">Background</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Make a video of my character (R2V)</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">R2V Reference</td>
-                    <td className="px-3 py-2">Gray or Scene</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Train a LoRA on my character</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">Standard 24</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Create a 3D model</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">3D Reference — Angles</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Explore character in different styles</td>
-                    <td className="px-3 py-2">Any (multi-style select)</td>
-                    <td className="px-3 py-2">Standard 24</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Generate without a reference image</td>
-                    <td className="px-3 py-2">Seedream Generate</td>
-                    <td className="px-3 py-2">Any</td>
-                    <td className="px-3 py-2">White or Gray</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Use my trained LoRA character</td>
-                    <td className="px-3 py-2">Flux 2</td>
-                    <td className="px-3 py-2">Any</td>
-                    <td className="px-3 py-2">White or Gray</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Focus on facial expressions</td>
-                    <td className="px-3 py-2">Nano Banana 2 Edit</td>
-                    <td className="px-3 py-2">Expressions Focus</td>
-                    <td className="px-3 py-2">White</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Design creature/monster</td>
-                    <td className="px-3 py-2">Seedream Generate</td>
-                    <td className="px-3 py-2">Creature / Non-Human</td>
-                    <td className="px-3 py-2">White or Scene</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Section>
-
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t dark:border-gray-700 bg-white dark:bg-gray-800 mt-12">
-        <div className="max-w-5xl mx-auto px-6 py-6 text-center text-xs text-gray-400 dark:text-gray-500">
-          Internal admin reference — Stitch Studios
-        </div>
-      </footer>
+      <TurnaroundGuideContent />
     </div>
   );
 }
