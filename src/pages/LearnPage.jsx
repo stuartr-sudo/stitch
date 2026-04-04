@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
-  Sun, Moon, Video, GitBranch, Share2,
+  Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -22,6 +22,9 @@ import { ShortsWorkbenchGuideContent } from './ShortsWorkbenchGuidePage';
 import { AutomationFlowsGuideContent } from './AutomationFlowsGuidePage';
 import { LinkedInGuideContent } from './LinkedInGuidePage';
 import { BrandKitGuideContent } from './BrandKitGuidePage';
+import { AdDiscoveryGuideContent } from './AdDiscoveryGuidePage';
+import { AgencyGuideContent } from './AgencyGuidePage';
+import { LongformGuideContent } from './LongformGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -77,6 +80,9 @@ const TABS = [
   { id: 'shorts',      label: 'Shorts',           Icon: Video },
   { id: 'flows',       label: 'Automation Flows', Icon: GitBranch },
   { id: 'brandkit',   label: 'Brand Kit',        Icon: BookOpen },
+  { id: 'ad-discovery', label: 'Ad Discovery', Icon: Eye },
+  { id: 'agency',    label: 'Agency Mode',      Icon: Briefcase },
+  { id: 'longform',  label: 'Longform',         Icon: Clapperboard },
 ];
 
 const CLI_SUB_TABS = [
@@ -287,6 +293,21 @@ export default function LearnPage() {
         {activeTab === 'brandkit' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <BrandKitGuideContent />
+          </div>
+        )}
+        {activeTab === 'ad-discovery' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <AdDiscoveryGuideContent />
+          </div>
+        )}
+        {activeTab === 'agency' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <AgencyGuideContent />
+          </div>
+        )}
+        {activeTab === 'longform' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <LongformGuideContent />
           </div>
         )}
       </div>
