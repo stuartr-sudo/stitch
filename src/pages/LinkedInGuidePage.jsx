@@ -12,7 +12,9 @@ import {
   AlertTriangle, Lightbulb, Eye, RefreshCw, Send, FileText, Sliders,
 } from 'lucide-react';
 
-// ── Expandable Section ──
+const CDN = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/linkedin/';
+
+// ── Shared UI primitives ──────────────────────────────────────────────────────
 
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -68,12 +70,16 @@ function Warning({ children }) {
   );
 }
 
-function Badge({ icon: Icon, label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
+function Screenshot({ src, alt, caption }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-      {Icon && <Icon className="w-3 h-3" />}
-      {label}
-    </span>
+    <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <img src={src} alt={alt} className="w-full block" loading="lazy" />
+      {caption && (
+        <p className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+          {caption}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -83,17 +89,27 @@ export function LinkedInGuideContent() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
 
-      {/* ── Overview ── */}
+      {/* Hero */}
+      <div className="rounded-xl bg-gradient-to-br from-[#0A66C2]/10 to-[#2C666E]/10 border border-[#0A66C2]/20 px-6 py-5">
+        <div className="flex items-center gap-3 mb-2">
+          <Linkedin className="w-6 h-6 text-[#0A66C2]" />
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">LinkedIn Tool</h2>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Research trending topics, generate posts with AI, create branded images, and publish directly to LinkedIn.
+        </p>
+      </div>
+
+      {/* Overview */}
       <Section icon={Linkedin} title="Overview" defaultOpen={true}>
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
-            The <strong>LinkedIn Posting Tool</strong> creates AI-written LinkedIn posts with
-            branded images from any topic URL or keyword search. It handles the full workflow:
-            find a topic, generate posts in multiple writing styles, customise the image,
-            and publish directly to LinkedIn.
+            The <strong>LinkedIn Posting Tool</strong> handles the full content workflow end-to-end: discover
+            topics from keyword search or article URLs, generate AI-written posts in multiple styles, create
+            branded 1080&times;1080 images, and publish directly to LinkedIn — all from one place.
           </p>
           <p>
-            The tool lives at <code>/linkedin</code> and has a two-panel layout:
+            The tool lives at <code>/linkedin</code> and uses a two-panel layout:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
@@ -101,8 +117,8 @@ export function LinkedInGuideContent() {
                 <Search className="w-3.5 h-3.5 text-[#2C666E]" /> Topic Queue (left)
               </h5>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                Discover and queue topics to write about. Paste a URL directly or search by keyword
-                to find relevant articles scored by relevance.
+                Discover and queue topics via keyword search or paste any article URL. Each topic is scored
+                by engagement potential using GPT-4.1-mini and the Exa search API.
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
@@ -110,264 +126,299 @@ export function LinkedInGuideContent() {
                 <FileText className="w-3.5 h-3.5 text-[#2C666E]" /> Post Feed (right)
               </h5>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                All your generated posts. Click any post to open the full editor where you can
-                refine text, customise the image, and publish.
+                All generated posts in a scrollable feed. Click any post to open the full editor where you
+                can refine text, restyle the image, and publish.
               </p>
             </div>
           </div>
         </div>
+        <Screenshot
+          src={CDN + '01-linkedin-overview.jpg'}
+          alt="LinkedIn tool two-panel layout"
+          caption="Two-panel layout: topic queue on the left, post feed on the right."
+        />
       </Section>
 
-      {/* ── Finding Topics ── */}
-      <Section icon={Search} title="Finding Topics">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+      {/* Topic Discovery */}
+      <Section icon={Search} title="Topic Discovery">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>Two ways to add topics to your queue:</p>
         </div>
 
-        <Step number="1" title="Paste a URL">
+        <Step number="1" title="Keyword search">
           <p>
-            Paste any article or webpage URL directly into the topic input. The AI will scrape
-            the page, extract the key content, and score it for LinkedIn relevance. Great for
-            sharing industry news, blog posts, or case studies.
+            Type a keyword or phrase in the search bar and press Enter. The AI searches for relevant
+            articles via Exa and scores each result by LinkedIn engagement potential. Click
+            <strong> Add</strong> on any result to queue it.
           </p>
         </Step>
 
-        <Step number="2" title="Keyword search">
+        <Step number="2" title="Paste a URL">
           <p>
-            Type a keyword or phrase to search for relevant articles. Results are scored by
-            LinkedIn relevance using GPT and Exa API. Click <strong>"Add"</strong> on any
-            result to add it to your queue.
+            Paste any article or webpage URL directly into the same input and press Enter. The AI scrapes
+            the page, extracts the key topic, and adds it to your queue immediately.
           </p>
         </Step>
 
         <Tip>
-          Topics stay in your queue until you generate posts from them. You can build up a
-          backlog of topics and work through them when ready.
+          Each topic gets an engagement score (shown as a number on the card). Higher-scored topics
+          are more likely to resonate with your LinkedIn audience based on current conversation trends.
+          Topics expire after 7 days — queue the ones you want to write about soon.
         </Tip>
+
+        <Screenshot
+          src={CDN + '02-topic-search.jpg'}
+          alt="Topic search bar highlighted"
+          caption="Search bar in the topic queue — accepts keywords or full article URLs."
+        />
       </Section>
 
-      {/* ── Creating Posts ── */}
-      <Section icon={Wand2} title="Creating Posts">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+      {/* Post Generation */}
+      <Section icon={Wand2} title="Post Generation">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
-            Select a topic from the queue and click <strong>"Create Posts"</strong> to open
-            the generation modal. You have several options to control the output:
+            Click <strong>Generate Post</strong> on any queued topic to open the creation panel.
+            Three GPT-4.1 post variations are generated automatically.
           </p>
         </div>
 
         <Step number="1" title="Choose a writing style">
           <p>
-            Select one style or <strong>"All Three"</strong> to generate three variations at once:
+            Select <strong>All Three</strong> to generate three variations at once, or pick one style:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Contrarian</h6>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Challenges conventional wisdom. Bold, debate-provoking takes.</p>
+              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Thought Leader</h6>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Bold, contrarian takes that challenge conventional wisdom.</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Story-led</h6>
+              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Storyteller</h6>
               <p className="text-xs text-gray-500 dark:text-gray-400">Narrative-driven. Opens with a hook, builds to a lesson.</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Data Punch</h6>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Leads with numbers, stats, and concrete evidence.</p>
+              <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-0.5">Educator</h6>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Leads with data, stats, and concrete evidence.</p>
             </div>
           </div>
         </Step>
 
-        <Step number="2" title="Select post format (optional)">
+        <Step number="2" title="Brand Kit & image options">
           <p>
-            Choose a specific format or leave on <strong>"Auto"</strong>. Options include
-            educational listicle, data infographic, comparison, myth vs reality,
-            problem-solution, and more. Auto picks the best format for your writing style.
+            Optionally select a <strong>Brand Kit</strong> to inject your brand voice and include your
+            logo. Choose an <strong>image layout</strong> template (controls text overlay position) and
+            a <strong>visual style</strong> preset to guide the AI background image.
           </p>
         </Step>
 
-        <Step number="3" title="Choose image layout">
+        <Step number="3" title="Generate">
           <p>
-            Select from <strong>8 image layout templates</strong> that control how text overlays
-            appear on the branded image: Bold Editorial, Minimal Center, Dark Cinematic,
-            Magazine, Clean Bottom, Top Headline, Text Only, or Side Strip.
-          </p>
-        </Step>
-
-        <Step number="4" title="Select visual style (optional)">
-          <p>
-            Pick an aesthetic preset to guide the AI image generation — abstract, photographic,
-            illustrated, etc. This controls the look of the background image, not the text layout.
-          </p>
-        </Step>
-
-        <Step number="5" title="Select Brand Kit (optional)">
-          <p>
-            Link a Brand Kit to include your logo on the image and align the tone with your
-            brand voice.
-          </p>
-        </Step>
-
-        <Step number="6" title="Generate">
-          <p>
-            Click <strong>"Generate"</strong>. The AI produces the post text, extracts a headline
-            excerpt for the image, generates an AI background image, and composites
-            everything into a branded 1080×1080 image. This typically takes 15–30 seconds.
+            Click <strong>Generate</strong>. All three variations are created in one pass — pick the one
+            that fits, or mix elements from each in the post editor.
           </p>
         </Step>
 
         <Tip>
-          Selecting <strong>"All Three"</strong> gives you three different takes on the same
-          topic. Pick the one that resonates, or mix elements from each in the editor.
+          Generating all three styles at once is the fastest way to find your angle. Different styles
+          tend to perform differently by industry — Thought Leader works well for tech and strategy,
+          Storyteller for consulting and culture, Educator for finance and data-heavy topics.
         </Tip>
+
+        <Screenshot
+          src={CDN + '03-create-post-modal.jpg'}
+          alt="Create Post modal with writing style and image options"
+          caption="The post generation panel — writing style, Brand Kit, image layout, and visual style selectors."
+        />
       </Section>
 
-      {/* ── The Post Editor ── */}
-      <Section icon={Sliders} title="The Post Editor">
+      {/* Image Generation */}
+      <Section icon={ImageIcon} title="Image Generation">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            Images are generated at post creation time, not at publish time. This lets you review and
+            adjust before committing.
+          </p>
+          <p>
+            The image pipeline: GPT-5-mini extracts a punchy headline excerpt from the post text
+            &rarr; Nano Banana 2 generates the AI background image &rarr; Satori composites the
+            headline and brand elements into a <strong>branded 1080&times;1080 layout</strong>.
+          </p>
+          <p>
+            The result is stored in two layers: the raw AI background (<code>base_image_url</code>)
+            and the final composed image. This separation is what makes zero-cost restyling possible.
+          </p>
+        </div>
+        <Screenshot
+          src={CDN + '04-post-with-image.jpg'}
+          alt="Generated post with branded image in the feed"
+          caption="A generated post in the feed — AI background image with text overlay composited by Satori."
+        />
+      </Section>
+
+      {/* Post Editor */}
+      <Section icon={Sliders} title="Post Editor">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
             Click any post in the feed to open the full editor at <code>/linkedin/:id</code>.
-            Here you can refine everything before publishing or downloading.
           </p>
         </div>
 
         <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mt-4 mb-2">Text editing</h4>
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
-            The post body is fully editable in a textarea (3,000 character limit). Changes auto-save
-            when you click away. You can also click <strong>"Regenerate Text"</strong> to get a
-            completely new version in the same writing style.
+            The post body is fully editable (3,000 character limit). Changes auto-save on blur.
+            Click <strong>Regenerate Text</strong> to get a fresh variation in the same writing style.
           </p>
-        </div>
-
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mt-4 mb-2">Image controls</h4>
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>Two image actions are available:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-              <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-1 flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-[#2C666E]" /> Recompose
-              </h5>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Re-renders the text overlay on the <strong>existing</strong> background image
-                with your updated style settings. Instant — no AI generation cost.
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-              <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-1 flex items-center gap-1.5">
-                <RefreshCw className="w-3.5 h-3.5 text-[#2C666E]" /> New Image
-              </h5>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Generates a completely new AI background image and re-composites the overlay.
-                Use this when you want a different visual entirely.
-              </p>
-            </div>
-          </div>
         </div>
 
         <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mt-4 mb-2">Style overrides</h4>
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>Fine-tune the image appearance with these controls:</p>
-          <ul className="list-disc list-inside space-y-1 text-xs mt-2">
-            <li><strong>Layout template</strong> — switch between 8 text layout styles</li>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="mb-2">Fine-tune the image appearance with these controls:</p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li><strong>Layout template</strong> — switch between ~17 text layout styles</li>
             <li><strong>Gradient colour</strong> — change the overlay scrim colour via hex picker</li>
-            <li><strong>Font family</strong> — choose from Inter, Playfair Display, JetBrains Mono, or Caveat</li>
-            <li><strong>Headline size</strong> — scale from 60% to 160%</li>
-            <li><strong>Body text size</strong> — scale from 60% to 160%</li>
+            <li><strong>Gradient density</strong> — opacity of the scrim (20–100%)</li>
+            <li><strong>Font family</strong> — Inter, Playfair Display, JetBrains Mono, or Caveat</li>
+            <li><strong>Headline scale</strong> — resize headline text independently (60–160%)</li>
+            <li><strong>Body text scale</strong> — resize body text independently (60–160%)</li>
           </ul>
           <p className="mt-2">
-            After adjusting any style setting, click <strong>"Recompose"</strong> to see the changes
-            applied to the image. This uses the existing background — no regeneration needed.
+            After adjusting any style setting, click <strong>Recompose</strong> to apply changes.
+            This reuses the existing background — no new AI generation required.
           </p>
         </div>
+
+        <Screenshot
+          src={CDN + '05-post-editor.jpg'}
+          alt="Post editor with style controls visible"
+          caption="The post editor — text editing area on the left, image preview and style controls on the right."
+        />
       </Section>
 
-      {/* ── Downloading Creatives ── */}
-      <Section icon={Download} title="Downloading Creatives">
+      {/* Recompose */}
+      <Section icon={RefreshCw} title="Recompose (Zero-Cost Restyling)">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
-            Each post's branded image can be downloaded directly from the post editor.
+            The <strong>Recompose</strong> button re-renders the text layout overlay on top of the
+            existing background image using your current style settings. No AI generation happens —
+            it's instant and free.
+          </p>
+          <p>
+            Because the raw background is stored separately in <code>base_image_url</code>, you can
+            try as many layout and colour combinations as you like without burning any credits.
+            Only clicking <strong>New Image</strong> triggers a new AI generation.
           </p>
         </div>
-
-        <Step number="1" title="Open the post editor">
-          <p>Click on any generated post in the feed to open it at <code>/linkedin/:id</code>.</p>
-        </Step>
-
-        <Step number="2" title="Download the image">
-          <p>
-            Below the image preview, click the <strong>"Download Image"</strong> link. This saves
-            the branded 1080×1080 PNG directly to your computer, named
-            <code> linkedin-post-{'{number}'}.png</code>.
-          </p>
-        </Step>
-
         <Tip>
-          The downloaded image includes all your style overrides — gradient colour, font, text
-          sizing, layout template. What you see in the editor is exactly what you download.
+          Use Recompose to quickly iterate: change the layout template, update the gradient colour to
+          match your brand, scale the headline up — then Recompose and compare. What you see is exactly
+          what gets saved and downloaded.
         </Tip>
-        <Tip>
-          If you want to change the image before downloading, use <strong>"Recompose"</strong>
-          to update the overlay or <strong>"New Image"</strong> for a fresh background, then download.
-        </Tip>
+        <Screenshot
+          src={CDN + '06-recompose.jpg'}
+          alt="Recompose button highlighted in the post editor"
+          caption="Recompose applies style changes to the existing background image instantly — no AI cost."
+        />
       </Section>
 
-      {/* ── Publishing to LinkedIn ── */}
+      {/* Publishing */}
       <Section icon={Send} title="Publishing to LinkedIn">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
-            You can publish posts directly to LinkedIn from the editor. This requires a
-            connected LinkedIn account.
+            Publish posts directly to LinkedIn from the editor. Requires a connected LinkedIn account.
           </p>
         </div>
 
-        <Step number="1" title="Connect LinkedIn">
+        <Step number="1" title="Connect your LinkedIn account">
           <p>
-            Go to <strong>Settings &rsaquo; Accounts</strong> (<code>/settings/accounts</code>)
-            and click <strong>"Connect LinkedIn"</strong>. You'll be redirected to LinkedIn to
-            authorise the connection.
+            Go to <strong>Settings &rsaquo; Accounts</strong> (<code>/settings/accounts</code>) and
+            click <strong>Connect LinkedIn</strong>. You'll be redirected to LinkedIn to authorise.
           </p>
         </Step>
 
         <Step number="2" title="Publish from the editor">
           <p>
-            Once connected, the <strong>"Publish"</strong> button appears in the post editor.
-            Click it to send the post with the branded image to LinkedIn. The post status
-            updates to "Published" and a link to view the live post appears.
+            Once connected, click <strong>Publish</strong> in the post editor to post the text and
+            image to LinkedIn immediately. The post status updates to "Published" with a link to
+            the live post.
           </p>
         </Step>
 
         <Warning>
-          Publishing is immediate — there's no draft or scheduling step on LinkedIn's side.
-          Make sure the post text and image are finalised before clicking Publish.
+          Publishing is immediate — there is no draft or scheduling step on LinkedIn's side. Make
+          sure the post text and image are finalised before clicking Publish.
         </Warning>
+        <Warning>
+          Users who connected LinkedIn before April 2026 must reconnect — OAuth scopes were upgraded
+          to include ad permissions (<code>r_ads w_ads r_ads_reporting</code>).
+        </Warning>
+
+        <Screenshot
+          src={CDN + '07-publish.jpg'}
+          alt="Publish button in the post editor"
+          caption="The Publish button posts the text and branded image to LinkedIn in one click."
+        />
       </Section>
 
-      {/* ── Tips & Best Practices ── */}
-      <Section icon={Lightbulb} title="Tips & Best Practices">
+      {/* Downloading */}
+      <Section icon={Download} title="Downloading the Image">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            Save the branded 1080&times;1080 image locally for use in other tools or to post
+            manually via LinkedIn's native uploader.
+          </p>
+        </div>
+
+        <Step number="1" title="Open the post editor">
+          <p>Click any post in the feed to open it at <code>/linkedin/:id</code>.</p>
+        </Step>
+
+        <Step number="2" title="Click Download Image">
+          <p>
+            Click <strong>Download Image</strong> below the image preview. The composed PNG is saved
+            directly to your computer, including all current style overrides (layout, colour, font,
+            text scale).
+          </p>
+        </Step>
+
+        <Tip>
+          What you see in the editor is exactly what you download — style changes applied via
+          Recompose are reflected in the downloaded file.
+        </Tip>
+
+        <Screenshot
+          src={CDN + '08-download.jpg'}
+          alt="Download Image button highlighted"
+          caption="Download Image saves the final composed PNG with all style overrides applied."
+        />
+      </Section>
+
+      {/* Tips */}
+      <Section icon={Lightbulb} title="Tips & Best Practices">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
           <ul className="list-disc list-inside space-y-2 text-sm">
             <li>
-              <strong>Use "All Three" styles</strong> — different writing styles perform differently
-              by industry. Test contrarian takes for tech, story-led for consulting, data punch
-              for finance.
+              <strong>Generate all three styles</strong> — different writing styles perform differently
+              by industry. Test Thought Leader for tech, Storyteller for consulting, Educator for finance.
             </li>
             <li>
-              <strong>Edit the post text</strong> — AI-generated posts are a strong starting point,
-              but adding your personal perspective or a specific anecdote always improves engagement.
+              <strong>Edit the post text</strong> — AI-generated posts are a strong starting point.
+              Adding your personal perspective or a specific anecdote consistently improves engagement.
             </li>
             <li>
-              <strong>Try the Dark Cinematic layout</strong> — high contrast text on dark overlays
-              tends to stop the scroll on LinkedIn's light-themed feed.
+              <strong>Try Dark Cinematic layout</strong> — high-contrast text on dark overlays tends
+              to stop the scroll on LinkedIn's light-themed feed.
             </li>
             <li>
               <strong>Use a Brand Kit</strong> — it adds your logo automatically and aligns the
-              tone with your brand voice. Consistent branding builds recognition.
+              tone with your brand voice. Consistent branding builds recognition over time.
             </li>
             <li>
-              <strong>Download before publishing</strong> — if you want to post manually or use
-              a scheduler, download the image and copy the post text.
+              <strong>Recompose is free</strong> — adjusting colours, fonts, and layout via Recompose
+              uses no AI credits. Experiment freely before deciding on the final look.
             </li>
             <li>
-              <strong>Recompose is free</strong> — adjusting colours, fonts, and layout via
-              Recompose doesn't use any AI credits. Experiment freely.
+              <strong>Download before publishing</strong> — if you want to post manually or use a
+              scheduler, download the image and copy the post text directly from the editor.
             </li>
           </ul>
         </div>
