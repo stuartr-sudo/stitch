@@ -21,6 +21,7 @@ import { VideoProductionGuideContent } from './VideoProductionGuidePage';
 import { ShortsWorkbenchGuideContent } from './ShortsWorkbenchGuidePage';
 import { AutomationFlowsGuideContent } from './AutomationFlowsGuidePage';
 import { LinkedInGuideContent } from './LinkedInGuidePage';
+import { BrandKitGuideContent } from './BrandKitGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -75,6 +76,7 @@ const TABS = [
   { id: 'video',       label: 'Video Production', Icon: Film },
   { id: 'shorts',      label: 'Shorts',           Icon: Video },
   { id: 'flows',       label: 'Automation Flows', Icon: GitBranch },
+  { id: 'brandkit',   label: 'Brand Kit',        Icon: BookOpen },
 ];
 
 const CLI_SUB_TABS = [
@@ -280,6 +282,11 @@ export default function LearnPage() {
         {activeTab === 'flows' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <AutomationFlowsGuideContent />
+          </div>
+        )}
+        {activeTab === 'brandkit' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <BrandKitGuideContent />
           </div>
         )}
       </div>
