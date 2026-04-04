@@ -228,7 +228,7 @@ export default function AdCloneModal({ isOpen, onClose, onCloneToAds }) {
       subtitle="Analyze any video ad and clone its strategy for your brand"
       icon={<Scissors className="w-5 h-5" />}
     >
-      <SlideOverBody>
+      <SlideOverBody className="p-5">
         <div className="space-y-6">
           {/* Input Section */}
           <div className="space-y-3">

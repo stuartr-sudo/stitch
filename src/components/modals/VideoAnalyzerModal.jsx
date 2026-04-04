@@ -119,7 +119,7 @@ export default function VideoAnalyzerModal({ isOpen, onClose }) {
       subtitle="Paste a video URL to get a full structural breakdown"
       icon={<Search className="w-5 h-5" />}
     >
-      <SlideOverBody>
+      <SlideOverBody className="p-5">
         <div className="space-y-6">
           {/* Input Section */}
           <div className="space-y-3">
