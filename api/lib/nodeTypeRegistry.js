@@ -3,6 +3,7 @@ import { uploadUrlToSupabase, generateMusic, pollFalQueue, extractFirstFrame } f
 import { generateGeminiVoiceover } from './voiceoverGenerator.js';
 import { burnCaptions } from './captionBurner.js';
 import { generateScript } from './scriptGenerator.js';
+import { buildCohesivePrompt } from './cohesivePromptBuilder.js';
 
 const NODE_TYPES = {
   'manual-input': {
@@ -43,7 +44,19 @@ const NODE_TYPES = {
       brand_kit: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}` : inputs.prompt;
+      // Build prompt via Cohesive Prompt Builder (never concatenate)
+      const prompt = await buildCohesivePrompt({
+        description: inputs.prompt,
+        style: inputs.style || config.style_preset_text || undefined,
+        tool: 'imagineer',
+        lighting: config.lighting || undefined,
+        cameraAngle: config.camera_angle || undefined,
+        colorPalette: config.color_palette || undefined,
+        mood: config.mood || undefined,
+        negativePrompt: config.negative_prompt || undefined,
+        brandStyleGuide: config.brand_kit || undefined,
+      }, context.apiKeys.openaiKey);
+
       const imageUrl = await generateImageV2(
         config.model, prompt, config.aspect_ratio,
         context.apiKeys, context.supabase, {}
@@ -115,7 +128,11 @@ const NODE_TYPES = {
       model: { type: 'select', options: ['nano-banana-2', 'seeddream-v4', 'wavespeed-nano-ultra', 'qwen-image-edit'], default: 'nano-banana-2' }
     },
     async run(inputs, config, context) {
-      const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}` : inputs.prompt;
+      const prompt = await buildCohesivePrompt({
+        description: inputs.prompt,
+        style: inputs.style || config.style_preset_text || undefined,
+        tool: 'edit',
+      }, context.apiKeys.openaiKey);
       const imageUrl = await generateImageV2(config.model, prompt, '1:1', context.apiKeys, context.supabase, { image_url: inputs.image });
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'imagineer-edit', model: config.model });
       return { image_url: imageUrl };
@@ -138,8 +155,13 @@ const NODE_TYPES = {
       background_mode: { type: 'select', options: ['white', 'gray', 'scene'], default: 'white' }
     },
     async run(inputs, config, context) {
-      const prompt = inputs.style ? `${inputs.prompt}, ${inputs.style}, character turnaround sheet` : `${inputs.prompt}, character turnaround sheet`;
-      const imageUrl = await generateImageV2(config.model, prompt, '2:3', context.apiKeys, context.supabase, {});
+      const prompt = await buildCohesivePrompt({
+        description: inputs.prompt,
+        style: inputs.style || config.style_preset_text || undefined,
+        tool: 'turnaround',
+      }, context.apiKeys.openaiKey);
+      const fullPrompt = prompt + ', character turnaround sheet';
+      const imageUrl = await generateImageV2(config.model, fullPrompt, '2:3', context.apiKeys, context.supabase, {});
       await context.logCost({ username: context.userEmail, category: 'fal', operation: 'turnaround-sheet', model: config.model });
       return { image_url: imageUrl };
     }
@@ -284,10 +306,11 @@ const NODE_TYPES = {
     outputs: [{ id: 'prompt', type: 'string' }],
     configSchema: {},
     async run(inputs, config, context) {
-      const parts = [inputs.description];
-      if (inputs.style) parts.push(inputs.style);
-      if (inputs.props) parts.push(inputs.props);
-      return { prompt: parts.join(', ') };
+      const prompt = await buildCohesivePrompt({
+        description: inputs.description,
+        style: inputs.style || undefined,
+      }, context.apiKeys.openaiKey);
+      return { prompt };
     }
   },
 
@@ -633,6 +656,54 @@ const NODE_TYPES = {
         case 'equals': conditionMet = value === (config.compare_value || ''); break;
       }
       return { result: conditionMet ? value : '' };
+    }
+  },
+
+  'style-preset': {
+    id: 'style-preset',
+    label: 'Style Preset',
+    category: 'input',
+    icon: '🎨',
+    inputs: [],
+    outputs: [{ id: 'style', type: 'string' }],
+    configSchema: {
+      style_key: { type: 'text', default: '' },
+      style_text: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      return { style: config.style_text || '' };
+    }
+  },
+
+  'video-style-preset': {
+    id: 'video-style-preset',
+    label: 'Video Style Preset',
+    category: 'input',
+    icon: '🎬',
+    inputs: [],
+    outputs: [{ id: 'style', type: 'string' }],
+    configSchema: {
+      style_key: { type: 'text', default: '' },
+      style_text: { type: 'text', default: '' }
+    },
+    async run(inputs, config, context) {
+      return { style: config.style_text || '' };
+    }
+  },
+
+  'prompt-template': {
+    id: 'prompt-template',
+    label: 'Prompt Template',
+    category: 'input',
+    icon: '📋',
+    inputs: [],
+    outputs: [{ id: 'prompt', type: 'string' }],
+    configSchema: {
+      template: { type: 'text', default: '' },
+      label: { type: 'text', default: 'Prompt Template' }
+    },
+    async run(inputs, config, context) {
+      return { prompt: config.template || '' };
     }
   },
 

@@ -2,6 +2,7 @@ import { getNodeType } from './nodeTypeRegistry.js';
 import { logCost } from './costLogger.js';
 
 const DEFAULT_CONCURRENCY = 3;
+const NODE_TIMEOUT_MS = 300_000; // 5 minutes per node (video gen can take 2-3 min)
 
 export class FlowExecutor {
   constructor(flow, execution, supabase, apiKeys, userId, userEmail) {
@@ -18,6 +19,8 @@ export class FlowExecutor {
     this.abortController = new AbortController();
     this.paused = false;
     this.cancelled = false;
+    // Sequential DB write queue to prevent race conditions on step_states
+    this._updateQueue = Promise.resolve();
   }
 
   getIncomingEdges(nodeId) {
@@ -57,13 +60,28 @@ export class FlowExecutor {
     return inputs;
   }
 
+  /**
+   * Queue-based DB update — serializes writes so concurrent node completions
+   * don't race on step_states (last-write-wins would lose intermediate state).
+   */
   async updateExecution(updates) {
-    await this.supabase
-      .from('automation_executions')
-      .update({ step_states: this.stepStates, ...updates })
-      .eq('id', this.executionId);
+    this._updateQueue = this._updateQueue.then(async () => {
+      try {
+        await this.supabase
+          .from('automation_executions')
+          .update({ step_states: this.stepStates, ...updates })
+          .eq('id', this.executionId);
+      } catch (err) {
+        console.error(`[flows] DB update failed for execution ${this.executionId}:`, err.message);
+      }
+    });
+    return this._updateQueue;
   }
 
+  /**
+   * Run a single node with a per-node timeout.
+   * Timeout prevents a hung API call from stalling the entire flow.
+   */
   async runNode(node) {
     const nodeType = getNodeType(node.type);
     if (!nodeType) throw new Error(`Unknown node type: ${node.type}`);
@@ -82,8 +100,16 @@ export class FlowExecutor {
       logCost: (params) => logCost({ ...params, username: this.userEmail }),
     };
 
+    const errorHandling = node.config?.errorHandling || 'stop';
+
     try {
-      const output = await nodeType.run(inputs, node.config || {}, context);
+      // Per-node timeout — wraps the run call in a race with a timer
+      const output = await this._withTimeout(
+        nodeType.run(inputs, node.config || {}, context),
+        NODE_TIMEOUT_MS,
+        `Node "${nodeType.label}" timed out after ${NODE_TIMEOUT_MS / 1000}s`
+      );
+
       this.stepStates[node.id] = {
         status: 'completed',
         started_at: this.stepStates[node.id].started_at,
@@ -91,11 +117,10 @@ export class FlowExecutor {
         output
       };
     } catch (err) {
-      const errorHandling = node.errorHandling || 'stop';
-
       if (errorHandling === 'retry') {
-        const retried = await this.retryNode(node, nodeType, inputs, context);
+        const retried = await this.retryNode(node, nodeType, inputs, context, errorHandling);
         if (retried) { this.running.delete(node.id); return; }
+        // Retries exhausted — fall through to failure handling below
       }
 
       this.stepStates[node.id] = {
@@ -105,6 +130,8 @@ export class FlowExecutor {
         error: err.message
       };
 
+      // Only cancel the entire flow if error mode is 'stop'
+      // 'skip' lets the flow continue, 'retry' already exhausted retries above
       if (errorHandling === 'stop') {
         this.cancelled = true;
       }
@@ -114,33 +141,60 @@ export class FlowExecutor {
     await this.updateExecution({});
   }
 
-  async retryNode(node, nodeType, inputs, context, maxRetries = 3) {
+  /**
+   * Retry a failed node up to maxRetries times with exponential backoff.
+   * Returns true if retry succeeded, false if all retries exhausted.
+   * Does NOT cancel the flow — the caller decides based on errorHandling mode.
+   */
+  async retryNode(node, nodeType, inputs, context, errorHandling, maxRetries = 3) {
     const delays = [2000, 4000, 8000];
     for (let i = 0; i < maxRetries; i++) {
+      console.log(`[flows] Retry ${i + 1}/${maxRetries} for node "${nodeType.label}" in ${delays[i]}ms`);
       await new Promise(r => setTimeout(r, delays[i]));
+
+      if (this.cancelled) return false; // Flow was cancelled during backoff
+
       try {
-        const output = await nodeType.run(inputs, node.config || {}, context);
+        const output = await this._withTimeout(
+          nodeType.run(inputs, node.config || {}, context),
+          NODE_TIMEOUT_MS,
+          `Node "${nodeType.label}" timed out on retry ${i + 1}`
+        );
         this.stepStates[node.id] = {
           status: 'completed',
           started_at: this.stepStates[node.id].started_at,
           completed_at: new Date().toISOString(),
           output
         };
+        await this.updateExecution({});
         return true;
       } catch (err) {
+        console.error(`[flows] Retry ${i + 1}/${maxRetries} failed for "${nodeType.label}":`, err.message);
         if (i === maxRetries - 1) {
+          // Final retry failed — update stepState but let caller handle flow-level decision
           this.stepStates[node.id] = {
             status: 'failed',
             started_at: this.stepStates[node.id].started_at,
             completed_at: new Date().toISOString(),
             error: `Failed after ${maxRetries} retries: ${err.message}`
           };
-          this.cancelled = true;
           return false;
         }
       }
     }
     return false;
+  }
+
+  /**
+   * Wrap a promise with a timeout. Rejects with a descriptive error if exceeded.
+   */
+  _withTimeout(promise, ms, message) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(message)), ms);
+      promise
+        .then(v => { clearTimeout(timer); resolve(v); })
+        .catch(e => { clearTimeout(timer); reject(e); });
+    });
   }
 
   async execute() {
@@ -162,10 +216,13 @@ export class FlowExecutor {
         continue;
       }
 
+      // Fire batch and wait for ALL to settle (not race with a short timer)
+      // This prevents the loop from spinning while nodes are running
       const promises = batch.map(node => this.runNode(node));
       await Promise.race([
         Promise.allSettled(promises),
-        new Promise(r => setTimeout(r, 1000))
+        // Poll every 2s to pick up newly-ready nodes from other concurrent completions
+        new Promise(r => setTimeout(r, 2000))
       ]);
     }
 

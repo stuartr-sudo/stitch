@@ -6,6 +6,8 @@ import BrandStyleGuideSelector from '@/components/ui/BrandStyleGuideSelector';
 import LoRAPicker from '@/components/LoRAPicker';
 import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
+import { apiFetch } from '@/lib/api';
+import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -173,6 +175,17 @@ function AspectRatioButtons({ value, onChange }) {
 }
 
 
+// Resolve style preset keys to their promptText values
+function resolveStylePresetText(keys) {
+  if (!keys || !Array.isArray(keys) || keys.length === 0) return '';
+  const allStyles = STYLE_CATEGORIES.flatMap(cat => cat.styles || []);
+  return keys.map(key => {
+    const style = allStyles.find(s => s.value === key);
+    return style?.promptText || '';
+  }).filter(Boolean).join('. ');
+}
+
+
 // ── ImageForm (Imagineer Generate, Imagineer Edit, Turnaround, Upscale, Smoosh) ──
 
 function ImageForm({ config, u, nodeType, wired }) {
@@ -194,7 +207,7 @@ function ImageForm({ config, u, nodeType, wired }) {
 
       {/* Visual Style */}
       <Panel title="Visual Style" description="Select one or more styles to guide generation">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)}
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }}
           maxHeight="20rem" columns="grid-cols-4" multiple />
       </Panel>
 
@@ -392,7 +405,7 @@ function VideoForm({ config, u, nodeType, wired }) {
       )}
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-4" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-4" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -661,7 +674,7 @@ function ShortsCreateForm({ config, u, wired }) {
 
       {/* Visual Style */}
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       {/* Captions */}
@@ -749,7 +762,7 @@ function StoryboardCreateForm({ config, u, wired }) {
       </div>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -796,7 +809,7 @@ function CarouselCreateForm({ config, u }) {
       </Panel>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -843,7 +856,7 @@ function AdsGenerateForm({ config, u }) {
       </Panel>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => u('style_preset', v)} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -1114,7 +1127,37 @@ function UtilityForm({ config, u, nodeType, wired }) {
 
 // ── InputForm ────────────────────────────────────────────────────────────────
 
-function InputForm({ config, u }) {
+function InputForm({ config, u, nodeType }) {
+  const nodeId = nodeType?.id;
+
+  // Style Preset node — pick from StyleGrid, stores both key and promptText
+  if (nodeId === 'style-preset') {
+    return <StylePresetForm config={config} u={u} />;
+  }
+
+  // Video Style Preset node — fetch from /api/styles/video
+  if (nodeId === 'video-style-preset') {
+    return <VideoStylePresetForm config={config} u={u} />;
+  }
+
+  // Prompt Template node — textarea for a reusable prompt template
+  if (nodeId === 'prompt-template') {
+    return (
+      <div className="space-y-5">
+        <Panel title="Prompt Template" description="Write a reusable prompt template that outputs to downstream nodes">
+          <textarea value={config.template || ''} onChange={e => u('template', e.target.value)}
+            placeholder="A cinematic wide shot of a character standing on a cliff overlooking a futuristic city..." rows={6} className={TEXTAREA} />
+        </Panel>
+        <Panel title="Display Label">
+          <input type="text" value={config.label || ''} onChange={e => u('label', e.target.value)}
+            placeholder="e.g. Hero Shot, Product Close-up..." className={INPUT} />
+          <p className="text-xs text-slate-400 mt-1">Shown as the node label on the canvas</p>
+        </Panel>
+      </div>
+    );
+  }
+
+  // Default: manual-input
   const inputType = config.inputType || 'string';
   return (
     <div className="space-y-5">
@@ -1139,6 +1182,105 @@ function InputForm({ config, u }) {
           placeholder="e.g. Topic, Reference Image..." className={INPUT} />
         <p className="text-xs text-slate-400 mt-1">Shown as the node label on the canvas</p>
       </Panel>
+    </div>
+  );
+}
+
+
+// ── StylePresetForm ─────────────────────────────────────────────────────────
+
+function StylePresetForm({ config, u }) {
+  // When user selects styles, resolve their promptText and store both key + text
+  const handleStyleChange = (keys) => {
+    u('style_key', keys);
+    u('style_text', resolveStylePresetText(keys));
+  };
+
+  return (
+    <div className="space-y-5">
+      <Panel title="Visual Style" description="Select one or more styles. The resolved prompt text is sent to downstream nodes.">
+        <StyleGrid
+          value={config.style_key || []}
+          onChange={handleStyleChange}
+          maxHeight="24rem"
+          columns="grid-cols-5"
+          multiple
+        />
+      </Panel>
+      {config.style_text && (
+        <Panel title="Resolved Prompt Text">
+          <p className="text-xs text-slate-500 whitespace-pre-wrap leading-relaxed">{config.style_text}</p>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+
+// ── VideoStylePresetForm ────────────────────────────────────────────────────
+
+function VideoStylePresetForm({ config, u }) {
+  const [videoStyles, setVideoStyles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch('/api/styles/video')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setVideoStyles(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const selectedKey = config.style_key || '';
+  const categories = useMemo(() => {
+    const cats = {};
+    videoStyles.forEach(s => {
+      const cat = s.category || 'Other';
+      if (!cats[cat]) cats[cat] = [];
+      cats[cat].push(s);
+    });
+    return cats;
+  }, [videoStyles]);
+
+  const handleSelect = (style) => {
+    u('style_key', style.key);
+    u('style_text', style.prompt || style.description || '');
+  };
+
+  if (loading) {
+    return <Panel title="Video Style Preset"><p className="text-sm text-slate-400">Loading video styles...</p></Panel>;
+  }
+
+  return (
+    <div className="space-y-5">
+      <Panel title="Video Style Preset" description="Select a motion/cinematography style. The prompt is sent to downstream nodes.">
+        <div className="max-h-[28rem] overflow-y-auto space-y-4">
+          {Object.entries(categories).map(([cat, styles]) => (
+            <div key={cat}>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{cat}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {styles.map(s => {
+                  const sel = selectedKey === s.key;
+                  return (
+                    <button key={s.key} onClick={() => handleSelect(s)}
+                      className={`text-left px-3 py-2.5 rounded-lg border transition-all ${sel
+                        ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]/20'
+                        : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}>
+                      <span className={`text-sm font-medium block truncate ${sel ? 'text-[#2C666E]' : 'text-slate-800'}`}>{s.label || s.key}</span>
+                      {s.description && <span className="text-[11px] text-slate-400 block mt-0.5 line-clamp-2">{s.description}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      {config.style_text && (
+        <Panel title="Resolved Prompt Text">
+          <p className="text-xs text-slate-500 whitespace-pre-wrap leading-relaxed">{config.style_text}</p>
+        </Panel>
+      )}
     </div>
   );
 }
@@ -1232,7 +1374,7 @@ export default function NodeConfigModal({
       case 'content': return <ContentForm {...props} />;
       case 'publish': return <PublishForm {...props} />;
       case 'utility': return <UtilityForm {...props} />;
-      case 'input': return <InputForm config={config} u={u} />;
+      case 'input': return <InputForm config={config} u={u} nodeType={nodeType} />;
       default: return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
     }
   };
