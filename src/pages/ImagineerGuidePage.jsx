@@ -1,8 +1,8 @@
 /**
- * ImagineerGuidePage — comprehensive teaching guide for all Image tools.
+ * ImagineerGuidePage — comprehensive teaching guide for the Imagineer image tool.
  *
- * Covers: Imagineer (T2I), Edit Image (I2I), Inpaint, Smoosh, Lens, Try Style,
- * and the Cohesive Prompt Builder that powers them all.
+ * Covers: T2I wizard (4 steps), multi-style bulk create, I2I editing,
+ * multi-image composition, reference image analysis, models, and tips.
  */
 
 import React, { useState } from 'react';
@@ -12,6 +12,8 @@ import {
   Cpu, Palette, SlidersHorizontal, Camera, Eye, CheckCircle2,
   Zap, Target, Lightbulb, Upload, Focus, Grid3X3, Blend,
 } from 'lucide-react';
+
+const CDN = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/imagineer/';
 
 // ── Reusable UI Components ──────────────────────────────────────────────────
 
@@ -54,7 +56,7 @@ function Step({ number, title, children }) {
 function Tip({ children }) {
   return (
     <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex gap-2">
-      <span className="shrink-0">&#128161;</span>
+      <span className="shrink-0">💡</span>
       <div>{children}</div>
     </div>
   );
@@ -78,21 +80,13 @@ function InfoBox({ children }) {
   );
 }
 
-function Badge({ icon: Icon, label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
+function GuideImage({ file, alt }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-      {Icon && <Icon className="w-3 h-3" />}
-      {label}
-    </span>
-  );
-}
-
-function KV({ label, children }) {
-  return (
-    <div className="flex gap-2 mt-1">
-      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-36">{label}</span>
-      <span className="text-sm text-gray-700 dark:text-gray-300">{children}</span>
-    </div>
+    <img
+      src={CDN + file}
+      alt={alt}
+      className="max-w-2xl mx-auto block rounded-xl border border-zinc-200 shadow-lg my-4"
+    />
   );
 }
 
@@ -104,8 +98,6 @@ function ModelTable({ models }) {
           <tr className="bg-gray-50 dark:bg-gray-800/50 text-left">
             <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300">Model</th>
             <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300">Best For</th>
-            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 text-center">Multi-Image</th>
-            <th className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 text-center">LoRA</th>
           </tr>
         </thead>
         <tbody>
@@ -113,8 +105,6 @@ function ModelTable({ models }) {
             <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'}>
               <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{m.name}</td>
               <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{m.bestFor}</td>
-              <td className="px-3 py-2 text-center">{m.multiImage ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300 dark:text-gray-500">--</span>}</td>
-              <td className="px-3 py-2 text-center">{m.lora ? <CheckCircle2 className="w-4 h-4 text-green-600 inline" /> : <span className="text-gray-300 dark:text-gray-500">--</span>}</td>
             </tr>
           ))}
         </tbody>
@@ -129,363 +119,277 @@ export function ImagineerGuideContent() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
 
+      {/* ── Hero ── */}
+      <div className="rounded-xl bg-gradient-to-br from-[#07393C] to-[#2C666E] p-6 text-white">
+        <div className="flex items-center gap-3 mb-2">
+          <Sparkles className="w-7 h-7" />
+          <h1 className="text-2xl font-bold">Imagineer</h1>
+        </div>
+        <p className="text-white/80 text-sm leading-relaxed">
+          AI image generation and editing. Two modes: <strong className="text-white">Text-to-Image</strong> for
+          creating from scratch using a 4-step wizard, and <strong className="text-white">Image-to-Image</strong> for
+          editing, transforming, and compositing existing images.
+        </p>
+      </div>
+
       {/* ── Section 1: Overview ── */}
-      <Section icon={Sparkles} title="Overview: Image Creation & Editing Tools" defaultOpen={true}>
+      <Section icon={Sparkles} title="Overview" defaultOpen={true}>
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
-            Stitch Studio provides a comprehensive suite of AI-powered image tools, all accessible
-            from the <strong>Image Tools</strong> section in the sidebar. Each tool is designed for
-            a specific workflow, but they all share a common foundation: the <strong>Cohesive Prompt Builder</strong>,
-            which uses GPT-4 to assemble your structured inputs into optimized generation prompts.
+            Imagineer is accessible from <strong>Image Tools</strong> in the sidebar. It combines two
+            complementary workflows in one modal: the T2I wizard guides you through subject, style,
+            enhance, and output steps to generate images from text; the I2I editor takes one or more
+            source images and transforms them based on your prompt.
           </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-            {[
-              { icon: Wand2, name: 'Imagineer', desc: 'Text-to-Image generation' },
-              { icon: Pencil, name: 'Edit Image', desc: 'Image-to-Image editing' },
-              { icon: Eraser, name: 'Inpaint', desc: 'Masked object removal/replace' },
-              { icon: Layers, name: 'Smoosh', desc: 'Canvas composition & blending' },
-              { icon: Focus, name: 'Lens', desc: 'Multi-angle adjustment' },
-              { icon: Shirt, name: 'Try Style', desc: 'Virtual clothing try-on' },
-            ].map(({ icon: I, name, desc }) => (
-              <div key={name} className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <I className="w-4 h-4 text-[#2C666E] mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-2">
-            All tools support <strong>multi-style bulk create</strong> — select multiple visual styles
-            and the system generates one image per style in a single batch. Brand Style Guides can be
-            applied across every tool for consistent output.
+          <p>
+            Both modes are powered by the <strong>Cohesive Prompt Builder</strong> — your structured
+            inputs (subject, style, lighting, mood, etc.) are assembled by GPT-4.1 mini into a single
+            optimized generation prompt before being sent to the AI model. This means you get
+            consistently well-structured prompts without having to write prompt engineering yourself.
           </p>
+          <p>
+            The key difference between modes: T2I starts from nothing and builds up; I2I starts from
+            an existing image and modifies it. Multi-image I2I lets you blend multiple source images
+            together — for example, placing a character into a scene.
+          </p>
+          <GuideImage file="01-imagineer-modal.jpg" alt="Imagineer modal open showing Text to Image and Image to Image mode tabs" />
         </div>
       </Section>
 
-      {/* ── Section 2: Imagineer (T2I) ── */}
-      <Section icon={Wand2} title="Imagineer (Text-to-Image)">
+      {/* ── Section 2: T2I Wizard ── */}
+      <Section icon={Wand2} title="Text-to-Image Wizard">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
-            The Imagineer is a <strong>4-step wizard</strong> for generating images from text descriptions.
-            Each step focuses on a different aspect of the creative brief, and the Cohesive Prompt Builder
-            combines everything into a single optimized prompt before sending to the AI model.
+            The T2I mode is a <strong>4-step wizard</strong>. Each step focuses on one aspect of the
+            creative brief. You move through them with the Next button — earlier steps remain editable
+            if you go back. The Cohesive Prompt Builder assembles everything at generation time.
           </p>
         </div>
 
-        <Step number={1} title="Subject">
-          <p>Define <strong>what</strong> you want to create.</p>
-          <KV label="Subject Type">Person, Group of People, Object, Product, Animal, Landscape, Cityscape, Interior Space, Architecture, Vehicle, Food, Abstract Concept</KV>
-          <KV label="Description">Free-text describing the subject in detail (e.g. "a confident businesswoman in a navy blazer")</KV>
-          <KV label="Reference Image">Upload, paste URL, or pick from Library. AI vision (GPT-4) analyzes the image and uses its details to seed your description.</KV>
-          <Tip>Upload a reference image to give the AI a concrete starting point. It uses GPT-4 vision to analyze the image and incorporate its details into the prompt.</Tip>
+        <Step number={1} title="Subject — what are you generating?">
+          <p>
+            Choose a subject type (Person, Object, Animal, Landscape, Architecture, etc.) and write
+            a detailed description. The more specific you are, the better the result.
+          </p>
+          <p>
+            <strong>Bad:</strong> "a cat" — <strong>Good:</strong> "a cyberpunk cat hacker in a neon-lit
+            server room, wearing a hoodie, green holographic screens reflected in its eyes"
+          </p>
+          <p>
+            You can optionally attach a reference image via upload, Library, or URL. GPT-4.1 mini
+            vision analyzes the reference and incorporates its details into the prompt as a starting
+            point — useful for character consistency or style matching.
+          </p>
+          <GuideImage file="02-t2i-subject.jpg" alt="T2I Step 1 — subject input with description field and reference image area" />
         </Step>
 
-        <Step number={2} title="Style">
-          <p>Choose one or more <strong>visual styles</strong> from the StyleGrid (123+ presets across categories).</p>
-          <KV label="Categories">UGC, Photography, Cinematic, Art, Animation, Period, Advertising, Fashion, Fine Art, Illustration, and more</KV>
-          <KV label="Multi-Style">Select multiple styles to bulk-generate one image per style in a single batch. Great for A/B testing visual directions.</KV>
-          <KV label="Custom Style">Write your own style description if presets don't match your vision.</KV>
-          <Tip>Each style preset contains a detailed 40-80 word prompt description that feeds into the Cohesive Prompt Builder. Longer, more specific style prompts produce noticeably better results.</Tip>
+        <Step number={2} title="Style — how should it look?">
+          <p>
+            Choose from <strong>86 visual style presets</strong> across categories including
+            Photography, Cinematic, Illustration, Animation, Fashion, Advertising, Fine Art, and more.
+            Each preset contains a detailed 40–80 word description that controls aesthetic, lighting,
+            composition, and rendering approach — not just a label.
+          </p>
+          <p>
+            You can also write a custom style description if none of the presets match your vision.
+          </p>
+          <GuideImage file="03-t2i-style.jpg" alt="T2I Step 2 — style selector showing StyleGrid with visual style presets" />
+          <Tip>
+            Style preset quality matters. The detailed descriptions in the presets produce noticeably
+            better results than short prompts. If writing a custom style, aim for 40+ words describing
+            lighting, mood, rendering technique, and color treatment.
+          </Tip>
         </Step>
 
-        <Step number={3} title="Enhance">
-          <p>Fine-tune the visual characteristics of your image.</p>
-          <KV label="Lighting">Natural Daylight, Golden Hour, Blue Hour, Studio, Dramatic, Neon Glow, Volumetric/God Rays, Backlit/Silhouette, Low Key, High Key</KV>
-          <KV label="Camera Angle">Eye Level, High Angle, Low Angle, Bird's Eye View, Dutch Angle, POV, Wide Shot, Close-Up</KV>
-          <KV label="Mood">Serene, Dramatic, Mysterious, Joyful, Melancholic, Energetic, Romantic, Tense, Ethereal, Dark, Epic</KV>
-          <KV label="Color Palette">Warm, Cool, Neutral, Vibrant, Muted, Pastel, Neon, Monochrome, Cinematic (Orange & Teal)</KV>
-          <KV label="Props">Quick-select accessory and object pills to add to the scene</KV>
-          <KV label="Negative Prompt">Pills for things to explicitly exclude (e.g. text, watermarks, extra fingers)</KV>
-          <KV label="Brand Style Guide">Apply a saved Brand Kit for consistent colors, mood, and visual rules</KV>
+        <Step number={3} title="Enhance — fine-tune the details">
+          <p>
+            Optional but significant. Enhance controls let you specify lighting (Golden Hour, Studio,
+            Neon Glow, Volumetric…), camera angle (Eye Level, Bird's Eye, Close-Up…), mood (Dramatic,
+            Ethereal, Joyful…), color palette (Warm, Muted, Neon, Cinematic…), and props. You can
+            also add a negative prompt to explicitly exclude unwanted elements (extra fingers, text,
+            watermarks, blurry).
+          </p>
+          <p>
+            A saved <strong>Brand Style Guide</strong> can be applied here to enforce consistent colors,
+            mood, and visual rules across all your generations.
+          </p>
+          <GuideImage file="04-t2i-enhance.jpg" alt="T2I Step 3 — enhance controls for lighting, mood, camera angle, and color" />
         </Step>
 
-        <Step number={4} title="Output">
-          <p>Select your model, dimensions, and output resolution.</p>
-
+        <Step number={4} title="Output — model, dimensions, and generate">
+          <p>
+            Select your model, aspect ratio, and output resolution. T2I supports four models:
+          </p>
           <ModelTable models={[
-            { name: 'Nano Banana 2', bestFor: 'Fast, general purpose', multiImage: false, lora: false },
-            { name: 'Kling Image O3', bestFor: 'Multi-ref, up to 4K', multiImage: true, lora: false },
-            { name: 'Seedream v4', bestFor: 'Prompt adherence & detail', multiImage: false, lora: false },
-            { name: 'Flux 2 Dev', bestFor: 'Brand Kits & LoRA products', multiImage: false, lora: true },
+            { name: 'Nano Banana 2', bestFor: 'Fast generation, general purpose, great for quick iterations' },
+            { name: 'Seedream v4', bestFor: 'High quality portraits and scenes, excellent prompt adherence' },
+            { name: 'Flux 2 (LoRA)', bestFor: 'Custom character and style LoRAs from Brand Kits' },
+            { name: 'Kling Image O3', bestFor: 'Multi-reference support, up to 4K resolution' },
           ]} />
-
-          <KV label="Dimensions">1:1, 16:9, 21:9, 9:16, 4:3, 3:2, 5:4, 3:4, 4:5, 2:3</KV>
-          <KV label="Output Sizes">1024x1024 up to 3840x2160 (4K). Match to your target platform.</KV>
-          <KV label="LoRA Picker">Flux 2 Dev only — select trained LoRAs from Brand Kits for custom subjects/styles.</KV>
-          <Warning>LoRA support is only available with Flux 2 Dev. Other models will ignore the LoRA selection.</Warning>
+          <GuideImage file="05-t2i-output.jpg" alt="T2I Step 4 — model selector and generate button" />
+          <Warning>
+            LoRA support is only available with Flux 2 Dev. Selecting a LoRA with any other model
+            will have no effect.
+          </Warning>
         </Step>
       </Section>
 
-      {/* ── Section 3: Image-to-Image (Edit) ── */}
-      <Section icon={Pencil} title="Image-to-Image (Edit)">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>
-            The Edit tool modifies existing images based on text instructions. It shares the same
-            enhance options as Imagineer (lighting, mood, style, etc.) but starts from your uploaded
-            image(s) instead of a blank canvas.
-          </p>
-        </div>
-
-        <Step number={1} title="Upload Images">
-          <p>Add your <strong>base image</strong> and optional reference images via upload, URL, or the Library.</p>
-          <KV label="Base Image">The first image is always the base that gets edited.</KV>
-          <KV label="Reference Images">Additional images provide material for the AI to blend in (multi-image models only).</KV>
-          <InfoBox>Multi-image models (Nano Banana Pro Ultra, Qwen, Kling O3, Nano Banana 2, Seedream 5 Lite) can blend multiple inputs. Single-image models (Flux 2 Dev, Seedream v4.5) only use the base image.</InfoBox>
-        </Step>
-
-        <Step number={2} title="Describe Your Edit">
-          <p>Write what you want changed. The same enhance controls (lighting, camera, mood, color, props, negative prompt) are available.</p>
-          <Tip>For multi-image composition, be explicit: "Composite the character from image 2 into the scene from image 1, matching lighting and perspective." Vague prompts produce sticker-on-background results.</Tip>
-        </Step>
-
-        <Step number={3} title="Choose Style & Model">
-          <p>Select from the StyleGrid (multi-style bulk create supported) and pick your model.</p>
-
-          <ModelTable models={[
-            { name: 'Nano Banana Pro Ultra', bestFor: 'Multi-image blending, 4K/8K', multiImage: true, lora: false },
-            { name: 'Qwen Image Edit', bestFor: 'Multi-image, great detail', multiImage: true, lora: false },
-            { name: 'Kling Image O3 Edit', bestFor: 'Multi-ref @Image syntax, 4K', multiImage: true, lora: false },
-            { name: 'Flux 2 Dev (LoRA)', bestFor: 'Brand Kits & custom products', multiImage: false, lora: true },
-            { name: 'Nano Banana 2', bestFor: 'Fast multi-image composition', multiImage: true, lora: false },
-            { name: 'Seedream v4.5', bestFor: 'High detail editing', multiImage: false, lora: false },
-            { name: 'Seedream 5 Lite', bestFor: 'Multi-image intelligent editing', multiImage: true, lora: false },
-          ]} />
-
-          <Warning>Flux 2 Dev is the only edit model that supports edit strength (0-1) and mask painting for selective edits. Other models apply edits globally.</Warning>
-        </Step>
-
-        <Step number={4} title="Output Settings">
-          <p>Choose dimensions and output size, then generate. Same options as Imagineer T2I.</p>
-        </Step>
-      </Section>
-
-      {/* ── Section 4: Inpaint ── */}
-      <Section icon={Eraser} title="Inpaint (Object Removal & Replacement)">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>
-            Inpaint lets you edit <strong>specific regions</strong> of an image using a painted mask.
-            The masked area gets replaced based on your prompt, while everything outside the mask stays untouched.
-          </p>
-        </div>
-
-        <Step number={1} title="Upload Your Image">
-          <p>Upload the image you want to edit. This becomes the canvas for mask painting.</p>
-        </Step>
-
-        <Step number={2} title="Paint the Mask">
-          <p>Use the brush tool to paint over the area you want changed.</p>
-          <KV label="White regions">Areas the AI will edit/replace</KV>
-          <KV label="Black regions">Areas that are preserved as-is</KV>
-          <KV label="Brush size">Adjustable slider for precision</KV>
-          <KV label="Eraser">Remove parts of the mask you painted by mistake</KV>
-          <Warning>The mask must cover the <strong>entire</strong> area you want changed. Partial masks lead to artifacts at the edges.</Warning>
-        </Step>
-
-        <Step number={3} title="Describe What to Add">
-          <p>Write a prompt describing what should appear in the masked region.</p>
-          <KV label="For replacement">Describe the new content: "a red vintage sports car"</KV>
-          <KV label="For removal">Leave the prompt empty or describe the background: "clean grass field"</KV>
-        </Step>
-
-        <Step number={4} title="Generate">
-          <p>Uses the <strong>Qwen Image Edit</strong> model. Toggle Pro Ultra mode for higher quality (slower).</p>
-          <Tip>For clean removal, paint generously over the object and describe the background that should fill in. The AI handles blending automatically.</Tip>
-        </Step>
-      </Section>
-
-      {/* ── Section 5: Smoosh (Compositor) ── */}
-      <Section icon={Layers} title="Smoosh (Canvas Compositor)">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>
-            Smoosh is a <strong>canvas-based compositor</strong> for arranging multiple images into a single
-            composition. You drag, resize, and layer images on a canvas, then the AI seamlessly blends them
-            together with professional lighting and color matching.
-          </p>
-        </div>
-
-        <Step number={1} title="Add Images to Canvas">
-          <p>Upload multiple images. Each becomes a draggable, resizable layer on the canvas.</p>
-        </Step>
-
-        <Step number={2} title="Arrange & Resize">
-          <p>Drag images to position them. Resize handles let you scale each layer. Layer order controls which elements appear in front.</p>
-          <KV label="Canvas Sizes">1080x1080 (Instagram), 1920x1080 (YouTube), 1080x1920 (Stories), and more</KV>
-          <KV label="Controls">Drag to position, corner handles to resize, layer order buttons</KV>
-        </Step>
-
-        <Step number={3} title="Choose Enhancement Preset">
-          <p>Select how the AI should refine the composition.</p>
-          <KV label="Blending">Seamless, Natural, Harmonize — focus on smooth transitions</KV>
-          <KV label="Advertising">Product Shot, Lifestyle, Minimalist, Bold — commercial looks</KV>
-          <KV label="Cinematic">Cinematic, Golden Hour, Moody — film-inspired grading</KV>
-          <KV label="Artistic">Dreamy, Vintage, Neon, Watercolor — creative effects</KV>
-          <KV label="Technical">Sharpen, Upscale — quality enhancement</KV>
-        </Step>
-
-        <Step number={4} title="Generate">
-          <p>The AI (Wavespeed Nano Banana Pro) renders the final seamless composite with matched lighting and shadows.</p>
-          <Tip>Use canvas dimension presets to match your target platform — 1080x1080 for Instagram, 1920x1080 for YouTube thumbnails.</Tip>
-        </Step>
-      </Section>
-
-      {/* ── Section 6: Lens ── */}
-      <Section icon={Focus} title="Lens (Multi-Angle Adjustment)">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>
-            Lens adjusts the <strong>viewing angle and perspective</strong> of an existing image.
-            Perfect for product photography where you need slightly different angles without reshooting.
-          </p>
-        </div>
-
-        <Step number={1} title="Upload Your Image">
-          <p>Upload the image you want to adjust the perspective of.</p>
-        </Step>
-
-        <Step number={2} title="Adjust Angles">
-          <KV label="Horizontal Angle">Rotate left/right (degrees) — simulates camera panning</KV>
-          <KV label="Vertical Angle">Rotate up/down (degrees) — simulates camera tilt</KV>
-          <KV label="Zoom">Adjust zoom level — push in or pull out</KV>
-        </Step>
-
-        <Step number={3} title="Generate">
-          <p>Uses <strong>Qwen Image Edit</strong> to render the new perspective with AI-generated fill for newly visible areas.</p>
-          <Tip>Lens works best with subjects that have clear 3D form — products, buildings, vehicles. It can struggle with flat patterns or abstract images.</Tip>
-        </Step>
-      </Section>
-
-      {/* ── Section 7: Try Style ── */}
-      <Section icon={Shirt} title="Try Style (Virtual Try-On)">
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2">
-          <p>
-            Try Style renders <strong>clothing on a person</strong> using AI fit simulation.
-            Upload a model photo and a garment image, and the AI produces a realistic try-on render.
-          </p>
-        </div>
-
-        <Step number={1} title="Upload Model Photo">
-          <p>A clear, front-facing photo of the person wearing the garment. Good lighting helps.</p>
-        </Step>
-
-        <Step number={2} title="Upload Garment Image">
-          <p>The clothing item to try on. Can be a flat-lay, on-model shot, or product image.</p>
-        </Step>
-
-        <Step number={3} title="Configure">
-          <KV label="Engine">FASHN AI v1.6 (realistic) or Flux 2 Stylized (creative/editorial)</KV>
-          <KV label="Category">Auto-detect, or specify: Tops, Bottoms, One-pieces</KV>
-          <KV label="Mode">Performance (fast), Balanced, Quality (slow but best)</KV>
-          <KV label="Garment Type">Auto, On-model, or Flat-lay — helps the AI understand the input</KV>
-          <KV label="Samples">1-4 output variations per generation</KV>
-          <Tip>FASHN produces the most realistic try-ons. Flux 2 Stylized is better for creative or editorial looks with prompt-based control.</Tip>
-          <Warning>For best results with FASHN, use a clean front-facing model photo with good lighting and minimal occlusion.</Warning>
-        </Step>
-      </Section>
-
-      {/* ── Section 8: Cohesive Prompt Builder ── */}
-      <Section icon={Brain} title="Cohesive Prompt Builder (Behind the Scenes)">
+      {/* ── Section 3: Multi-Style Bulk Create ── */}
+      <Section icon={Grid3X3} title="Multi-Style Bulk Create">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
           <p>
-            The <strong>Cohesive Prompt Builder</strong> is the shared prompt assembly system that powers
-            every image tool. Instead of writing raw prompts yourself, you fill in structured fields
-            (subject, style, mood, lighting, camera, color, props, etc.) and <strong>GPT-4</strong>
-            assembles them into a single optimized generation prompt.
+            In the Style step, you can select <strong>multiple styles</strong> from the StyleGrid at
+            once. When you do, Imagineer generates one image per style simultaneously — giving you a
+            grid of results to compare. This is the fastest way to explore different visual directions
+            for the same subject without running each one manually.
           </p>
+          <GuideImage file="06-style-grid.jpg" alt="StyleGrid showing multiple visual style presets available to select" />
           <p>
-            This ensures consistent, well-structured prompts regardless of which tool or model you're using.
-            The builder understands each tool's requirements and adapts the prompt format accordingly.
+            Each result in the multi-style grid can be saved, retried, or used independently. Generation
+            is batched in groups of two to avoid API rate limits — so 6 styles takes 3 batches.
           </p>
-
-          <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-2">How It Works</h4>
-            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-              <p><strong>1.</strong> You fill in structured fields across the wizard steps (subject, style, enhance, etc.)</p>
-              <p><strong>2.</strong> All fields are sent to the <code className="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded">/api/prompt/build-cohesive</code> endpoint</p>
-              <p><strong>3.</strong> GPT-4 assembles everything into a single, optimized prompt — resolving conflicts, adding coherence, and formatting for the target model</p>
-              <p><strong>4.</strong> The optimized prompt is sent to the selected image model for generation</p>
-            </div>
-          </div>
-
-          <KV label="Supported tools">Imagineer, Edit Image, Turnaround, Storyboard, JumpStart</KV>
-          <KV label="Inputs accepted">Description, style, props, negative prompt, brand guide, lighting, camera, mood, color palette, reference description</KV>
-          <KV label="Mode toggle">Builder mode (structured fields) vs. Freeform mode (raw prompt text)</KV>
-
-          <Tip>Even in freeform mode, the prompt builder optimizes your text before sending it to the image model. You can always switch between builder and freeform without losing your inputs.</Tip>
+          <GuideImage file="07-multi-style.jpg" alt="Multiple styles selected in the StyleGrid for bulk generation" />
+          <Tip>
+            Use multi-style bulk create when a client brief is open-ended or you're not sure which
+            visual direction will resonate. Generate 4–6 styles in a single run, then present the
+            grid for review rather than iterating one at a time.
+          </Tip>
         </div>
       </Section>
 
-      {/* ── Section 9: Tips & Best Practices ── */}
-      <Section icon={Lightbulb} title="Tips & Best Practices">
+      {/* ── Section 4: I2I Editing ── */}
+      <Section icon={Pencil} title="Image-to-Image Editing">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            Switch to <strong>Image to Image</strong> mode using the tab at the top of the Imagineer
+            modal. Instead of a multi-step wizard, I2I presents a single panel: upload your source
+            image(s), write your edit instruction, choose a style and model, then generate.
+          </p>
+          <p>
+            All the same enhance controls are available — lighting, mood, camera angle, color palette,
+            props, and negative prompt. The Cohesive Prompt Builder applies to I2I too, so structured
+            inputs produce better results than a raw prompt.
+          </p>
+          <GuideImage file="08-i2i-mode.jpg" alt="Image to Image mode panel with image upload area and edit controls" />
+        </div>
+
+        <div className="mt-4">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-2">I2I Models</h4>
+          <ModelTable models={[
+            { name: 'Nano Banana 2', bestFor: 'Fast multi-image composition and blending' },
+            { name: 'Seedream v4', bestFor: 'High quality image-to-image transformations' },
+            { name: 'Wavespeed Nano Ultra', bestFor: 'Fast blending, good for style transfer' },
+            { name: 'Qwen Image Edit', bestFor: 'Multi-image synthesis and detail-aware editing' },
+          ]} />
+          <GuideImage file="09-i2i-models.jpg" alt="I2I model selector showing available models" />
+        </div>
+      </Section>
+
+      {/* ── Section 5: Multi-Image Composition ── */}
+      <Section icon={Blend} title="Multi-Image Composition">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            Several I2I models (Nano Banana 2, Wavespeed Nano Ultra, Qwen Image Edit) support
+            uploading <strong>multiple source images</strong> at once. The AI composites them into
+            a single result — for example, placing a character from one image into a scene from another,
+            or blending product images with lifestyle backgrounds.
+          </p>
+          <GuideImage file="10-multi-image.jpg" alt="Multi-image input UI showing multiple image slots in I2I mode" />
+          <p>
+            The key to good multi-image composites is being explicit in your prompt about the
+            compositional relationship you want. Vague prompts produce "sticker on background" results
+            where the subjects look pasted rather than integrated.
+          </p>
+          <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 space-y-2">
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Prompt examples</p>
+            <p className="text-sm text-red-600 dark:text-red-400">
+              <strong>Too vague:</strong> "put the character in the scene"
+            </p>
+            <p className="text-sm text-green-700 dark:text-green-400">
+              <strong>Explicit:</strong> "composite the character from the first image into the scene from the
+              second image, matching the lighting direction and color temperature, with natural shadows
+              and perspective integration"
+            </p>
+          </div>
+          <Tip>
+            For best compositing results, use images with similar lighting direction. A character lit
+            from the left placed into a scene lit from the right will always look off, even with a
+            perfect prompt.
+          </Tip>
+        </div>
+      </Section>
+
+      {/* ── Section 6: Reference Image Analysis ── */}
+      <Section icon={Eye} title="Reference Image Analysis">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            In T2I Step 1 (Subject), you can upload a reference image and click <strong>"Describe"</strong>.
+            GPT-4.1 mini vision analyzes the reference and generates a detailed character or scene
+            description that you can use as the basis for your prompt.
+          </p>
+          <p>
+            This is particularly useful for character consistency — upload a turnaround sheet or
+            reference illustration, let the AI describe it, then use that description as the subject
+            for every scene in a project. The description captures details a human might miss or
+            forget to specify (exact clothing, distinctive features, color values).
+          </p>
+          <Tip>
+            For character consistency across multiple images, keep the same reference image attached
+            in every generation. The described characteristics feed into the Cohesive Prompt Builder
+            and persist as an anchor for the visual identity.
+          </Tip>
+        </div>
+      </Section>
+
+      {/* ── Section 7: Tips ── */}
+      <Section icon={Lightbulb} title="Tips and Model Guide">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-4">
 
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Choosing the Right Tool</h4>
-            <div className="space-y-1">
-              <KV label="Starting from scratch">Use Imagineer (T2I) with a detailed subject description</KV>
-              <KV label="Modifying an image">Use Edit Image (I2I) for global changes to existing images</KV>
-              <KV label="Removing objects">Use Inpaint with mask painting for surgical edits</KV>
-              <KV label="Combining images">Use Smoosh for canvas-based layout, or multi-image Edit for AI blending</KV>
-              <KV label="New perspective">Use Lens to adjust camera angle without reshooting</KV>
-              <KV label="Clothing on model">Use Try Style for virtual garment fitting</KV>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Choosing a model</h4>
+            <div className="space-y-1.5">
+              <p><strong className="text-gray-700 dark:text-gray-300">Nano Banana 2</strong> — fastest turnaround. Use for quick drafts, iteration, and multi-image composition. Available in both T2I and I2I.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Seedream v4</strong> — highest visual quality. Use for final hero images, portraits, and detailed scenes where accuracy matters.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Flux 2 (LoRA)</strong> — the only model that supports trained LoRAs. Required for custom characters, products, or brand-specific subjects trained in Brand Kits.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Wavespeed Nano Ultra</strong> — I2I only. Fast style transfer and blending, good for lightweight transformations.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Qwen Image Edit</strong> — I2I only. Strong multi-image synthesis, detail-aware editing that respects fine features.</p>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Model Selection Guide</h4>
-            <div className="space-y-1">
-              <KV label="Fastest">Nano Banana 2 — best for quick iterations and drafts</KV>
-              <KV label="Highest quality">Seedream v4 / v4.5 — excellent prompt adherence and detail</KV>
-              <KV label="Brand assets">Flux 2 Dev — the only model supporting LoRA for custom trained subjects</KV>
-              <KV label="Multi-reference">Kling Image O3 — supports multiple reference images with @Image syntax</KV>
-              <KV label="Multi-image edit">Seedream 5 Lite or Nano Banana Pro Ultra — intelligent multi-image blending</KV>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Workflow recommendations</h4>
+            <div className="space-y-1.5">
+              <p><strong className="text-gray-700 dark:text-gray-300">Exploring directions:</strong> Use multi-style bulk create with Nano Banana 2 (fast + cheap) to generate 4–6 options, then switch to Seedream v4 to refine the chosen direction.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Character work:</strong> Generate a base character with T2I, then use I2I to vary poses, outfits, or environments while maintaining the core identity via reference.</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Product shots:</strong> Generate clean product images with T2I, then use I2I multi-image to composite the product into lifestyle backgrounds.</p>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Multi-Style Workflow</h4>
-            <p>
-              Select multiple styles in the StyleGrid to generate one image per style in a single batch.
-              This is the fastest way to A/B test visual directions. Each result can be individually
-              saved, retried, or used as input for further editing.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Reference Images</h4>
-            <div className="space-y-1">
-              <KV label="T2I Reference">Analyzed by GPT-4 vision and described textually to seed the prompt</KV>
-              <KV label="I2I References">Directly blended by multi-image models as visual input</KV>
-              <KV label="Best practice">Use high-quality, well-lit reference images. The better the input, the better the output.</KV>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Brand Consistency</h4>
-            <p>
-              For consistent output across all tools, create a <strong>Brand Kit</strong> (sidebar &rarr; Brand)
-              with your colors, mood, and visual rules. Then select the Brand Style Guide in the enhance step.
-              For custom subjects (products, mascots), train a <strong>LoRA</strong> (sidebar &rarr; Train LoRA)
-              and use it with Flux 2 Dev.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Resolution Guide</h4>
-            <div className="space-y-1">
-              <KV label="Social media">1080x1080 (feed), 1080x1920 (stories/reels)</KV>
-              <KV label="Website/blog">1920x1080 or 2560x1440</KV>
-              <KV label="Print quality">3840x2160 (4K) or use Topaz upscaling</KV>
-              <KV label="Thumbnail">1280x720 or 1920x1080</KV>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Resolution guide</h4>
+            <div className="space-y-1.5">
+              <p><strong className="text-gray-700 dark:text-gray-300">Social media feed:</strong> 1080×1080 (1:1) or 1080×1350 (4:5)</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Stories / Reels:</strong> 1080×1920 (9:16)</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">YouTube thumbnail:</strong> 1920×1080 (16:9)</p>
+              <p><strong className="text-gray-700 dark:text-gray-300">Print / High resolution:</strong> 3840×2160 (4K) — use Topaz upscaling from the Library if you need to go larger</p>
             </div>
           </div>
 
           <Warning>
-            AI-generated images from FAL.ai CDN URLs are <strong>temporary</strong> and expire within hours.
-            Always save generated images to your Library before closing the modal. Saved images are stored permanently in Supabase.
+            <strong>T2I and I2I use separate endpoints.</strong> Nano Banana 2 in T2I mode hits
+            <code className="text-xs mx-1 px-1 bg-red-100 dark:bg-red-900/40 rounded">fal-ai/nano-banana-2</code>
+            while I2I mode hits
+            <code className="text-xs mx-1 px-1 bg-red-100 dark:bg-red-900/40 rounded">fal-ai/nano-banana-2/edit</code>.
+            These are different models with different capabilities. The same applies to Seedream.
+            The modal handles this automatically — just make sure you're on the right tab.
           </Warning>
+
+          <Warning>
+            FAL CDN image URLs are <strong>temporary</strong> and expire within hours. Always save
+            generated images to your Library before closing the modal. Saved images are stored
+            permanently in Supabase and accessible from the Library panel.
+          </Warning>
+
         </div>
       </Section>
 
