@@ -12,7 +12,7 @@ import {
   LayoutGrid, Sliders, Image as ImageIcon, Copy, BarChart2, Link2,
   Globe, Monitor, Smartphone, AlertTriangle, Lightbulb, Lock,
   Settings, CheckCircle2, Repeat, Target, FileText, Layers,
-  TrendingUp, Zap, HelpCircle, Download, GitBranch,
+  TrendingUp, Zap, HelpCircle, Download, GitBranch, Send,
 } from 'lucide-react';
 
 const CDN = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/ads/';
@@ -181,7 +181,7 @@ function Screenshot({ file, alt, caption }) {
 function PlatformTable() {
   const rows = [
     { platform: 'Google Ads', badge: <Badge icon={Globe} label="Google Ads" color="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" />, status: 'OAuth configured — needs Developer Token', statusColor: 'text-amber-600 dark:text-amber-400' },
-    { platform: 'LinkedIn Ads', badge: <Badge icon={Monitor} label="LinkedIn" color="bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" />, status: 'APPROVED — reconnect LinkedIn to get ad scopes', statusColor: 'text-green-600 dark:text-green-400' },
+    { platform: 'LinkedIn Ads', badge: <Badge icon={Monitor} label="LinkedIn" color="bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" />, status: 'LIVE — Publish to LinkedIn from Ads Manager', statusColor: 'text-green-600 dark:text-green-400' },
     { platform: 'Meta Ads', badge: <Badge icon={Smartphone} label="Meta" color="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" />, status: 'Pending App Review', statusColor: 'text-amber-600 dark:text-amber-400' },
     { platform: 'TikTok Ads', badge: <Badge label="TikTok" color="bg-gray-800 text-white" />, status: 'Pending Marketing API review', statusColor: 'text-amber-600 dark:text-amber-400' },
   ];
@@ -699,6 +699,106 @@ export function AdsManagerGuideContent() {
         />
       </Section>
 
+      {/* ── Publishing to LinkedIn ── */}
+      <Section icon={Send} title="Publishing to LinkedIn">
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <p>
+            Approved LinkedIn ad variations can be published directly to <strong>LinkedIn Campaign Manager</strong>
+            from within Stitch. This creates the full ad structure — Campaign Group, Campaign, image upload,
+            and Creative — in one click. No need to manually export and re-create ads in LinkedIn's UI.
+          </p>
+        </div>
+
+        <Step number="1" title="Approve the variation">
+          <p>
+            Only <strong>approved</strong> LinkedIn variations show the Publish button. Click
+            <strong> Approve</strong> on any variation you're happy with — the button turns green
+            and the "Publish to LinkedIn" button appears below the action bar.
+          </p>
+        </Step>
+
+        <Screenshot
+          file="13-approve-then-publish-flow.jpg"
+          alt="Approved variation showing the publish workflow"
+          caption="Step 1: Approve the variation — the green Approved button confirms the variation is ready."
+        />
+
+        <Step number="2" title='Click "Publish to LinkedIn"'>
+          <p>
+            The blue <strong>"Publish to LinkedIn"</strong> button appears on its own row below the
+            Approve/Reject bar. Click it to start the publish process. Behind the scenes, Stitch:
+          </p>
+          <ul className="list-disc list-inside space-y-1 mt-2">
+            <li>Creates a <strong>Campaign Group</strong> in LinkedIn Campaign Manager (one per Stitch campaign)</li>
+            <li>Creates a <strong>Campaign</strong> with the correct objective (Traffic, Conversions, Awareness, or Leads)</li>
+            <li>Uploads the <strong>ad image</strong> to LinkedIn's media hosting</li>
+            <li>Creates the <strong>Creative</strong> (the actual ad) with your intro text, headline, CTA, and landing URL</li>
+          </ul>
+        </Step>
+
+        <Screenshot
+          file="12-publish-to-linkedin-button.jpg"
+          alt="Publish to LinkedIn button highlighted on an approved variation"
+          caption="Step 2: Click Publish to LinkedIn — the button appears only on approved LinkedIn variations."
+        />
+
+        <Step number="3" title="Confirmation">
+          <p>
+            Once published, the variation status changes to <Badge label="Published" color="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" /> and
+            the LinkedIn Creative ID appears below the action bar. The ad is now live in
+            LinkedIn Campaign Manager where you can review targeting, budget, and billing.
+          </p>
+        </Step>
+
+        <div className="mt-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-xs mb-2">What gets created in LinkedIn</h5>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Campaign Group</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Named after your Stitch campaign. Reused if you publish multiple variations
+                from the same campaign — they all go under one group.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Campaign</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Objective auto-maps from your Stitch campaign: Traffic &rarr; Website Visits,
+                Conversions &rarr; Website Conversions, Awareness &rarr; Brand Awareness,
+                Leads &rarr; Lead Generation.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Creative</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Your intro text, headline, image, and CTA button are pushed exactly as they
+                appear in the Stitch preview. The landing URL from your campaign is set as
+                the click-through destination.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Ad Account</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Your LinkedIn Ad Account is configured in your connection settings.
+                The organization associated with the ad account is resolved automatically.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Tip>
+          Publishing multiple variations from the same campaign reuses the same LinkedIn Campaign Group
+          and Campaign — each variation becomes a separate Creative under that campaign. LinkedIn
+          will automatically optimise delivery across your creatives.
+        </Tip>
+
+        <Warning>
+          You must have LinkedIn connected with advertising scopes (<code>r_ads</code>, <code>rw_ads</code>,
+          <code>r_ads_reporting</code>). If you connected LinkedIn before the ads API was approved,
+          disconnect and reconnect at <strong>Settings &rsaquo; Accounts</strong> to get the new scopes.
+        </Warning>
+      </Section>
+
       {/* ── Platform API Status ── */}
       <Section icon={Globe} title="Platform API Status">
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-3">
@@ -713,7 +813,7 @@ export function AdsManagerGuideContent() {
 
         <Warning>
           LinkedIn users who connected before the Advertising API approval must <strong>reconnect</strong> to
-          get the new ad management scopes (<code>r_ads</code>, <code>w_ads</code>, <code>r_ads_reporting</code>).
+          get the new ad management scopes (<code>r_ads</code>, <code>rw_ads</code>, <code>r_ads_reporting</code>).
           The old connection only covers organic posting.
         </Warning>
         <Warning>
