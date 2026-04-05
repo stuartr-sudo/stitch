@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock, Copy, FlaskConical, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Check, X, RefreshCw, Lock, Copy, FlaskConical, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -214,6 +214,26 @@ export default function AdCampaignEditor() {
   };
 
   const [splittingId, setSplittingId] = useState(null);
+  const [publishingId, setPublishingId] = useState(null);
+
+  const handlePublishLinkedIn = async (variationId) => {
+    setPublishingId(variationId);
+    try {
+      const res = await apiFetch(`/api/ads/variations/${variationId}/publish-linkedin`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success && data.variation) {
+        setVariations(prev => prev.map(v => v.id === variationId ? data.variation : v));
+      } else {
+        toast.error(data.error || 'Failed to publish to LinkedIn');
+      }
+    } catch {
+      toast.error('Failed to publish to LinkedIn');
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   const handleSplitTest = async (variationId, mode) => {
     setSplittingId(variationId);
@@ -378,8 +398,8 @@ export default function AdCampaignEditor() {
               {/* Editor */}
               {selectedVariation && (
                 <div className="p-4">
-                  {/* Approve/Reject bar */}
-                  <div className="flex items-center gap-2 mb-4">
+                  {/* Approve/Reject + actions bar */}
+                  <div className="flex items-center gap-2 mb-2">
                     <Button
                       variant={selectedVariation.status === 'approved' ? 'default' : 'outline'}
                       size="sm"
@@ -399,8 +419,6 @@ export default function AdCampaignEditor() {
                       {selectedVariation.status === 'rejected' ? 'Rejected' : 'Reject'}
                     </Button>
                     <div className="flex-1" />
-
-                    {/* Split test buttons */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -424,7 +442,6 @@ export default function AdCampaignEditor() {
                       }
                       Split Test
                     </Button>
-
                     <button
                       onClick={() => handleDeleteVariation(selectedVariation.id)}
                       className="text-xs text-gray-400 hover:text-red-500 transition-colors"
@@ -432,6 +449,39 @@ export default function AdCampaignEditor() {
                       Delete
                     </button>
                   </div>
+
+                  {/* Publish to LinkedIn */}
+                  {selectedVariation.platform === 'linkedin' && selectedVariation.status === 'approved' && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePublishLinkedIn(selectedVariation.id)}
+                        disabled={publishingId === selectedVariation.id}
+                        className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        {publishingId === selectedVariation.id
+                          ? <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                          : <Send className="w-3 h-3 mr-1" />
+                        }
+                        Publish to LinkedIn
+                      </Button>
+                      {selectedVariation.platform_ad_id && (
+                        <span className="text-xs text-blue-600 font-mono truncate max-w-[200px]" title={selectedVariation.platform_ad_id}>
+                          {selectedVariation.platform_ad_id}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {selectedVariation.platform_ad_id && selectedVariation.status === 'published' && (
+                    <div className="flex items-center gap-2 mb-4 px-2 py-1.5 bg-blue-50 rounded-md">
+                      <Send className="w-3 h-3 text-blue-600 flex-shrink-0" />
+                      <span className="text-xs text-blue-700">Published:</span>
+                      <span className="text-xs text-blue-600 font-mono truncate" title={selectedVariation.platform_ad_id}>
+                        {selectedVariation.platform_ad_id}
+                      </span>
+                    </div>
+                  )}
 
                   {activePlatform === 'linkedin' && (
                     <LinkedInAdEditor

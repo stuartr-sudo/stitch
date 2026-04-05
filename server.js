@@ -718,6 +718,7 @@ app.patch('/api/ads/variations/:id', authenticateToken, (await import('./api/ads
 app.delete('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
 app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import('./api/ads/regenerate.js')).default);
 app.post('/api/ads/variations/:id/split-test', authenticateToken, (await import('./api/ads/split-test.js')).default);
+app.post('/api/ads/variations/:id/publish-linkedin', authenticateToken, (await import('./api/ads/publish-linkedin.js')).default);
 app.get('/api/ads/google/auth', authenticateToken, (await import('./api/ads/google-auth.js')).default);
 app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js')).default);
 app.post('/api/ads/synthesize-description', authenticateToken, (await import('./api/ads/synthesize-description.js')).default);

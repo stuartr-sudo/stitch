@@ -129,7 +129,7 @@ DB tables: `ad_campaigns` (JSONB `platforms` array, `product_description`, `land
 
 **Paid Ads — Platform API Status** (as of April 2026):
 - **Google Ads**: OAuth configured (`GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REDIRECT_URI`). Scope: `https://www.googleapis.com/auth/adwords`. Auth + callback endpoints at `api/ads/google-auth.js` + `api/ads/google-callback.js`. Stores tokens in `platform_connections` as `google_ads`. PENDING: Developer Token from client's Google Ads API Centre (requires admin access to their account). YouTube ads are managed through Google Ads API (same scope).
-- **LinkedIn Ads**: APPROVED — Advertising API Development Tier + Ad Library. OAuth scopes updated to `openid profile w_member_social r_ads w_ads r_ads_reporting`. Users must reconnect LinkedIn to get new scopes. PENDING: Build LinkedIn Ads API publishing endpoints (create campaigns, upload creatives, pull reporting).
+- **LinkedIn Ads**: APPROVED — Advertising API Development Tier + Ad Library. OAuth scopes updated to `openid profile w_member_social r_ads rw_ads r_ads_reporting`. Users must reconnect LinkedIn to get new scopes. PENDING: Build LinkedIn Ads API publishing endpoints (create campaigns, upload creatives, pull reporting).
 - **Meta/Facebook Ads**: PENDING — need to request `ads_management`, `ads_read`, `business_management` scopes via Meta App Review (requires Business Verification). Current scopes only cover organic posting.
 - **TikTok Ads**: PENDING — separate Marketing API app submitted to `business-api.tiktok.com`, under review (1-2 weeks). Will need separate credentials (`TIKTOK_ADS_CLIENT_KEY`, `TIKTOK_ADS_CLIENT_SECRET`) and OAuth endpoints (`api/tiktok/ads-auth.js` + `api/tiktok/ads-callback.js`). Redirect URI: `https://stitchstudios.app/api/tiktok/ads/callback`.
 
@@ -204,7 +204,7 @@ All env vars are documented in `.env.example` — refer to that file for the ful
 - Ads Manager `ad_variations.copy_data` uses wildly different JSONB schemas per platform: Google RSA has `{ headlines: [...15], descriptions: [...4], pinned: {} }`, LinkedIn has `{ introText, headline, description, cta }`, Meta has `{ primaryText, headline, description, cta }`. Always check `variation.platform` before accessing copy_data fields.
 - Ads Manager `regenerate.js` accepts `style_preset` (string) and injects it into the image generation prompt. The `AdImageSection` component uses the shared StyleGrid to select styles — same 123 presets used across all tools.
 - Google Ads API requires BOTH OAuth tokens AND a Developer Token for API calls. OAuth alone is not sufficient. The Developer Token comes from the Google Ads API Centre (requires admin access to the Google Ads account).
-- LinkedIn Advertising API was approved at Development Tier. Users who connected LinkedIn before the scope upgrade must reconnect to get `r_ads w_ads r_ads_reporting` permissions.
+- LinkedIn Advertising API was approved at Development Tier. Users who connected LinkedIn before the scope upgrade must reconnect to get `r_ads rw_ads r_ads_reporting` permissions.
 - TikTok Marketing API is a SEPARATE app from the content posting API — different credentials, different portal (business-api.tiktok.com vs developers.tiktok.com). Don't confuse `TIKTOK_CLIENT_KEY` (content) with `TIKTOK_ADS_CLIENT_KEY` (marketing).
 - Company address: 1007 N Orange St, 4th Floor, Ste 1382, Wilmington, DE 19801 (shown in homepage footer).
 
