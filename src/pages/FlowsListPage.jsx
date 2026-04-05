@@ -67,23 +67,23 @@ export default function FlowsListPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white p-8">
+    <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold">Automation Flows</h1>
-          <button onClick={handleNewFlow} className="px-5 py-2 text-sm bg-indigo-500/80 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">
+          <h1 className="text-xl font-bold text-slate-800">Automation Flows</h1>
+          <button onClick={handleNewFlow} className="px-5 py-2 text-sm bg-[#2C666E] text-white font-semibold rounded-lg hover:bg-[#07393C] transition-colors">
             + New Flow
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0 mb-6 border-b border-white/[0.08]">
+        <div className="flex gap-0 mb-6 border-b border-slate-200">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-5 py-2 text-sm transition-colors ${tab === t.id ? 'text-white border-b-2 border-indigo-500 font-medium' : 'text-gray-500 hover:text-gray-400'}`}
+              className={`px-5 py-2 text-sm transition-colors ${tab === t.id ? 'text-[#2C666E] border-b-2 border-[#2C666E] font-medium' : 'text-slate-500 hover:text-slate-700'}`}
             >
               {t.label}
             </button>
@@ -92,61 +92,61 @@ export default function FlowsListPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="text-gray-500 text-sm">Loading...</div>
+          <div className="text-slate-400 text-sm">Loading...</div>
         ) : tab === 'flows' ? (
           <div className="grid grid-cols-3 gap-4">
             {flows.map(flow => (
               <FlowCard key={flow.id} flow={flow} onRun={handleRunFlow} onDelete={handleDeleteFlow} />
             ))}
-            {flows.length === 0 && <p className="text-gray-600 text-sm col-span-3">No flows yet. Create one or start from a template.</p>}
+            {flows.length === 0 && <p className="text-slate-400 text-sm col-span-3">No flows yet. Create one or start from a template.</p>}
           </div>
         ) : tab === 'templates' ? (
           <div className="grid grid-cols-3 gap-4">
             {templates.map(t => (
-              <div key={t.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 hover:border-white/[0.15] transition-colors">
-                <div className="text-sm font-semibold text-white mb-1">{t.name}</div>
-                <div className="text-xs text-gray-500 mb-4">{t.description}</div>
+              <div key={t.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:border-[#2C666E]/30 hover:shadow-md transition-all">
+                <div className="text-sm font-semibold text-slate-800 mb-1">{t.name}</div>
+                <div className="text-xs text-slate-500 mb-4">{t.description}</div>
                 <button
                   onClick={() => handleCloneTemplate(t.id)}
-                  className="px-3 py-1.5 text-xs bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 rounded-md hover:bg-indigo-500/25"
+                  className="px-3 py-1.5 text-xs bg-[#2C666E]/10 border border-[#2C666E]/20 text-[#2C666E] font-medium rounded-md hover:bg-[#2C666E]/20"
                 >
                   Use Template
                 </button>
               </div>
             ))}
-            {templates.length === 0 && <p className="text-gray-600 text-sm col-span-3">No templates available yet.</p>}
+            {templates.length === 0 && <p className="text-slate-400 text-sm col-span-3">No templates available yet.</p>}
           </div>
         ) : (
           <div className="space-y-2">
             {executions.map(e => (
-              <div key={e.id} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 py-3">
+              <div key={e.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-3">
                 <div>
-                  <span className="text-sm text-white">{e.flow_name}</span>
-                  <span className="text-xs text-gray-600 ml-3">{new Date(e.created_at).toLocaleString()}</span>
+                  <span className="text-sm text-slate-800">{e.flow_name}</span>
+                  <span className="text-xs text-slate-400 ml-3">{new Date(e.created_at).toLocaleString()}</span>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  e.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300' :
-                  e.status === 'failed' ? 'bg-red-500/10 text-red-300' :
-                  e.status === 'running' ? 'bg-blue-500/10 text-blue-300' :
-                  'bg-gray-500/10 text-gray-400'
+                <span className={`text-xs px-2 py-0.5 rounded border ${
+                  e.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                  e.status === 'failed' ? 'bg-red-50 text-red-600 border-red-100' :
+                  e.status === 'running' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                  'bg-slate-50 text-slate-500 border-slate-200'
                 }`}>{e.status}</span>
               </div>
             ))}
-            {executions.length === 0 && <p className="text-gray-600 text-sm">No executions yet.</p>}
+            {executions.length === 0 && <p className="text-slate-400 text-sm">No executions yet.</p>}
           </div>
         )}
 
         {/* Stats */}
         <div className="flex gap-4 mt-6">
           {[
-            { label: 'Active Flows', value: flows.length, color: 'text-white' },
-            { label: 'Total Runs', value: executions.length, color: 'text-emerald-400' },
-            { label: 'Scheduled', value: scheduledCount, color: 'text-blue-400' },
-            { label: 'Success Rate', value: `${successRate}%`, color: 'text-amber-400' },
+            { label: 'Active Flows', value: flows.length, color: 'text-slate-800' },
+            { label: 'Total Runs', value: executions.length, color: 'text-emerald-600' },
+            { label: 'Scheduled', value: scheduledCount, color: 'text-blue-600' },
+            { label: 'Success Rate', value: `${successRate}%`, color: 'text-amber-600' },
           ].map(stat => (
-            <div key={stat.label} className="flex-1 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg text-center">
+            <div key={stat.label} className="flex-1 p-4 bg-white border border-slate-200 rounded-lg text-center">
               <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-              <div className="text-[11px] text-gray-500">{stat.label}</div>
+              <div className="text-[11px] text-slate-400">{stat.label}</div>
             </div>
           ))}
         </div>

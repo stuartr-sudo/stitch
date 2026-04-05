@@ -1,20 +1,20 @@
 import { Handle, Position } from '@xyflow/react';
 
 const CATEGORY_COLORS = {
-  input:   { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.2)', text: '#999' },
-  image:   { bg: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.25)', text: '#c4b5fd' },
-  video:   { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', text: '#93c5fd' },
-  audio:   { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', text: '#6ee7b7' },
-  content: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)', text: '#fcd34d' },
-  publish: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', text: '#fca5a5' },
-  utility: { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.1)', text: '#999' },
+  input:   { bg: '#ffffff', border: '#94a3b8', text: '#475569' },
+  image:   { bg: '#faf5ff', border: '#a855f7', text: '#7c3aed' },
+  video:   { bg: '#eff6ff', border: '#3b82f6', text: '#2563eb' },
+  audio:   { bg: '#ecfdf5', border: '#10b981', text: '#059669' },
+  content: { bg: '#fffbeb', border: '#f59e0b', text: '#d97706' },
+  publish: { bg: '#fef2f2', border: '#ef4444', text: '#dc2626' },
+  utility: { bg: '#f8fafc', border: '#94a3b8', text: '#475569' },
 };
 
 const STATUS_STYLES = {
-  running:   { border: '2px solid rgba(59,130,246,0.5)', shadow: '0 0 16px rgba(59,130,246,0.15)' },
-  completed: { border: '2px solid rgba(16,185,129,0.5)', shadow: '0 0 12px rgba(16,185,129,0.1)' },
-  failed:    { border: '2px solid rgba(239,68,68,0.5)', shadow: '0 0 12px rgba(239,68,68,0.1)' },
-  paused:    { border: '2px solid rgba(245,158,11,0.5)', shadow: '0 0 12px rgba(245,158,11,0.1)' },
+  running:   { border: '2px solid #3b82f6', shadow: '0 0 12px rgba(59,130,246,0.2)' },
+  completed: { border: '2px solid #10b981', shadow: '0 0 12px rgba(16,185,129,0.15)' },
+  failed:    { border: '2px solid #ef4444', shadow: '0 0 12px rgba(239,68,68,0.15)' },
+  paused:    { border: '2px solid #f59e0b', shadow: '0 0 12px rgba(245,158,11,0.15)' },
 };
 
 export default function StitchNode({ data, selected }) {
@@ -28,32 +28,32 @@ export default function StitchNode({ data, selected }) {
       style={{
         background: colors.bg,
         border: statusStyle?.border || `1px solid ${colors.border}`,
-        boxShadow: statusStyle?.shadow || (selected ? `0 0 0 2px rgba(99,102,241,0.5)` : 'none'),
+        boxShadow: statusStyle?.shadow || (selected ? `0 0 0 2px rgba(44,102,110,0.5)` : '0 1px 3px rgba(0,0,0,0.08)'),
       }}
     >
       {/* Header */}
       <div
         className="px-3 py-2 text-xs font-semibold flex items-center justify-between gap-2"
-        style={{ background: colors.bg, color: colors.text }}
+        style={{ color: colors.text }}
       >
         <span>{nodeType.icon} {nodeType.label}</span>
-        {stepState?.status === 'completed' && <span className="text-emerald-400">✓</span>}
+        {stepState?.status === 'completed' && <span className="text-emerald-600">&#10003;</span>}
         {stepState?.status === 'running' && (
-          <span className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />
+          <span className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin inline-block" />
         )}
-        {stepState?.status === 'failed' && <span className="text-red-400">✕</span>}
+        {stepState?.status === 'failed' && <span className="text-red-500">&#10005;</span>}
       </div>
 
       {/* Status info */}
       {stepState && (
         <div className="px-3 py-1.5 text-[10px]">
           {stepState.status === 'completed' && (
-            <span className="text-emerald-400">
+            <span className="text-emerald-600">
               Done in {((new Date(stepState.completed_at) - new Date(stepState.started_at)) / 1000).toFixed(1)}s
             </span>
           )}
-          {stepState.status === 'running' && <span className="text-blue-400">Running...</span>}
-          {stepState.status === 'failed' && <span className="text-red-400 truncate block">{stepState.error}</span>}
+          {stepState.status === 'running' && <span className="text-blue-500">Running...</span>}
+          {stepState.status === 'failed' && <span className="text-red-500 truncate block">{stepState.error}</span>}
         </div>
       )}
 

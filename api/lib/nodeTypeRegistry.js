@@ -720,6 +720,119 @@ const NODE_TYPES = {
     async run(inputs, config, context) {
       return { model_url: `placeholder_${Date.now()}` };
     }
+  },
+
+  'background-removal': {
+    id: 'background-removal',
+    label: 'Background Removal',
+    category: 'image',
+    icon: '🧹',
+    inputs: [
+      { id: 'image', type: 'image', required: true }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      const { request_id } = await pollFalQueue('fal-ai/bria/background/remove', {
+        image_url: inputs.image
+      }, context.apiKeys.FAL_KEY);
+      const result = await pollFalQueue('fal-ai/bria/background/remove', null, context.apiKeys.FAL_KEY, request_id);
+      const imageUrl = await uploadUrlToSupabase(result.image?.url || result.output?.url || result.url, context.supabase, 'media/bg-removed');
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'background-removal', model: 'bria-bg-remove' });
+      return { image_url: imageUrl };
+    }
+  },
+
+  'inpaint': {
+    id: 'inpaint',
+    label: 'Inpaint',
+    category: 'image',
+    icon: '🖌️',
+    inputs: [
+      { id: 'image', type: 'image', required: true },
+      { id: 'prompt', type: 'string', required: true },
+      { id: 'mask', type: 'image', required: true }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {
+      model: { type: 'select', options: ['qwen-image-edit'], default: 'qwen-image-edit' }
+    },
+    async run(inputs, config, context) {
+      const imageUrl = await generateImageV2(config.model, inputs.prompt, '1:1', context.apiKeys, context.supabase, {
+        image_url: inputs.image,
+        mask_url: inputs.mask
+      });
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'inpaint', model: config.model });
+      return { image_url: imageUrl };
+    }
+  },
+
+  'lens': {
+    id: 'lens',
+    label: 'Lens (Multi-Angle)',
+    category: 'image',
+    icon: '🔄',
+    inputs: [
+      { id: 'image', type: 'image', required: true },
+      { id: 'prompt', type: 'string', required: false }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {
+      angle: { type: 'select', options: ['front', 'left', 'right', 'back', 'top', 'bottom', 'three_quarter_left', 'three_quarter_right'], default: 'three_quarter_left' }
+    },
+    async run(inputs, config, context) {
+      const anglePrompt = `${config.angle.replace(/_/g, ' ')} view angle`;
+      const prompt = inputs.prompt ? `${inputs.prompt}, ${anglePrompt}` : anglePrompt;
+      const imageUrl = await generateImageV2('nano-banana-2', prompt, '1:1', context.apiKeys, context.supabase, { image_url: inputs.image });
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'lens', model: 'nano-banana-2' });
+      return { image_url: imageUrl };
+    }
+  },
+
+  'trystyle': {
+    id: 'trystyle',
+    label: 'Virtual Try-On',
+    category: 'image',
+    icon: '👗',
+    inputs: [
+      { id: 'person_image', type: 'image', required: true },
+      { id: 'garment_image', type: 'image', required: true }
+    ],
+    outputs: [{ id: 'image_url', type: 'image' }],
+    configSchema: {
+      category: { type: 'select', options: ['tops', 'bottoms', 'one-pieces'], default: 'tops' }
+    },
+    async run(inputs, config, context) {
+      const { request_id } = await pollFalQueue('fal-ai/fashn/tryon/v1.6', {
+        model_image: inputs.person_image,
+        garment_image: inputs.garment_image,
+        category: config.category || 'tops'
+      }, context.apiKeys.FAL_KEY);
+      const result = await pollFalQueue('fal-ai/fashn/tryon/v1.6', null, context.apiKeys.FAL_KEY, request_id);
+      const imageUrl = await uploadUrlToSupabase(result.image?.url || result.output?.url || result.url, context.supabase, 'media/trystyle');
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'trystyle', model: 'fashn-tryon' });
+      return { image_url: imageUrl };
+    }
+  },
+
+  'lora-train': {
+    id: 'lora-train',
+    label: 'LoRA Train',
+    category: 'utility',
+    icon: '🧠',
+    inputs: [
+      { id: 'trigger_word', type: 'string', required: true }
+    ],
+    outputs: [{ id: 'lora_url', type: 'string' }],
+    configSchema: {
+      model: { type: 'select', options: ['flux-lora-fast', 'flux-portrait', 'flux-kontext', 'wan-22-image'], default: 'flux-lora-fast' },
+      steps: { type: 'text', default: '1000' }
+    },
+    async run(inputs, config, context) {
+      // LoRA training requires images to be uploaded as a zip — this is a placeholder
+      // that returns the trigger word. Full training requires the BrandAssetsModal workflow.
+      return { lora_url: `lora_placeholder_${inputs.trigger_word}_${Date.now()}` };
+    }
   }
 };
 

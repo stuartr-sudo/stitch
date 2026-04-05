@@ -22,7 +22,7 @@ export default function DeletableEdge({
     <>
       <BaseEdge
         path={edgePath}
-        style={{ stroke: selected ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)', strokeWidth: selected ? 2 : 1.5 }}
+        style={{ stroke: selected ? '#475569' : '#cbd5e1', strokeWidth: selected ? 2 : 1.5 }}
       />
       {selected && (
         <EdgeLabelRenderer>
@@ -32,11 +32,11 @@ export default function DeletableEdge({
           >
             <button
               onClick={deleteEdge}
-              className="w-5 h-5 rounded-full bg-gray-800 border border-white/20 text-white/60 hover:bg-red-600 hover:border-red-500 hover:text-white flex items-center justify-center transition-colors"
+              className="w-5 h-5 rounded-full bg-white border border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm"
               style={{ fontSize: 10, lineHeight: 1 }}
               title="Delete connection"
             >
-              ✕
+              &#10005;
             </button>
           </div>
         </EdgeLabelRenderer>

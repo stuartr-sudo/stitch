@@ -21,28 +21,28 @@ export default function ExecutionLog({ execution }) {
   };
 
   return (
-    <div className="w-[280px] border-l border-white/[0.08] flex flex-col flex-shrink-0">
-      <div className="px-4 py-3 border-b border-white/[0.06]">
-        <div className="text-[11px] uppercase tracking-wider text-gray-500">Execution Log</div>
+    <div className="w-[280px] border-l border-slate-200 bg-white flex flex-col flex-shrink-0">
+      <div className="px-4 py-3 border-b border-slate-200">
+        <div className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Execution Log</div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {entries.map((entry, i) => (
           <div key={i}>
-            <div className="text-[10px] text-gray-600">{formatElapsed(entry.time)}</div>
+            <div className="text-[10px] text-slate-400">{formatElapsed(entry.time)}</div>
             <div className={`text-[11px] ${
-              entry.status === 'completed' ? 'text-emerald-400' :
-              entry.status === 'failed' ? 'text-red-400' :
-              'text-gray-400'
+              entry.status === 'completed' ? 'text-emerald-600' :
+              entry.status === 'failed' ? 'text-red-500' :
+              'text-slate-500'
             }`}>
-              {entry.nodeId} → {entry.type === 'start' ? 'running' : entry.status}
+              {entry.nodeId} &rarr; {entry.type === 'start' ? 'running' : entry.status}
             </div>
             {entry.error && (
-              <div className="text-[10px] text-red-400/70 mt-0.5 pl-2 border-l-2 border-white/[0.06]">{entry.error}</div>
+              <div className="text-[10px] text-red-400 mt-0.5 pl-2 border-l-2 border-slate-200">{entry.error}</div>
             )}
           </div>
         ))}
         {entries.length === 0 && (
-          <div className="text-[11px] text-gray-600">Waiting for execution to start...</div>
+          <div className="text-[11px] text-slate-400">Waiting for execution to start...</div>
         )}
       </div>
     </div>

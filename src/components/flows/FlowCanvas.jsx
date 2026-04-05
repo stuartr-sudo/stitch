@@ -76,11 +76,11 @@ export default function FlowCanvas({
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
         proOptions={{ hideAttribution: true }}
-        style={{ background: '#0a0a0f' }}
+        style={{ background: '#f8fafc' }}
       >
-        <Controls className="!bg-gray-900 !border-white/10" />
-        <MiniMap className="!bg-gray-900" nodeColor="#333" />
-        <Background variant="dots" gap={16} size={1} color="#1a1a2e" />
+        <Controls className="!bg-white !border-slate-200 !shadow-sm !rounded-lg" />
+        <MiniMap className="!bg-white !border-slate-200 !rounded-lg !shadow-sm" nodeColor="#94a3b8" />
+        <Background variant="dots" gap={16} size={1} color="#e2e8f0" />
       </ReactFlow>
     </div>
   );

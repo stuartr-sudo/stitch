@@ -190,6 +190,64 @@ function resolveStylePresetText(keys) {
 
 function ImageForm({ config, u, nodeType, wired }) {
   const nodeId = nodeType.id;
+
+  // Simple image tools with their own dedicated forms
+  if (nodeId === 'background-removal') {
+    return (
+      <Panel title="About">
+        <p className="text-sm text-slate-600">Removes the background from an image using BRIA AI. Connect an image to the input port.</p>
+      </Panel>
+    );
+  }
+
+  if (nodeId === 'lens') {
+    return (
+      <div className="space-y-5">
+        <Panel title="Target Angle">
+          <PillGroup options={[
+            { id: 'front', label: 'Front' }, { id: 'left', label: 'Left' },
+            { id: 'right', label: 'Right' }, { id: 'back', label: 'Back' },
+            { id: 'three_quarter_left', label: '3/4 Left' }, { id: 'three_quarter_right', label: '3/4 Right' },
+            { id: 'top', label: 'Top' }, { id: 'bottom', label: 'Bottom' },
+          ]} value={config.angle || 'three_quarter_left'} onChange={v => u('angle', v)} columns={4} />
+        </Panel>
+      </div>
+    );
+  }
+
+  if (nodeId === 'trystyle') {
+    return (
+      <div className="space-y-5">
+        <Panel title="Garment Category">
+          <PillGroup options={[
+            { id: 'tops', label: 'Tops', desc: 'Shirts, jackets, etc.' },
+            { id: 'bottoms', label: 'Bottoms', desc: 'Pants, skirts, etc.' },
+            { id: 'one-pieces', label: 'One-Pieces', desc: 'Dresses, jumpsuits' },
+          ]} value={config.category || 'tops'} onChange={v => u('category', v)} columns={3} />
+        </Panel>
+        <Panel title="About">
+          <p className="text-sm text-slate-500">Virtual try-on via FASHN AI. Connect a person image and a garment image to the input ports.</p>
+        </Panel>
+      </div>
+    );
+  }
+
+  if (nodeId === 'inpaint') {
+    return (
+      <div className="space-y-5">
+        {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
+          <Panel title="Edit Prompt">
+            <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
+              placeholder="Describe what should appear in the masked region..." rows={3} className={TEXTAREA} />
+          </Panel>
+        )}
+        <Panel title="About">
+          <p className="text-sm text-slate-500">Edit a specific region of an image. Connect an image and a mask (white = edit area, black = keep area).</p>
+        </Panel>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Prompt */}
@@ -1118,6 +1176,28 @@ function UtilityForm({ config, u, nodeType, wired }) {
       <Panel title="About">
         <p className="text-sm text-slate-600">Converts an image to a 3D model via Hunyuan 3D Pro. Connect an image input for the front view.</p>
       </Panel>
+    );
+  }
+
+  if (nodeId === 'lora-train') {
+    return (
+      <div className="space-y-5">
+        <Panel title="Training Model">
+          <PillGroup options={[
+            { id: 'flux-lora-fast', label: 'Flux Fast', desc: '$2 flat, fastest' },
+            { id: 'flux-portrait', label: 'Flux Portrait', desc: '$2.40/1K steps' },
+            { id: 'flux-kontext', label: 'Flux Kontext', desc: '$2.50/1K steps' },
+            { id: 'wan-22-image', label: 'Wan 2.2 Image', desc: '$4.50/1K steps' },
+          ]} value={config.model || 'flux-lora-fast'} onChange={v => u('model', v)} columns={2} />
+        </Panel>
+        <Panel title="Steps">
+          <input type="number" min="100" max="5000" value={config.steps || 1000} onChange={e => u('steps', e.target.value)} className={INPUT} />
+          <p className="text-xs text-slate-400 mt-1">Higher = better quality, more cost. 500-1500 recommended.</p>
+        </Panel>
+        <Panel title="About">
+          <p className="text-sm text-slate-500">LoRA training requires uploading images through the Brand Assets panel. This node triggers training and outputs the trained model URL.</p>
+        </Panel>
+      </div>
     );
   }
 

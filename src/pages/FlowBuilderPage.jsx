@@ -199,25 +199,25 @@ export default function FlowBuilderPage() {
   const isExecuting = !!executionId;
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0f]">
+    <div className="h-screen flex flex-col bg-slate-50">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-black/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/flows')} className="text-gray-500 hover:text-gray-300 text-sm">← Flows</button>
-          <span className="text-sm font-semibold text-white">{flow?.name || 'New Flow'}</span>
-          {saving && <span className="text-[11px] text-gray-500">Saving...</span>}
-          {!saving && flow?.id && <span className="text-[11px] text-emerald-500/70 bg-emerald-500/10 px-2 py-0.5 rounded">Saved</span>}
+          <button onClick={() => navigate('/flows')} className="text-slate-400 hover:text-slate-600 text-sm">&larr; Flows</button>
+          <span className="text-sm font-semibold text-slate-800">{flow?.name || 'New Flow'}</span>
+          {saving && <span className="text-[11px] text-slate-400">Saving...</span>}
+          {!saving && flow?.id && <span className="text-[11px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">Saved</span>}
         </div>
         <div className="flex gap-2">
           {isExecuting ? (
             <>
-              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-md">⏸ Pause</button>
-              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-500/15 border border-red-500/30 text-red-300 rounded-md">✕ Cancel</button>
+              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-md hover:bg-amber-100">Pause</button>
+              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-50 border border-red-200 text-red-600 rounded-md hover:bg-red-100">Cancel</button>
             </>
           ) : (
             <>
-              <button className="px-3 py-1.5 text-xs bg-white/[0.06] border border-white/10 text-gray-400 rounded-md">Schedule</button>
-              <button onClick={handleRun} className="px-4 py-1.5 text-xs bg-indigo-500/80 text-white font-semibold rounded-md">▶ Run Flow</button>
+              <button className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 text-slate-500 rounded-md hover:bg-slate-100">Schedule</button>
+              <button onClick={handleRun} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
             </>
           )}
         </div>
