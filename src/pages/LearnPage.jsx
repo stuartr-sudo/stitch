@@ -4,7 +4,7 @@ import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
   Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard, Scissors,
-  ChevronDown, ChevronRight, X,
+  ChevronDown, ChevronRight, X, TrendingUp,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -28,6 +28,7 @@ import { AgencyGuideContent } from './AgencyGuidePage';
 import { LongformGuideContent } from './LongformGuidePage';
 import { AdCloneGuideContent } from './AdCloneGuidePage';
 import { VideoAnalyzerGuideContent } from './VideoAnalyzerGuidePage';
+import { MmMethodGuideContent } from './MmMethodGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -88,6 +89,7 @@ const TABS = [
   { id: 'longform',  label: 'Longform',         Icon: Clapperboard },
   { id: 'clone-ad', label: 'Clone Ad',          Icon: Scissors },
   { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
+  { id: 'mm-method',       label: 'MM Method',       Icon: TrendingUp },
 ];
 
 // ── Sidebar categories ──
@@ -99,6 +101,7 @@ const CATEGORIES = [
   { label: 'Analysis', items: ['clone-ad', 'video-analyzer'] },
   { label: 'Social & Ads', items: ['ads', 'linkedin', 'carousels'] },
   { label: 'Brand & Setup', items: ['brandkit', 'flows'] },
+  { label: 'Trading', items: ['mm-method'] },
   { label: 'Advanced', items: ['ad-discovery', 'agency'] },
 ];
 
@@ -466,6 +469,11 @@ export default function LearnPage() {
         {activeTab === 'video-analyzer' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <VideoAnalyzerGuideContent />
+          </div>
+        )}
+        {activeTab === 'mm-method' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <MmMethodGuideContent />
           </div>
         )}
       </div>
