@@ -28,6 +28,7 @@ import { AgencyGuideContent } from './AgencyGuidePage';
 import { LongformGuideContent } from './LongformGuidePage';
 import { AdCloneGuideContent } from './AdCloneGuidePage';
 import { VideoAnalyzerGuideContent } from './VideoAnalyzerGuidePage';
+import { SewoGuideContent } from './SewoGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -88,6 +89,7 @@ const TABS = [
   { id: 'longform',  label: 'Longform',         Icon: Clapperboard },
   { id: 'clone-ad', label: 'Clone Ad',          Icon: Scissors },
   { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
+  { id: 'sewo',           label: 'SEWO Pipeline',  Icon: GitBranch },
 ];
 
 // ── Sidebar categories ──
@@ -99,6 +101,7 @@ const CATEGORIES = [
   { label: 'Analysis', items: ['clone-ad', 'video-analyzer'] },
   { label: 'Social & Ads', items: ['ads', 'linkedin', 'carousels'] },
   { label: 'Brand & Setup', items: ['brandkit', 'flows'] },
+  { label: 'Content Pipeline', items: ['sewo'] },
   { label: 'Advanced', items: ['ad-discovery', 'agency'] },
 ];
 
@@ -466,6 +469,11 @@ export default function LearnPage() {
         {activeTab === 'video-analyzer' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <VideoAnalyzerGuideContent />
+          </div>
+        )}
+        {activeTab === 'sewo' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <SewoGuideContent />
           </div>
         )}
       </div>
