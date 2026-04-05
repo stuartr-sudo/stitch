@@ -118,6 +118,8 @@ export default function LearnPage() {
   const [cliSubTab, setCliSubTab] = useState('learn');
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsed, setCollapsed] = useState({});
+  const [guideSections, setGuideSections] = useState([]);
+  const [expandedTab, setExpandedTab] = useState(null);
 
   // Scope dark mode to this page only
   useEffect(() => {
@@ -163,10 +165,40 @@ export default function LearnPage() {
     (progress.practiceScores.intermediate || 0) +
     (progress.practiceScores.advanced || 0);
 
+  // Discover guide sections from DOM after tab renders
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const els = document.querySelectorAll('[data-guide-section]');
+      const sections = Array.from(els).map((el) => ({
+        id: el.id,
+        title: el.getAttribute('data-guide-section'),
+      }));
+      setGuideSections(sections);
+    }, 100); // small delay for content to render
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
   // Sync tab to URL
   const switchTab = (id) => {
     setActiveTab(id);
+    setExpandedTab(id === activeTab ? expandedTab : null); // collapse sub-items when switching
     setSearchParams(id === 'cli' ? {} : { tab: id }, { replace: true });
+  };
+
+  const handleSectionClick = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const toggleTabSections = (tabId) => {
+    if (activeTab !== tabId) {
+      switchTab(tabId);
+      setExpandedTab(tabId);
+    } else {
+      setExpandedTab(expandedTab === tabId ? null : tabId);
+    }
   };
 
   const toggleCategory = (label) => {
@@ -266,19 +298,40 @@ export default function LearnPage() {
                     const tab = TAB_MAP[id];
                     if (!tab) return null;
                     const isActive = activeTab === id;
+                    const showSections = isActive && expandedTab === id && guideSections.length > 0;
                     return (
-                      <button
-                        key={id}
-                        onClick={() => switchTab(id)}
-                        className={`w-full flex items-center gap-2.5 pl-9 pr-3 py-2 text-sm transition-colors ${
-                          isActive
-                            ? 'bg-[#2C666E]/10 dark:bg-[#2C666E]/20 text-[#2C666E] dark:text-[#5AABB5] font-medium border-l-2 border-[#2C666E]'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 border-l-2 border-transparent'
-                        }`}
-                      >
-                        <tab.Icon className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{tab.label}</span>
-                      </button>
+                      <div key={id}>
+                        <button
+                          onClick={() => toggleTabSections(id)}
+                          className={`w-full flex items-center gap-2.5 pl-9 pr-3 py-2 text-sm transition-colors ${
+                            isActive
+                              ? 'bg-[#2C666E]/10 dark:bg-[#2C666E]/20 text-[#2C666E] dark:text-[#5AABB5] font-medium border-l-2 border-[#2C666E]'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 border-l-2 border-transparent'
+                          }`}
+                        >
+                          <tab.Icon className="w-4 h-4 shrink-0" />
+                          <span className="truncate flex-1 text-left">{tab.label}</span>
+                          {isActive && guideSections.length > 0 && (
+                            showSections
+                              ? <ChevronDown className="w-3 h-3 shrink-0 opacity-50" />
+                              : <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
+                          )}
+                        </button>
+                        {/* Section sub-items */}
+                        {showSections && (
+                          <div className="ml-9 border-l border-gray-200 dark:border-gray-700">
+                            {guideSections.map((section) => (
+                              <button
+                                key={section.id}
+                                onClick={() => handleSectionClick(section.id)}
+                                className="w-full text-left pl-3 pr-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-[#2C666E] dark:hover:text-[#5AABB5] hover:bg-[#2C666E]/5 dark:hover:bg-[#2C666E]/10 transition-colors truncate"
+                              >
+                                {section.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
