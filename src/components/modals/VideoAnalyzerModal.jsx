@@ -65,10 +65,17 @@ export default function VideoAnalyzerModal({ isOpen, onClose }) {
     setResult(null);
 
     const isDeep = analysisMode === 'deep';
-    setProgress(isDeep
-      ? 'Extracting 12 frames and transcribing audio (deep analysis)...'
-      : 'Extracting frames and transcribing audio...'
-    );
+    setProgress('Resolving video URL...');
+
+    // Update progress through stages
+    setTimeout(() => {
+      setProgress(p => p.startsWith('Resolving') ? (isDeep
+        ? 'Extracting 12 frames and transcribing audio (deep analysis)...'
+        : 'Extracting frames and transcribing audio...') : p);
+    }, 5000);
+    setTimeout(() => {
+      setProgress(p => p.startsWith('Extracting') ? 'Running AI analysis...' : p);
+    }, 15000);
 
     const endpoint = isDeep ? '/api/analyze/video-gemini' : '/api/analyze/video';
 
@@ -128,7 +135,7 @@ export default function VideoAnalyzerModal({ isOpen, onClose }) {
               <Input
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://example.com/video.mp4"
+                placeholder="YouTube, TikTok, Instagram, or direct video URL"
                 className="mt-1"
                 disabled={loading}
               />
@@ -207,12 +214,47 @@ export default function VideoAnalyzerModal({ isOpen, onClose }) {
             )}
           </div>
 
+          {/* Video Metadata */}
+          {result?.metadata && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-3">
+              {result.metadata.thumbnail && (
+                <img src={result.metadata.thumbnail} alt="" className="w-16 h-10 rounded object-cover flex-shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                {result.metadata.title && (
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{result.metadata.title}</p>
+                )}
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  {result.metadata.platform && (
+                    <span className="px-1.5 py-0.5 bg-[#2C666E]/10 text-[#2C666E] dark:text-[#5AABB5] rounded font-medium capitalize">
+                      {result.metadata.platform}
+                    </span>
+                  )}
+                  {result.metadata.duration && (
+                    <span>{Math.round(result.metadata.duration)}s</span>
+                  )}
+                  {result.metadata.uploader && (
+                    <span className="truncate">by {result.metadata.uploader}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resolve Warning */}
+          {result?.resolve_warning && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+              {result.resolve_warning}
+            </p>
+          )}
+
           {/* Extracted Frames Preview */}
           {result?.frames?.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4" />
                 Extracted Frames ({result.frames.length})
+                <span className="text-xs text-gray-400 font-normal ml-auto">Saved to library</span>
               </h3>
               <div className="grid grid-cols-4 gap-2">
                 {result.frames.map((url, i) => (
@@ -220,7 +262,7 @@ export default function VideoAnalyzerModal({ isOpen, onClose }) {
                     key={i}
                     src={url}
                     alt={`Frame ${i + 1}`}
-                    className="rounded-md border border-gray-200 w-full aspect-video object-cover"
+                    className="rounded-md border border-gray-200 dark:border-gray-700 w-full aspect-video object-cover"
                   />
                 ))}
               </div>

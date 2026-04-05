@@ -118,16 +118,19 @@ export default function AdCloneModal({ isOpen, onClose, onCloneToAds }) {
     }
 
     setLoading(true);
-    setProgress('Extracting frames and transcribing audio...');
+    setProgress('Resolving video URL...');
     setResult(null);
 
     try {
       setTimeout(() => {
+        setProgress(p => p.startsWith('Resolving') ? 'Extracting frames and transcribing audio...' : p);
+      }, 5000);
+      setTimeout(() => {
         setProgress(p => p.startsWith('Extracting') ? 'Running base video analysis...' : p);
-      }, 8000);
+      }, 15000);
       setTimeout(() => {
         setProgress(p => p.startsWith('Running base') ? 'Analyzing ad strategy and generating clone recipe...' : p);
-      }, 18000);
+      }, 25000);
 
       const res = await apiFetch('/api/analyze/clone-ad', {
         method: 'POST',
@@ -237,7 +240,7 @@ export default function AdCloneModal({ isOpen, onClose, onCloneToAds }) {
               <Input
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://example.com/ad-video.mp4"
+                placeholder="YouTube, TikTok, Instagram, or direct video URL"
                 className="mt-1"
                 disabled={loading}
               />
@@ -296,12 +299,47 @@ export default function AdCloneModal({ isOpen, onClose, onCloneToAds }) {
             )}
           </div>
 
+          {/* Video Metadata */}
+          {result?.metadata && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
+              {result.metadata.thumbnail && (
+                <img src={result.metadata.thumbnail} alt="" className="w-16 h-10 rounded object-cover flex-shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                {result.metadata.title && (
+                  <p className="text-sm font-medium text-gray-800 truncate">{result.metadata.title}</p>
+                )}
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  {result.metadata.platform && (
+                    <span className="px-1.5 py-0.5 bg-[#2C666E]/10 text-[#2C666E] rounded font-medium capitalize">
+                      {result.metadata.platform}
+                    </span>
+                  )}
+                  {result.metadata.duration && (
+                    <span>{Math.round(result.metadata.duration)}s</span>
+                  )}
+                  {result.metadata.uploader && (
+                    <span className="truncate">by {result.metadata.uploader}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resolve Warning */}
+          {result?.resolve_warning && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {result.resolve_warning}
+            </p>
+          )}
+
           {/* Extracted Frames */}
           {result?.frames?.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4" />
                 Extracted Frames ({result.frames.length})
+                <span className="text-xs text-gray-400 font-normal ml-auto">Saved to library</span>
               </h3>
               <div className="grid grid-cols-4 gap-2">
                 {result.frames.map((url, i) => (

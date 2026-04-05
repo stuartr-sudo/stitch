@@ -11,7 +11,10 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
+import { resolveVideoUrl } from '../lib/resolveVideoUrl.js';
+import { saveAnalysisFrames } from '../lib/saveAnalysisFrames.js';
 
 const FAL_BASE = 'https://queue.fal.run';
 
@@ -233,21 +236,26 @@ export default async function handler(req, res) {
     if (!falKey) return res.status(400).json({ error: 'FAL.ai API key required for video analysis' });
 
     const openai = new OpenAI({ apiKey: openaiKey });
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    console.log(`[analyze/video-gemini] Deep analyzing: ${video_url} (est. ${duration_seconds}s)`);
+    // Resolve platform URLs (YouTube, TikTok, IG, etc.) to direct video URLs
+    const { videoUrl: resolvedUrl, metadata: videoMetadata, warning: resolveWarning } = await resolveVideoUrl(video_url);
+    const effectiveDuration = videoMetadata?.duration || duration_seconds;
+    if (resolveWarning) console.warn(`[analyze/video-gemini] ${resolveWarning}`);
+    console.log(`[analyze/video-gemini] Deep analyzing: ${resolvedUrl} (${effectiveDuration}s${videoMetadata?.platform ? `, ${videoMetadata.platform}` : ''})`);
 
     // Extract 12 frames at even intervals (0%, 8%, 17%, 25%, 33%, 42%, 50%, 58%, 67%, 75%, 83%, 92%)
     const framePercentages = [0, 0.08, 0.17, 0.25, 0.33, 0.42, 0.50, 0.58, 0.67, 0.75, 0.83, 0.92];
-    const frameTimes = framePercentages.map(p => Math.max(0.5, Math.round(p * duration_seconds * 10) / 10));
+    const frameTimes = framePercentages.map(p => Math.max(0.5, Math.round(p * effectiveDuration * 10) / 10));
     // Cap last frame before video end
-    frameTimes[frameTimes.length - 1] = Math.min(frameTimes[frameTimes.length - 1], duration_seconds - 0.5);
+    frameTimes[frameTimes.length - 1] = Math.min(frameTimes[frameTimes.length - 1], effectiveDuration - 0.5);
 
     // Extract frames in parallel (concurrency limit of 4)
     const frameUrls = [];
     for (let batch = 0; batch < frameTimes.length; batch += 4) {
       const batchTimes = frameTimes.slice(batch, batch + 4);
       const results = await Promise.allSettled(
-        batchTimes.map(t => extractFrame(video_url, t, duration_seconds, falKey))
+        batchTimes.map(t => extractFrame(resolvedUrl, t, effectiveDuration, falKey))
       );
       for (const r of results) {
         if (r.status === 'fulfilled' && r.value) frameUrls.push(r.value);
@@ -256,11 +264,15 @@ export default async function handler(req, res) {
 
     console.log(`[analyze/video-gemini] Extracted ${frameUrls.length}/${frameTimes.length} frames`);
 
+    // Save frames to library (fire-and-forget)
+    saveAnalysisFrames(supabase, req.user.id, req.user.email, frameUrls, videoMetadata, 'video-analysis')
+      .catch(err => console.warn(`[analyze/video-gemini] Frame save failed (non-fatal): ${err.message}`));
+
     // Transcribe audio — non-fatal if it fails
     let transcript = '';
     let chunks = [];
     try {
-      const whisperResult = await transcribeAudio(video_url, falKey);
+      const whisperResult = await transcribeAudio(resolvedUrl, falKey);
       transcript = whisperResult.text;
       chunks = whisperResult.chunks;
       console.log(`[analyze/video-gemini] Transcribed ${transcript.length} chars`);
@@ -319,6 +331,8 @@ export default async function handler(req, res) {
       transcript_chunks: chunks,
       frames_extracted: frameUrls.length,
       analysis_type: 'deep',
+      metadata: videoMetadata,
+      resolve_warning: resolveWarning,
     });
 
   } catch (err) {
