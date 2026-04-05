@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
   Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard, Scissors,
+  ChevronDown, ChevronRight, X,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -89,6 +90,20 @@ const TABS = [
   { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
 ];
 
+// ── Sidebar categories ──
+
+const CATEGORIES = [
+  { label: 'Getting Started', items: ['cli'] },
+  { label: 'Image Tools', items: ['imagineer', 'lora', 'turnaround'] },
+  { label: 'Video Tools', items: ['video', 'shorts', 'storyboards', 'motion', 'longform'] },
+  { label: 'Analysis', items: ['clone-ad', 'video-analyzer'] },
+  { label: 'Social & Ads', items: ['ads', 'linkedin', 'carousels'] },
+  { label: 'Brand & Setup', items: ['brandkit', 'flows'] },
+  { label: 'Advanced', items: ['ad-discovery', 'agency'] },
+];
+
+const TAB_MAP = Object.fromEntries(TABS.map((t) => [t.id, t]));
+
 const CLI_SUB_TABS = [
   { id: 'learn', label: 'Learn', Icon: BookOpen },
   { id: 'practice', label: 'Practice', Icon: Trophy },
@@ -101,6 +116,8 @@ export default function LearnPage() {
   const initialTab = TABS.find((t) => t.id === searchParams.get('tab'))?.id || 'cli';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [cliSubTab, setCliSubTab] = useState('learn');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsed, setCollapsed] = useState({});
 
   // Scope dark mode to this page only
   useEffect(() => {
@@ -152,6 +169,22 @@ export default function LearnPage() {
     setSearchParams(id === 'cli' ? {} : { tab: id }, { replace: true });
   };
 
+  const toggleCategory = (label) => {
+    setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  // Filter categories by search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return CATEGORIES;
+    const q = searchQuery.toLowerCase();
+    return CATEGORIES.map((cat) => ({
+      ...cat,
+      items: cat.items.filter((id) => TAB_MAP[id]?.label.toLowerCase().includes(q)),
+    })).filter((cat) => cat.items.length > 0);
+  }, [searchQuery]);
+
+  const isSearching = searchQuery.trim().length > 0;
+
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen text-gray-900 dark:text-white flex flex-col">
       {/* Header */}
@@ -183,26 +216,84 @@ export default function LearnPage() {
         </div>
       </div>
 
-      {/* Main tab bar */}
-      <div className="px-6 border-b border-gray-200 dark:border-gray-800 flex gap-1 overflow-x-auto">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => switchTab(id)}
-            className={`flex items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors px-3 ${
-              activeTab === id
-                ? 'border-b-2 border-[#2C666E] text-gray-900 dark:text-white pb-3 pt-3'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 pb-3 pt-3'
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Sidebar + Content */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left Sidebar */}
+        <div className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto flex flex-col">
+          {/* Search */}
+          <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search guides..."
+                className="w-full pl-8 pr-7 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E] transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+          {/* Category groups */}
+          <div className="flex-1 py-1">
+            {filteredCategories.map((cat) => {
+              const isOpen = isSearching || !collapsed[cat.label];
+              return (
+                <div key={cat.label}>
+                  {/* Category header */}
+                  <button
+                    onClick={() => toggleCategory(cat.label)}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    {isOpen
+                      ? <ChevronDown className="w-3 h-3 shrink-0" />
+                      : <ChevronRight className="w-3 h-3 shrink-0" />
+                    }
+                    <span className="flex-1 text-left">{cat.label}</span>
+                    <span className="text-[10px] font-normal text-gray-300 dark:text-gray-600">{cat.items.length}</span>
+                  </button>
+
+                  {/* Tab items */}
+                  {isOpen && cat.items.map((id) => {
+                    const tab = TAB_MAP[id];
+                    if (!tab) return null;
+                    const isActive = activeTab === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => switchTab(id)}
+                        className={`w-full flex items-center gap-2.5 pl-9 pr-3 py-2 text-sm transition-colors ${
+                          isActive
+                            ? 'bg-[#2C666E]/10 dark:bg-[#2C666E]/20 text-[#2C666E] dark:text-[#5AABB5] font-medium border-l-2 border-[#2C666E]'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 border-l-2 border-transparent'
+                        }`}
+                      >
+                        <tab.Icon className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {filteredCategories.length === 0 && (
+              <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                No guides match "{searchQuery}"
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
         {/* CLI Lab — has its own sub-tabs */}
         {activeTab === 'cli' && (
           <div className="flex flex-col h-full bg-gray-950 text-white">
@@ -325,6 +416,7 @@ export default function LearnPage() {
           </div>
         )}
       </div>
+      </div>{/* end sidebar + content flex */}
     </div>
   );
 }
