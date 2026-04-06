@@ -115,6 +115,7 @@ function App() {
     <BrowserRouter>
       <ThemeProvider>
       <AuthProvider>
+        <CommandCenterProvider>
         <YouTubeRedirectHandler />
         <Routes>
           {/* Public home / login */}
@@ -365,6 +366,7 @@ function App() {
         </Routes>
         <Toaster position="bottom-right" />
         <AuthenticatedChatBubble />
+        </CommandCenterProvider>
       </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
@@ -375,11 +377,7 @@ function App() {
 function AuthenticatedChatBubble() {
   const { user, hasKeys } = useAuth();
   if (!user || !hasKeys) return null;
-  return (
-    <CommandCenterProvider>
-      <ChatBubble />
-    </CommandCenterProvider>
-  );
+  return <ChatBubble />;
 }
 
 export default App;

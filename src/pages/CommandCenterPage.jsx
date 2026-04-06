@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LayoutGrid, BarChart3, Calendar, Plus, Loader2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useCommandCenter } from '@/contexts/CommandCenterContext';
 import StatsBar from '@/components/command-center/StatsBar';
 import CampaignCard from '@/components/command-center/CampaignCard';
 import GanttView from '@/components/command-center/GanttView';
@@ -15,6 +16,7 @@ const TABS = [
 
 export default function CommandCenterPage() {
   const navigate = useNavigate();
+  const { toggle: toggleChat } = useCommandCenter();
   const [activeTab, setActiveTab] = useState('campaigns');
   const [stats, setStats] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
@@ -83,11 +85,8 @@ export default function CommandCenterPage() {
             </p>
           </div>
           <button
-            onClick={() => {
-              // Open chat bubble and navigate to studio
-              navigate('/studio');
-            }}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            onClick={toggleChat}
+            className="flex items-center gap-2 bg-[#2C666E] hover:bg-[#3a7a83] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" /> New Braindump
           </button>

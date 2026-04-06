@@ -111,8 +111,20 @@ export function CommandCenterProvider({ children }) {
   );
 }
 
+// Safe fallback so components outside the provider don't crash
+const NOOP = () => {};
+const FALLBACK = {
+  isOpen: false, toggle: NOOP, close: NOOP,
+  threadId: null, setThreadId: NOOP,
+  messages: [], setMessages: NOOP,
+  isStreaming: false, setIsStreaming: NOOP,
+  unreadCount: 0, setUnreadCount: NOOP,
+  abortRef: { current: null },
+  startNewThread: async () => null, loadThread: NOOP,
+  addMessage: NOOP, updateLastAssistant: NOOP, cancelStream: NOOP
+};
+
 export function useCommandCenter() {
   const ctx = useContext(CommandCenterContext);
-  if (!ctx) throw new Error('useCommandCenter must be used within CommandCenterProvider');
-  return ctx;
+  return ctx || FALLBACK;
 }
