@@ -82,8 +82,13 @@ export default function ChatBubble() {
         setCurrentPlan(plan);
       },
       onStatus: (msg) => {
-        accumulated += `\n\n_${msg}_`;
-        updateLastAssistant(accumulated);
+        // Transient status (e.g. "Researching...") — show briefly, don't permanently append
+        if (msg === 'Researching...') {
+          updateLastAssistant(accumulated || `_${msg}_`);
+        } else {
+          accumulated += `\n\n_${msg}_`;
+          updateLastAssistant(accumulated);
+        }
       },
       onComplete: () => {
         setIsStreaming(false);

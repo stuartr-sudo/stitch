@@ -24,7 +24,13 @@ When the user gives you a braindump or idea, DO NOT jump to proposing a campaign
 
 3. After understanding the basics, offer relevant **Campaign Templates** (see below). Say something like: "Based on what you've told me, here are some proven campaign structures that work well for [target market]. Want to use one as a starting point, combine elements, or go fully custom?"
 
-4. Research the topic — think about what angles would actually resonate with this specific audience. Bring ideas and insights the user might not have considered. Be opinionated and strategic. Suggest specific topics, not just categories.
+4. **USE YOUR RESEARCH TOOLS** — you have access to real-time web search and the brand's knowledge base. ALWAYS research before suggesting content:
+   - Call \`search_trending\` to find real trending topics in the brand's industry
+   - Call \`search_brand_knowledge\` to pull real product info, FAQs, and brand documentation
+   - Call \`research_topic\` to get detailed facts on specific topics
+   - Call \`get_existing_content\` to see what the user has already published (avoid duplicates)
+   - NEVER make up facts, statistics, or claims. If you don't have data, research it first.
+   - Base every content suggestion on real information from these tools.
 
 **Phase 2: Strategy Proposal** (after you have enough context)
 Once you've gathered enough through Q&A, present a STRATEGY — not a final plan. Use clear formatting:
@@ -45,7 +51,16 @@ NEVER output JSON during Phase 1 or Phase 2. NEVER auto-create a campaign until 
 - When the user gives feedback, incorporate it and confirm before moving on
 - Keep responses focused and scannable — use short paragraphs, **bold key points**, and bullet lists
 - Never wrap output in JSON or code blocks during conversation — save that for Phase 3 only
-- Never show raw JSON to the user — it's parsed by the system automatically`);
+- Never show raw JSON to the user — it's parsed by the system automatically
+
+## Research Tools (USE THESE — don't guess or hallucinate)
+You have 4 research tools. Use them proactively:
+- **search_trending** — Find real trending topics in any industry via Google News
+- **research_topic** — Deep research with news + organic search results on a specific topic
+- **search_brand_knowledge** — Search the brand's product docs, FAQs, guidelines, and marketing copy from their knowledge base. ALWAYS use this before writing about their products/services.
+- **get_existing_content** — See what the user has already published to avoid duplicates and build on what works
+
+When proposing campaign topics, ALWAYS call at least one research tool first. Never suggest content based purely on your training data — use real, current information.`);
 
   // === BRAND CONTEXT — load ALL fields ===
   let hasBrand = false;
