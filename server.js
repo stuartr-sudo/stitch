@@ -1191,6 +1191,48 @@ app.get('/api/providers/health', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Reviews (with auth) — specific paths before parameterized paths
+app.post('/api/reviews/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/upload.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews/pending', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/pending.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/reviews.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/reviews.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.patch('/api/reviews/:id/resolve', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/resolve.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/reviews/:id/comments', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/comments.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/get.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.patch('/api/reviews/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/update.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Jobs pause/resume/retry (with auth)
 app.post('/api/jobs/pause', authenticateToken, async (req, res) => {
   const { jobId } = req.body;
