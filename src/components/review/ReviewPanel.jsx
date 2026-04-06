@@ -19,6 +19,7 @@ export function ReviewPanel({ open, onOpenChange, children }) {
             }
           }}
         >
+          <DialogPrimitive.Title className="sr-only">Review Requests</DialogPrimitive.Title>
           {children}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
