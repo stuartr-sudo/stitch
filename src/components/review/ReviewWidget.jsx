@@ -100,7 +100,7 @@ export default function ReviewWidget() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.tool || form.tool === '__other__' || !form.type || !form.title.trim()) {
+    if (!form.tool || !form.type || !form.title.trim()) {
       toast.error('Please fill in Tool, Type, and Title');
       return;
     }
@@ -111,7 +111,7 @@ export default function ReviewWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tool: form.tool,
-          endpoint: form.endpoint || null,
+          endpoint: (form.endpoint && form.endpoint !== '__other__') ? form.endpoint : null,
           type: form.type,
           priority: form.priority,
           title: form.title.trim(),
@@ -162,52 +162,53 @@ export default function ReviewWidget() {
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Tool *</label>
                   <select
-                    required={form.tool !== '__other__'}
-                    value={form.tool === '__other__' || (!ALL_TOOLS.includes(form.tool) && form.tool) ? '__other__' : form.tool}
-                    onChange={(e) => {
-                      if (e.target.value === '__other__') {
-                        handleField('tool', '__other__');
-                      } else {
-                        handleField('tool', e.target.value);
-                      }
-                    }}
+                    required
+                    value={form.tool}
+                    onChange={(e) => handleField('tool', e.target.value)}
                     className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500/60"
                   >
                     <option value="">Select tool...</option>
                     {ALL_TOOLS.map((t) => (
                       <option key={t} value={t}>{t}</option>
                     ))}
+                  </select>
+                </div>
+
+                {/* Endpoint / Feature */}
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Endpoint / Feature</label>
+                  <select
+                    value={
+                      form.endpoint === '__other__' || (form.endpoint && !endpoints.includes(form.endpoint))
+                        ? '__other__'
+                        : form.endpoint
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === '__other__') {
+                        handleField('endpoint', '__other__');
+                      } else {
+                        handleField('endpoint', e.target.value);
+                      }
+                    }}
+                    className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500/60"
+                  >
+                    <option value="">Select endpoint...</option>
+                    {endpoints.map((ep) => (
+                      <option key={ep} value={ep}>{ep}</option>
+                    ))}
                     <option value="__other__">Other...</option>
                   </select>
-                  {(form.tool === '__other__' || (!ALL_TOOLS.includes(form.tool) && form.tool && form.tool !== '')) && (
+                  {(form.endpoint === '__other__' || (form.endpoint && !endpoints.includes(form.endpoint) && form.endpoint !== '')) && (
                     <input
                       type="text"
-                      required
-                      value={form.tool === '__other__' ? '' : form.tool}
-                      onChange={(e) => setForm((prev) => ({ ...prev, tool: e.target.value || '__other__', endpoint: '' }))}
-                      placeholder="Type tool or location..."
+                      value={form.endpoint === '__other__' ? '' : form.endpoint}
+                      onChange={(e) => setForm((prev) => ({ ...prev, endpoint: e.target.value || '__other__' }))}
+                      placeholder="Type feature or location..."
                       className="w-full mt-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60"
                       autoFocus
                     />
                   )}
                 </div>
-
-                {/* Endpoint — only when tool has endpoints */}
-                {endpoints.length > 0 && (
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Endpoint</label>
-                    <select
-                      value={form.endpoint}
-                      onChange={(e) => handleField('endpoint', e.target.value)}
-                      className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500/60"
-                    >
-                      <option value="">Select endpoint...</option>
-                      {endpoints.map((ep) => (
-                        <option key={ep} value={ep}>{ep}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 {/* Type */}
                 <div>
