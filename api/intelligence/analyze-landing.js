@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
   try {
     const keys = await getUserKeys(userId, req.user.email);
-    const openai = new OpenAI({ apiKey: keys.openai });
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
 
     if (!firecrawlKey) {

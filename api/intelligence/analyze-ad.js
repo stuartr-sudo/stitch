@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
   try {
     const keys = await getUserKeys(userId, req.user.email);
-    const openai = new OpenAI({ apiKey: keys.openai });
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
 
     let context = '';
     if (source_url) context += `Ad URL: ${source_url}\n`;

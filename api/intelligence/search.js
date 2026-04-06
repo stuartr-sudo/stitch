@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   try {
     const keys = await getUserKeys(userId, req.user.email);
-    const openai = new OpenAI({ apiKey: keys.openai });
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
 
     const platformFilter = platforms?.length && !platforms.includes('all')
       ? `on ${platforms.join(', ')}`

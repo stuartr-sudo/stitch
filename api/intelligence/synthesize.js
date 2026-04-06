@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   try {
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const keys = await getUserKeys(userId, req.user.email);
-    const openai = new OpenAI({ apiKey: keys.openai });
+    const openai = new OpenAI({ apiKey: keys.openaiKey });
 
     // Fetch all selected ads with their analyses
     const { data: ads, error } = await supabase
