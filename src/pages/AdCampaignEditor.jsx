@@ -95,9 +95,11 @@ export default function AdCampaignEditor() {
     setGenerating(true);
     try {
       const basePlatforms = campaign.platforms || ['linkedin'];
-      const platforms = extraPlatform && !basePlatforms.includes(extraPlatform)
-        ? [...basePlatforms, extraPlatform]
-        : basePlatforms;
+      const isNewPlatform = extraPlatform && !basePlatforms.includes(extraPlatform);
+      // When adding a new platform from the empty state, only generate that platform
+      // so existing variations on other platforms are not regenerated unnecessarily.
+      // When clicking top "Regenerate All", generate all campaign platforms.
+      const platforms = isNewPlatform ? [extraPlatform] : basePlatforms;
       const res = await apiFetch(`/api/ads/campaigns/${id}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,8 +107,26 @@ export default function AdCampaignEditor() {
       });
       const data = await res.json();
       if (data.success) {
-        setVariations(data.variations || []);
-        setCampaign(prev => ({ ...prev, status: 'review' }));
+        const newVars = data.variations || [];
+        const affectedPlatforms = [...new Set(newVars.map(v => v.platform))];
+        // Merge: keep untouched platforms, replace only regenerated ones
+        setVariations(prev => [
+          ...prev.filter(v => !affectedPlatforms.includes(v.platform)),
+          ...newVars,
+        ]);
+        if (isNewPlatform) {
+          // Persist the new platform to the campaign record so future
+          // "Regenerate All" clicks also include it
+          const updatedPlatforms = [...basePlatforms, extraPlatform];
+          setCampaign(prev => ({ ...prev, status: 'review', platforms: updatedPlatforms }));
+          apiFetch(`/api/ads/campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platforms: updatedPlatforms }),
+          }).catch(() => {});
+        } else {
+          setCampaign(prev => ({ ...prev, status: 'review' }));
+        }
         setSelectedVariationIdx(0);
       } else {
         toast.error(data.error || 'Generation failed');
@@ -370,7 +390,7 @@ export default function AdCampaignEditor() {
             <div className="p-8 text-center">
               <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm mb-2">No {activePlatform} ad variations yet</p>
-              <p className="text-gray-400 text-xs mb-4">Click "Generate Ads" to create AI-powered variations</p>
+              <p className="text-gray-400 text-xs mb-4">Click Generate below to create AI-powered {activePlatform} ad variations</p>
               <Button onClick={() => handleGenerate(activePlatform)} disabled={generating} size="sm" className="bg-[#2C666E] hover:bg-[#1f4f55]">
                 {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
                 Generate
