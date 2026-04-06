@@ -559,53 +559,148 @@ export function StoryboardGuideContent() {
       </Section>
 
       {/* ── Production Tab ── */}
-      <Section icon={Zap} title="Production Tab — Generating the Final Video">
+      <Section icon={Zap} title="Production Tab — The 6-Step Pipeline">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <p>
-            The Production tab converts your storyboard into a fully assembled video. Click
-            <strong> Generate All Clips</strong> to start the pipeline — each frame progresses through
-            video generation independently, so you can watch clips arrive in real time rather than
-            waiting for the full batch.
+            The Production tab converts your storyboard into a fully assembled video through an
+            automated 6-step pipeline. Click <strong>Start Production</strong> to begin — the system
+            responds immediately and runs the pipeline in the background. A progress bar tracks each
+            step in real time, polling every 4 seconds.
           </p>
         </div>
 
-        <SS file="10-production-tab.jpg" alt="Production tab showing frame clip generation status and Generate All button" />
+        <SS file="12-production-ready.jpg" alt="Production tab showing Start Production button with model-aware cost estimate" />
 
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-2">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2">The 6 Steps</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3">
+          <div className="grid gap-2">
+            {[
+              { step: '1. TTS', desc: 'Generates voiceover audio for every frame with dialogue. Per-frame voice overrides are applied here.' },
+              { step: '2. Video', desc: 'Generates video clips sequentially with frame chaining. Model-aware — FLF models use two keyframes per scene, I2V models animate forward from one.' },
+              { step: '3. Lipsync', desc: 'Applies lip sync to frames that have both dialogue audio and a generated video clip.' },
+              { step: '4. Music', desc: 'Generates background music based on your music mood setting — always instrumental.' },
+              { step: '5. Assembly', desc: 'Composes all video clips, voiceover, and music into a single video via FFmpeg.' },
+              { step: '6. Captions', desc: 'Burns subtitles into the assembled video using your selected caption style.' },
+            ].map(({ step, desc }) => (
+              <div key={step} className="flex gap-3 items-start">
+                <span className="text-xs font-bold text-[#2C666E] dark:text-teal-400 whitespace-nowrap mt-0.5">{step}</span>
+                <span>{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2">Cost & Time Estimates</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p>
-            <strong>FLF models (Veo 3.1, Veo 3.1 Lite, Kling V3, Kling O3):</strong> For each scene,
-            the system uses two keyframe images — the scene's own preview image as the first frame, and
-            the next scene's preview image as the last frame. The video model then generates the motion
-            that connects them. This requires that every scene already has a preview image before Production
-            can run.
+            Before starting production, the system shows a <strong>model-aware cost estimate</strong> and
+            approximate time. The cost calculation accounts for the selected video model, number of frames
+            with dialogue (TTS), lipsync if enabled, music generation, assembly, and caption burning.
+            Different models have different per-clip costs — Wavespeed WAN is the cheapest, Kling R2V Pro
+            is the most expensive.
+          </p>
+        </div>
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2">Per-Frame Status & Retry</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            During production, each frame shows individual status badges for audio (blue), video (green),
+            and lipsync (purple). If a frame fails, it shows an error status — click
+            <strong> Retry Video</strong> in the detail panel to regenerate just that one clip without
+            restarting the entire pipeline.
           </p>
           <p>
-            <strong>I2V models (Wan 2.5, Kling 2.0, Hailuo):</strong> Each scene is animated forward
-            from its single keyframe. After generation, the last frame of each clip is automatically
-            extracted and used as the first frame of the next scene, creating a chain of visual continuity
-            across the whole video without you needing to manage it manually.
-          </p>
-          <p>
-            <strong>Per-scene repair:</strong> If a specific clip fails or you don't like the result,
-            click the <strong>Repair</strong> button on that frame. It re-generates just that one clip
-            without touching any of the others. After repairing, use <strong>Reassemble</strong> to
-            rebuild the final video from all current clips.
+            After production completes, the final video appears with <strong>Download</strong> and
+            <strong> Save to Library</strong> buttons. The captioned version is preferred if captions
+            were enabled; otherwise the raw assembled video is shown.
           </p>
         </div>
 
         <Tip>
           Production can take several minutes for a 10–15 scene storyboard. The page auto-polls for
-          progress every few seconds — you can leave the tab and return later.
+          progress every 4 seconds — you can leave the tab and return later. Failed frames don't block
+          the rest of the pipeline; they're skipped and you can retry them individually afterward.
         </Tip>
       </Section>
 
+      {/* ── Voice Casting & Transitions ── */}
+      <Section icon={Volume2} title="Voice Casting & Scene Transitions">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
+          <p>
+            For professional productions, different characters or scenes often need different voices —
+            and the way scenes connect visually matters as much as the content within them.
+          </p>
+        </div>
+
+        <SS file="13-voice-transitions.jpg" alt="Detail panel showing voice selector dropdown and transition type pills at the bottom" />
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2 flex items-center gap-2">
+          <Volume2 className="w-4 h-4 text-[#2C666E]" /> Per-Scene Voice Override
+        </h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            When a frame has dialogue, a <strong>Voice</strong> dropdown appears in the detail panel.
+            By default it uses the storyboard's global voice setting, but you can override it per frame
+            to cast different voices for different characters or narrators. 11 voices are available
+            covering a range of genders, ages, and styles — from Rachel (calm narration) to Roger
+            (confident, deep) to River (calm, non-binary).
+          </p>
+          <p>
+            Next to the voice selector is a <strong>play button</strong> that generates a quick voiceover
+            preview. Click it to hear exactly how that voice sounds with your dialogue text before
+            committing to a full production run. The preview plays in an inline audio player right below
+            the selector.
+          </p>
+        </div>
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2">Scene Transitions</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            At the bottom of each frame's detail panel, four transition type pills let you control how
+            the scene connects to the next one:
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-1">
+            <li><strong>Cut</strong> — instant switch (default, works for most content)</li>
+            <li><strong>Fade</strong> — gradual fade to/from black</li>
+            <li><strong>Dissolve</strong> — one scene blends into the next</li>
+            <li><strong>Wipe</strong> — directional transition sweep</li>
+          </ul>
+          <p>
+            Transitions are stored per frame and applied during the Assembly step of production.
+          </p>
+        </div>
+      </Section>
+
+      {/* ── Batch Regeneration ── */}
+      <Section icon={RefreshCw} title="Batch Regeneration">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
+          <p>
+            The toolbar includes a <strong>batch regeneration button</strong> (circular arrows icon, next
+            to the Previews button) that regenerates preview images for all unlocked frames at once. This
+            is much faster than clicking through each frame individually when you've changed the visual
+            style or anchor image and want to refresh everything.
+          </p>
+        </div>
+
+        <SS file="14-batch-regen.jpg" alt="Toolbar showing the batch regeneration button highlighted next to Previews" />
+
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-2">
+          <p>
+            Locked frames are automatically excluded — only unlocked frames are regenerated. This lets
+            you protect scenes you're happy with while refreshing everything else in one click.
+          </p>
+          <p>
+            For single-frame regeneration, click <strong>Regen Preview</strong> in the detail panel instead.
+          </p>
+        </div>
+      </Section>
+
       {/* ── Export & Share ── */}
-      <Section icon={Share2} title="Export & Share">
+      <Section icon={Share2} title="Export, Share & Client Review">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
           <p>
-            The Export PDF and Share buttons live in the top toolbar of the workspace, alongside Animatic,
-            Grid, and Previews. Both are available as soon as you have frames — you don't need to wait
-            for Production to complete.
+            The Export PDF and Share buttons live in the top toolbar of the workspace. Both are
+            available as soon as you have frames — you don't need to wait for Production to complete.
           </p>
         </div>
 
@@ -619,9 +714,7 @@ export function StoryboardGuideContent() {
             <p>
               Generates a structured storyboard document with every frame's preview image, narration text,
               dialogue, visual direction, camera angle, and timestamp. The PDF is formatted for print and
-              screen — ideal for client review meetings where you want to walk through the story before
-              spending budget on video generation. The button is disabled until you have at least some
-              preview images generated.
+              screen — ideal for client review meetings.
             </p>
           </div>
 
@@ -630,16 +723,72 @@ export function StoryboardGuideContent() {
               <Share2 className="w-4 h-4 text-[#2C666E]" /> Share Review Link
             </h4>
             <p>
-              Creates a public review URL at <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">/api/storyboard/review/:token</code>.
-              Anyone with the link can view all frames, preview images, narration, dialogue, camera directions,
-              and timing without needing a Stitch account. Send to clients, directors, or collaborators for
-              async review. The review page is read-only — viewers can't edit anything.
+              Creates a public review URL that opens a dedicated <strong>Client Review Page</strong>.
+              Anyone with the link can view the full storyboard without needing a Stitch account —
+              no login required.
             </p>
-            <Tip>
-              Share the link before generating video clips to get client sign-off on the story structure.
-              It's much faster and cheaper to iterate on the script than to regenerate video clips.
-            </Tip>
           </div>
+        </div>
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-[#2C666E]" /> Client Review Page
+        </h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            The review page is a standalone public page designed for client feedback. It shows every frame
+            with its preview image, narrative text, dialogue, setting, camera angle, and timing — laid out
+            in a clean, professional format that non-technical stakeholders can easily navigate.
+          </p>
+        </div>
+
+        <SS file="15-review-page.jpg" alt="Public client review page showing storyboard frames with Approve and Request Changes buttons" />
+
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-2">
+          <div>
+            <strong className="text-gray-900 dark:text-gray-100">Approve / Request Changes</strong>
+            <p className="mt-0.5">
+              Two prominent buttons at the top let the reviewer formally approve the storyboard for
+              production or request specific changes. Approvals and change requests are stored in the
+              database and update the storyboard's review status, which is visible in the workspace.
+            </p>
+          </div>
+          <div>
+            <strong className="text-gray-900 dark:text-gray-100">Per-Scene Comments</strong>
+            <p className="mt-0.5">
+              Each frame has a "Comment on scene N" toggle. Click it to expand a comment input
+              where reviewers can leave feedback about that specific scene — what they like, what
+              needs to change, or technical notes. Comments include the reviewer's name and timestamp.
+            </p>
+          </div>
+          <div>
+            <strong className="text-gray-900 dark:text-gray-100">General Comments</strong>
+            <p className="mt-0.5">
+              At the bottom of the page, a general comments section allows feedback that isn't
+              tied to a specific scene — overall pacing notes, brand alignment feedback, or
+              strategic direction.
+            </p>
+          </div>
+        </div>
+
+        <SS file="16-review-comments.jpg" alt="Review page scrolled to show more frames and the general comments section" />
+
+        <Tip>
+          Share the review link before generating video clips to get client sign-off on the story
+          structure. It's much faster and cheaper to iterate on the script than to regenerate video clips.
+          Once approved, the storyboard status updates automatically so you know it's safe to start production.
+        </Tip>
+
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2">Version Snapshots</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p>
+            Before sharing with a client or making major changes, save a <strong>version snapshot</strong>.
+            This serializes the entire storyboard state (all settings + all frames) into a timestamped
+            backup. If the client requests changes that don't work out, you can restore any previous
+            version instantly — no manual re-editing needed.
+          </p>
+          <p>
+            Versions are accessible via the API and will be surfaced in the workspace UI in a future update.
+          </p>
         </div>
       </Section>
 
@@ -730,7 +879,7 @@ export function StoryboardGuideContent() {
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-400 dark:text-gray-500 py-4">
-        Last updated April 2026
+        Last updated 6 April 2026
       </div>
 
     </div>
