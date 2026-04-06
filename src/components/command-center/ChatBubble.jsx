@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Plus, Loader2, Square } from 'lucide-react';
+import { Bot, X, Send, Plus, Loader2, Square, History, MessageSquare } from 'lucide-react';
 import { useCommandCenter } from '@/contexts/CommandCenterContext';
 import { useSSEChat } from '@/hooks/useSSEChat';
 import { apiFetch } from '@/lib/api';
@@ -11,14 +11,28 @@ export default function ChatBubble() {
     isOpen, toggle, close,
     threadId, messages, isStreaming, setIsStreaming,
     unreadCount,
-    startNewThread, addMessage, updateLastAssistant, cancelStream
+    startNewThread, loadThread, addMessage, updateLastAssistant, cancelStream
   } = useCommandCenter();
 
   const { sendMessage, cancel } = useSSEChat();
   const [input, setInput] = useState('');
   const [currentPlan, setCurrentPlan] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [threads, setThreads] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Load thread history
+  const fetchThreads = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await apiFetch('/api/command-center/threads?limit=10');
+      const data = await res.json();
+      setThreads(data.threads || []);
+    } catch { /* ignore */ }
+    setLoadingHistory(false);
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -146,6 +160,13 @@ export default function ChatBubble() {
             </div>
             <div className="flex items-center gap-1">
               <button
+                onClick={() => { setShowHistory(!showHistory); if (!showHistory) fetchThreads(); }}
+                className={`p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors ${showHistory ? 'text-purple-400' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Chat history"
+              >
+                <History className="w-4 h-4" />
+              </button>
+              <button
                 onClick={handleNewChat}
                 className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-slate-200 transition-colors"
                 title="New braindump"
@@ -160,6 +181,36 @@ export default function ChatBubble() {
               </button>
             </div>
           </div>
+
+          {/* Thread history dropdown */}
+          {showHistory && (
+            <div className="border-b border-slate-700/50 px-3 py-2 max-h-[200px] overflow-y-auto">
+              {loadingHistory ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-slate-500" /></div>
+              ) : threads.length === 0 ? (
+                <p className="text-slate-500 text-xs text-center py-3">No previous conversations</p>
+              ) : (
+                <div className="space-y-1">
+                  {threads.map(t => (
+                    <button
+                      key={t.thread_id}
+                      onClick={() => { loadThread(t.thread_id); setShowHistory(false); }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors
+                        ${t.thread_id === threadId ? 'bg-purple-900/30 text-purple-300' : 'hover:bg-slate-700/50 text-slate-400'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{t.last_message || 'Empty conversation'}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-600 ml-5">
+                        {new Date(t.last_activity).toLocaleDateString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0" style={{ maxHeight: '440px' }}>

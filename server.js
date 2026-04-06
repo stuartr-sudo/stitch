@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { pollScheduledPublications } from './api/lib/scheduledPublisher.js';
+import { pollCommandCenterPublications } from './api/lib/commandCenterPublisher.js';
 import { startLoraPoller } from './api/lib/loraPoller.js';
 
 dotenv.config();
@@ -1489,6 +1490,11 @@ app.listen(PORT, () => {
     setInterval(pollScheduledPublications, 30000);
     pollScheduledPublications();
     console.log('[scheduled-publisher] Polling every 30s');
+
+    // Command Center scheduled publisher (polls every 30s)
+    setInterval(pollCommandCenterPublications, 30000);
+    pollCommandCenterPublications();
+    console.log('[cc-publisher] Polling every 30s');
 
     // Recover interrupted Command Center campaigns
     import('./api/lib/campaignOrchestrator.js').then(({ recoverInterruptedCampaigns }) => {

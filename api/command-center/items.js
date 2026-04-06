@@ -131,8 +131,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Item not found or not approved' });
       }
 
-      // TODO: Phase 5 — call appropriate publisher based on item.platform
-      // For now, mark as published
+      // Mark as published. Platform-specific publishing (YouTube upload, LinkedIn post, etc.)
+      // will be called here once content assets are finalized in native editors.
+      // The scheduled publisher (commandCenterPublisher.js) handles auto-publish at scheduled times.
       const { data: updated } = await supabase
         .from('command_center_items')
         .update({ status: 'published', published_at: new Date().toISOString() })
