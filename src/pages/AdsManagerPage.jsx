@@ -184,10 +184,15 @@ export default function AdsManagerPage() {
       const data = await res.json();
 
       if (data.success && data.description) {
-        if (form.product_description.trim() && !confirm('Replace existing description?')) {
+        const hasExisting = form.product_description.trim() || form.target_audience.trim();
+        if (hasExisting && !confirm('Replace existing description and target audience?')) {
           return;
         }
-        setForm(prev => ({ ...prev, product_description: data.description }));
+        setForm(prev => ({
+          ...prev,
+          product_description: data.description,
+          ...(data.target_audience ? { target_audience: data.target_audience } : {}),
+        }));
       } else {
         setSynthesizeError(data.error || 'Failed to generate description');
       }

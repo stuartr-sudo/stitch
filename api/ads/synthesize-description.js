@@ -4,15 +4,27 @@ import { createClient } from '@supabase/supabase-js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
-const SYSTEM_PROMPT = `You are a marketing strategist. Given information about a product/service (from a webpage and/or brand kit), write a cohesive product/service description suitable for generating advertising campaigns.
+const SYSTEM_PROMPT = `You are a marketing strategist. Given information about a product/service (from a webpage and/or brand kit), extract two things and return them as JSON.
 
-Requirements:
+Return ONLY valid JSON in this exact format:
+{
+  "description": "...",
+  "target_audience": "..."
+}
+
+Requirements for "description":
 - Write natural prose, 2-3 paragraphs max
 - Focus on what the product/service IS and its value proposition
 - If brand voice/personality data is provided, match that tone
 - Do NOT list raw data fields or bullet points
 - Do NOT fabricate features not present in the source material
-- Write as if describing the product to an ad copywriter who needs full context`;
+- Write as if describing the product to an ad copywriter who needs full context
+
+Requirements for "target_audience":
+- A concise phrase describing who this product/service is for (e.g. "SaaS founders aged 25-45", "Small business owners in retail")
+- Extract from explicit target market data if available, otherwise infer from product/service context
+- Keep it to 1-2 short phrases, suitable for an ad targeting field
+- If truly unknown, return an empty string`;
 
 export default async function handler(req, res) {
   const { url, brand_kit_id } = req.body;
@@ -113,14 +125,22 @@ export default async function handler(req, res) {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4.1-mini',
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 1200,
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Synthesize a cohesive product/service description from these sources:\n\n${sources.join('\n\n')}` },
+        { role: 'user', content: `Synthesize the product/service description and target audience from these sources:\n\n${sources.join('\n\n')}` },
       ],
     });
 
-    const description = completion.choices[0]?.message?.content?.trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(completion.choices[0]?.message?.content || '{}');
+    } catch {
+      return res.json({ success: false, error: 'Failed to generate description' });
+    }
+
+    const description = parsed.description?.trim();
     if (!description) {
       return res.json({ success: false, error: 'Failed to generate description' });
     }
@@ -135,7 +155,7 @@ export default async function handler(req, res) {
       metadata: { has_url: !!hasUrl, has_brand_kit: !!hasBrandKit },
     }).catch(() => {});
 
-    return res.json({ success: true, description });
+    return res.json({ success: true, description, target_audience: parsed.target_audience?.trim() || '' });
   } catch (err) {
     console.error('[ads/synthesize-description]', err);
     if (err.name === 'TimeoutError') {
