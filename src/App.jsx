@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { CommandCenterProvider } from '@/contexts/CommandCenterContext';
 import ChatBubble from '@/components/command-center/ChatBubble';
+import ReviewWidget from './components/review/ReviewWidget';
 import CommandCenterPage from './pages/CommandCenterPage';
 
 // Silence all non-error toasts — only show toast.error() and toast.warning()
@@ -366,6 +367,7 @@ function App() {
         </Routes>
         <Toaster position="bottom-right" />
         <AuthenticatedChatBubble />
+        <AuthenticatedReviewWidget />
         </CommandCenterProvider>
       </AuthProvider>
       </ThemeProvider>
@@ -378,6 +380,12 @@ function AuthenticatedChatBubble() {
   const { user, hasKeys } = useAuth();
   if (!user || !hasKeys) return null;
   return <ChatBubble />;
+}
+
+function AuthenticatedReviewWidget() {
+  const { user, hasKeys } = useAuth();
+  if (!user || !hasKeys) return null;
+  return <ReviewWidget />;
 }
 
 export default App;
