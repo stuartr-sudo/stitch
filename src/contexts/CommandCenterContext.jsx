@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 
 const CommandCenterContext = createContext(null);
@@ -10,6 +10,7 @@ export function CommandCenterProvider({ children }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const abortRef = useRef(null);
+  const [pendingContext, setPendingContext] = useState(null);
 
   const toggle = useCallback(() => {
     setIsOpen(prev => {
@@ -75,6 +76,13 @@ export function CommandCenterProvider({ children }) {
     });
   }, []);
 
+  // Open chat with pre-filled context (used by Ad Intelligence "Use in Command Center")
+  const openWithContext = useCallback(async (message) => {
+    setPendingContext(message);
+    setIsOpen(true);
+    setUnreadCount(0);
+  }, []);
+
   // Cancel streaming
   const cancelStream = useCallback(() => {
     if (abortRef.current) {
@@ -101,7 +109,10 @@ export function CommandCenterProvider({ children }) {
     loadThread,
     addMessage,
     updateLastAssistant,
-    cancelStream
+    cancelStream,
+    pendingContext,
+    setPendingContext,
+    openWithContext
   };
 
   return (
@@ -121,7 +132,8 @@ const FALLBACK = {
   unreadCount: 0, setUnreadCount: NOOP,
   abortRef: { current: null },
   startNewThread: async () => null, loadThread: NOOP,
-  addMessage: NOOP, updateLastAssistant: NOOP, cancelStream: NOOP
+  addMessage: NOOP, updateLastAssistant: NOOP, cancelStream: NOOP,
+  pendingContext: null, setPendingContext: NOOP, openWithContext: NOOP
 };
 
 export function useCommandCenter() {

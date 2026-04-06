@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+import { useCommandCenter } from '@/contexts/CommandCenterContext';
 import CompetitorSearchBar from '@/components/intelligence/CompetitorSearchBar';
 import AdResultCard from '@/components/intelligence/AdResultCard';
 import AdTeardownPanel from '@/components/intelligence/AdTeardownPanel';
@@ -19,6 +20,7 @@ const TABS = [
 
 export default function AdIntelligencePage() {
   const navigate = useNavigate();
+  const { openWithContext } = useCommandCenter();
   const [activeTab, setActiveTab] = useState('research');
 
   // Research state
@@ -127,6 +129,20 @@ export default function AdIntelligencePage() {
     setCampaignCompetitor(null);
     setCampaignModalOpen(true);
   }, []);
+
+  const handleUseInCommandCenter = useCallback((ad, analysis) => {
+    const parts = [`I found a competitor ad I want to beat. Here's the analysis:`];
+    if (ad.advertiser) parts.push(`**Competitor:** ${ad.advertiser}`);
+    if (ad.platform) parts.push(`**Platform:** ${ad.platform}`);
+    if (analysis?.hook) parts.push(`**Hook:** ${analysis.hook}`);
+    if (analysis?.strengths?.length) parts.push(`**Strengths:** ${analysis.strengths.join(', ')}`);
+    if (analysis?.weaknesses?.length) parts.push(`**Weaknesses:** ${analysis.weaknesses.join(', ')}`);
+    if (analysis?.clone_suggestions?.length) parts.push(`**Clone suggestions:** ${analysis.clone_suggestions.join('; ')}`);
+    if (ad.ad_copy) parts.push(`**Their ad copy:** "${ad.ad_copy.slice(0, 200)}"`);
+    if (ad.thumbnail_url) parts.push(`**Creative:** ${ad.thumbnail_url}`);
+    parts.push(`\nHelp me create a campaign that beats this.`);
+    openWithContext(parts.join('\n'));
+  }, [openWithContext]);
 
   // ─── Library tab functions ───────────────────────────────
   const loadLibrary = useCallback(async () => {
@@ -404,6 +420,7 @@ export default function AdIntelligencePage() {
         onAnalyzeLanding={handleAnalyzeLanding}
         onSave={handleSaveToLibrary}
         onCreateCampaign={handleCreateCampaign}
+        onUseInCommandCenter={handleUseInCommandCenter}
         analyzingLanding={analyzingLanding}
       />
 

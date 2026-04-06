@@ -1,4 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
+import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
+
+// Archive an image URL to permanent Supabase storage
+async function archiveCreative(url, supabase, userId) {
+  if (!url) return null;
+  // Skip if already a Supabase URL
+  if (url.includes('.supabase.co/storage/')) return url;
+  try {
+    const archived = await uploadUrlToSupabase(url, supabase, `intelligence/${userId}`);
+    return archived || url;
+  } catch (err) {
+    console.warn('[intelligence/library] Creative archive failed, keeping original URL:', err.message);
+    return url; // Graceful fallback
+  }
+}
 
 export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -17,7 +32,6 @@ export default async function handler(req, res) {
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
-        // Query param filters
         const params = url.searchParams;
         if (params.get('competitor_id')) query = query.eq('competitor_id', params.get('competitor_id'));
         if (params.get('platform')) query = query.eq('platform', params.get('platform'));
@@ -29,6 +43,10 @@ export default async function handler(req, res) {
       }
       if (req.method === 'POST') {
         const { source_url, platform, ad_format, ad_copy, thumbnail_url, landing_page_url, analysis, landing_page_analysis, clone_recipe, niche, tags, competitor_id, notes } = req.body;
+
+        // Archive the creative image to permanent Supabase storage
+        const archivedUrl = await archiveCreative(thumbnail_url, supabase, userId);
+
         const { data, error } = await supabase
           .from('ad_library')
           .insert({
@@ -37,7 +55,7 @@ export default async function handler(req, res) {
             platform: platform || null,
             ad_format: ad_format || null,
             ad_copy: ad_copy || null,
-            thumbnail_url: thumbnail_url || null,
+            thumbnail_url: archivedUrl || null,
             landing_page_url: landing_page_url || null,
             analysis: analysis || null,
             landing_page_analysis: landing_page_analysis || null,
@@ -57,9 +75,37 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // /library/:id — update or delete
     const itemId = pathParts[0];
+    const action = pathParts[1]; // e.g. /library/:id/re-archive
 
+    // POST /library/:id/re-archive — re-download and archive a creative whose URL may have expired
+    if (req.method === 'POST' && action === 're-archive') {
+      const { data: item } = await supabase
+        .from('ad_library')
+        .select('thumbnail_url')
+        .eq('id', itemId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!item) return res.status(404).json({ error: 'Item not found' });
+
+      if (item.thumbnail_url?.includes('.supabase.co/storage/')) {
+        return res.json({ already_archived: true, thumbnail_url: item.thumbnail_url });
+      }
+
+      const archivedUrl = await archiveCreative(item.thumbnail_url, supabase, userId);
+      if (archivedUrl && archivedUrl !== item.thumbnail_url) {
+        await supabase
+          .from('ad_library')
+          .update({ thumbnail_url: archivedUrl })
+          .eq('id', itemId)
+          .eq('user_id', userId);
+        return res.json({ archived: true, thumbnail_url: archivedUrl });
+      }
+      return res.json({ archived: false, note: 'Could not archive — URL may already be expired' });
+    }
+
+    // PATCH /library/:id — update fields
     if (req.method === 'PATCH') {
       const updates = {};
       for (const key of ['tags', 'notes', 'is_favorite', 'competitor_id', 'analysis', 'landing_page_analysis', 'landing_page_url']) {
@@ -76,6 +122,7 @@ export default async function handler(req, res) {
       return res.json({ updated: data });
     }
 
+    // DELETE /library/:id
     if (req.method === 'DELETE') {
       const { error } = await supabase.from('ad_library').delete().eq('id', itemId).eq('user_id', userId);
       if (error) throw error;

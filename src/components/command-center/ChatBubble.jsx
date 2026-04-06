@@ -11,7 +11,8 @@ export default function ChatBubble() {
     isOpen, toggle, close,
     threadId, messages, isStreaming, setIsStreaming,
     unreadCount,
-    startNewThread, loadThread, addMessage, updateLastAssistant, cancelStream
+    startNewThread, loadThread, addMessage, updateLastAssistant, cancelStream,
+    pendingContext, setPendingContext
   } = useCommandCenter();
 
   const { sendMessage, cancel } = useSSEChat();
@@ -52,6 +53,20 @@ export default function ChatBubble() {
       startNewThread();
     }
   }, [isOpen, threadId, startNewThread]);
+
+  // Auto-send pending context (from Ad Intelligence "Use in Command Center")
+  const pendingContextHandled = useRef(false);
+  useEffect(() => {
+    if (pendingContext && threadId && !isStreaming && !pendingContextHandled.current) {
+      pendingContextHandled.current = true;
+      setInput(pendingContext);
+      setPendingContext(null);
+      // Trigger send after a brief delay so the input is visible
+      setTimeout(() => {
+        pendingContextHandled.current = false;
+      }, 300);
+    }
+  }, [pendingContext, threadId, isStreaming, setPendingContext]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();

@@ -1,9 +1,9 @@
 import React from 'react';
-import { X, ExternalLink, Loader2, Globe, Sparkles } from 'lucide-react';
+import { X, ExternalLink, Loader2, Globe, Sparkles, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LandingPageAnalysis from './LandingPageAnalysis';
 
-export default function AdTeardownPanel({ open, onClose, ad, analysis, landingAnalysis, onAnalyzeLanding, onSave, onCreateCampaign, analyzingLanding }) {
+export default function AdTeardownPanel({ open, onClose, ad, analysis, landingAnalysis, onAnalyzeLanding, onSave, onCreateCampaign, onUseInCommandCenter, analyzingLanding }) {
   if (!open || !ad) return null;
 
   return (
@@ -100,10 +100,15 @@ export default function AdTeardownPanel({ open, onClose, ad, analysis, landingAn
           )}
 
           {/* Action Bar */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t flex-wrap">
             <Button onClick={() => onCreateCampaign(ad, analysis)} className="flex-1 bg-green-600 hover:bg-green-700">
-              <Sparkles className="w-4 h-4 mr-2" /> Create Campaign from This
+              <Sparkles className="w-4 h-4 mr-2" /> Create Ad Campaign
             </Button>
+            {onUseInCommandCenter && (
+              <Button onClick={() => { onUseInCommandCenter(ad, analysis); onClose(); }} className="flex-1 bg-[#2C666E] hover:bg-[#3a7a83]">
+                <Bot className="w-4 h-4 mr-2" /> Use in Command Center
+              </Button>
+            )}
             {ad.landing_page_url && !landingAnalysis && (
               <Button onClick={() => onAnalyzeLanding(ad.landing_page_url)} disabled={analyzingLanding} variant="outline" className="border-indigo-300 text-indigo-600">
                 {analyzingLanding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Globe className="w-4 h-4 mr-2" />}

@@ -70,6 +70,22 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'search_competitor_library',
+      description: 'Search the user\'s saved competitor ad library from Ad Intelligence. Returns analyzed competitor ads with strengths, weaknesses, clone suggestions, and creative URLs. Use this when the user mentions competitors, wants to beat a competitor, or is planning a competitive campaign.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Optional search term to filter by advertiser name, platform, or niche' },
+          platform: { type: 'string', description: 'Filter by platform', enum: ['Meta', 'Google', 'LinkedIn', 'TikTok'] },
+          limit: { type: 'number', description: 'Max results (default: 10)', default: 10 },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ── Tool execution functions ────────────────────────────────────────────────
@@ -269,6 +285,52 @@ async function executeGetExistingContent(args, supabase, userId) {
   }
 }
 
+async function executeSearchCompetitorLibrary(args, supabase, userId) {
+  try {
+    let query = supabase
+      .from('ad_library')
+      .select('id, source_url, platform, ad_format, ad_copy, thumbnail_url, analysis, clone_recipe, niche, competitor_id, competitors(name), created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (args.platform) query = query.eq('platform', args.platform);
+    const limit = Math.min(args.limit || 10, 20);
+    query = query.limit(limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const ads = (data || []).map(ad => ({
+      platform: ad.platform,
+      advertiser: ad.competitors?.name || 'Unknown',
+      ad_copy: ad.ad_copy?.slice(0, 300),
+      creative_url: ad.thumbnail_url,
+      hook: ad.analysis?.hook,
+      strengths: ad.analysis?.strengths,
+      weaknesses: ad.analysis?.weaknesses,
+      clone_suggestions: ad.analysis?.clone_suggestions,
+      niche: ad.niche,
+      saved_date: ad.created_at,
+    }));
+
+    // If query provided, filter by text match
+    if (args.query) {
+      const q = args.query.toLowerCase();
+      const filtered = ads.filter(a =>
+        a.advertiser?.toLowerCase().includes(q) ||
+        a.ad_copy?.toLowerCase().includes(q) ||
+        a.niche?.toLowerCase().includes(q) ||
+        a.hook?.toLowerCase().includes(q)
+      );
+      return { results: filtered, query: args.query, count: filtered.length };
+    }
+
+    return { results: ads, count: ads.length };
+  } catch (err) {
+    return { results: [], error: err.message };
+  }
+}
+
 // ── Main handler ────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -430,6 +492,9 @@ export default async function handler(req, res) {
               break;
             case 'get_existing_content':
               result = await executeGetExistingContent(args, supabase, userId);
+              break;
+            case 'search_competitor_library':
+              result = await executeSearchCompetitorLibrary(args, supabase, userId);
               break;
             default:
               result = { error: `Unknown tool: ${tc.name}` };

@@ -59,8 +59,10 @@ You have 4 research tools. Use them proactively:
 - **research_topic** — Deep research with news + organic search results on a specific topic
 - **search_brand_knowledge** — Search the brand's product docs, FAQs, guidelines, and marketing copy from their knowledge base. ALWAYS use this before writing about their products/services.
 - **get_existing_content** — See what the user has already published to avoid duplicates and build on what works
+- **search_competitor_library** — Search the user's saved competitor ads from Ad Intelligence. Returns analyzed ads with hooks, strengths, weaknesses, and clone suggestions. Use this when the user mentions competitors, wants to beat a competitor, or is building a competitive campaign.
 
-When proposing campaign topics, ALWAYS call at least one research tool first. Never suggest content based purely on your training data — use real, current information.`);
+When proposing campaign topics, ALWAYS call at least one research tool first. Never suggest content based purely on your training data — use real, current information.
+When the user mentions a competitor or sends competitor analysis context, call search_competitor_library to see if they have more saved intelligence.`);
 
   // === BRAND CONTEXT — load ALL fields ===
   let hasBrand = false;
