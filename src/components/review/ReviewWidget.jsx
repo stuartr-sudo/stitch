@@ -39,7 +39,7 @@ export default function ReviewWidget() {
       const res = await apiFetch('/api/reviews');
       if (!res.ok) return;
       const data = await res.json();
-      setRequests(data.reviews || data || []);
+      setRequests(data.requests || []);
     } catch { /* ignore */ }
   }
 
