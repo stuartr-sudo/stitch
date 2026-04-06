@@ -23,9 +23,9 @@ export function PlanCard({ plan, onBuild, onRefine }) {
   if (!plan?.items?.length) return null;
 
   return (
-    <div className="bg-purple-950/30 border border-purple-800/40 rounded-lg p-3 my-2">
+    <div className="bg-teal-950/30 border border-teal-800/40 rounded-lg p-3 my-2">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-purple-300 font-semibold text-xs">{plan.name || 'Campaign Plan'}</span>
+        <span className="text-teal-300 font-semibold text-xs">{plan.name || 'Campaign Plan'}</span>
         <span className="text-slate-500 text-[10px]">{plan.items.length} pieces</span>
       </div>
 
@@ -38,7 +38,7 @@ export function PlanCard({ plan, onBuild, onRefine }) {
           const Icon = TYPE_ICONS[item.type] || Sparkles;
           return (
             <div key={i} className="flex items-start gap-2 text-[11px]">
-              <Icon className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+              <Icon className="w-3.5 h-3.5 text-teal-400 mt-0.5 flex-shrink-0" />
               <div>
                 <span className="text-slate-200 font-medium">
                   {TYPE_LABELS[item.type] || item.type}

@@ -61,8 +61,8 @@ export default function GanttView({ campaigns }) {
           {days.map((day, i) => (
             <div
               key={i}
-              className={`text-center py-2 text-xs border-l border-slate-800
-                ${day.isToday ? 'bg-indigo-950/20 text-white font-semibold' : day.isWeekend ? 'text-slate-600' : 'text-slate-500'}`}
+              className={`text-center py-2 text-xs border-l border-gray-200
+                ${day.isToday ? 'bg-teal-50 text-teal-800 font-semibold' : day.isWeekend ? 'text-slate-400' : 'text-slate-500'}`}
             >
               <div>{day.label}</div>
               <div className="text-[10px]">{day.month} {day.dayNum}</div>
@@ -78,11 +78,11 @@ export default function GanttView({ campaigns }) {
               className="grid gap-0 mt-2"
               style={{ gridTemplateColumns: '200px repeat(14, 1fr)' }}
             >
-              <div className="bg-slate-800 rounded-l-lg px-3 py-2">
-                <span className="text-white text-xs font-semibold truncate block">{campaign.name}</span>
-                <span className="text-slate-500 text-[10px]">{campaign.items?.length || 0} items</span>
+              <div className="bg-gray-100 rounded-l-lg px-3 py-2">
+                <span className="text-slate-900 text-xs font-semibold truncate block">{campaign.name}</span>
+                <span className="text-slate-400 text-[10px]">{campaign.items?.length || 0} items</span>
               </div>
-              <div className="col-span-14 bg-slate-800 rounded-r-lg h-full" />
+              <div className="col-span-14 bg-gray-100 rounded-r-lg h-full" />
             </div>
 
             {/* Item rows */}
@@ -96,7 +96,7 @@ export default function GanttView({ campaigns }) {
                   className="grid gap-0 items-center"
                   style={{ gridTemplateColumns: '200px repeat(14, 1fr)', minHeight: '32px' }}
                 >
-                  <div className="text-slate-400 text-[11px] px-3 pl-6 truncate">
+                  <div className="text-slate-500 text-[11px] px-3 pl-6 truncate">
                     {item.type === 'short' ? '🎬' : item.type === 'linkedin_post' ? '💼' : item.type === 'carousel' ? '📊' : item.type === 'ad_set' ? '📣' : '📋'}
                     {' '}{item.type?.replace('_', ' ')}
                     {item.platform ? ` (${item.platform})` : ''}
@@ -106,14 +106,14 @@ export default function GanttView({ campaigns }) {
                     const isScheduled = dayIdx === scheduledIdx;
 
                     return (
-                      <div key={dayIdx} className={`border-l border-slate-800/50 px-0.5 py-0.5 ${day.isToday ? 'bg-indigo-950/10' : ''}`}>
+                      <div key={dayIdx} className={`border-l border-gray-200 px-0.5 py-0.5 ${day.isToday ? 'bg-teal-50/50' : ''}`}>
                         {isCreated && (
                           <div className={`${STATUS_COLORS[item.status]} rounded text-white text-[9px] text-center py-0.5 px-1 truncate`}>
                             {item.status}
                           </div>
                         )}
                         {isScheduled && !isCreated && (
-                          <div className="bg-slate-700 border border-slate-600 rounded text-slate-300 text-[9px] text-center py-0.5 px-1 truncate">
+                          <div className="bg-slate-100 border border-slate-200 rounded text-slate-600 text-[9px] text-center py-0.5 px-1 truncate">
                             Publish
                           </div>
                         )}

@@ -57,11 +57,11 @@ export default function CalendarView({ items }) {
     <div>
       {/* Week navigation */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors">
+        <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <div className="text-slate-300 text-sm font-medium">{weekLabel}</div>
-        <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors">
+        <div className="text-slate-700 text-sm font-medium">{weekLabel}</div>
+        <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -75,15 +75,15 @@ export default function CalendarView({ items }) {
             <div
               key={day.key}
               className={`rounded-xl border min-h-[140px] p-2
-                ${day.isToday ? 'border-indigo-500/50 bg-indigo-950/10' : 'border-slate-700/30 bg-slate-800/30'}
+                ${day.isToday ? 'border-teal-400 bg-teal-50/50' : 'border-gray-200 bg-white'}
                 ${day.isWeekend ? 'opacity-60' : ''}`}
             >
               {/* Day header */}
               <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs ${day.isToday ? 'text-indigo-300 font-semibold' : 'text-slate-500'}`}>
+                <span className={`text-xs ${day.isToday ? 'text-teal-700 font-semibold' : 'text-slate-400'}`}>
                   {day.dayName}
                 </span>
-                <span className={`text-sm font-medium ${day.isToday ? 'text-white bg-indigo-600 w-6 h-6 rounded-full flex items-center justify-center text-[11px]' : 'text-slate-400'}`}>
+                <span className={`text-sm font-medium ${day.isToday ? 'text-white bg-[#2C666E] w-6 h-6 rounded-full flex items-center justify-center text-[11px]' : 'text-slate-400'}`}>
                   {day.dayNum}
                 </span>
               </div>
@@ -109,7 +109,7 @@ export default function CalendarView({ items }) {
                 })}
 
                 {dayItems.length === 0 && (
-                  <div className="text-slate-700 text-[10px] text-center mt-4">—</div>
+                  <div className="text-slate-300 text-[10px] text-center mt-4">—</div>
                 )}
               </div>
             </div>

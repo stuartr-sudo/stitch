@@ -129,8 +129,8 @@ export default function ChatBubble() {
       <button
         onClick={toggle}
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center
-          bg-gradient-to-br from-purple-600 to-purple-400 text-white shadow-lg shadow-purple-600/30
-          hover:shadow-purple-600/50 hover:scale-105 transition-all duration-200
+          bg-[#2C666E] text-white shadow-lg shadow-teal-800/30
+          hover:bg-[#3a7a83] hover:shadow-teal-800/50 hover:scale-105 transition-all duration-200
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}
         aria-label="Open AI Marketing Team"
       >
@@ -144,15 +144,15 @@ export default function ChatBubble() {
 
       {/* Chat panel overlay */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] bg-[#12122a] border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden">
+        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] bg-slate-800 border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-[#2C666E] flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
               </div>
               <div>
-                <div className="text-purple-300 font-semibold text-sm">Marketing Team</div>
+                <div className="text-teal-300 font-semibold text-sm">Marketing Team</div>
                 <div className="text-slate-500 text-[10px]">
                   {isStreaming ? 'Thinking...' : 'Ready to help'}
                 </div>
@@ -161,7 +161,7 @@ export default function ChatBubble() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { setShowHistory(!showHistory); if (!showHistory) fetchThreads(); }}
-                className={`p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors ${showHistory ? 'text-purple-400' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors ${showHistory ? 'text-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
                 title="Chat history"
               >
                 <History className="w-4 h-4" />
@@ -196,7 +196,7 @@ export default function ChatBubble() {
                       key={t.thread_id}
                       onClick={() => { loadThread(t.thread_id); setShowHistory(false); }}
                       className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors
-                        ${t.thread_id === threadId ? 'bg-purple-900/30 text-purple-300' : 'hover:bg-slate-700/50 text-slate-400'}`}
+                        ${t.thread_id === threadId ? 'bg-teal-900/30 text-teal-300' : 'hover:bg-slate-700/50 text-slate-400'}`}
                     >
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-3 h-3 flex-shrink-0" />
@@ -216,7 +216,7 @@ export default function ChatBubble() {
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0" style={{ maxHeight: '440px' }}>
             {messages.length === 0 && !isStreaming && (
               <div className="text-center py-8">
-                <Bot className="w-10 h-10 text-purple-600/40 mx-auto mb-3" />
+                <Bot className="w-10 h-10 text-teal-600/40 mx-auto mb-3" />
                 <p className="text-slate-400 text-sm font-medium">What are we creating today?</p>
                 <p className="text-slate-600 text-xs mt-1">Braindump your ideas — I'll plan the campaign.</p>
               </div>
@@ -288,7 +288,7 @@ export default function ChatBubble() {
                 onKeyDown={handleKeyDown}
                 placeholder="Type your braindump..."
                 rows={1}
-                className="flex-1 bg-slate-800/60 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 resize-none focus:outline-none focus:border-purple-600/50 focus:ring-1 focus:ring-purple-600/20"
+                className="flex-1 bg-slate-800/60 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 resize-none focus:outline-none focus:border-teal-600/50 focus:ring-1 focus:ring-teal-600/20"
                 style={{ maxHeight: '100px' }}
                 onInput={(e) => {
                   e.target.style.height = 'auto';
@@ -307,7 +307,7 @@ export default function ChatBubble() {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:text-slate-500 text-white flex items-center justify-center transition-colors"
+                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#2C666E] hover:bg-[#3a7a83] disabled:bg-slate-700 disabled:text-slate-500 text-white flex items-center justify-center transition-colors"
                 >
                   <Send className="w-4 h-4" />
                 </button>
