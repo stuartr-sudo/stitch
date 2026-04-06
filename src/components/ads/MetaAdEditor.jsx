@@ -114,13 +114,14 @@ export default function MetaAdEditor({ variation, onUpdate, onRegenerate, onEnha
         </div>
       </div>
 
-      {/* Image with style picker */}
+      {/* Image with style picker and multi-image upload */}
       <AdImageSection
-        imageUrl={variation?.image_urls?.[0]}
+        imageUrls={variation?.image_urls || []}
         imagePrompt={variation?.image_prompt}
         onPromptChange={(newPrompt) => onUpdate({ ...variation, image_prompt: newPrompt })}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
         onEnhancePrompt={onEnhancePrompt ? (prompt) => onEnhancePrompt(variation.id, prompt) : undefined}
+        onImagesChange={(newUrls) => onUpdate({ ...variation, image_urls: newUrls })}
         regenerating={regenerating}
         aspectClass="aspect-square"
       />
