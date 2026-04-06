@@ -190,6 +190,26 @@ export default function AdCampaignEditor() {
     }
   };
 
+  const handleEnhancePrompt = async (variationId, currentPrompt) => {
+    try {
+      const res = await apiFetch('/api/ads/enhance-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ variation_id: variationId, custom_prompt: currentPrompt }),
+      });
+      const data = await res.json();
+      if (data.enhanced_prompt) {
+        setVariations(prev => prev.map(v =>
+          v.id === variationId ? { ...v, image_prompt: data.enhanced_prompt } : v
+        ));
+        return data.enhanced_prompt;
+      }
+    } catch (err) {
+      toast.error('Prompt enhancement failed');
+    }
+    return null;
+  };
+
   const handleUpdateVariation = (updated) => {
     setVariations(prev => {
       const old = prev.find(v => v.id === updated.id);
@@ -537,6 +557,7 @@ export default function AdCampaignEditor() {
                       variation={selectedVariation}
                       onUpdate={handleUpdateVariation}
                       onRegenerate={handleRegenerate}
+                      onEnhancePrompt={handleEnhancePrompt}
                       regenerating={regeneratingId === selectedVariation.id}
                       landingUrl={campaign?.landing_url}
                     />
@@ -556,6 +577,7 @@ export default function AdCampaignEditor() {
                       variation={selectedVariation}
                       onUpdate={handleUpdateVariation}
                       onRegenerate={handleRegenerate}
+                      onEnhancePrompt={handleEnhancePrompt}
                       regenerating={regeneratingId === selectedVariation.id}
                       landingUrl={campaign?.landing_url}
                     />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Loader2, ChevronDown, Palette, Eye, EyeOff } from 'lucide-react';
+import { RefreshCw, Loader2, ChevronDown, Palette, Eye, EyeOff, Sparkles } from 'lucide-react';
 import StyleGrid from '@/components/ui/StyleGrid';
 import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 
@@ -7,10 +7,22 @@ import { STYLE_CATEGORIES } from '@/lib/stylePresets';
  * Shared ad image section with style picker for regeneration.
  * Used by LinkedIn, Meta, and Google editors.
  */
-export default function AdImageSection({ imageUrl, imagePrompt, onPromptChange, onRegenerate, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
+export default function AdImageSection({ imageUrl, imagePrompt, onPromptChange, onRegenerate, onEnhancePrompt, regenerating, aspectClass = 'aspect-[1.91/1]' }) {
   const [showStyles, setShowStyles] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('');
+  const [enhancing, setEnhancing] = useState(false);
+
+  const handleEnhance = async () => {
+    if (!onEnhancePrompt || !imagePrompt?.trim()) return;
+    setEnhancing(true);
+    try {
+      const enhanced = await onEnhancePrompt(imagePrompt);
+      if (enhanced) onPromptChange?.(enhanced);
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleRegenWithStyle = () => {
     // Look up the full promptText for the selected style so the backend GPT gets
@@ -71,12 +83,27 @@ export default function AdImageSection({ imageUrl, imagePrompt, onPromptChange, 
             {showPrompt ? 'Hide image prompt' : 'View image prompt'}
           </button>
           {showPrompt && (
-            <textarea
-              value={imagePrompt}
-              onChange={e => onPromptChange?.(e.target.value)}
-              rows={3}
-              className="mt-1 w-full text-xs text-gray-900 bg-gray-50 rounded p-2 leading-relaxed border focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-y"
-            />
+            <div className="mt-1">
+              <textarea
+                value={imagePrompt}
+                onChange={e => onPromptChange?.(e.target.value)}
+                rows={3}
+                className="w-full text-xs text-gray-900 bg-gray-50 rounded p-2 leading-relaxed border focus:outline-none focus:ring-2 focus:ring-[#2C666E] resize-y"
+              />
+              {onEnhancePrompt && (
+                <button
+                  onClick={handleEnhance}
+                  disabled={enhancing || !imagePrompt?.trim()}
+                  className="mt-1 flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Use AI to rewrite this prompt into a rich image generation prompt"
+                >
+                  {enhancing
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Sparkles className="w-3 h-3" />}
+                  {enhancing ? 'Enhancing…' : 'AI Enhance Prompt'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

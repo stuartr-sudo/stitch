@@ -851,6 +851,7 @@ app.post('/api/ads/variations/:id/publish-linkedin', authenticateToken, (await i
 app.get('/api/ads/google/auth', authenticateToken, (await import('./api/ads/google-auth.js')).default);
 app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js')).default);
 app.post('/api/ads/synthesize-description', authenticateToken, (await import('./api/ads/synthesize-description.js')).default);
+app.post('/api/ads/enhance-prompt', authenticateToken, (await import('./api/ads/enhance-prompt.js')).default);
 app.get('/api/ads/campaigns/:id/export', authenticateToken, (await import('./api/ads/export.js')).default);
 
 // ─── Ad Intelligence routes ──────────────────────────────────────────────

@@ -24,7 +24,7 @@ function CharCounter({ current, max }) {
   );
 }
 
-export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, regenerating, landingUrl }) {
+export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, onEnhancePrompt, regenerating, landingUrl }) {
   const copy = variation?.copy_data || {};
 
   const handleChange = (field, value) => {
@@ -120,6 +120,7 @@ export default function LinkedInAdEditor({ variation, onUpdate, onRegenerate, re
         imagePrompt={variation?.image_prompt}
         onPromptChange={(newPrompt) => onUpdate({ ...variation, image_prompt: newPrompt })}
         onRegenerate={(style) => onRegenerate(variation.id, true, style)}
+        onEnhancePrompt={onEnhancePrompt ? (prompt) => onEnhancePrompt(variation.id, prompt) : undefined}
         regenerating={regenerating}
         aspectClass="aspect-[1.91/1]"
       />
