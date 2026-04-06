@@ -65,7 +65,7 @@ export default function ReviewWidget() {
     setScreenshotUploading(true);
     try {
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('image', file);
       const res = await apiFetch('/api/reviews/upload', {
         method: 'POST',
         body: fd,
