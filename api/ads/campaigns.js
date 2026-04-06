@@ -8,8 +8,11 @@ export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (req.method === 'POST') {
-    const { name, objective, platforms, landing_url, product_description, target_audience, brand_kit_id } = req.body || {};
+    const { name, objective, platforms, landing_url, product_description, target_audience, brand_kit_id, writing_style } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const VALID_STYLES = ['default', 'storytelling', 'data_driven', 'conversational', 'professional'];
+    const style = VALID_STYLES.includes(writing_style) ? writing_style : 'default';
 
     const { data, error } = await supabase
       .from('ad_campaigns')
@@ -22,6 +25,7 @@ export default async function handler(req, res) {
         product_description: product_description || null,
         target_audience: target_audience || null,
         brand_kit_id: brand_kit_id || null,
+        writing_style: style,
       })
       .select()
       .single();

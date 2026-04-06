@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
+import { resolveExaKey } from '../lib/newsjackScorer.js';
 
 const LINKEDIN_SYSTEM = `You are an expert LinkedIn Ads copywriter. Generate 3 ad variations for LinkedIn Sponsored Content.
 
@@ -77,6 +78,78 @@ const PLATFORM_CONFIGS = {
     platformContext: 'Meta/Instagram feed ad — eye-catching, vibrant, scroll-stopping',
   },
 };
+
+// ---------------------------------------------------------------------------
+// Writing style modifiers — injected into the user message for each platform
+// ---------------------------------------------------------------------------
+
+const STYLE_MODIFIERS = {
+  default: null, // no modifier — use base system prompt as-is
+
+  storytelling: `WRITING STYLE — STORYTELLING:
+Structure the copy as a narrative arc:
+1. Open with a relatable pain point or aspirational moment (1-2 sentences)
+2. Introduce the product/service as the turning point
+3. Paint a "after" picture — the transformation or outcome
+4. End with a clear, specific CTA
+Use vivid, concrete language. Weave in any research context provided. Each variation should feature a different character or scenario.`,
+
+  data_driven: `WRITING STYLE — DATA-DRIVEN:
+Lead with a specific, surprising number or stat when possible (or a strong implied metric).
+Use proof points, percentages, time-to-value, and ROI framing.
+Structure: bold stat/claim → why it matters → how the product delivers → CTA.
+Be specific: "3x" beats "significantly", "in 14 days" beats "fast".
+If you don't have hard numbers, use verifiable-sounding specifics (team sizes, process steps, typical timelines).`,
+
+  conversational: `WRITING STYLE — CONVERSATIONAL:
+Write as if a knowledgeable friend is recommending this, not a brand selling.
+Use contractions, short sentences, and everyday vocabulary.
+Avoid corporate-speak entirely.
+It's OK to start sentences with "And", "But", "So".
+Ask a question, share a quick take, or use a light observation to hook the reader.
+The CTA should feel like a friendly nudge, not a hard sell.`,
+
+  professional: `WRITING STYLE — PROFESSIONAL:
+Write with authority and precision. This is B2B — speak to outcomes and business impact.
+Use confident, active-voice statements. No hedging ("might", "could possibly").
+Highlight credibility signals: scale, specificity, expertise.
+Structure: establish authority → articulate the business problem → position the solution → direct CTA.
+Tone: boardroom-ready. Polished, not stiff.`,
+};
+
+// ---------------------------------------------------------------------------
+// Exa research helper for Storytelling style
+// ---------------------------------------------------------------------------
+
+async function fetchStorytellingResearch(topic, exaKey) {
+  if (!exaKey) return null;
+
+  try {
+    const res = await fetch('https://api.exa.ai/search', {
+      method: 'POST',
+      headers: { 'x-api-key': exaKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `${topic} customer success story transformation results case study`,
+        num_results: 4,
+        use_autoprompt: true,
+        type: 'neural',
+        contents: { text: { max_characters: 600 } },
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const snippets = (data.results || [])
+      .filter(r => r.text?.trim())
+      .map(r => `- ${r.title}: ${r.text.trim().slice(0, 300)}`)
+      .join('\n');
+
+    return snippets || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Build a rich image prompt using GPT (same pattern as Cohesive Prompt Builder).
@@ -223,14 +296,31 @@ export default async function handler(req, res) {
     brand?.target_audience ? `Audience: ${brand.target_audience}` : null,
   ].filter(Boolean).join('\n');
 
+  // Resolve writing style and optionally fetch research for Storytelling
+  const writingStyle = campaign.writing_style || 'default';
+  let storytellingResearch = null;
+  if (writingStyle === 'storytelling') {
+    const exaKey = await resolveExaKey(req.user.id);
+    storytellingResearch = await fetchStorytellingResearch(
+      campaign.product_description || campaign.name,
+      exaKey
+    );
+    if (storytellingResearch) {
+      console.log(`[ads/generate] Storytelling research fetched (${storytellingResearch.length} chars)`);
+    }
+  }
+
   const targetPlatforms = platforms || campaign.platforms || ['linkedin'];
-  const userMessage = [
+  const userMessageParts = [
     `Product/Service: ${campaign.product_description || campaign.name}`,
     campaign.landing_url ? `Landing URL: ${campaign.landing_url}` : null,
     campaign.target_audience ? `Target Audience: ${campaign.target_audience}` : null,
     campaign.objective ? `Campaign Objective: ${campaign.objective}` : null,
     brandContext || null,
-  ].filter(Boolean).join('\n');
+    storytellingResearch ? `\nRESEARCH CONTEXT (weave relevant details into the narrative):\n${storytellingResearch}` : null,
+    STYLE_MODIFIERS[writingStyle] ? `\n${STYLE_MODIFIERS[writingStyle]}` : null,
+  ].filter(Boolean);
+  const userMessage = userMessageParts.join('\n');
 
   // Update status
   await supabase.from('ad_campaigns').update({ status: 'generating' }).eq('id', id);

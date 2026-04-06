@@ -117,6 +117,7 @@ export default function AdsManagerPage() {
     product_description: '',
     landing_url: '',
     target_audience: '',
+    writing_style: 'default',
   });
 
   // Auto-fill panel state
@@ -511,6 +512,35 @@ export default function AdsManagerPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Writing Style</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'default', label: 'Default', desc: 'Balanced, platform-optimised copy' },
+                  { key: 'storytelling', label: 'Storytelling', desc: 'Research-driven narrative leading to a CTA' },
+                  { key: 'data_driven', label: 'Data-Driven', desc: 'Stats, numbers and proof points' },
+                  { key: 'conversational', label: 'Conversational', desc: 'Casual and relatable tone' },
+                  { key: 'professional', label: 'Professional', desc: 'Formal, authoritative B2B copy' },
+                ].map(({ key, label, desc }) => (
+                  <button
+                    key={key}
+                    onClick={() => setForm(prev => ({ ...prev, writing_style: key }))}
+                    title={desc}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                      form.writing_style === key ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {form.writing_style === 'storytelling' && (
+                <p className="mt-1.5 text-xs text-[#2C666E]">
+                  Storytelling uses Exa to research your product/industry and weaves facts into a narrative arc.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2">
