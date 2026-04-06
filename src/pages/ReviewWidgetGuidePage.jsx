@@ -14,6 +14,28 @@ import {
   Send, CheckCircle, XCircle, RotateCcw, Zap,
 } from 'lucide-react';
 
+const CDN = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/review-widget/';
+
+// ── Screenshot ──
+
+function Screenshot({ file, alt, caption }) {
+  return (
+    <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <img
+        src={`${CDN}${file}`}
+        alt={alt}
+        className="w-full block"
+        loading="lazy"
+      />
+      {caption && (
+        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 italic">
+          {caption}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Expandable Section ──
 
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
@@ -126,6 +148,7 @@ export function ReviewWidgetGuideContent() {
           every page (the Command Center bot is in the bottom-right). The badge shows how many requests
           are pending or need your info.
         </p>
+        <Screenshot file="01-widget-button.jpg" alt="Review Widget button in bottom-left corner" caption="The review widget button (bottom-left) with amber highlight. The Command Center bot is in the bottom-right." />
         <Step number="1" title="Find the button">
           <p>
             Look at the bottom-left of your screen. You&apos;ll see a navy circle with a blue glow ring
@@ -151,6 +174,7 @@ export function ReviewWidgetGuideContent() {
           Fill in as much detail as you can &mdash; the more context, the better the automated response.
         </p>
 
+        <Screenshot file="02-submit-form.jpg" alt="Review Widget submit form" caption="The submit form with all fields: Tool, Type, Priority, Title, Description, Screenshot, and Submit button." />
         <Step number="1" title="Select a Tool">
           <p>
             Choose which tool the request is about from the dropdown. All 39 tools are listed alphabetically:
@@ -173,6 +197,7 @@ export function ReviewWidgetGuideContent() {
           <p className="mt-1">
             This is <strong>optional</strong> &mdash; skip it if the issue is about the tool&apos;s UI rather than a specific model.
           </p>
+          <Screenshot file="03-endpoint-dropdown.jpg" alt="Endpoint dropdown after selecting Imagineer" caption="After selecting 'Imagineer', the Endpoint dropdown appears with all its model endpoints." />
         </Step>
 
         <Step number="3" title="Choose the Request Type">
@@ -257,6 +282,7 @@ export function ReviewWidgetGuideContent() {
           from the left as a 600px panel overlay.
         </p>
 
+        <Screenshot file="04-dashboard-panel.jpg" alt="Review Requests dashboard panel" caption="The dashboard panel slides in from the left with filter chips and the request list." />
         <Step number="1" title="Filter by Status">
           <p>
             Six filter chips at the top: <strong>All</strong>, <strong>Pending</strong>, <strong>In Progress</strong>,
