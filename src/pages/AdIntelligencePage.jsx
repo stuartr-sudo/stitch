@@ -61,7 +61,7 @@ export default function AdIntelligencePage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, platforms, formats }),
-    });
+    }).then(r => r.json());
     setSearching(false);
     if (data.error) { toast.error(data.error); return; }
     setSearchResults(data.results || []);
@@ -73,7 +73,7 @@ export default function AdIntelligencePage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source_url: ad.source_url, ad_copy: ad.ad_copy, description: ad.description }),
-    });
+    }).then(r => r.json());
     setAnalyzingId(null);
     if (data.error) { toast.error(data.error); return; }
     setSelectedAd(ad);
@@ -88,7 +88,7 @@ export default function AdIntelligencePage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
-    });
+    }).then(r => r.json());
     setAnalyzingLanding(false);
     if (data.error) { toast.error(data.error); return; }
     setLandingAnalysis(data.analysis);
@@ -110,7 +110,7 @@ export default function AdIntelligencePage() {
         analysis: analysis || selectedAnalysis,
         landing_page_analysis: landingAnalysis,
       }),
-    });
+    }).then(r => r.json());
     setSavingId(null);
     if (data.error) { toast.error(data.error); return; }
     setSavedIds(prev => new Set([...prev, key]));
@@ -129,7 +129,7 @@ export default function AdIntelligencePage() {
     const params = new URLSearchParams();
     if (libraryFilter.platform) params.set('platform', libraryFilter.platform);
     if (libraryFilter.favorite) params.set('favorite', 'true');
-    const data = await apiFetch(`/api/intelligence/library?${params}`);
+    const data = await apiFetch(`/api/intelligence/library?${params}`).then(r => r.json());
     setLibraryLoading(false);
     if (!data.error) setLibraryItems(data.items || []);
   }, [libraryFilter]);
@@ -141,19 +141,19 @@ export default function AdIntelligencePage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_favorite: !item.is_favorite }),
-    });
+    }).then(r => r.json());
     loadLibrary();
   };
 
   const deleteLibraryItem = async (item) => {
-    await apiFetch(`/api/intelligence/library/${item.id}`, { method: 'DELETE' });
+    await apiFetch(`/api/intelligence/library/${item.id}`, { method: 'DELETE' }).then(r => r.json());
     loadLibrary();
   };
 
   // ─── Competitors tab functions ───────────────────────────
   const loadCompetitors = useCallback(async () => {
     setCompetitorsLoading(true);
-    const data = await apiFetch('/api/intelligence/competitors');
+    const data = await apiFetch('/api/intelligence/competitors').then(r => r.json());
     setCompetitorsLoading(false);
     if (!data.error) setCompetitors(data.competitors || []);
   }, []);
@@ -167,7 +167,7 @@ export default function AdIntelligencePage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newCompName.trim(), website_url: newCompUrl.trim() || null }),
-    });
+    }).then(r => r.json());
     setAddingCompetitor(false);
     if (data.error) { toast.error(data.error); return; }
     setNewCompName('');
@@ -176,7 +176,7 @@ export default function AdIntelligencePage() {
   };
 
   const selectCompetitor = async (comp) => {
-    const data = await apiFetch(`/api/intelligence/competitors/${comp.id}`);
+    const data = await apiFetch(`/api/intelligence/competitors/${comp.id}`).then(r => r.json());
     if (!data.error) {
       setSelectedCompetitor(data.competitor);
       setCompetitorAds(data.ads || []);
@@ -188,20 +188,20 @@ export default function AdIntelligencePage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
-    });
+    }).then(r => r.json());
     selectCompetitor(selectedCompetitor);
     loadCompetitors();
   };
 
   const handleDeleteCompetitor = async (comp) => {
-    await apiFetch(`/api/intelligence/competitors/${comp.id}`, { method: 'DELETE' });
+    await apiFetch(`/api/intelligence/competitors/${comp.id}`, { method: 'DELETE' }).then(r => r.json());
     setSelectedCompetitor(null);
     loadCompetitors();
   };
 
   const handleRefreshCompetitor = async (comp) => {
     setRefreshing(true);
-    await apiFetch(`/api/intelligence/competitors/${comp.id}/refresh`, { method: 'POST' });
+    await apiFetch(`/api/intelligence/competitors/${comp.id}/refresh`, { method: 'POST' }).then(r => r.json());
     setRefreshing(false);
     selectCompetitor(comp);
   };

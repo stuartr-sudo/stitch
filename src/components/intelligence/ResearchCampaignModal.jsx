@@ -43,7 +43,7 @@ export default function ResearchCampaignModal({ open, onClose, sourceAds, compet
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ad_ids: adIds }),
-    }).then(data => {
+    }).then(r => r.json()).then(data => {
       if (data.error) {
         toast.error('Failed to synthesize insights');
         return;
@@ -91,7 +91,7 @@ export default function ResearchCampaignModal({ open, onClose, sourceAds, compet
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    });
+    }).then(r => r.json());
 
     setGenerating(false);
 
