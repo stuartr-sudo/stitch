@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       }
     }).join('\n');
 
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-4.1-mini',
       messages: [
         {

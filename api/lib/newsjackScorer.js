@@ -179,7 +179,7 @@ Be direct and opinionated. A score of 1–3 means weak fit. 4–6 means moderate
 
   const userPrompt = `Brand context:\n${brandSummary || '(no brand context provided)'}\n\nArticles to score:\n${articlesText}\n\nReturn scores and angles for all ${articles.length} article(s).`;
 
-  const completion = await client.beta.chat.completions.parse({
+  const completion = await client.chat.completions.parse({
     model: 'gpt-4.1-mini',
     messages: [
       { role: 'system', content: systemPrompt },

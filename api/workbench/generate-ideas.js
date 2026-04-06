@@ -67,7 +67,7 @@ ${context ? `Additional context from the creator: ${context}` : ''}
 Do NOT use clichés like "you won't believe", "mind-blowing", "game-changer", "buckle up", or "what if I told you".`;
 
   try {
-    const completion = await openai.beta.chat.completions.parse({
+    const completion = await openai.chat.completions.parse({
       model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: systemPrompt },
