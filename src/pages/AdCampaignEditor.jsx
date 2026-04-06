@@ -90,14 +90,18 @@ export default function AdCampaignEditor() {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (extraPlatform = null) => {
     if (!campaign) return;
     setGenerating(true);
     try {
+      const basePlatforms = campaign.platforms || ['linkedin'];
+      const platforms = extraPlatform && !basePlatforms.includes(extraPlatform)
+        ? [...basePlatforms, extraPlatform]
+        : basePlatforms;
       const res = await apiFetch(`/api/ads/campaigns/${id}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platforms: campaign.platforms }),
+        body: JSON.stringify({ platforms }),
       });
       const data = await res.json();
       if (data.success) {
@@ -367,7 +371,7 @@ export default function AdCampaignEditor() {
               <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm mb-2">No {activePlatform} ad variations yet</p>
               <p className="text-gray-400 text-xs mb-4">Click "Generate Ads" to create AI-powered variations</p>
-              <Button onClick={handleGenerate} disabled={generating} size="sm" className="bg-[#2C666E] hover:bg-[#1f4f55]">
+              <Button onClick={() => handleGenerate(activePlatform)} disabled={generating} size="sm" className="bg-[#2C666E] hover:bg-[#1f4f55]">
                 {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
                 Generate
               </Button>
