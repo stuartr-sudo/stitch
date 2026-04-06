@@ -233,7 +233,10 @@ export default function AdsManagerPage() {
       const res = await apiFetch('/api/ads/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          brand_kit_id: (useBrandKit && selectedBrandKitId) ? selectedBrandKitId : undefined,
+        }),
       });
       const data = await res.json();
       if (data.campaign) {

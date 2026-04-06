@@ -62,11 +62,18 @@ export default function AdCampaignEditor() {
   }, [id]);
 
   // Load brand kit for preview (logo, name, etc.)
+  // Re-runs when campaign loads so we can select the matching brand kit by ID
   useEffect(() => {
     apiFetch('/api/brand/kit').then(r => r.json()).then(d => {
-      setBrand(d.brandKit || d.brands?.[0] || null);
+      const kits = d.brands || [];
+      if (campaign?.brand_kit_id) {
+        const matched = kits.find(k => k.id === campaign.brand_kit_id);
+        setBrand(matched || d.brandKit || kits[0] || null);
+      } else {
+        setBrand(d.brandKit || kits[0] || null);
+      }
     }).catch(() => {});
-  }, []);
+  }, [campaign?.brand_kit_id]);
 
   useEffect(() => { loadCampaign(); }, [loadCampaign]);
 
@@ -167,7 +174,14 @@ export default function AdCampaignEditor() {
       });
       const data = await res.json();
       if (data.variation) {
-        setVariations(prev => prev.map(v => v.id === variationId ? data.variation : v));
+        setVariations(prev => prev.map(v => {
+          if (v.id !== variationId) return v;
+          // Preserve unsaved copy edits if this was image-only regen
+          if (imageOnly) {
+            return { ...data.variation, copy_data: v.copy_data };
+          }
+          return data.variation;
+        }));
       }
     } catch (err) {
       toast.error('Regeneration failed');

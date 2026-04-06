@@ -145,13 +145,10 @@ export default async function handler(req, res) {
       brandKit = bk;
     } catch {}
 
-    // If the user provided a custom prompt (edited in the UI), use it directly
-    // Otherwise, build a rich prompt via GPT, referencing previous prompt for improvement
+    // Always build a rich prompt via GPT so that style_preset is always applied.
+    // When custom_prompt is provided, treat it as creative direction (not verbatim output).
     let imagePrompt = '';
-    if (custom_prompt && custom_prompt.trim()) {
-      imagePrompt = custom_prompt.trim();
-      console.log(`[ads/regenerate] Using custom prompt: ${imagePrompt.slice(0, 120)}...`);
-    } else try {
+    try {
       const sections = [];
       sections.push('PURPOSE: Generate an improved advertising image for a paid ad campaign.');
       sections.push(`PLATFORM: ${variation.platform} — ${platformContextMap[variation.platform] || 'advertising'}`);
@@ -160,10 +157,12 @@ export default async function handler(req, res) {
       if (campaign.target_audience) sections.push(`TARGET AUDIENCE: ${campaign.target_audience}`);
       if (style_preset) sections.push(`REQUESTED VISUAL STYLE: ${style_preset}`);
 
-      // Previous prompt context — tell GPT to improve on it
-      const previousPrompt = variation.image_prompt;
-      if (previousPrompt) {
-        sections.push(`PREVIOUS IMAGE PROMPT (improve on this — make it more specific, vivid, and on-brand):\n${previousPrompt}`);
+      // User's custom direction — use as creative guidance, not verbatim output
+      if (custom_prompt && custom_prompt.trim()) {
+        sections.push(`USER DIRECTION (incorporate this concept and intent, but improve and vary it — do not copy verbatim):\n${custom_prompt.trim()}`);
+      } else if (variation.image_prompt) {
+        // Previous prompt context — tell GPT to improve on it
+        sections.push(`PREVIOUS IMAGE PROMPT (improve on this — make it more specific, vivid, and on-brand):\n${variation.image_prompt}`);
       }
 
       // Brand style guide context
@@ -192,8 +191,10 @@ Rules:
 - Create a scene that visually represents the product/service and appeals to the target audience
 - Be extremely specific with visual details: setting, lighting, colors, composition, materials, mood
 - If a brand style guide is provided, align the visual style with it
-- If a visual style is requested, apply that aesthetic throughout
+- If a visual style is requested, apply that aesthetic throughout — this takes priority over any previous prompt style
+- If USER DIRECTION is provided, interpret the creative intent and build on it — do not copy it verbatim; improve and vary it
 - If a previous prompt is provided, IMPROVE on it — make the scene more compelling, more specific, more on-brand. Take a different creative angle while keeping the core concept.
+- Each regeneration should produce a noticeably different composition or creative angle for variety
 - The image must work as an ad — eye-catching and conveying value visually
 - NEVER include text, words, logos, watermarks, or UI elements in the image
 - NEVER use copyrighted brand names — describe visual characteristics instead
