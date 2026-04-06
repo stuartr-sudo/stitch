@@ -48,6 +48,7 @@ import LearnPage from './pages/LearnPage';
 import FlowsListPage from './pages/FlowsListPage';
 import FlowBuilderPage from './pages/FlowBuilderPage';
 import AdDiscoveryPage from './pages/AdDiscoveryPage';
+import AdIntelligencePage from './pages/AdIntelligencePage';
 import AgencyPage from './pages/AgencyPage';
 import { Loader2 } from 'lucide-react';
 
@@ -298,7 +299,8 @@ function App() {
             }
           />
 
-          <Route path="/ads/discover" element={<ProtectedRoute><AdDiscoveryPage /></ProtectedRoute>} />
+          <Route path="/ads/intelligence" element={<ProtectedRoute><AdIntelligencePage /></ProtectedRoute>} />
+          <Route path="/ads/discover" element={<ProtectedRoute><AdIntelligencePage /></ProtectedRoute>} />
           <Route
             path="/ads"
             element={

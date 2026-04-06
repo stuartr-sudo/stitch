@@ -825,6 +825,17 @@ export default function VideoAdvertCreator() {
                   </div>
 
                   <div
+                    onClick={() => navigate('/ads/intelligence')}
+                    className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-[#2C666E]" />
+                      <span className="text-xs font-medium text-gray-800">Ad Intelligence</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Research competitor ads & landing pages</p>
+                  </div>
+
+                  <div
                     onClick={() => navigate('/shorts/workbench')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >

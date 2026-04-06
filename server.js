@@ -842,6 +842,15 @@ app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js'
 app.post('/api/ads/synthesize-description', authenticateToken, (await import('./api/ads/synthesize-description.js')).default);
 app.get('/api/ads/campaigns/:id/export', authenticateToken, (await import('./api/ads/export.js')).default);
 
+// ─── Ad Intelligence routes ──────────────────────────────────────────────
+app.post('/api/intelligence/search', authenticateToken, async (req, res) => (await import('./api/intelligence/search.js')).default(req, res));
+app.post('/api/intelligence/analyze-ad', authenticateToken, async (req, res) => (await import('./api/intelligence/analyze-ad.js')).default(req, res));
+app.post('/api/intelligence/analyze-landing', authenticateToken, async (req, res) => (await import('./api/intelligence/analyze-landing.js')).default(req, res));
+app.post('/api/intelligence/synthesize', authenticateToken, async (req, res) => (await import('./api/intelligence/synthesize.js')).default(req, res));
+app.post('/api/intelligence/generate-campaign', authenticateToken, async (req, res) => (await import('./api/intelligence/generate-campaign.js')).default(req, res));
+app.all('/api/intelligence/library*', authenticateToken, async (req, res) => (await import('./api/intelligence/library.js')).default(req, res));
+app.all('/api/intelligence/competitors*', authenticateToken, async (req, res) => (await import('./api/intelligence/competitors.js')).default(req, res));
+
 // ─── Connected Accounts routes ────────────────────────────────────────────
 app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);
 app.delete('/api/accounts/connections/:platform', authenticateToken, (await import('./api/accounts/connections.js')).default);
