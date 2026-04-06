@@ -237,7 +237,7 @@ export default function AdsManagerPage() {
       });
       const data = await res.json();
       if (data.campaign) {
-        navigate(`/ads/${data.campaign.id}`);
+        navigate(`/ads/${data.campaign.id}?generate=1`);
       } else {
         toast.error(data.error || 'Failed to create campaign');
       }
