@@ -84,7 +84,7 @@ const TABS = [
   { id: 'shorts',      label: 'Shorts',           Icon: Video },
   { id: 'flows',       label: 'Automation Flows', Icon: GitBranch },
   { id: 'brandkit',   label: 'Brand Kit',        Icon: BookOpen },
-  { id: 'ad-discovery', label: 'Ad Discovery', Icon: Eye },
+  { id: 'ad-discovery', label: 'Ad Intelligence', Icon: Eye },
   { id: 'agency',    label: 'Agency Mode',      Icon: Briefcase },
   { id: 'longform',  label: 'Longform',         Icon: Clapperboard },
   { id: 'clone-ad', label: 'Clone Ad',          Icon: Scissors },
