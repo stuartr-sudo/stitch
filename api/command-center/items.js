@@ -145,6 +145,44 @@ export default async function handler(req, res) {
       return res.json({ item: updated });
     }
 
+    // DELETE /api/command-center/items/:id — delete single item
+    if (req.method === 'DELETE') {
+      if (!itemId) return res.status(400).json({ error: 'Item ID required' });
+
+      // Get campaign_id before deleting
+      const { data: item } = await supabase
+        .from('command_center_items')
+        .select('campaign_id')
+        .eq('id', itemId)
+        .eq('user_id', userId)
+        .single();
+
+      const { error } = await supabase
+        .from('command_center_items')
+        .delete()
+        .eq('id', itemId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Update campaign item count
+      if (item?.campaign_id) {
+        const { count } = await supabase
+          .from('command_center_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('campaign_id', item.campaign_id)
+          .eq('user_id', userId);
+
+        await supabase
+          .from('command_center_campaigns')
+          .update({ item_count: count || 0 })
+          .eq('id', item.campaign_id)
+          .eq('user_id', userId);
+      }
+
+      return res.json({ success: true });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('Command Center items error:', err);

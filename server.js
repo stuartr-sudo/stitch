@@ -224,6 +224,11 @@ app.put('/api/command-center/items/:id', authenticateToken, async (req, res) => 
   return handler(req, res);
 });
 
+app.delete('/api/command-center/items/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
 // Campaigns — CRUD
 app.get('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
   const handler = (await import('./api/command-center/campaigns.js')).default;

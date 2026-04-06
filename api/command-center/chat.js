@@ -341,12 +341,12 @@ export default async function handler(req, res) {
 
     for (let round = 0; round < MAX_TOOL_ROUNDS + 1; round++) {
       const stream = await openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-4.1',
         messages: openaiMessages,
         tools: TOOLS,
         stream: true,
         temperature: 0.7,
-        max_tokens: 3000,
+        max_completion_tokens: 4000,
       });
 
       let roundContent = '';

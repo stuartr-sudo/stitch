@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Film, FileText, LayoutGrid, Megaphone, BookOpen, Sparkles, ExternalLink, Check, X, RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Film, FileText, LayoutGrid, Megaphone, BookOpen, Sparkles, ExternalLink, Check, X, RefreshCw, Trash2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 const TYPE_ICONS = { short: Film, linkedin_post: FileText, carousel: LayoutGrid, ad_set: Megaphone, storyboard: BookOpen, custom: Sparkles };
@@ -91,6 +91,20 @@ export default function CampaignCard({ campaign, onUpdate }) {
     onUpdate?.();
   };
 
+  const handleDeleteItem = async (itemId, e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this item?')) return;
+    await apiFetch(`/api/command-center/items/${itemId}`, { method: 'DELETE' });
+    onUpdate?.();
+  };
+
+  const handleDeleteCampaign = async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${campaign.name}" and all its items?`)) return;
+    await apiFetch(`/api/command-center/campaigns/${campaign.id}`, { method: 'DELETE' });
+    onUpdate?.();
+  };
+
   const getEditUrl = (item) => {
     const result = item.result_json;
     if (!result) return null;
@@ -122,7 +136,14 @@ export default function CampaignCard({ campaign, onUpdate }) {
             {new Date(campaign.created_at).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-1 ml-2">
+          <button
+            onClick={handleDeleteCampaign}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+            title="Delete campaign"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
@@ -241,6 +262,9 @@ export default function CampaignCard({ campaign, onUpdate }) {
                           <ExternalLink className="w-3 h-3" /> Edit
                         </button>
                       )}
+                      <button onClick={(e) => handleDeleteItem(item.id, e)} className="flex items-center gap-1 bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-500 text-[11px] px-2.5 py-1 rounded-md transition-colors ml-auto">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 </div>
