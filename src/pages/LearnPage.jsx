@@ -4,7 +4,7 @@ import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
   Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard, Scissors,
-  ChevronDown, ChevronRight, X, Zap,
+  ChevronDown, ChevronRight, X, Zap, PenLine,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -29,6 +29,7 @@ import { LongformGuideContent } from './LongformGuidePage';
 import { AdCloneGuideContent } from './AdCloneGuidePage';
 import { VideoAnalyzerGuideContent } from './VideoAnalyzerGuidePage';
 import { CommandCenterGuideContent } from './CommandCenterGuidePage';
+import { ReviewWidgetGuideContent } from './ReviewWidgetGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -90,6 +91,7 @@ const TABS = [
   { id: 'clone-ad', label: 'Clone Ad',          Icon: Scissors },
   { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
   { id: 'command-center', label: 'Command Center', Icon: Zap },
+  { id: 'review-widget', label: 'Review Widget', Icon: PenLine },
 ];
 
 // ── Sidebar categories ──
@@ -100,7 +102,7 @@ const CATEGORIES = [
   { label: 'Video Tools', items: ['video', 'shorts', 'storyboards', 'motion', 'longform'] },
   { label: 'Analysis', items: ['clone-ad', 'video-analyzer'] },
   { label: 'Social & Ads', items: ['command-center', 'ads', 'linkedin', 'carousels'] },
-  { label: 'Brand & Setup', items: ['brandkit', 'flows'] },
+  { label: 'Brand & Setup', items: ['brandkit', 'flows', 'review-widget'] },
   { label: 'Advanced', items: ['ad-discovery', 'agency'] },
 ];
 
@@ -473,6 +475,11 @@ export default function LearnPage() {
         {activeTab === 'command-center' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <CommandCenterGuideContent />
+          </div>
+        )}
+        {activeTab === 'review-widget' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <ReviewWidgetGuideContent />
           </div>
         )}
       </div>
