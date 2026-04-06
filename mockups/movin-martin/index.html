@@ -903,14 +903,14 @@
         <p>Different visual directions for the animation series</p>
       </div>
       <div class="gallery-grid">
-        <div class="gallery-item anim" data-d="1"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576625855-l2r5fk.png" alt="3D Kids Animation"><div class="gi-label">3D Kids Animation</div></div>
-        <div class="gallery-item anim" data-d="2"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576642777-ugvp9.png" alt="Kids City"><div class="gi-label">Kids City</div></div>
-        <div class="gallery-item anim" data-d="3"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576968956-cl57wb.png" alt="Storybook"><div class="gi-label">Storybook</div></div>
-        <div class="gallery-item anim" data-d="4"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576636704-5rl3u.png" alt="Whimsical Garden"><div class="gi-label">Whimsical Garden</div></div>
-        <div class="gallery-item anim" data-d="5"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576617977-wmgoow.png" alt="Nature Island"><div class="gi-label">Nature Island</div></div>
-        <div class="gallery-item anim" data-d="1"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577851434-7l5ulp.png" alt="Anime"><div class="gi-label">Anime</div></div>
-        <div class="gallery-item anim" data-d="2"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576631966-wh1vzf.png" alt="Candy City 3D"><div class="gi-label">Candy City 3D</div></div>
-        <div class="gallery-item anim" data-d="3"><img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577853354-p40ziq.png" alt="Stop Motion"><div class="gi-label">Stop Motion</div></div>
+        <div class="gallery-item anim" data-d="1"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576625855-l2r5fk.png" alt="3D Kids Animation"><div class="gi-label">3D Kids Animation</div></div>
+        <div class="gallery-item anim" data-d="2"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576642777-ugvp9.png" alt="Kids City"><div class="gi-label">Kids City</div></div>
+        <div class="gallery-item anim" data-d="3"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576968956-cl57wb.png" alt="Storybook"><div class="gi-label">Storybook</div></div>
+        <div class="gallery-item anim" data-d="4"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576636704-5rl3u.png" alt="Whimsical Garden"><div class="gi-label">Whimsical Garden</div></div>
+        <div class="gallery-item anim" data-d="5"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576617977-wmgoow.png" alt="Nature Island"><div class="gi-label">Nature Island</div></div>
+        <div class="gallery-item anim" data-d="1"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577851434-7l5ulp.png" alt="Anime"><div class="gi-label">Anime</div></div>
+        <div class="gallery-item anim" data-d="2"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576631966-wh1vzf.png" alt="Candy City 3D"><div class="gi-label">Candy City 3D</div></div>
+        <div class="gallery-item anim" data-d="3"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577853354-p40ziq.png" alt="Stop Motion"><div class="gi-label">Stop Motion</div></div>
       </div>
     </div>
   </section>
@@ -996,6 +996,34 @@
     </div>
   </footer>
 
+  <!-- FLOATING PUPPY that follows scroll -->
+  <div id="floatingPuppy" class="floating-puppy">
+    <img src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/turnaround-cell-1774575618447-q185xo.png" alt="Movin' Martin" draggable="false">
+  </div>
+  <style>
+    .floating-puppy {
+      position: fixed;
+      right: 32px;
+      bottom: 100px;
+      width: 100px;
+      height: 100px;
+      z-index: 998;
+      pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
+      filter: drop-shadow(0 8px 20px rgba(59, 130, 246, 0.3));
+      opacity: 0;
+    }
+    .floating-puppy.show { opacity: 1; }
+    .floating-puppy img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+    @media (max-width: 700px) {
+      .floating-puppy { width: 70px; height: 70px; right: 16px; bottom: 80px; }
+    }
+  </style>
+
   <script>
     // Scroll animations
     const obs = new IntersectionObserver(entries => {
@@ -1029,6 +1057,26 @@
     setTimeout(() => {
       document.querySelectorAll('.anim').forEach(el => el.classList.add('vis'));
     }, 300);
+
+    // Floating puppy follows scroll with gentle bobbing
+    (function() {
+      const puppy = document.getElementById('floatingPuppy');
+      let targetY = 0, currentY = 0, ticking = false;
+      const baseBottom = 100;
+
+      window.addEventListener('scroll', () => {
+        // Show after scrolling past hero
+        if (scrollY > window.innerHeight * 0.7) {
+          puppy.classList.add('show');
+        } else {
+          puppy.classList.remove('show');
+        }
+        // Gentle bobbing based on scroll position
+        const bob = Math.sin(scrollY * 0.008) * 12;
+        const tilt = Math.sin(scrollY * 0.005) * 8;
+        puppy.style.transform = `translateY(${bob}px) rotate(${tilt}deg)`;
+      });
+    })();
   </script>
 </body>
 </html>
