@@ -81,13 +81,14 @@ const PLATFORM_CONFIGS = {
 /**
  * Build a rich image prompt using GPT (same pattern as Cohesive Prompt Builder).
  */
-async function buildAdImagePrompt(openai, { productDescription, platform, platformContext, brandKit, objective, targetAudience }) {
+async function buildAdImagePrompt(openai, { productDescription, platform, platformContext, brandKit, objective, targetAudience, adCopy }) {
   const sections = [];
   sections.push('PURPOSE: Generate a compelling advertising image for a paid ad campaign.');
   sections.push(`PLATFORM: ${platform} — ${platformContext}`);
   sections.push(`PRODUCT/SERVICE: ${productDescription}`);
   if (objective) sections.push(`CAMPAIGN OBJECTIVE: ${objective}`);
   if (targetAudience) sections.push(`TARGET AUDIENCE: ${targetAudience}`);
+  if (adCopy) sections.push(`AD COPY (image must visually reinforce this message):\n${adCopy}`);
 
   // Brand style guide context
   if (brandKit) {
@@ -277,6 +278,14 @@ export default async function handler(req, res) {
         let imageUrl = null;
         let imagePrompt = '';
         if (keys.falKey) {
+          // Extract first variation's copy to ground the image in actual ad content
+          let adCopy = '';
+          if (platform === 'google') {
+            adCopy = parsed.headlines?.[0] || '';
+          } else {
+            const v0 = parsed.variations?.[0] || {};
+            adCopy = [v0.headline, v0.introText || v0.primaryText].filter(Boolean).join('. ').slice(0, 300);
+          }
           try {
             imagePrompt = await buildAdImagePrompt(client, {
               productDescription: campaign.product_description || campaign.name,
@@ -285,6 +294,7 @@ export default async function handler(req, res) {
               brandKit: brand,
               objective: campaign.objective,
               targetAudience: campaign.target_audience,
+              adCopy: adCopy || undefined,
             });
             logCost({
               username: req.user.email,

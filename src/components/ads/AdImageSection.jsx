@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, Loader2, ChevronDown, Palette, Eye, EyeOff } from 'lucide-react';
 import StyleGrid from '@/components/ui/StyleGrid';
+import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 
 /**
  * Shared ad image section with style picker for regeneration.
@@ -12,7 +13,14 @@ export default function AdImageSection({ imageUrl, imagePrompt, onPromptChange, 
   const [selectedStyle, setSelectedStyle] = useState('');
 
   const handleRegenWithStyle = () => {
-    onRegenerate(selectedStyle || undefined);
+    // Look up the full promptText for the selected style so the backend GPT gets
+    // detailed visual direction, not just an opaque key like 'iphone-selfie'
+    let styleText = selectedStyle;
+    for (const cat of STYLE_CATEGORIES) {
+      const found = cat.styles.find(s => s.value === selectedStyle);
+      if (found?.promptText) { styleText = `${found.label}: ${found.promptText}`; break; }
+    }
+    onRegenerate(styleText || undefined);
     setShowStyles(false);
   };
 

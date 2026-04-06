@@ -158,6 +158,15 @@ export default async function handler(req, res) {
       if (style_preset) sections.push(`REQUESTED VISUAL STYLE: ${style_preset}`);
 
       // User's custom direction — use as creative guidance, not verbatim output
+      // Include the actual ad copy so the image visually supports the message
+      const copyLines = [];
+      const c = variation.copy_data || {};
+      if (c.headline) copyLines.push(`Headline: ${c.headline}`);
+      if (c.introText) copyLines.push(`Intro: ${c.introText.slice(0, 200)}`);
+      if (c.primaryText) copyLines.push(`Primary Text: ${c.primaryText}`);
+      if (c.headlines?.length > 0) copyLines.push(`Headlines: ${c.headlines.slice(0, 3).join(' | ')}`);
+      if (copyLines.length > 0) sections.push(`AD COPY (image must visually reinforce this message):\n${copyLines.join('\n')}`);
+
       if (custom_prompt && custom_prompt.trim()) {
         sections.push(`USER DIRECTION (incorporate this concept and intent, but improve and vary it — do not copy verbatim):\n${custom_prompt.trim()}`);
       } else if (variation.image_prompt) {
