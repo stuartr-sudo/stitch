@@ -110,11 +110,12 @@ export default async function handler(req, res) {
       .eq('user_id', req.user.id)
       .maybeSingle();
 
-    const { data: brand } = await supabase
+    const brandQuery = supabase
       .from('brand_kit')
       .select('brand_name, tagline, industry, target_audience, logo_url')
-      .eq('user_id', req.user.id)
-      .maybeSingle();
+      .eq('user_id', req.user.id);
+    if (brand_kit_id) brandQuery.eq('id', brand_kit_id);
+    const { data: brand } = await brandQuery.maybeSingle();
 
     const brandContext = [
       brand?.brand_name ? `Brand: ${brand.brand_name}` : null,

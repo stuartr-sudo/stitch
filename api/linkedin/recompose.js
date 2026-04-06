@@ -27,12 +27,13 @@ export default async function handler(req, res) {
   const newOverrides = req.body.style_overrides || {};
   const merged = { ...existingOverrides, ...newOverrides };
 
-  // Fetch brand for logo
-  const { data: brand } = await supabase
+  // Fetch brand for logo — use post's brand_kit_id if set
+  const brandQuery = supabase
     .from('brand_kit')
     .select('logo_url, brand_name')
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+    .eq('user_id', req.user.id);
+  if (post.brand_kit_id) brandQuery.eq('id', post.brand_kit_id);
+  const { data: brand } = await brandQuery.maybeSingle();
 
   // Fetch config for series title
   const { data: config } = await supabase

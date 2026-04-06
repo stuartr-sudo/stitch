@@ -168,12 +168,10 @@ export default async function handler(req, res) {
             const storedBase = await uploadUrlToSupabase(baseImageUrl, supabase, 'linkedin').catch(() => baseImageUrl);
             updateFields.base_image_url = storedBase;
 
-            // Fetch brand for composition
-            const { data: brand } = await supabase
-              .from('brand_kit')
-              .select('logo_url')
-              .eq('user_id', req.user.id)
-              .maybeSingle();
+            // Fetch brand for composition — use post's brand_kit_id if set
+            const brandQ = supabase.from('brand_kit').select('logo_url').eq('user_id', req.user.id);
+            if (post.brand_kit_id) brandQ.eq('id', post.brand_kit_id);
+            const { data: brand } = await brandQ.maybeSingle();
 
             const composedBuffer = await composeLinkedInSatori({
               backgroundImageUrl: baseImageUrl,
