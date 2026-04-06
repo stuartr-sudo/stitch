@@ -8,6 +8,8 @@ export const SCENE_MODELS = [
   { id: 'grok-r2v', label: 'Grok Imagine R2V (xAI)', description: 'Up to 7 reference images — @Image1 syntax', mode: 'reference-to-video', supportsRefs: true },
 
   // Image-to-Video
+  { id: 'kling-v3', label: 'Kling V3 Pro', description: 'Multi-shot batching — better cross-scene consistency', mode: 'image-to-video', supportsMultiShot: true, supportsAudio: true },
+  { id: 'kling-o3', label: 'Kling O3 Pro', description: 'Multi-shot batching + audio generation', mode: 'image-to-video', supportsMultiShot: true, supportsAudio: true },
   { id: 'veo3-fast', label: 'Veo 3.1 Fast', description: 'Google — flexible duration, audio', mode: 'image-to-video', supportsAudio: true, supportsResolution: true },
   { id: 'veo3-lite', label: 'Veo 3.1 Lite', description: 'Google — 60% cheaper, same quality', mode: 'image-to-video', supportsAudio: true, supportsResolution: true },
   { id: 'pixverse-v6', label: 'PixVerse V6', description: 'Audio, styles, multi-resolution', mode: 'image-to-video', supportsAudio: true },
@@ -77,6 +79,11 @@ export default function SceneModelSelector({ value, onChange, sceneNumber }) {
             {selected.supportsAudio && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
                 Audio
+              </span>
+            )}
+            {selected.supportsMultiShot && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">
+                Multi-Shot
               </span>
             )}
             {selected.supportsResolution && (

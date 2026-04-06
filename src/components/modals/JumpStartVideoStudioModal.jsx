@@ -117,6 +117,15 @@ const EDIT_MODELS = [
   },
 ];
 
+// Multi-Shot Model Options
+const MULTISHOT_MODELS = [
+  { id: 'kling-v3', label: 'Kling V3 Pro', description: 'Native multi-shot — model handles shot composition in one call', native: true, supportsR2V: false },
+  { id: 'kling-o3', label: 'Kling O3 Pro', description: 'Native multi-shot with audio support', native: true, supportsR2V: false, supportsAudio: true },
+  { id: 'kling-r2v-pro', label: 'Kling O3 R2V Pro', description: 'Multi-shot with character consistency (elements)', native: true, isR2V: true },
+  { id: 'veo3-fast', label: 'Veo 3.1 Fast (Assembly)', description: 'Per-shot generation + sequential assembly', native: false },
+  { id: 'grok-imagine', label: 'Grok Imagine (Assembly)', description: 'Per-shot generation + sequential assembly', native: false },
+];
+
 /**
  * JumpStartVideoStudioModal - Video Edit and Extend functionality
  */
@@ -210,6 +219,13 @@ export default function JumpStartVideoStudioModal({
       if (assembled) setPrompt(assembled);
     }
   }, [assemblePrompt, mode, promptMode]);
+
+  // Multi-shot State
+  const [multishotModel, setMultishotModel] = useState('kling-v3');
+  const [shots, setShots] = useState([{ prompt: '', duration: 5 }, { prompt: '', duration: 5 }]);
+  const [startImageUrl, setStartImageUrl] = useState('');
+  const currentMultishotModel = MULTISHOT_MODELS.find(m => m.id === multishotModel) || MULTISHOT_MODELS[0];
+  const totalShotDuration = shots.reduce((sum, s) => sum + (Number(s.duration) || 3), 0);
 
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -467,6 +483,48 @@ export default function JumpStartVideoStudioModal({
     }
   };
 
+  // Multi-shot generation
+  const handleMultishot = async () => {
+    if (shots.some(s => !s.prompt.trim())) {
+      toast.error('All shots need a prompt');
+      return;
+    }
+    if (totalShotDuration > 15) {
+      toast.error(`Total duration (${totalShotDuration}s) exceeds 15s maximum`);
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationStatus(`Generating ${shots.length}-shot video (${totalShotDuration}s)...`);
+    setGeneratedVideoUrl(null);
+
+    try {
+      const response = await apiFetch('/api/jumpstart/generate-multishot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startImageUrl: startImageUrl || null,
+          model: multishotModel,
+          shots: shots.map(s => ({ prompt: s.prompt.trim(), duration: Number(s.duration) || 3 })),
+          aspectRatio: '16:9',
+          enableAudio: false,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      setGeneratedVideoUrl(data.videoUrl);
+      setActiveTab('preview');
+      saveToLibrary(data.videoUrl, 'video', `Multi-Shot (${shots.length} shots) - ${new Date().toLocaleString()}`, 'video-studio-multishot');
+    } catch (error) {
+      console.error('Multi-shot error:', error);
+      toast.error(error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Save to Library
   const handleSaveToLibrary = async () => {
     if (!generatedVideoUrl) return;
@@ -551,6 +609,9 @@ export default function JumpStartVideoStudioModal({
             </button>
             <button onClick={() => setMode('edit')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'edit' ? 'bg-white shadow text-[#07393C]' : 'text-slate-600 hover:text-slate-900'}`}>
               <Edit3 className="w-4 h-4 inline mr-1" /> Edit
+            </button>
+            <button onClick={() => { setMode('multishot'); setActiveTab('settings'); }} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'multishot' ? 'bg-white shadow text-purple-700' : 'text-slate-600 hover:text-slate-900'}`}>
+              <Video className="w-4 h-4 inline mr-1" /> Multi-Shot
             </button>
           </div>
 
@@ -652,8 +713,8 @@ export default function JumpStartVideoStudioModal({
           </div>
         </div>
 
-        {/* Settings Tab */}
-        <div className={`absolute inset-0 overflow-hidden ${activeTab === 'settings' ? '' : 'hidden'}`}>
+        {/* Settings Tab (extend/edit only — multi-shot has its own panel) */}
+        <div className={`absolute inset-0 overflow-hidden ${activeTab === 'settings' && mode !== 'multishot' ? '' : 'hidden'}`}>
           <div className="h-full grid grid-cols-[280px_1fr] overflow-hidden">
             {/* LEFT COLUMN — Video Preview + Model & Settings */}
             <div className="bg-gray-50 p-4 overflow-y-auto border-r border-slate-200 space-y-4">
@@ -939,6 +1000,120 @@ export default function JumpStartVideoStudioModal({
           </div>
         </div>
 
+        {/* Multi-Shot Settings */}
+        {mode === 'multishot' && activeTab === 'settings' && (
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="h-full grid grid-cols-[280px_1fr] overflow-hidden">
+              {/* Left column — Model + Config */}
+              <div className="bg-gray-50 p-4 overflow-y-auto border-r border-slate-200 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">Multi-Shot Model</Label>
+                  <select
+                    className="w-full p-2.5 text-sm border rounded-lg bg-white cursor-pointer"
+                    value={multishotModel}
+                    onChange={(e) => setMultishotModel(e.target.value)}
+                  >
+                    {MULTISHOT_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400">{currentMultishotModel.description}</p>
+                  {currentMultishotModel.native && (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-700">Native Multi-Shot</span>
+                  )}
+                  {!currentMultishotModel.native && (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700">Assembly Fallback</span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">Start Image URL</Label>
+                  <Input
+                    placeholder="https://... (optional first frame)"
+                    value={startImageUrl}
+                    onChange={(e) => setStartImageUrl(e.target.value)}
+                    className="text-sm"
+                  />
+                  <p className="text-[10px] text-slate-400">Optional — provides visual starting point for shot 1.</p>
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">Total Duration</span>
+                    <span className={`text-sm font-bold ${totalShotDuration > 15 ? 'text-red-600' : 'text-slate-800'}`}>
+                      {totalShotDuration}s / 15s
+                    </span>
+                  </div>
+                  {totalShotDuration > 15 && (
+                    <p className="text-[10px] text-red-600 font-medium">Exceeds 15s maximum — reduce shot durations.</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Shots</span>
+                    <span className="text-sm font-medium text-slate-700">{shots.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column — Shot editor */}
+              <div className="p-4 overflow-y-auto space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-bold text-slate-800">Shot Direction</h3>
+                  <button
+                    onClick={() => shots.length < 6 && setShots(prev => [...prev, { prompt: '', duration: 3 }])}
+                    disabled={shots.length >= 6}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-3 h-3 inline mr-1" /> Add Shot
+                  </button>
+                </div>
+
+                {shots.map((shot, idx) => (
+                  <div key={idx} className="border border-slate-200 rounded-xl p-3 bg-white space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">Shot {idx + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] text-slate-500">Duration</label>
+                        <select
+                          value={shot.duration}
+                          onChange={(e) => {
+                            const updated = [...shots];
+                            updated[idx] = { ...updated[idx], duration: Number(e.target.value) };
+                            setShots(updated);
+                          }}
+                          className="w-16 p-1 text-xs border rounded bg-slate-50"
+                        >
+                          {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(d => (
+                            <option key={d} value={d}>{d}s</option>
+                          ))}
+                        </select>
+                        {shots.length > 2 && (
+                          <button
+                            onClick={() => setShots(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-red-400 hover:text-red-600 p-1"
+                            title="Remove shot"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <textarea
+                      placeholder={`Describe shot ${idx + 1} — subject action, camera movement, scene details...`}
+                      value={shot.prompt}
+                      onChange={(e) => {
+                        const updated = [...shots];
+                        updated[idx] = { ...updated[idx], prompt: e.target.value };
+                        setShots(updated);
+                      }}
+                      className="w-full h-24 p-2.5 text-sm border rounded-lg bg-slate-50 resize-none focus:ring-2 focus:ring-purple-300"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Preview Tab */}
         <div className={`absolute inset-0 flex flex-col overflow-hidden ${activeTab === 'preview' ? '' : 'hidden'}`}>
           <div className="flex-1 flex flex-col bg-gray-100 overflow-hidden">
@@ -986,11 +1161,24 @@ export default function JumpStartVideoStudioModal({
           </>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && mode !== 'multishot' && (
           <>
             <Button variant="outline" onClick={() => setActiveTab('source')} className="rounded-xl"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
             <Button disabled={isGenerating} onClick={handleProcess} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-12 px-10 font-bold rounded-xl shadow-lg">
               {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Play className="w-4 h-4 fill-current" /> Run {mode === 'extend' ? 'Extend' : 'Edit'}</>}
+            </Button>
+          </>
+        )}
+
+        {activeTab === 'settings' && mode === 'multishot' && (
+          <>
+            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+            <Button
+              disabled={isGenerating || totalShotDuration > 15 || shots.some(s => !s.prompt.trim())}
+              onClick={handleMultishot}
+              className="bg-purple-700 hover:bg-purple-800 text-white gap-2 h-12 px-10 font-bold rounded-xl shadow-lg"
+            >
+              {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating {shots.length} shots...</> : <><Video className="w-4 h-4" /> Generate Multi-Shot ({totalShotDuration}s)</>}
             </Button>
           </>
         )}

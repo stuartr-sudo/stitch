@@ -249,6 +249,24 @@ export const VIDEO_MODELS = {
       aspect_ratio: aspectRatio,
       generate_audio: opts.generate_audio === true,
     }),
+    // R2V multi-shot: elements + image_urls + multi_prompt on the R2V endpoint
+    supportsMultiShotR2V: true,
+    buildMultiShotR2VBody: (startImageUrl, multiPrompt, totalDuration, aspectRatio, opts = {}) => ({
+      ...(startImageUrl && { start_image_url: startImageUrl }),
+      multi_prompt: multiPrompt,
+      shot_type: opts.shot_type || 'customize',
+      duration: klingV3Duration(totalDuration),
+      aspect_ratio: aspectRatio,
+      generate_audio: opts.generate_audio === true,
+      ...(opts.elements?.length && {
+        elements: opts.elements.map(el => ({
+          frontal_image_url: el.frontalImageUrl || el.frontal_image_url,
+          reference_image_urls: (el.referenceImageUrls || el.reference_image_urls || []).slice(0, 3),
+        })),
+      }),
+      ...(opts.image_urls?.length && { image_urls: opts.image_urls.slice(0, 4) }),
+      ...(opts.end_image_url && { end_image_url: opts.end_image_url }),
+    }),
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
@@ -401,4 +419,9 @@ export function getR2VEndpoint(modelKey) {
 export function isMultiShotCapable(modelKey) {
   const model = VIDEO_MODELS[modelKey];
   return model && !!model.supportsMultiShot;
+}
+
+export function isMultiShotR2VCapable(modelKey) {
+  const model = VIDEO_MODELS[modelKey];
+  return model && !!model.supportsMultiShotR2V && !!model.r2vEndpoint;
 }

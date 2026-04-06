@@ -25,8 +25,11 @@ import { logCost } from '../lib/costLogger.js';
 import {
   animateImageV2,
   generateImageV2,
+  animateMultiShot,
+  animateMultiShotR2V,
   MediaGenerationError,
 } from '../lib/mediaGenerator.js';
+import { isMultiShotCapable, isMultiShotR2VCapable } from '../lib/modelRegistry.js';
 import {
   pollFalQueue,
   uploadUrlToSupabase,
@@ -62,6 +65,8 @@ function getModelStrategy(modelId) {
     'pixverse-v6': 'i2v',
     'seedance-pro': 'i2v',
     'kling-video': 'i2v',
+    'kling-v3': 'i2v',
+    'kling-o3': 'i2v',
     'grok-imagine': 'i2v',
     'wavespeed-wan': 'i2v',
     'kling-r2v-pro': 'r2v-element',
@@ -86,6 +91,8 @@ function getRegistryKey(modelId) {
     'kling-video': 'fal_kling',
     'grok-imagine': 'fal_grok_video',
     'wavespeed-wan': 'wavespeed_wan',
+    'kling-v3': 'fal_kling_v3',
+    'kling-o3': 'fal_kling_o3',
     'kling-r2v-pro': 'fal_kling_o3',
     'kling-r2v-standard': 'fal_kling_o3',
     'veo3': 'fal_veo3',
@@ -390,6 +397,67 @@ async function generateFLF(startImage, prompt, duration, aspectRatio, config, fr
   return uploadUrlToSupabase(output.video.url, supabase, 'pipeline/videos');
 }
 
+// ── Multi-Shot Batching ────────────────────────────────────────────────────
+
+/**
+ * Group consecutive frames into multi-shot batches when using a multi-shot capable model.
+ * Rules:
+ *   - Model must be multi-shot capable (Kling V3/O3)
+ *   - 2-6 consecutive frames per batch
+ *   - Total batch duration <= 15s
+ *   - Motion_ref overrides break the batch
+ *   - Already-completed frames break the batch
+ *
+ * Returns array of: { type: 'multishot', frames: [...], registryKey, strategy }
+ *                or { type: 'single', frame }
+ */
+function batchFramesForMultiShot(frames, config) {
+  const registryKey = getRegistryKey(config.model);
+  const strategy = getModelStrategy(config.model);
+
+  const canBatchI2V = registryKey && isMultiShotCapable(registryKey);
+  const canBatchR2V = registryKey && strategy === 'r2v-element' && isMultiShotR2VCapable(registryKey);
+  const canBatch = canBatchI2V || canBatchR2V;
+
+  if (!canBatch) {
+    return frames.map(f => ({ type: 'single', frame: f }));
+  }
+
+  const groups = [];
+  let currentBatch = [];
+  let batchDuration = 0;
+
+  const flushBatch = () => {
+    if (currentBatch.length >= 2) {
+      groups.push({ type: 'multishot', frames: [...currentBatch], registryKey, strategy, isR2V: canBatchR2V && !canBatchI2V });
+    } else {
+      currentBatch.forEach(f => groups.push({ type: 'single', frame: f }));
+    }
+    currentBatch = [];
+    batchDuration = 0;
+  };
+
+  for (const frame of frames) {
+    const duration = frame.duration_seconds || config.frameInterval || 4;
+    const hasMotionRef = frame.motion_ref?.videoUrl || frame.motion_ref?.trimmedUrl;
+    const isAlreadyDone = frame.generation_status === 'done' && frame.video_url;
+
+    if (hasMotionRef || isAlreadyDone || batchDuration + duration > 15 || currentBatch.length >= 6) {
+      flushBatch();
+      if (isAlreadyDone || hasMotionRef) {
+        groups.push({ type: 'single', frame });
+        continue;
+      }
+    }
+
+    currentBatch.push(frame);
+    batchDuration += duration;
+  }
+
+  flushBatch();
+  return groups;
+}
+
 // ── Pipeline Runner ─────────────────────────────────────────────────────────
 
 async function runProductionPipeline(jobId, storyboard, frames, keys) {
@@ -464,55 +532,142 @@ async function runProductionPipeline(jobId, storyboard, frames, keys) {
     const completedFrames = [];
     const failedFrames = [];
 
-    for (let i = 0; i < frames.length; i++) {
-      const frame = frames[i];
+    // Group frames into multi-shot batches where eligible
+    const groups = batchFramesForMultiShot(frames, config);
+    const msCount = groups.filter(g => g.type === 'multishot').length;
+    if (msCount > 0) {
+      console.log(`[Producer] Multi-shot batching: ${groups.length} groups (${msCount} multi-shot, ${groups.length - msCount} single)`);
+    }
 
-      // Skip already-done frames (for retry/resume)
-      if (frame.generation_status === 'done' && frame.video_url) {
-        prevLastFrame = frame.last_frame_url;
-        completedFrames.push(frame.frame_number);
-        continue;
+    for (const group of groups) {
+      if (group.type === 'multishot') {
+        // ── Multi-shot batch: all frames in one API call ──
+        const batchFrames = group.frames;
+        const frameNums = batchFrames.map(f => f.frame_number).join(',');
+        console.log(`[Producer] Multi-shot batch: frames [${frameNums}]`);
+
+        for (const f of batchFrames) {
+          await updateFrame(f.id, { generation_status: 'generating', generation_attempt: (f.generation_attempt || 0) + 1 });
+        }
+
+        try {
+          const multiPrompt = batchFrames.map(f => {
+            let prompt = f.visual_prompt || '';
+            const cam = buildCameraPrompt(f.camera_config);
+            if (cam) prompt = `${cam}. ${prompt}`;
+            return {
+              prompt,
+              duration: String(Math.max(1, Math.min(15, Math.round(f.duration_seconds || config.frameInterval || 4)))),
+            };
+          });
+
+          const totalDuration = multiPrompt.reduce((s, p) => s + Number(p.duration), 0);
+          const startImage = prevLastFrame || config.startFrameUrl || batchFrames[0].start_frame_url || batchFrames[0].preview_image_url;
+
+          let videoUrl;
+          if (group.isR2V && isMultiShotR2VCapable(group.registryKey)) {
+            videoUrl = await animateMultiShotR2V(
+              group.registryKey, startImage, multiPrompt, totalDuration,
+              config.aspectRatio || '16:9', keys, supabase,
+              { elements: config.elements, generate_audio: false },
+            );
+          } else {
+            videoUrl = await animateMultiShot(
+              group.registryKey, startImage, multiPrompt, totalDuration,
+              config.aspectRatio || '16:9', keys, supabase,
+              { generate_audio: false },
+            );
+          }
+
+          // Extract last frame for chaining
+          let lastFrameUrl = null;
+          try {
+            lastFrameUrl = await extractLastFrame(videoUrl, totalDuration, keys.falKey);
+            if (lastFrameUrl) lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/storyboard');
+          } catch (err) {
+            console.warn(`[Producer] Multi-shot batch last frame extraction failed:`, err.message);
+          }
+
+          // Store single video URL on ALL batch frames
+          for (const f of batchFrames) {
+            await updateFrame(f.id, {
+              video_url: videoUrl,
+              last_frame_url: lastFrameUrl,
+              generation_status: 'done',
+              generation_error: null,
+            });
+            f.video_url = videoUrl;
+            f.last_frame_url = lastFrameUrl;
+            completedFrames.push(f.frame_number);
+          }
+
+          prevLastFrame = lastFrameUrl;
+          console.log(`[Producer] Multi-shot batch [${frameNums}] done: ${videoUrl.substring(0, 80)}`);
+
+        } catch (err) {
+          console.error(`[Producer] Multi-shot batch [${frameNums}] failed: ${err.message} — falling back to individual`);
+          // Fall back to individual generation for each frame in the batch
+          for (const f of batchFrames) {
+            try {
+              const { videoUrl, lastFrameUrl } = await generateFrameVideo(f, config, prevLastFrame, keys, supabase);
+              await updateFrame(f.id, { video_url: videoUrl, last_frame_url: lastFrameUrl, generation_status: 'done', generation_error: null });
+              f.video_url = videoUrl;
+              f.last_frame_url = lastFrameUrl;
+              prevLastFrame = lastFrameUrl;
+              completedFrames.push(f.frame_number);
+            } catch (innerErr) {
+              console.error(`[Producer] Fallback frame ${f.frame_number} failed:`, innerErr.message);
+              await updateFrame(f.id, { generation_status: 'error', generation_error: innerErr.message });
+              failedFrames.push(f.frame_number);
+              prevLastFrame = config.startFrameUrl;
+            }
+          }
+        }
+
+      } else {
+        // ── Single frame: existing logic ──
+        const frame = group.frame;
+
+        if (frame.generation_status === 'done' && frame.video_url) {
+          prevLastFrame = frame.last_frame_url;
+          completedFrames.push(frame.frame_number);
+          continue;
+        }
+
+        await updateJob({ current_frame: frame.frame_number });
+        await updateFrame(frame.id, { generation_status: 'generating', generation_attempt: (frame.generation_attempt || 0) + 1 });
+
+        try {
+          const { videoUrl, lastFrameUrl } = await generateFrameVideo(frame, config, prevLastFrame, keys, supabase);
+
+          await updateFrame(frame.id, {
+            video_url: videoUrl,
+            last_frame_url: lastFrameUrl,
+            generation_status: 'done',
+            generation_error: null,
+          });
+
+          frame.video_url = videoUrl;
+          frame.last_frame_url = lastFrameUrl;
+          prevLastFrame = lastFrameUrl;
+          completedFrames.push(frame.frame_number);
+
+          console.log(`[Producer] Frame ${frame.frame_number}/${frames.length} done: ${videoUrl.substring(0, 80)}`);
+        } catch (err) {
+          console.error(`[Producer] Frame ${frame.frame_number} failed:`, err.message);
+          await updateFrame(frame.id, { generation_status: 'error', generation_error: err.message });
+          failedFrames.push(frame.frame_number);
+          prevLastFrame = config.startFrameUrl;
+        }
       }
 
-      await updateJob({ current_frame: frame.frame_number });
-      await updateFrame(frame.id, { generation_status: 'generating', generation_attempt: (frame.generation_attempt || 0) + 1 });
-
-      try {
-        const { videoUrl, lastFrameUrl } = await generateFrameVideo(frame, config, prevLastFrame, keys, supabase);
-
-        await updateFrame(frame.id, {
-          video_url: videoUrl,
-          last_frame_url: lastFrameUrl,
-          generation_status: 'done',
-          generation_error: null,
-        });
-
-        frame.video_url = videoUrl;
-        frame.last_frame_url = lastFrameUrl;
-        prevLastFrame = lastFrameUrl;
-        completedFrames.push(frame.frame_number);
-
-        console.log(`[Producer] Frame ${frame.frame_number}/${frames.length} done: ${videoUrl.substring(0, 80)}`);
-
-        // Checkpoint
-        await updateJob({
-          step_results: {
-            tts: { done: true },
-            video: { done: false, completed: completedFrames, failed: failedFrames, current: frame.frame_number },
-          },
-        });
-
-      } catch (err) {
-        console.error(`[Producer] Frame ${frame.frame_number} failed:`, err.message);
-        await updateFrame(frame.id, {
-          generation_status: 'error',
-          generation_error: err.message,
-        });
-        failedFrames.push(frame.frame_number);
-
-        // Continue with next frame — use start image as fallback for chaining
-        prevLastFrame = config.startFrameUrl;
-      }
+      // Checkpoint after each group
+      await updateJob({
+        step_results: {
+          tts: { done: true },
+          video: { done: false, completed: completedFrames, failed: failedFrames },
+        },
+      });
     }
 
     await updateJob({
@@ -591,12 +746,21 @@ async function runProductionPipeline(jobId, storyboard, frames, keys) {
     console.log(`[Producer] Step 5: Assembly`);
 
     // Use lipsync video if available, otherwise raw video
-    const videoUrls = frames
-      .filter(f => f.video_url)
-      .map(f => f.lipsync_video_url || f.video_url);
-    const clipDurations = frames
-      .filter(f => f.video_url)
-      .map(f => f.tts_duration || f.duration_seconds || 4);
+    // Deduplicate multi-shot batch videos (all batch frames share one URL)
+    const seenUrls = new Set();
+    const videoUrls = [];
+    const clipDurations = [];
+    for (const f of frames.filter(ff => ff.video_url)) {
+      const url = f.lipsync_video_url || f.video_url;
+      if (!seenUrls.has(url)) {
+        seenUrls.add(url);
+        // For multi-shot batched frames sharing a URL, sum their durations
+        const batchFrames = frames.filter(ff => (ff.lipsync_video_url || ff.video_url) === url);
+        const totalBatchDur = batchFrames.reduce((s, ff) => s + (ff.tts_duration || ff.duration_seconds || 4), 0);
+        videoUrls.push(url);
+        clipDurations.push(totalBatchDur);
+      }
+    }
 
     // Build voiceover URL (first frame's audio, or null)
     const firstAudio = frames.find(f => f.audio_url)?.audio_url;

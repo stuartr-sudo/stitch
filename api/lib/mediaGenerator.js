@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { IMAGE_MODELS, VIDEO_MODELS, veoDuration } from './modelRegistry.js';
-import { pollFalQueue, pollWavespeedRequest, uploadUrlToSupabase } from './pipelineHelpers.js';
+import { pollFalQueue, pollWavespeedRequest, uploadUrlToSupabase, extractLastFrame } from './pipelineHelpers.js';
 
 // FAL/Wavespeed reject files > 10MB (10485760 bytes). Use 9MB threshold for safety margin.
 const MAX_IMAGE_BYTES = 9 * 1024 * 1024;
@@ -303,4 +303,113 @@ export async function animateImageR2V(r2vEndpoint, referenceImageUrl, prompt, as
   if (!resultUrl) throw new MediaGenerationError(r2vEndpoint, 'video', 'No URL in R2V response');
 
   return uploadUrlToSupabase(resultUrl, supabase, 'pipeline/finals');
+}
+
+/**
+ * Multi-shot R2V: elements + image_urls + multi_prompt on the R2V endpoint.
+ * Only O3 supports this (via buildMultiShotR2VBody + r2vEndpoint).
+ * Auto-injects @Element refs into per-shot prompts when elements are present.
+ */
+export async function animateMultiShotR2V(modelKey, startImageUrl, multiPrompt, totalDuration, aspectRatio, keys, supabase, opts = {}) {
+  const model = VIDEO_MODELS[modelKey];
+  if (!model) throw new MediaGenerationError(modelKey, 'video', `Unknown model: ${modelKey}`);
+  if (!model.buildMultiShotR2VBody) throw new MediaGenerationError(modelKey, 'video', `Model ${modelKey} does not support multi-shot R2V`);
+  if (!model.r2vEndpoint) throw new MediaGenerationError(modelKey, 'video', `Model ${modelKey} has no R2V endpoint`);
+
+  const provider = PROVIDER_CONFIG[model.provider];
+  if (!provider) throw new MediaGenerationError(modelKey, 'video', `Unknown provider: ${model.provider}`);
+
+  const safeStartImage = startImageUrl ? await standardizeImageForVideo(startImageUrl, supabase) : undefined;
+
+  // Inject @Element references into per-shot prompts if elements provided but not already referenced
+  const finalMultiPrompt = multiPrompt.map(shot => {
+    let prompt = shot.prompt;
+    if (opts.elements?.length && !prompt.includes('@Element')) {
+      const elementRefs = opts.elements.map((_, idx) => `@Element${idx + 1}`).join(' ');
+      prompt = `${elementRefs} ${prompt}`;
+    }
+    return { prompt, duration: shot.duration };
+  });
+
+  const body = model.buildMultiShotR2VBody(safeStartImage, finalMultiPrompt, totalDuration, aspectRatio, opts);
+
+  const res = await fetch(`${provider.baseUrl}/${model.r2vEndpoint}`, {
+    method: 'POST',
+    headers: provider.buildHeaders(keys),
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new MediaGenerationError(modelKey, 'video', errText);
+  }
+
+  const queueData = await res.json();
+  const directResult = model.parseResult(queueData);
+  if (directResult) return uploadUrlToSupabase(directResult, supabase, 'pipeline/videos');
+
+  const output = await provider.poll(queueData, model, keys, model.pollConfig);
+  const url = model.parseResult(output);
+  if (!url) throw new MediaGenerationError(modelKey, 'video', 'No URL in R2V multi-shot response');
+  return uploadUrlToSupabase(url, supabase, 'pipeline/videos');
+}
+
+/**
+ * Fallback multi-shot for models that don't support native multi_prompt.
+ * Generates individual clips per shot via animateImageV2, chains last frames,
+ * then concatenates sequentially via FAL FFmpeg compose.
+ */
+export async function assembleMultiShotFallback(modelKey, imageUrl, multiPrompt, aspectRatio, keys, supabase, opts = {}) {
+  const clips = [];
+  let currentImage = imageUrl;
+
+  for (let i = 0; i < multiPrompt.length; i++) {
+    const shot = multiPrompt[i];
+    const duration = Number(shot.duration) || 3;
+
+    console.log(`[multishot-fallback] Generating shot ${i + 1}/${multiPrompt.length} (${duration}s)`);
+    const clipUrl = await animateImageV2(
+      modelKey, currentImage, shot.prompt, aspectRatio, duration, keys, supabase,
+      { generate_audio: opts.generate_audio || false },
+    );
+    clips.push({ url: clipUrl, duration });
+
+    // Extract last frame for next shot's start image (continuity)
+    if (i < multiPrompt.length - 1) {
+      try {
+        const lastFrame = await extractLastFrame(clipUrl, duration, keys.falKey);
+        if (lastFrame) currentImage = await uploadUrlToSupabase(lastFrame, supabase, 'pipeline/storyboard');
+      } catch (err) {
+        console.warn(`[multishot-fallback] Last frame extraction failed for shot ${i + 1}, reusing previous image`);
+      }
+    }
+  }
+
+  if (clips.length === 1) return clips[0].url;
+
+  // Concatenate clips sequentially via FAL FFmpeg compose
+  const keyframes = [];
+  let timestamp = 0;
+  for (const clip of clips) {
+    keyframes.push({ url: clip.url, timestamp: Math.round(timestamp), duration: Math.round(clip.duration * 1000) });
+    timestamp += clip.duration * 1000;
+  }
+
+  const composeBody = {
+    tracks: [{ id: 'video', type: 'video', keyframes }],
+    duration: Math.round(timestamp),
+  };
+
+  const composeRes = await fetch('https://queue.fal.run/fal-ai/ffmpeg-api/compose', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(composeBody),
+  });
+
+  if (!composeRes.ok) throw new MediaGenerationError(modelKey, 'video', `FFmpeg compose failed: ${await composeRes.text()}`);
+  const composeQueue = await composeRes.json();
+  const output = await pollFalQueue(composeQueue.response_url, 'fal-ai/ffmpeg-api/compose', keys.falKey, 120, 3000);
+  const finalUrl = output?.video_url || output?.video?.url || output?.output_url;
+  if (!finalUrl) throw new MediaGenerationError(modelKey, 'video', 'No URL from FFmpeg compose');
+  return uploadUrlToSupabase(finalUrl, supabase, 'pipeline/finals');
 }
