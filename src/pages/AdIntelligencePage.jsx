@@ -53,10 +53,14 @@ export default function AdIntelligencePage() {
   const [campaignSourceAds, setCampaignSourceAds] = useState([]);
   const [campaignCompetitor, setCampaignCompetitor] = useState(null);
 
+  // Source counts from last search
+  const [searchSources, setSearchSources] = useState(null);
+
   // ─── Research tab functions ──────────────────────────────
   const handleSearch = useCallback(async (query, platforms, formats) => {
     setSearching(true);
     setSearchResults([]);
+    setSearchSources(null);
     const data = await apiFetch('/api/intelligence/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,6 +69,7 @@ export default function AdIntelligencePage() {
     setSearching(false);
     if (data.error) { toast.error(data.error); return; }
     setSearchResults(data.results || []);
+    setSearchSources(data.sources || null);
   }, []);
 
   const handleAnalyze = useCallback(async (ad) => {
@@ -250,7 +255,17 @@ export default function AdIntelligencePage() {
             )}
             {!searching && searchResults.length > 0 && (
               <div>
-                <p className="text-sm text-gray-500 mb-3">{searchResults.length} ads found</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <p className="text-sm text-gray-500">{searchResults.length} results found</p>
+                  {searchSources && (
+                    <div className="flex gap-2 text-[10px]">
+                      {searchSources.meta_ads > 0 && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">{searchSources.meta_ads} Meta Ads</span>}
+                      {searchSources.exa > 0 && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded">{searchSources.exa} Exa</span>}
+                      {searchSources.serp > 0 && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">{searchSources.serp} Web</span>}
+                      {searchSources.rag > 0 && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">{searchSources.rag} Knowledge</span>}
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-4">
                   {searchResults.map((ad, i) => (
                     <AdResultCard
