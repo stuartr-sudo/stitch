@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       .from('linkedin_topics')
       .select('*')
       .eq('id', topic_id)
-      .eq('user_id', req.user.id)
+      .eq('username', req.user.email)
       .single();
 
     if (topicErr || !topic) return res.status(404).json({ error: 'Topic not found' });
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     let content = topic.full_content;
     if (!content || content.length < 500) {
       const exaKey = await resolveExaKey(req.user.id);
-      const fetched = await fetchUrlContent(topic.url, exaKey);
+      const fetched = await fetchUrlContent(topic.source_url, exaKey);
       if (fetched && fetched.length > (content?.length || 0)) {
         content = fetched;
         await supabase.from('linkedin_topics').update({ full_content: content }).eq('id', topic_id);
@@ -120,13 +120,13 @@ export default async function handler(req, res) {
       brand?.target_audience ? `Audience: ${brand.target_audience}` : null,
     ].filter(Boolean).join('\n');
 
-    const userMessage = `Source article: ${topic.headline}\nURL: ${topic.url}\n\nArticle content:\n${content || topic.snippet || '(no content available)'}\n\n${brandContext ? `Brand context:\n${brandContext}` : ''}`;
+    const userMessage = `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content || topic.source_summary || '(no content available)'}\n\n${brandContext ? `Brand context:\n${brandContext}` : ''}`;
 
     // Determine post number and template
     const { data: maxNum } = await supabase
       .from('linkedin_posts')
       .select('post_number')
-      .eq('user_id', req.user.id)
+      .eq('username', req.user.email)
       .not('post_number', 'is', null)
       .order('post_number', { ascending: false })
       .limit(1)
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
         body = cleanPostBody(body);
 
         // Append source as plain text (not hyperlinked)
-        body += `\n\nsrc: ${cleanSourceUrl(topic.url)}`;
+        body += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
 
         // Append CTA if configured (this one IS a hyperlink)
         if (config?.linkedin_cta_text && config?.linkedin_cta_url) {
@@ -196,12 +196,12 @@ export default async function handler(req, res) {
     // Generate excerpt via gpt-5-mini — pull a compelling insight from the full article
     let excerpt = '';
     try {
-      const excerptSource = content || topic.snippet || topic.headline || '';
+      const excerptSource = content || topic.source_summary || topic.source_title || '';
       const excerptCompletion = await client.chat.completions.create({
         model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: 'Extract the single most compelling or surprising 6-12 word phrase from this article that would make someone stop scrolling. It should capture a key insight, not just restate the headline. Use sentence case (capitalize only the first word and proper nouns). Return only the phrase, no quotation marks.' },
-          { role: 'user', content: `Headline: ${topic.headline}\n\nArticle:\n${excerptSource.slice(0, 2000)}` },
+          { role: 'user', content: `Headline: ${topic.source_title}\n\nArticle:\n${excerptSource.slice(0, 2000)}` },
         ],
         temperature: 0.3,
         max_tokens: 50,
@@ -219,7 +219,7 @@ export default async function handler(req, res) {
       }).catch(() => {});
     } catch (err) {
       console.warn('[linkedin/generate-posts] Excerpt generation failed:', err.message);
-      excerpt = topic.headline?.slice(0, 80) || '';
+      excerpt = topic.source_title?.slice(0, 80) || '';
     }
 
     // Generate base image via FAL Nano Banana 2
@@ -228,9 +228,9 @@ export default async function handler(req, res) {
     if (keys.falKey) {
       try {
         // Build image prompt — inject style_preset promptText if provided
-        let imagePrompt = `Professional editorial photograph for LinkedIn post about: ${topic.headline}. Clean, modern, business context. No text, no logos.`;
+        let imagePrompt = `Professional editorial photograph for LinkedIn post about: ${topic.source_title}. Clean, modern, business context. No text, no logos.`;
         if (style_preset) {
-          imagePrompt = `${style_preset}. LinkedIn post about: ${topic.headline}. No text, no logos.`;
+          imagePrompt = `${style_preset}. LinkedIn post about: ${topic.source_title}. No text, no logos.`;
         }
 
         const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
@@ -356,10 +356,10 @@ export default async function handler(req, res) {
         const { data: post, error: postErr } = await supabase
           .from('linkedin_posts')
           .insert({
-            user_id: req.user.id,
+            username: req.user.email,
             topic_id,
-            style,
-            body,
+            post_style: style,
+            content: body,
             excerpt,
             post_number: postNumber,
             template_index: tplIndex,

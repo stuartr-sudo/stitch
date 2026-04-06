@@ -120,7 +120,7 @@ export default function LinkedInPage() {
 
   const onGenerate = useCallback((topicId) => {
     const topic = topics.find(t => t.id === topicId);
-    setCreateModal({ open: true, topicId, headline: topic?.headline || '' });
+    setCreateModal({ open: true, topicId, headline: topic?.source_title || '' });
   }, [topics]);
 
   const onCreateModalDone = useCallback((newPosts) => {

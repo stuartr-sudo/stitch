@@ -9,9 +9,9 @@ export default async function handler(req, res) {
     // Fetch post + verify ownership
     const { data: post, error: postErr } = await supabase
       .from('linkedin_posts')
-      .select('*, linkedin_topics(headline, url)')
+      .select('*, linkedin_topics(source_title, source_url)')
       .eq('id', req.params.id)
-      .eq('user_id', req.user.id)
+      .eq('username', req.user.email)
       .single();
 
     if (postErr || !post) return res.status(404).json({ error: 'Post not found' });
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     // Publish to LinkedIn — use pre-generated square image
     const linkedinResult = await publishToLinkedIn({
       accessToken,
-      body: post.body,
+      body: post.content,
       imageUrl: post.featured_image_square || null,
     });
 

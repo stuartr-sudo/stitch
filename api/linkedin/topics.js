@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const { data, error } = await supabase
     .from('linkedin_topics')
     .select('*')
-    .eq('user_id', req.user.id)
+    .eq('username', req.user.email)
     .neq('status', 'expired')
     .gt('expires_at', new Date().toISOString())
     .order('relevance_score', { ascending: false, nullsFirst: false });

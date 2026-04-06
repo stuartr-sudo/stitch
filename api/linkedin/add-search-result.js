@@ -10,14 +10,15 @@ export default async function handler(req, res) {
     const { data: topic, error } = await supabase
       .from('linkedin_topics')
       .upsert({
-        user_id: req.user.id,
-        url,
-        headline: headline || '',
-        snippet: snippet || '',
-        source_domain: source_domain || '',
+        username: req.user.email,
+        source_url: url,
+        source_title: headline || '',
+        source_summary: snippet || '',
+        source_channel: source_domain || '',
         relevance_score: relevance_score ?? null,
         suggested_angle: suggested_angle || null,
-      }, { onConflict: 'user_id,url', ignoreDuplicates: false })
+        created_date: new Date().toISOString().split('T')[0],
+      }, { onConflict: 'source_url,username,created_date', ignoreDuplicates: false })
       .select()
       .single();
 

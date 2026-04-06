@@ -21,7 +21,7 @@ export default function PostFeed({ posts, config, onApprove, onEdit, onReject, o
     const key = post.topic_id ?? '__no_topic__';
     if (!seen.has(key)) {
       seen.set(key, groups.length);
-      groups.push({ key, headline: post.linkedin_topics?.headline ?? null, posts: [] });
+      groups.push({ key, headline: post.linkedin_topics?.source_title ?? null, posts: [] });
     }
     groups[seen.get(key)].posts.push(post);
   }

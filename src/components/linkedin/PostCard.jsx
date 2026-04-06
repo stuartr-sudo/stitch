@@ -15,7 +15,7 @@ function styleBadgeClass(style) {
 export default function PostCard({ post, config, onApprove, onEdit, onReject, onRegenerate, onPublish, onOpenPost }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(post.body ?? '');
+  const [draft, setDraft] = useState(post.content ?? '');
   const [publishing, setPublishing] = useState(false);
 
   const isPublished = post.status === 'published';
@@ -36,18 +36,18 @@ export default function PostCard({ post, config, onApprove, onEdit, onReject, on
   }
 
   function handleCancel() {
-    setDraft(post.body ?? '');
+    setDraft(post.content ?? '');
     setEditing(false);
   }
 
-  const contentText = post.body ?? '';
+  const contentText = post.content ?? '';
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col gap-3">
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${styleBadgeClass(post.style)}`}>
-          {post.style ?? 'Post'}
+        <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${styleBadgeClass(post.post_style)}`}>
+          {post.post_style ?? 'Post'}
         </span>
         {isPublished && (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">

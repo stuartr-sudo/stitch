@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     .from('linkedin_topics')
     .update({ status })
     .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
+    .eq('username', req.user.email)
     .select()
     .single();
 

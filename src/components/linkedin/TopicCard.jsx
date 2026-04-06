@@ -57,11 +57,11 @@ export default function TopicCard({ topic, onGenerate, onDismiss, isGenerating }
       </div>
 
       {/* Headline */}
-      <p className="font-semibold text-sm text-slate-900 leading-snug">{topic.headline}</p>
+      <p className="font-semibold text-sm text-slate-900 leading-snug">{topic.source_title}</p>
 
       {/* Source + time */}
       <p className="text-xs text-slate-400">
-        {sourceDomain(topic.url)}
+        {sourceDomain(topic.source_url)}
         {topic.published_at && (
           <> &middot; {timeAgo(topic.published_at)}</>
         )}

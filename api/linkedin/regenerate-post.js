@@ -52,7 +52,7 @@ export default async function handler(req, res) {
       .from('linkedin_posts')
       .select('*, linkedin_topics(*)')
       .eq('id', req.params.id)
-      .eq('user_id', req.user.id)
+      .eq('username', req.user.email)
       .single();
 
     if (postErr || !post) return res.status(404).json({ error: 'Post not found' });
@@ -64,13 +64,13 @@ export default async function handler(req, res) {
     if (!keys.openaiKey) return res.status(500).json({ error: 'OpenAI key not configured' });
 
     const client = new OpenAI({ apiKey: keys.openaiKey });
-    const content = topic.full_content || topic.snippet || '';
+    const content = topic.full_content || topic.source_summary || '';
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4.1',
       messages: [
-        { role: 'system', content: STYLE_PROMPTS[post.style] },
-        { role: 'user', content: `Source article: ${topic.headline}\nURL: ${topic.url}\n\nArticle content:\n${content}` },
+        { role: 'system', content: STYLE_PROMPTS[post.post_style] },
+        { role: 'user', content: `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content}` },
       ],
       temperature: 0.9,
       max_tokens: 1000,
@@ -91,8 +91,8 @@ export default async function handler(req, res) {
     finalBody = cleanPostBody(finalBody);
 
     // Append source as plain text
-    if (topic.url) {
-      finalBody += `\n\nsrc: ${cleanSourceUrl(topic.url)}`;
+    if (topic.source_url) {
+      finalBody += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
     }
 
     // Append CTA if configured (hyperlinked)
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
 
     // Merge style overrides if provided
     const { style_overrides, regenerate_image } = req.body || {};
-    const updateFields = { body: finalBody, status: 'generated' };
+    const updateFields = { content: finalBody, status: 'generated' };
     if (style_overrides) {
       updateFields.style_overrides = { ...(post.style_overrides || {}), ...style_overrides };
     }
@@ -124,7 +124,7 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: `Professional editorial photograph for LinkedIn post about: ${topic.headline}. Clean, modern, business context. No text, no logos.`,
+            prompt: `Professional editorial photograph for LinkedIn post about: ${topic.source_title}. Clean, modern, business context. No text, no logos.`,
             image_size: 'square_hd',
             num_images: 1,
           }),

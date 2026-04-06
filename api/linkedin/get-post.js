@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     .from('linkedin_posts')
     .select('*, linkedin_topics(*)')
     .eq('id', id)
-    .eq('user_id', req.user.id)
+    .eq('username', req.user.email)
     .single();
 
   if (error || !post) return res.status(404).json({ error: 'Post not found' });

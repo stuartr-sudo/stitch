@@ -5,8 +5,8 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('linkedin_posts')
-    .select('*, linkedin_topics(headline, source_domain, url)')
-    .eq('user_id', req.user.id)
+    .select('*, linkedin_topics(source_title, source_channel, source_url)')
+    .eq('username', req.user.email)
     .order('created_at', { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });

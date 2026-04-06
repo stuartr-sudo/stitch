@@ -50,7 +50,7 @@ export default function LinkedInPostEditor() {
         }
         const p = data.post;
         setPost(p);
-        setBody(p.body || '');
+        setBody(p.content || '');
         setCarouselStyle(p.carousel_style || 'bold_editorial');
         // Restore overrides if present
         const so = p.style_overrides || {};
@@ -73,7 +73,7 @@ export default function LinkedInPostEditor() {
 
   // Save text on blur
   async function handleSaveBody() {
-    if (!post || body === post.body) return;
+    if (!post || body === post.content) return;
     setSaving(true);
     try {
       const res = await apiFetch(`/api/linkedin/posts/${id}`, {
@@ -82,7 +82,7 @@ export default function LinkedInPostEditor() {
         body: JSON.stringify({ content: body }),
       });
       const data = await res.json();
-      if (!data.error) setPost(prev => ({ ...prev, body, ...data.post }));
+      if (!data.error) setPost(prev => ({ ...prev, content: body, ...data.post }));
     } catch {
       toast.error('Failed to save');
     } finally {
@@ -103,7 +103,7 @@ export default function LinkedInPostEditor() {
       if (data.error) { toast.error(data.error); return; }
       const updated = data.post;
       setPost(updated);
-      setBody(updated.body || '');
+      setBody(updated.content || '');
     } catch {
       toast.error('Regeneration failed');
     } finally {
@@ -126,7 +126,7 @@ export default function LinkedInPostEditor() {
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
       setPost(data.post);
-      setBody(data.post.body || '');
+      setBody(data.post.content || '');
     } catch {
       toast.error('Image regeneration failed');
     } finally {
@@ -190,11 +190,11 @@ export default function LinkedInPostEditor() {
           </button>
           <div>
             <h1 className="text-sm font-semibold text-slate-900 truncate max-w-md">
-              {topic?.headline || 'LinkedIn Post'}
+              {topic?.source_title || 'LinkedIn Post'}
             </h1>
             <div className="flex items-center gap-2">
-              <span className={`inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${STYLE_BADGE[post.style] || 'bg-slate-100 text-slate-600'}`}>
-                {post.style}
+              <span className={`inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${STYLE_BADGE[post.post_style] || 'bg-slate-100 text-slate-600'}`}>
+                {post.post_style}
               </span>
               <span className="text-xs text-slate-400">Post #{post.post_number}</span>
               {saving && <span className="text-[10px] text-slate-400">Saving...</span>}
@@ -225,14 +225,14 @@ export default function LinkedInPostEditor() {
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="max-w-2xl mx-auto space-y-4">
             {/* Source article link */}
-            {topic?.url && (
+            {topic?.source_url && (
               <a
-                href={topic.url}
+                href={topic.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-blue-600 hover:underline truncate block"
               >
-                Source: {topic.url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 80)}
+                Source: {topic.source_url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 80)}
               </a>
             )}
 
