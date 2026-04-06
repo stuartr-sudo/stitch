@@ -153,6 +153,107 @@ app.all('/api/flows*', authenticateToken, async (req, res) => {
   return handler(req, res);
 });
 
+// Command Center — AI Marketing Team
+// Chat SSE endpoint (must be before other command-center routes)
+app.post('/api/command-center/chat', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/chat.js')).default;
+  return handler(req, res);
+});
+
+// Specific routes first, then catch-all for campaigns
+app.get('/api/command-center/stats', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/stats.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/calendar', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/calendar.js')).default;
+  return handler(req, res);
+});
+
+// Threads — specific routes before catch-all
+app.post('/api/command-center/threads', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/threads', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/threads/:id/messages', authenticateToken, async (req, res) => {
+  req.params.sub = 'messages';
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.delete('/api/command-center/threads/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+// Items — action routes before generic update
+app.post('/api/command-center/items/:id/approve', authenticateToken, async (req, res) => {
+  req.params.action = 'approve';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/reject', authenticateToken, async (req, res) => {
+  req.params.action = 'reject';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/rebuild', authenticateToken, async (req, res) => {
+  req.params.action = 'rebuild';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/publish', authenticateToken, async (req, res) => {
+  req.params.action = 'publish';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.put('/api/command-center/items/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+// Campaigns — CRUD
+app.get('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/campaigns', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/campaigns/:id/build', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/build.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/campaigns', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.put('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.delete('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
 // Video Analyzer route (with auth)
 app.post('/api/analyze/video', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('analyze/video.js');
@@ -653,6 +754,10 @@ app.get('/api/storyboard/projects/:id/production-status', authenticateToken, asy
   (await import('./api/storyboard/production-status.js')).default(req, res);
 });
 
+app.post('/api/storyboard/projects/:id/retry-frame', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/retry-frame.js')).default(req, res);
+});
+
 // Storyboard Tool — CRUD + frame management (catch-all)
 app.all('/api/storyboard/projects*', authenticateToken, async (req, res) => {
   const handler = (await import('./api/storyboard/projects.js')).default;
@@ -662,6 +767,18 @@ app.all('/api/storyboard/projects*', authenticateToken, async (req, res) => {
 // Public storyboard review (no auth)
 app.get('/api/storyboard/review/:token', async (req, res) => {
   req.url = `/api/storyboard/review/${req.params.token}`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/storyboard/review/:token/comments', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}/comments`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/review/:token/comment', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}/comment`;
   const handler = (await import('./api/storyboard/projects.js')).default;
   return handler(req, res);
 });
@@ -1372,6 +1489,11 @@ app.listen(PORT, () => {
     setInterval(pollScheduledPublications, 30000);
     pollScheduledPublications();
     console.log('[scheduled-publisher] Polling every 30s');
+
+    // Recover interrupted Command Center campaigns
+    import('./api/lib/campaignOrchestrator.js').then(({ recoverInterruptedCampaigns }) => {
+      recoverInterruptedCampaigns();
+    }).catch(err => console.error('[command-center] Recovery check failed:', err.message));
 
     // Start LoRA training background poller (checks every 60s)
     startLoraPoller();

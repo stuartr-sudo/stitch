@@ -255,7 +255,9 @@ export async function generateStoryboardVoiceover(scenes, options = {}) {
     }
 
     try {
-      const result = await generateSpeech(scene.dialogue, options);
+      // Use per-scene voice override if provided, otherwise fall back to global
+      const sceneOptions = scene.voice ? { ...options, voice: scene.voice } : options;
+      const result = await generateSpeech(scene.dialogue, sceneOptions);
       totalDuration += result.durationSeconds || 0;
       totalCost += result.estimatedCost || 0;
 

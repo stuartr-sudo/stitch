@@ -28,6 +28,7 @@ import {
   LayoutGrid, GitBranch,
 } from 'lucide-react';
 import StoryboardSettings from '@/components/storyboard/StoryboardSettings';
+import { estimateProductionCost, estimateProductionTime } from '@/lib/storyboardCostEstimator';
 import StoryboardAnimatic from '@/components/storyboard/StoryboardAnimatic';
 import MotionReferenceInput from '@/components/MotionReferenceInput';
 import CameraControlPanel from '@/components/shorts/CameraControlPanel';
@@ -226,9 +227,33 @@ function BeatGroupHeader({ beatType, frameCount, intervalSeconds }) {
 // Detail Panel (right sidebar)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
+const VOICE_OPTIONS = [
+  { id: '', label: 'Default (storyboard voice)' },
+  { id: 'Rachel', label: 'Rachel', style: 'calm, narration' },
+  { id: 'Aria', label: 'Aria', style: 'expressive, warm' },
+  { id: 'Sarah', label: 'Sarah', style: 'soft, gentle' },
+  { id: 'Laura', label: 'Laura', style: 'professional' },
+  { id: 'Charlotte', label: 'Charlotte', style: 'warm, authoritative' },
+  { id: 'Roger', label: 'Roger', style: 'confident, deep' },
+  { id: 'Charlie', label: 'Charlie', style: 'casual, Australian' },
+  { id: 'George', label: 'George', style: 'British, warm' },
+  { id: 'Callum', label: 'Callum', style: 'deep, transatlantic' },
+  { id: 'Liam', label: 'Liam', style: 'articulate, American' },
+  { id: 'River', label: 'River', style: 'calm, American' },
+];
+
+const TRANSITION_TYPES = [
+  { key: 'cut', label: 'Cut' },
+  { key: 'fade', label: 'Fade' },
+  { key: 'dissolve', label: 'Dissolve' },
+  { key: 'wipe', label: 'Wipe' },
+];
+
+function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing, onRegenPreview, onRetryVideo, regenLoading, onPreviewVoice, storyboard }) {
   const [editField, setEditField] = useState(null);
   const [editVal, setEditVal] = useState('');
+  const [previewingVoice, setPreviewingVoice] = useState(false);
+  const [previewAudioUrl, setPreviewAudioUrl] = useState(null);
 
   // Reset editing when frame changes
   useEffect(() => { setEditField(null); }, [frame?.id]);
@@ -337,6 +362,56 @@ function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
         <Field label="Story" field="narrative_note" icon={Film} multiline />
         <Field label="Setting" field="setting" icon={Eye} />
         <Field label="Dialogue" field="dialogue" icon={MessageSquare} accent multiline />
+
+        {/* Voice Override + Preview (only when dialogue exists) */}
+        {frame.dialogue?.trim() && (
+          <div className="mb-3">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1 flex items-center gap-1">
+              <Volume2 size={10} /> Voice
+            </span>
+            <div className="flex gap-1.5 items-center">
+              <select
+                value={frame.voice_override || ''}
+                onChange={e => onUpdate(frame.id, { voice_override: e.target.value || null })}
+                disabled={frame.locked}
+                className="flex-1 text-[11px] px-2 py-1.5 border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2C666E]/30 disabled:opacity-50"
+              >
+                {VOICE_OPTIONS.map(v => (
+                  <option key={v.id} value={v.id}>{v.label}{v.style ? ` — ${v.style}` : ''}</option>
+                ))}
+              </select>
+              <button
+                onClick={async () => {
+                  setPreviewingVoice(true);
+                  setPreviewAudioUrl(null);
+                  try {
+                    const r = await apiFetch('/api/storyboard/generate-voiceover', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        mode: 'single',
+                        dialogue: frame.dialogue,
+                        voice: frame.voice_override || storyboard?.voice || 'Rachel',
+                        model: storyboard?.tts_model || 'elevenlabs-v3',
+                      }),
+                    });
+                    const d = await r.json();
+                    if (d.audioUrl) setPreviewAudioUrl(d.audioUrl);
+                  } catch (e) { toast.error('Preview failed'); }
+                  setPreviewingVoice(false);
+                }}
+                disabled={previewingVoice || frame.locked}
+                className="px-2 py-1.5 text-[10px] font-medium bg-[#2C666E] text-white rounded-md hover:bg-[#1e4d54] disabled:opacity-40 whitespace-nowrap"
+              >
+                {previewingVoice ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
+              </button>
+            </div>
+            {previewAudioUrl && (
+              <audio src={previewAudioUrl} controls autoPlay className="w-full mt-1.5 h-7" />
+            )}
+          </div>
+        )}
+
         {/* Generation Mode */}
         <div className="mb-3">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Generation Mode</span>
@@ -431,16 +506,44 @@ function DetailPanel({ frame, onUpdate, onSplit, onDelete, isProducing }) {
             <div className="text-[10px] text-amber-700">{frame.brand_warnings.join('; ')}</div>
           </div>
         )}
+
+        {/* Scene Transition */}
+        <div className="mt-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Transition to next</span>
+          <div className="flex gap-1">
+            {TRANSITION_TYPES.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => !frame.locked && onUpdate(frame.id, { transition_type: key })}
+                className={`flex-1 text-[10px] font-medium py-1 rounded-md border transition-colors ${
+                  (frame.transition_type || 'cut') === key
+                    ? 'bg-[#2C666E] text-white border-[#2C666E]'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                } ${frame.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
       <div className="px-4 py-3 border-t border-gray-200 space-y-2">
         <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
-            <RotateCcw size={11} /> Regen Preview
+          <button
+            onClick={() => onRegenPreview?.(frame.frame_number)}
+            disabled={frame.locked || isProducing || regenLoading}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {regenLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Regen Preview
           </button>
           {frame.video_url && (
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
+            <button
+              onClick={() => onRetryVideo?.(frame.id)}
+              disabled={frame.locked || isProducing}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <RotateCcw size={11} /> Retry Video
             </button>
           )}
@@ -507,9 +610,9 @@ function ProductionTab({ storyboard, frames, job, onStartProduction, onPollStatu
                 <Zap className="w-4 h-4 mr-2" /> Start Production
               </Button>
               <div className="flex items-center justify-center gap-3 mt-3 text-xs text-gray-400">
-                <span>~{Math.ceil(frames.length * 0.7)} min estimated</span>
+                <span>~{estimateProductionTime(frames, storyboard)} min estimated</span>
                 <span>·</span>
-                <span>~${(frames.length * 0.35).toFixed(2)} estimated cost</span>
+                <span>~${estimateProductionCost(frames, storyboard).total.toFixed(2)} estimated cost</span>
               </div>
             </>
           )}
@@ -600,7 +703,22 @@ function ProductionTab({ storyboard, frames, job, onStartProduction, onPollStatu
             >
               <FileDown size={14} /> Download
             </a>
-            <button className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
+            <button
+              onClick={async () => {
+                const videoUrl = job?.captioned_url || job?.assembled_url || storyboard?.assembled_url;
+                if (!videoUrl) return;
+                try {
+                  const r = await apiFetch('/api/library/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: videoUrl, type: 'video', title: storyboard?.name || 'Storyboard Video', source: 'storyboard' }),
+                  });
+                  const d = await r.json();
+                  if (d.error) throw new Error(d.error);
+                } catch (e) { toast.error('Save failed: ' + e.message); }
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+            >
               <Send size={14} /> Save to Library
             </button>
           </div>
@@ -876,6 +994,29 @@ export default function StoryboardWorkspace() {
     }
   };
 
+  // ── Retry single frame video ──
+  const [retryingVideoFrameId, setRetryingVideoFrameId] = useState(null);
+  const handleRetryVideo = async (frameId) => {
+    setRetryingVideoFrameId(frameId);
+    try {
+      const res = await apiFetch(`/api/storyboard/projects/${storyboardId}/retry-frame`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frameId }),
+      });
+      const data = await res.json();
+      if (data.success && data.frame) {
+        setFrames(prev => prev.map(f => f.id === data.frame.id ? { ...f, ...data.frame } : f));
+      } else {
+        throw new Error(data.error || 'Retry failed');
+      }
+    } catch (err) {
+      toast.error('Video retry failed: ' + err.message);
+    } finally {
+      setRetryingVideoFrameId(null);
+    }
+  };
+
   // ── Reorder Frames (drag & drop) ──
   const handleDragStart = useCallback((frameId) => {
     setDragFrameId(frameId);
@@ -1064,6 +1205,21 @@ export default function StoryboardWorkspace() {
                 {generatingPreviews ? <><Loader2 size={14} className="animate-spin mr-1" /> Previews...</> : <><ImageIcon size={14} className="mr-1" /> Previews ({previewCount}/{frames.length})</>}
               </Button>
             )}
+            {hasScript && previewCount > 0 && (
+              <Button
+                onClick={() => {
+                  const unlocked = frames.filter(f => !f.locked).map(f => f.frame_number);
+                  if (unlocked.length === 0) return;
+                  handleGeneratePreviews(unlocked);
+                }}
+                disabled={generatingPreviews}
+                variant="outline"
+                size="sm"
+                title="Regenerate all unlocked previews"
+              >
+                <RefreshCw size={14} />
+              </Button>
+            )}
             {hasScript && (
               <Button onClick={handleGenerateScript} disabled={generatingScript} variant="outline" size="sm" title="Regenerate script">
                 <RotateCcw size={14} />
@@ -1198,7 +1354,17 @@ export default function StoryboardWorkspace() {
         {/* Detail Panel (storyboard tab only) */}
         {activeTab === 'storyboard' && (
           <div className="w-80 border-l border-gray-200 bg-white flex-shrink-0 overflow-hidden">
-            <DetailPanel frame={selectedFrame} onUpdate={updateFrame} onSplit={handleSplitFrame} onDelete={handleDeleteFrame} isProducing={isProducing} />
+            <DetailPanel
+              frame={selectedFrame}
+              onUpdate={updateFrame}
+              onSplit={handleSplitFrame}
+              onDelete={handleDeleteFrame}
+              isProducing={isProducing}
+              onRegenPreview={(frameNumber) => handleGeneratePreviews([frameNumber])}
+              onRetryVideo={handleRetryVideo}
+              regenLoading={generatingPreviews}
+              storyboard={storyboard}
+            />
           </div>
         )}
       </div>

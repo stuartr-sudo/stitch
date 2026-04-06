@@ -793,6 +793,16 @@ export default function VideoAdvertCreator() {
               {expandedSections.socialTools && (
                 <div className="mt-2 space-y-1">
                   <div
+                    onClick={() => navigate('/command-center')}
+                    className="group bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-purple-600" />
+                      <span className="text-xs font-medium text-purple-900">Command Center</span>
+                    </div>
+                    <p className="text-[10px] text-purple-600 mt-0.5 ml-6">AI marketing dashboard</p>
+                  </div>
+                  <div
                     onClick={() => navigate('/campaigns')}
                     className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-2 cursor-pointer transition-colors"
                   >

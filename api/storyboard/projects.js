@@ -35,9 +35,21 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathParts = url.pathname.replace('/api/storyboard/projects', '').split('/').filter(Boolean);
 
-  // ── Public share view (no auth required) ──
+  // ── Public review routes (no auth required) ──
   if (req.url.startsWith('/api/storyboard/review/')) {
-    const token = req.url.split('/review/')[1]?.split('?')[0];
+    const reviewPath = req.url.split('/review/')[1]?.split('?')[0] || '';
+    const reviewParts = reviewPath.split('/');
+    const token = reviewParts[0];
+
+    // POST /api/storyboard/review/:token/comment
+    if (reviewParts[1] === 'comment' && req.method === 'POST') {
+      return handleAddReviewComment(req, res, supabase, token);
+    }
+    // GET /api/storyboard/review/:token/comments
+    if (reviewParts[1] === 'comments' && req.method === 'GET') {
+      return handleGetReviewComments(req, res, supabase, token);
+    }
+    // GET /api/storyboard/review/:token (default — storyboard data)
     return handlePublicReview(req, res, supabase, token);
   }
 
@@ -69,6 +81,19 @@ export default async function handler(req, res) {
   // Route: /api/storyboard/projects/:id/check-characters
   if (pathParts[1] === 'check-characters') {
     if (req.method === 'POST') return checkCharacters(req, res, supabase, userId, storyboardId);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Route: /api/storyboard/projects/:id/versions/:versionId/restore
+  if (pathParts[1] === 'versions' && pathParts[2] && pathParts[3] === 'restore') {
+    if (req.method === 'POST') return restoreVersion(req, res, supabase, userId, storyboardId, pathParts[2]);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Route: /api/storyboard/projects/:id/versions
+  if (pathParts[1] === 'versions') {
+    if (req.method === 'GET') return listVersions(req, res, supabase, userId, storyboardId);
+    if (req.method === 'POST') return saveVersion(req, res, supabase, userId, storyboardId);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -715,6 +740,7 @@ async function handlePublicReview(req, res, supabase, token) {
       description: storyboard.description,
       logline: storyboard.logline,
       status: storyboard.status,
+      reviewStatus: storyboard.review_status,
       aspectRatio: storyboard.aspect_ratio,
       desiredLength: storyboard.desired_length,
       mood: storyboard.overall_mood,
@@ -724,4 +750,167 @@ async function handlePublicReview(req, res, supabase, token) {
     },
     frames: frames || [],
   });
+}
+
+// ── REVIEW COMMENTS ─────────────────────────────────────────────────────────
+
+async function resolveStoryboardByToken(supabase, token) {
+  if (!token) return null;
+  const { data } = await supabase
+    .from('storyboards')
+    .select('id')
+    .eq('share_token', token)
+    .eq('share_enabled', true)
+    .single();
+  return data?.id || null;
+}
+
+async function handleAddReviewComment(req, res, supabase, token) {
+  const storyboardId = await resolveStoryboardByToken(supabase, token);
+  if (!storyboardId) return res.status(404).json({ error: 'Storyboard not found or sharing disabled' });
+
+  const { frameNumber, reviewerName, reviewerEmail, comment, commentType } = req.body || {};
+  if (!comment?.trim()) return res.status(400).json({ error: 'Comment is required' });
+
+  const { data, error } = await supabase
+    .from('storyboard_review_comments')
+    .insert({
+      storyboard_id: storyboardId,
+      frame_number: frameNumber || null,
+      reviewer_name: (reviewerName || 'Anonymous').substring(0, 100),
+      reviewer_email: reviewerEmail?.substring(0, 200) || null,
+      comment: comment.substring(0, 2000),
+      comment_type: ['note', 'approval', 'change_request'].includes(commentType) ? commentType : 'note',
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Update storyboard review_status on approval or change_request
+  if (commentType === 'approval') {
+    await supabase.from('storyboards').update({ review_status: 'approved' }).eq('id', storyboardId);
+  } else if (commentType === 'change_request') {
+    await supabase.from('storyboards').update({ review_status: 'changes_requested' }).eq('id', storyboardId);
+  }
+
+  return res.json({ success: true, comment: data });
+}
+
+async function handleGetReviewComments(req, res, supabase, token) {
+  const storyboardId = await resolveStoryboardByToken(supabase, token);
+  if (!storyboardId) return res.status(404).json({ error: 'Storyboard not found or sharing disabled' });
+
+  const { data, error } = await supabase
+    .from('storyboard_review_comments')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.json({ success: true, comments: data || [] });
+}
+
+// ── VERSIONS ────────────────────────────────────────────────────────────────
+
+async function listVersions(req, res, supabase, userId, storyboardId) {
+  const { data, error } = await supabase
+    .from('storyboard_versions')
+    .select('id, version_label, created_at')
+    .eq('storyboard_id', storyboardId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ success: true, versions: data || [] });
+}
+
+async function saveVersion(req, res, supabase, userId, storyboardId) {
+  const { label } = req.body || {};
+
+  // Load current storyboard
+  const { data: sb, error: sbErr } = await supabase
+    .from('storyboards')
+    .select('*')
+    .eq('id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (sbErr || !sb) return res.status(404).json({ error: 'Storyboard not found' });
+
+  // Load current frames
+  const { data: frames } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true });
+
+  // Auto-generate label if not provided
+  const { count } = await supabase
+    .from('storyboard_versions')
+    .select('*', { count: 'exact', head: true })
+    .eq('storyboard_id', storyboardId);
+
+  const versionLabel = label || `v${(count || 0) + 1}`;
+
+  const { data: version, error: vErr } = await supabase
+    .from('storyboard_versions')
+    .insert({
+      storyboard_id: storyboardId,
+      user_id: userId,
+      version_label: versionLabel,
+      snapshot_data: { storyboard: sb, frames: frames || [] },
+    })
+    .select('id, version_label, created_at')
+    .single();
+
+  if (vErr) return res.status(500).json({ error: vErr.message });
+  return res.json({ success: true, version });
+}
+
+async function restoreVersion(req, res, supabase, userId, storyboardId, versionId) {
+  // Load version
+  const { data: version, error: vErr } = await supabase
+    .from('storyboard_versions')
+    .select('snapshot_data')
+    .eq('id', versionId)
+    .eq('storyboard_id', storyboardId)
+    .eq('user_id', userId)
+    .single();
+
+  if (vErr || !version) return res.status(404).json({ error: 'Version not found' });
+
+  const { storyboard: sbSnap, frames: frameSnap } = version.snapshot_data;
+
+  // Update storyboard fields (excluding id, user_id, created_at)
+  const { id: _id, user_id: _uid, created_at: _ca, ...sbUpdate } = sbSnap;
+  await supabase.from('storyboards').update(sbUpdate).eq('id', storyboardId);
+
+  // Delete existing frames and re-insert from snapshot
+  await supabase.from('storyboard_frames').delete().eq('storyboard_id', storyboardId);
+
+  if (frameSnap?.length) {
+    const framesToInsert = frameSnap.map(({ id: _fid, created_at: _fca, updated_at: _fua, ...rest }) => ({
+      ...rest,
+      storyboard_id: storyboardId,
+    }));
+    await supabase.from('storyboard_frames').insert(framesToInsert);
+  }
+
+  // Reload fresh data
+  const { data: freshSb } = await supabase
+    .from('storyboards')
+    .select('*')
+    .eq('id', storyboardId)
+    .single();
+
+  const { data: freshFrames } = await supabase
+    .from('storyboard_frames')
+    .select('*')
+    .eq('storyboard_id', storyboardId)
+    .order('frame_number', { ascending: true });
+
+  return res.json({ success: true, storyboard: freshSb, frames: freshFrames || [] });
 }

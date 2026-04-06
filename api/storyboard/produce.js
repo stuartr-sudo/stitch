@@ -104,7 +104,7 @@ function getRegistryKey(modelId) {
  *
  * @returns {{ videoUrl: string, lastFrameUrl: string|null }}
  */
-async function generateFrameVideo(frame, config, prevLastFrame, keys, supabase) {
+export async function generateFrameVideo(frame, config, prevLastFrame, keys, supabase) {
   // MT override: if frame has a motion reference, use MT regardless of global model
   if (frame.motion_ref?.videoUrl || frame.motion_ref?.trimmedUrl) {
     const { generateMotionTransfer } = await import('../lib/motionTransferRegistry.js');
@@ -434,7 +434,11 @@ async function runProductionPipeline(jobId, storyboard, frames, keys) {
       console.log(`[Producer] Step 1: TTS for ${scenesWithDialogue.length} frames`);
 
       const voResult = await generateStoryboardVoiceover(
-        frames.map(f => ({ sceneNumber: f.frame_number, dialogue: f.dialogue })),
+        frames.map(f => ({
+          sceneNumber: f.frame_number,
+          dialogue: f.dialogue,
+          voice: f.voice_override || undefined, // per-frame voice override
+        })),
         { model: config.ttsModel, voice: config.voice, speed: config.ttsSpeed, falKey: keys.falKey, supabase }
       );
 
