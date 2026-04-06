@@ -10,6 +10,16 @@ import { getUserKeys } from '../lib/getUserKeys.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
 
+// Strip em dashes and en dashes from all string values in an object
+function stripDashes(obj) {
+  if (typeof obj === 'string') return obj.replace(/[\u2013\u2014]/g, ' - ');
+  if (Array.isArray(obj)) return obj.map(stripDashes);
+  if (obj && typeof obj === 'object') {
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, stripDashes(v)]));
+  }
+  return obj;
+}
+
 const REGEN_PROMPTS = {
   linkedin: `You are an expert LinkedIn Ads copywriter. Generate a single LinkedIn Sponsored Content ad variation.
 
@@ -19,11 +29,12 @@ Produce:
 - description: Supporting text (max 300 characters).
 - cta: One of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"
 
-NO emojis, NO hashtags, NO AI clichés. Return valid JSON: { "introText": "...", "headline": "...", "description": "...", "cta": "..." }`,
+NO emojis, NO hashtags, NO AI clichés. NEVER use em dashes or en dashes — use hyphens (-) instead. Return valid JSON: { "introText": "...", "headline": "...", "description": "...", "cta": "..." }`,
 
   google: `You are an expert Google Ads copywriter. Regenerate assets for a Responsive Search Ad.
 
 Produce 15 headlines (max 30 chars each, no exclamation marks) and 4 descriptions (max 90 chars each).
+NEVER use em dashes or en dashes — use hyphens (-) instead.
 Return valid JSON: { "headlines": ["..."], "descriptions": ["..."] }`,
 
   meta: `You are an expert Meta/Facebook Ads copywriter. Generate a single Facebook/Instagram feed ad variation.
@@ -34,7 +45,7 @@ Produce:
 - description: Below headline (max 30 characters).
 - cta: One of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"
 
-Return valid JSON: { "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }`,
+NEVER use em dashes or en dashes — use hyphens (-) instead. Return valid JSON: { "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }`,
 };
 
 export default async function handler(req, res) {
@@ -113,7 +124,7 @@ export default async function handler(req, res) {
     }).catch(() => {});
 
     try {
-      const parsed = JSON.parse(completion.choices[0]?.message?.content || '{}');
+      const parsed = stripDashes(JSON.parse(completion.choices[0]?.message?.content || '{}'));
       if (variation.platform === 'google') {
         updates.copy_data = { headlines: parsed.headlines || [], descriptions: parsed.descriptions || [], pinned: variation.copy_data?.pinned || {} };
       } else {

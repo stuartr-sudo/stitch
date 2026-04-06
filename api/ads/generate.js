@@ -20,6 +20,7 @@ For each variation, produce:
 
 RULES:
 - NO emojis, NO hashtags
+- NEVER use em dashes or en dashes. Use hyphens (-) instead of any dash character.
 - NO filler phrases: "In today's world", "Let's dive in", "Here's the thing"
 - NO AI clichés: "landscape", "navigate", "leverage", "robust", "delve"
 - Be specific with real benefits and outcomes
@@ -37,6 +38,7 @@ Produce:
 RULES:
 - No exclamation marks (Google policy)
 - No ALL CAPS words
+- NEVER use em dashes or en dashes. Use hyphens (-) instead of any dash character.
 - Headlines must be diverse: include brand name, benefits, features, CTAs, numbers
 - Descriptions should expand on different value propositions
 - Be specific with real benefits
@@ -56,10 +58,21 @@ For each variation, produce:
 RULES:
 - Conversational, not corporate
 - NO AI clichés
+- NEVER use em dashes or en dashes. Use hyphens (-) instead of any dash character.
 - Each variation should take a different angle (emotional, practical, social-proof)
-- Write to stop the scroll — first 5 words matter most
+- Write to stop the scroll - first 5 words matter most
 
 Return valid JSON: { "variations": [{ "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }] }`;
+
+// Strip em dashes and en dashes from all string values in an object
+function stripDashes(obj) {
+  if (typeof obj === 'string') return obj.replace(/[\u2013\u2014]/g, ' - ');
+  if (Array.isArray(obj)) return obj.map(stripDashes);
+  if (obj && typeof obj === 'object') {
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, stripDashes(v)]));
+  }
+  return obj;
+}
 
 const PLATFORM_CONFIGS = {
   linkedin: {
@@ -358,7 +371,7 @@ export default async function handler(req, res) {
         const raw = completion.choices[0]?.message?.content || '{}';
         let parsed;
         try {
-          parsed = JSON.parse(raw);
+          parsed = stripDashes(JSON.parse(raw));
         } catch {
           console.error(`[ads/generate] Failed to parse ${platform} response:`, raw.slice(0, 200));
           return { platform, variations: [] };

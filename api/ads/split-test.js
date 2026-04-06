@@ -10,6 +10,16 @@ import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 
+// Strip em dashes and en dashes from all string values in an object
+function stripDashes(obj) {
+  if (typeof obj === 'string') return obj.replace(/[\u2013\u2014]/g, ' - ');
+  if (Array.isArray(obj)) return obj.map(stripDashes);
+  if (obj && typeof obj === 'object') {
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, stripDashes(v)]));
+  }
+  return obj;
+}
+
 const SPLIT_PROMPTS = {
   linkedin: `You are an expert LinkedIn Ads copywriter. You're creating an A/B split test variation.
 Given an existing ad, create a DIFFERENT version that tests a new angle. Keep the same product/offer but change:
@@ -17,6 +27,7 @@ Given an existing ad, create a DIFFERENT version that tests a new angle. Keep th
 - The emotional angle (e.g. if original is aspirational, try fear-of-missing-out; if data-driven, try story-led)
 - The CTA framing
 
+NEVER use em dashes or en dashes — use hyphens (-) instead.
 Return valid JSON: { "introText": "...", "headline": "...", "description": "...", "cta": "..." }
 Max lengths: introText 600 chars, headline 200 chars, description 300 chars.
 CTA must be one of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"`,
@@ -26,6 +37,7 @@ Given existing headlines and descriptions, create a DIFFERENT set that tests new
 - Use different value propositions and hooks
 - Test different CTAs and benefit framings
 - Ensure variety from the original
+- NEVER use em dashes or en dashes — use hyphens (-) instead
 
 Return valid JSON: { "headlines": ["..."], "descriptions": ["..."] }
 Exactly 15 headlines (max 30 chars each, no exclamation marks) and 4 descriptions (max 90 chars each).`,
@@ -36,6 +48,7 @@ Given an existing ad, create a DIFFERENT version that tests a new angle. Change:
 - The emotional tone (e.g. if original is urgent, try curiosity; if practical, try emotional)
 - The CTA approach
 
+NEVER use em dashes or en dashes — use hyphens (-) instead.
 Return valid JSON: { "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }
 Max lengths: primaryText 125 chars, headline 40 chars, description 30 chars.
 CTA must be one of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"`,
@@ -100,7 +113,7 @@ export default async function handler(req, res) {
         output_tokens: completion.usage?.completion_tokens || 0,
       }).catch(() => {});
 
-      const parsed = JSON.parse(completion.choices[0]?.message?.content || '{}');
+      const parsed = stripDashes(JSON.parse(completion.choices[0]?.message?.content || '{}'));
 
       if (source.platform === 'google') {
         newCopyData = {
