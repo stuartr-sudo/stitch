@@ -4,6 +4,9 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { CommandCenterProvider } from '@/contexts/CommandCenterContext';
+import ChatBubble from '@/components/command-center/ChatBubble';
+import CommandCenterPage from './pages/CommandCenterPage';
 
 // Silence all non-error toasts — only show toast.error() and toast.warning()
 toast.success = () => {};
@@ -23,12 +26,14 @@ import LongformWorkbenchPage from './pages/LongformWorkbenchPage';
 import PublishQueuePage from './pages/PublishQueuePage';
 import ProposalPage from './pages/ProposalPage';
 import ProposalsIndexPage from './pages/ProposalsIndexPage';
+import MovinMartinMockupPage from './pages/MovinMartinMockupPage';
 import LinkedInPage from './pages/LinkedInPage';
 import LinkedInPostEditor from './components/linkedin/LinkedInPostEditor';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
 import StoryboardGuidePage from './pages/StoryboardGuidePage';
 import StoryboardWorkspace from './pages/StoryboardWorkspace';
+import StoryboardReviewPage from './pages/StoryboardReviewPage';
 import SettingsAccountsPage from './pages/SettingsAccountsPage';
 import AdsManagerPage from './pages/AdsManagerPage';
 import AdCampaignEditor from './pages/AdCampaignEditor';
@@ -125,10 +130,14 @@ function App() {
           <Route path="/login" element={<SetupKeys />} />
           <Route path="/setup" element={<Navigate to="/login" replace />} />
 
+          {/* Public storyboard review — no auth */}
+          <Route path="/review/:token" element={<StoryboardReviewPage />} />
+
           {/* Public proposal pages — no auth, isolated from app */}
           <Route path="/proposal" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
           <Route path="/proposals" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
           <Route path="/proposal/hamilton-city-council" element={<ProposalPage />} />
+          <Route path="/proposals/movin-martin-website-mockup" element={<MovinMartinMockupPage />} />
 
           {/* Protected studio */}
           <Route
@@ -307,6 +316,9 @@ function App() {
             }
           />
 
+          {/* Command Center */}
+          <Route path="/command-center" element={<ProtectedRoute><CommandCenterPage /></ProtectedRoute>} />
+
           {/* Unified learn page */}
           <Route
             path="/learn"
@@ -350,9 +362,21 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster position="bottom-right" />
+        <AuthenticatedChatBubble />
       </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+  );
+}
+
+// Only render the chat bubble for authenticated users with API keys
+function AuthenticatedChatBubble() {
+  const { user, hasKeys } = useAuth();
+  if (!user || !hasKeys) return null;
+  return (
+    <CommandCenterProvider>
+      <ChatBubble />
+    </CommandCenterProvider>
   );
 }
 
