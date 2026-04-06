@@ -13,7 +13,7 @@ const ANTI_SLOP = `RULES (violating any = rejection):
 - NO filler: "In today's world", "Let's dive in", "Here's the thing"
 - NO hedging: "might", "could potentially", "it's possible"
 - NO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry"
-- NO emojis, NO hashtags, NO markdown formatting
+- NO emojis, NO hashtags, NO markdown formatting, NO em dashes (—)
 - Every sentence must add new information — no repetition
 - Be specific: use real names, real numbers, real places
 - Write like a sharp human, not a language model`;
@@ -53,6 +53,8 @@ function cleanPostBody(body) {
   text = text.replace(/\*(.+?)\*/g, '$1');
   // Strip hashtags
   text = text.replace(/#\w+/g, '');
+  // Replace em dashes and en dashes with plain hyphens
+  text = text.replace(/[\u2013\u2014]/g, ' - ');
   // Fix camelCase joins (e.g. "riskManagement" → "risk Management")
   text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
   // Fix missing space after period (e.g. "fact.The" → "fact. The")

@@ -125,8 +125,13 @@ export default function LinkedInPostEditor() {
       });
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
-      setPost(data.post);
-      setBody(data.post.content || '');
+      // Only update image fields — preserve edited post body
+      setPost(prev => ({
+        ...prev,
+        featured_image_square: data.post.featured_image_square ?? prev.featured_image_square,
+        base_image_url: data.post.base_image_url ?? prev.base_image_url,
+        style_overrides: data.post.style_overrides ?? prev.style_overrides,
+      }));
     } catch {
       toast.error('Image regeneration failed');
     } finally {

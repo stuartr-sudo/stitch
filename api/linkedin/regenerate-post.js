@@ -10,7 +10,7 @@ const ANTI_SLOP = `RULES (violating any = rejection):
 - NO filler: "In today's world", "Let's dive in", "Here's the thing"
 - NO hedging: "might", "could potentially", "it's possible"
 - NO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry"
-- NO emojis, NO hashtags, NO markdown formatting
+- NO emojis, NO hashtags, NO markdown formatting, NO em dashes (—)
 - Every sentence must add new information — no repetition
 - Be specific: use real names, real numbers, real places
 - Write like a sharp human, not a language model`;
@@ -31,6 +31,8 @@ function cleanPostBody(body) {
   text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}]/gu, '');
   text = text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/__(.+?)__/g, '$1').replace(/\*(.+?)\*/g, '$1');
   text = text.replace(/#\w+/g, '');
+  // Replace em dashes and en dashes with plain hyphens
+  text = text.replace(/[\u2013\u2014]/g, ' - ');
   text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
   text = text.replace(/\.([A-Z])/g, '. $1');
   text = text.replace(/\n{3,}/g, '\n\n').trim();
@@ -61,56 +63,63 @@ export default async function handler(req, res) {
     if (!topic) return res.status(404).json({ error: 'Associated topic not found' });
 
     const keys = await getUserKeys(req.user.id, req.user.email);
-    if (!keys.openaiKey) return res.status(500).json({ error: 'OpenAI key not configured' });
-
-    const client = new OpenAI({ apiKey: keys.openaiKey });
-    const content = topic.full_content || topic.source_summary || '';
-
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4.1',
-      messages: [
-        { role: 'system', content: STYLE_PROMPTS[post.post_style] },
-        { role: 'user', content: `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content}` },
-      ],
-      temperature: 0.9,
-      max_tokens: 1000,
-    });
-
-    logCost({
-      username: req.user.email,
-      category: 'openai',
-      operation: 'linkedin_generation',
-      model: 'gpt-4.1',
-      input_tokens: completion.usage?.prompt_tokens || 0,
-      output_tokens: completion.usage?.completion_tokens || 0,
-    }).catch(() => {});
-
-    let finalBody = completion.choices[0]?.message?.content?.trim() || '';
-
-    // Clean post body
-    finalBody = cleanPostBody(finalBody);
-
-    // Append source as plain text
-    if (topic.source_url) {
-      finalBody += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
-    }
-
-    // Append CTA if configured (hyperlinked)
-    const { data: config } = await supabase
-      .from('linkedin_config')
-      .select('linkedin_cta_text, linkedin_cta_url')
-      .eq('user_id', req.user.id)
-      .maybeSingle();
-
-    if (config?.linkedin_cta_text && config?.linkedin_cta_url) {
-      finalBody += `\n${config.linkedin_cta_text} → ${config.linkedin_cta_url}`;
-    }
 
     // Merge style overrides if provided
     const { style_overrides, regenerate_image } = req.body || {};
-    const updateFields = { content: finalBody, status: 'generated' };
+    const updateFields = {};
     if (style_overrides) {
       updateFields.style_overrides = { ...(post.style_overrides || {}), ...style_overrides };
+    }
+
+    // Fetch config for CTA (needed for both text regen and image regen)
+    const { data: config } = await supabase
+      .from('linkedin_config')
+      .select('linkedin_cta_text, linkedin_cta_url, series_title')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    // Only regenerate text when NOT doing an image-only regeneration
+    if (!regenerate_image) {
+      if (!keys.openaiKey) return res.status(500).json({ error: 'OpenAI key not configured' });
+
+      const client = new OpenAI({ apiKey: keys.openaiKey });
+      const content = topic.full_content || topic.source_summary || '';
+
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4.1',
+        messages: [
+          { role: 'system', content: STYLE_PROMPTS[post.post_style] },
+          { role: 'user', content: `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content}` },
+        ],
+        temperature: 0.9,
+        max_tokens: 1000,
+      });
+
+      logCost({
+        username: req.user.email,
+        category: 'openai',
+        operation: 'linkedin_generation',
+        model: 'gpt-4.1',
+        input_tokens: completion.usage?.prompt_tokens || 0,
+        output_tokens: completion.usage?.completion_tokens || 0,
+      }).catch(() => {});
+
+      let finalBody = completion.choices[0]?.message?.content?.trim() || '';
+
+      // Clean post body
+      finalBody = cleanPostBody(finalBody);
+
+      // Append source as plain text
+      if (topic.source_url) {
+        finalBody += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
+      }
+
+      if (config?.linkedin_cta_text && config?.linkedin_cta_url) {
+        finalBody += `\n${config.linkedin_cta_text} → ${config.linkedin_cta_url}`;
+      }
+
+      updateFields.content = finalBody;
+      updateFields.status = 'generated';
     }
 
     // Optionally regenerate image with new style
