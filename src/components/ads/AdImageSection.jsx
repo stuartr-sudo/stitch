@@ -225,13 +225,13 @@ export default function AdImageSection({
                 <button
                   onClick={handleEnhance}
                   disabled={enhancing || !imagePrompt?.trim()}
-                  className="mt-1 flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Use AI to rewrite this prompt into a rich image generation prompt"
                 >
                   {enhancing
-                    ? <Loader2 className="w-3 h-3 animate-spin" />
-                    : <Sparkles className="w-3 h-3" />}
-                  {enhancing ? 'Enhancing…' : 'AI Enhance Prompt'}
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Sparkles className="w-3.5 h-3.5" />}
+                  {enhancing ? 'Enhancing…' : 'Enhance with AI'}
                 </button>
               )}
             </div>

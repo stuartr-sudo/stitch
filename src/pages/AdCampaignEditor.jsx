@@ -567,6 +567,7 @@ export default function AdCampaignEditor() {
                       variation={selectedVariation}
                       onUpdate={handleUpdateVariation}
                       onRegenerate={handleRegenerate}
+                      onEnhancePrompt={handleEnhancePrompt}
                       regenerating={regeneratingId === selectedVariation.id}
                       campaignName={campaign?.name}
                       landingUrl={campaign?.landing_url}

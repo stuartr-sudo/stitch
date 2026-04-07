@@ -162,11 +162,12 @@ export default async function handler(req, res) {
     try {
       const sections = [];
       sections.push('PURPOSE: Generate an improved advertising image for a paid ad campaign.');
+      // Style preset goes FIRST so it's the primary visual directive
+      if (style_preset) sections.push(`REQUESTED VISUAL STYLE (this is the #1 priority — the entire image must be rendered in this style):\n${style_preset}`);
       sections.push(`PLATFORM: ${variation.platform} — ${platformContextMap[variation.platform] || 'advertising'}`);
       sections.push(`PRODUCT/SERVICE: ${campaign.product_description || campaign.name}`);
       if (campaign.objective) sections.push(`CAMPAIGN OBJECTIVE: ${campaign.objective}`);
       if (campaign.target_audience) sections.push(`TARGET AUDIENCE: ${campaign.target_audience}`);
-      if (style_preset) sections.push(`REQUESTED VISUAL STYLE: ${style_preset}`);
 
       // User's custom direction — use as creative guidance, not verbatim output
       // Include the actual ad copy so the image visually supports the message
@@ -204,14 +205,14 @@ export default async function handler(req, res) {
       if (!keys.openaiKey) throw new Error('No OpenAI key');
       const client = new OpenAI({ apiKey: keys.openaiKey });
 
+      const hasStylePreset = !!style_preset;
       const systemPrompt = `You are an expert AI advertising image prompt engineer. Your job is to produce a single, detailed, visually rich prompt for an AI image generator (Nano Banana 2).
 
 Rules:
 - Output ONLY the prompt text — no preamble, no explanation, no quotes
 - Create a scene that visually represents the product/service and appeals to the target audience
 - Be extremely specific with visual details: setting, lighting, colors, composition, materials, mood
-- If a brand style guide is provided, align the visual style with it
-- If a visual style is requested, apply that aesthetic throughout — this takes priority over any previous prompt style
+${hasStylePreset ? `- CRITICAL: A REQUESTED VISUAL STYLE has been provided. This is the #1 priority. The ENTIRE image must be rendered in this style. The style defines the look, feel, color palette, composition, and artistic treatment. All other visual guidance (brand kit, previous prompt) is SECONDARY to the requested style. Do NOT fall back to a generic corporate look — commit fully to the requested aesthetic.` : `- If a brand style guide is provided, align the visual style with it`}
 - If USER DIRECTION is provided, interpret the creative intent and build on it — do not copy it verbatim; improve and vary it
 - If a previous prompt is provided, IMPROVE on it — make the scene more compelling, more specific, more on-brand. Take a different creative angle while keeping the core concept.
 - Each regeneration should produce a noticeably different composition or creative angle for variety
