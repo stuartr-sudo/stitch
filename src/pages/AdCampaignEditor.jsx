@@ -430,7 +430,7 @@ export default function AdCampaignEditor() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Variation list + editor */}
-        <div className="w-[480px] flex-shrink-0 border-r bg-white overflow-y-auto">
+        <div className="w-[600px] flex-shrink-0 border-r bg-white overflow-y-auto">
           {platformVariations.length === 0 ? (
             <div className="p-8 text-center">
               <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
