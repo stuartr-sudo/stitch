@@ -58,7 +58,7 @@ export default function MetaAdPreview({ variation, brandName, brandLogoUrl }) {
             {/* Bottom CTA overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
               {copy.primaryText && (
-                <p className="text-white text-sm mb-3 line-clamp-2">{copy.primaryText}</p>
+                <p className="text-white text-sm mb-3 line-clamp-2 whitespace-pre-wrap">{copy.primaryText}</p>
               )}
               <div className="flex items-center justify-center">
                 <div className="bg-white rounded-full px-6 py-2 flex items-center gap-2">
@@ -117,7 +117,7 @@ export default function MetaAdPreview({ variation, brandName, brandLogoUrl }) {
 
         {/* Primary text */}
         <div className="px-4 pb-2">
-          <p className="text-sm text-gray-800 leading-relaxed">
+          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
             {copy.primaryText || 'Your primary text will appear here...'}
           </p>
         </div>

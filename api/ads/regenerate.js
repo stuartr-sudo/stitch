@@ -24,7 +24,7 @@ const REGEN_PROMPTS = {
   linkedin: `You are an expert LinkedIn Ads copywriter. Generate a single LinkedIn Sponsored Content ad variation.
 
 Produce:
-- introText: Main post body (max 600 characters). Professional, compelling.
+- introText: Main post body (max 600 characters). Professional, compelling. Use line breaks (\\n\\n) between short paragraphs (1-2 sentences each). NEVER write a wall of text. Structure: Hook\\n\\nContext/problem\\n\\nSolution/benefit\\n\\nCTA line.
 - headline: Below image (max 200 characters). Punchy, benefit-focused.
 - description: Supporting text (max 300 characters).
 - cta: One of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"
@@ -45,7 +45,7 @@ Return valid JSON: { "headlines": ["..."], "descriptions": ["..."] }`,
   meta: `You are an expert Meta/Facebook Ads copywriter. Generate a single Facebook/Instagram feed ad variation.
 
 Produce:
-- primaryText: Above image (max 125 characters). Conversational, scroll-stopping.
+- primaryText: Above image. Conversational, scroll-stopping. Use line breaks (\\n\\n) between short paragraphs. Hook first, then expand.
 - headline: Bold below image (max 40 characters).
 - description: Below headline (max 30 characters).
 - cta: One of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"

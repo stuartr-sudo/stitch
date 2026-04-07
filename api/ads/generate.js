@@ -19,6 +19,12 @@ For each variation, produce:
 - cta: One of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"
 - image_brief: A 1-sentence visual description of what the ad image should depict to match THIS specific variation's copy. Include the subject (who/what is shown), setting, and mood. If the copy mentions a specific person name, age, gender, or scenario, the image_brief MUST reflect that exactly.
 
+FORMATTING — introText:
+- Use line breaks (\\n\\n) between paragraphs. NEVER write a wall of text.
+- Keep paragraphs short — 1-2 sentences each.
+- Typical structure: Hook line\\n\\nProblem/context\\n\\nSolution/benefit\\n\\nCTA line
+- The final line should be a standalone call-to-action sentence.
+
 RULES:
 - NO emojis, NO hashtags
 - NEVER use em dashes or en dashes. Use hyphens (-) instead of any dash character.
@@ -66,11 +72,16 @@ Return valid JSON: { "headlines": ["..."], "descriptions": ["..."], "image_brief
 const META_SYSTEM = `You are an expert Meta/Facebook Ads copywriter. Generate 3 ad variations for Facebook/Instagram feed ads.
 
 For each variation, produce:
-- primaryText: Main text above image (max 125 characters for above-fold). Conversational, scroll-stopping.
+- primaryText: Main text above image (max 125 characters for above-fold, but can be longer with "See more"). Conversational, scroll-stopping.
 - headline: Bold text below image (max 40 characters). Action-oriented.
 - description: Below headline (max 30 characters). Supporting info.
 - cta: One of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"
 - image_brief: A 1-sentence visual description of what the ad image should depict to match THIS specific variation's copy. Include the subject (who/what is shown), setting, and mood. If the copy mentions a specific person, scenario, or emotion, the image_brief MUST reflect that exactly.
+
+FORMATTING — primaryText:
+- Use line breaks (\\n\\n) between short paragraphs. NEVER write a wall of text.
+- Hook in the first line, then expand below.
+- Keep each paragraph to 1-2 sentences max.
 
 RULES:
 - Conversational, not corporate
