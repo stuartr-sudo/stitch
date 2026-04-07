@@ -4,7 +4,7 @@ import {
   Terminal, BookOpen, Trophy, Search, Sparkles, Film,
   RotateCcw, LayoutGrid, Target, GraduationCap, Wand2, Play,
   Sun, Moon, Video, GitBranch, Share2, Eye, Briefcase, Clapperboard, Scissors,
-  ChevronDown, ChevronRight, X, Zap, PenLine,
+  ChevronDown, ChevronRight, X, Zap, PenLine, Copy,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LearnTab from '@/components/educate/LearnTab';
@@ -30,6 +30,7 @@ import { AdCloneGuideContent } from './AdCloneGuidePage';
 import { VideoAnalyzerGuideContent } from './VideoAnalyzerGuidePage';
 import { CommandCenterGuideContent } from './CommandCenterGuidePage';
 import { ReviewWidgetGuideContent } from './ReviewWidgetGuidePage';
+import { ReplicationGuideContent } from './ReplicationGuidePage';
 
 // ── CLI Lab progress persistence ──
 
@@ -92,6 +93,7 @@ const TABS = [
   { id: 'video-analyzer', label: 'Video Analyzer', Icon: Search },
   { id: 'command-center', label: 'Command Center', Icon: Zap },
   { id: 'review-widget', label: 'Review Widget', Icon: PenLine },
+  { id: 'replication', label: 'Replication Guide', Icon: Copy },
 ];
 
 // ── Sidebar categories ──
@@ -103,7 +105,7 @@ const CATEGORIES = [
   { label: 'Analysis', items: ['clone-ad', 'video-analyzer'] },
   { label: 'Social & Ads', items: ['command-center', 'ads', 'linkedin', 'carousels'] },
   { label: 'Brand & Setup', items: ['brandkit', 'flows', 'review-widget'] },
-  { label: 'Advanced', items: ['ad-discovery', 'agency'] },
+  { label: 'Advanced', items: ['ad-discovery', 'agency', 'replication'] },
 ];
 
 const TAB_MAP = Object.fromEntries(TABS.map((t) => [t.id, t]));
@@ -480,6 +482,11 @@ export default function LearnPage() {
         {activeTab === 'review-widget' && (
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
             <ReviewWidgetGuideContent />
+          </div>
+        )}
+        {activeTab === 'replication' && (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-850 min-h-full">
+            <ReplicationGuideContent />
           </div>
         )}
       </div>
