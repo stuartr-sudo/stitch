@@ -336,7 +336,7 @@ export default async function handler(req, res) {
   // Fetch brand kit (full visual fields for image prompt + basic fields for copy)
   const { data: brand } = await supabase
     .from('brand_kit')
-    .select('brand_name, tagline, industry, target_audience, visual_style_notes, mood_atmosphere, lighting_prefs, composition_style, ai_prompt_rules, preferred_elements, prohibited_elements, colors')
+    .select('brand_name, brand_username, tagline, industry, target_audience, visual_style_notes, mood_atmosphere, lighting_prefs, composition_style, ai_prompt_rules, preferred_elements, prohibited_elements, colors')
     .eq('user_id', req.user.id)
     .maybeSingle();
 
@@ -346,6 +346,60 @@ export default async function handler(req, res) {
     brand?.industry ? `Industry: ${brand.industry}` : null,
     brand?.target_audience ? `Audience: ${brand.target_audience}` : null,
   ].filter(Boolean).join('\n');
+
+  // ---------------------------------------------------------------------------
+  // RAG: Fetch brand guidelines + knowledge base from Doubleclicker shared tables
+  // ---------------------------------------------------------------------------
+  const brandUsername = brand?.brand_username;
+  let brandGuidelineContext = '';
+  let ragContext = '';
+
+  if (brandUsername) {
+    // 1. Brand guidelines — voice, tone, target market, personality, preferred/prohibited phrases
+    try {
+      const { data: bg } = await supabase
+        .from('brand_guidelines')
+        .select('voice_and_tone, target_market, brand_personality, content_style_rules, prohibited_elements, preferred_elements')
+        .eq('user_name', brandUsername)
+        .maybeSingle();
+
+      if (bg) {
+        const parts = [];
+        if (bg.brand_personality) parts.push(`Brand Personality: ${bg.brand_personality}`);
+        if (bg.voice_and_tone) parts.push(`Voice & Tone: ${bg.voice_and_tone}`);
+        if (bg.target_market) parts.push(`Target Market: ${bg.target_market}`);
+        if (bg.preferred_elements) parts.push(`Preferred Elements: ${bg.preferred_elements}`);
+        if (bg.prohibited_elements) parts.push(`Prohibited Elements: ${bg.prohibited_elements}`);
+        if (bg.content_style_rules) parts.push(`Content Style Rules: ${bg.content_style_rules}`);
+        if (parts.length > 0) {
+          brandGuidelineContext = parts.join('\n\n');
+          console.log(`[ads/generate] Brand guidelines loaded for ${brandUsername} (${brandGuidelineContext.length} chars)`);
+        }
+      }
+    } catch (err) {
+      console.warn('[ads/generate] Failed to fetch brand guidelines:', err.message);
+    }
+
+    // 2. RAG knowledge base — search for real product/industry data
+    try {
+      const searchQuery = campaign.product_description || campaign.name;
+      const { data: chunks } = await supabase
+        .from('knowledge_chunks')
+        .select('content, url, domain')
+        .eq('user_name', brandUsername)
+        .textSearch('content_tsv', searchQuery, { type: 'websearch' })
+        .limit(8);
+
+      if (chunks?.length > 0) {
+        ragContext = chunks
+          .map(c => `- [${c.domain}${c.url ? ` — ${c.url}` : ''}]: ${c.content.slice(0, 400)}`)
+          .join('\n');
+        console.log(`[ads/generate] RAG: ${chunks.length} knowledge chunks found for "${searchQuery.slice(0, 50)}"`);
+      }
+    } catch (err) {
+      console.warn('[ads/generate] RAG search failed:', err.message);
+    }
+  }
 
   // Resolve writing style and fetch web research for grounding (all styles)
   const writingStyle = campaign.writing_style || 'default';
@@ -366,7 +420,9 @@ export default async function handler(req, res) {
     campaign.target_audience ? `Target Audience: ${campaign.target_audience}` : null,
     campaign.objective ? `Campaign Objective: ${campaign.objective}` : null,
     brandContext || null,
-    webResearch ? `\nRESEARCH CONTEXT — REAL information from the web. You may reference ONLY facts, names, companies, and data found here. NEVER invent details beyond what is provided:\n${webResearch}` : null,
+    brandGuidelineContext ? `\nBRAND VOICE GUIDELINES — Follow these rules for tone, vocabulary, and style. This is how the brand speaks:\n${brandGuidelineContext}` : null,
+    ragContext ? `\nKNOWLEDGE BASE — REAL facts, data, and information about this product/industry from researched sources. Use these details to write truthful, grounded ad copy:\n${ragContext}` : null,
+    webResearch ? `\nWEB RESEARCH — Additional real information from the web. You may reference facts found here:\n${webResearch}` : null,
     STYLE_MODIFIERS[writingStyle] ? `\n${STYLE_MODIFIERS[writingStyle]}` : null,
   ].filter(Boolean);
   const userMessage = userMessageParts.join('\n');

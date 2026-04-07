@@ -29,12 +29,17 @@ Produce:
 - description: Supporting text (max 300 characters).
 - cta: One of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"
 
-NO emojis, NO hashtags, NO AI clichés. NEVER use em dashes or en dashes — use hyphens (-) instead. Return valid JSON: { "introText": "...", "headline": "...", "description": "...", "cta": "..." }`,
+NO emojis, NO hashtags, NO AI clichés. NEVER use em dashes or en dashes — use hyphens (-) instead.
+CRITICAL — NO FABRICATION: NEVER invent customer names, testimonials, case studies, or statistics. Use ONLY facts from the KNOWLEDGE BASE or RESEARCH provided. If no research is available, write about the product benefits in general terms.
+If BRAND VOICE GUIDELINES are provided, follow them exactly for tone, vocabulary, and style.
+Return valid JSON: { "introText": "...", "headline": "...", "description": "...", "cta": "..." }`,
 
   google: `You are an expert Google Ads copywriter. Regenerate assets for a Responsive Search Ad.
 
 Produce 15 headlines (max 30 chars each, no exclamation marks) and 4 descriptions (max 90 chars each).
 NEVER use em dashes or en dashes — use hyphens (-) instead.
+CRITICAL — NO FABRICATION: NEVER invent statistics or data points. Use ONLY facts from the KNOWLEDGE BASE or RESEARCH provided.
+If BRAND VOICE GUIDELINES are provided, follow them exactly for tone and vocabulary.
 Return valid JSON: { "headlines": ["..."], "descriptions": ["..."] }`,
 
   meta: `You are an expert Meta/Facebook Ads copywriter. Generate a single Facebook/Instagram feed ad variation.
@@ -45,7 +50,10 @@ Produce:
 - description: Below headline (max 30 characters).
 - cta: One of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"
 
-NEVER use em dashes or en dashes — use hyphens (-) instead. Return valid JSON: { "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }`,
+NEVER use em dashes or en dashes — use hyphens (-) instead.
+CRITICAL — NO FABRICATION: NEVER invent customer names, testimonials, or statistics. Use ONLY facts from the KNOWLEDGE BASE or RESEARCH provided.
+If BRAND VOICE GUIDELINES are provided, follow them exactly for tone, vocabulary, and style.
+Return valid JSON: { "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }`,
 };
 
 export default async function handler(req, res) {
@@ -78,12 +86,14 @@ export default async function handler(req, res) {
     const systemPrompt = REGEN_PROMPTS[variation.platform];
     if (!systemPrompt) return res.status(400).json({ error: `Unsupported platform: ${variation.platform}` });
 
-    // Fetch brand kit for context
+    // Fetch brand kit + brand guidelines + RAG knowledge for context
     let brandContext = '';
+    let brandGuidelineContext = '';
+    let ragContext = '';
     try {
       const { data: brandKit } = await supabase
         .from('brand_kit')
-        .select('brand_name, tagline, industry, target_audience')
+        .select('brand_name, brand_username, tagline, industry, target_audience')
         .eq('user_id', req.user.id)
         .single();
       if (brandKit) {
@@ -93,6 +103,42 @@ export default async function handler(req, res) {
         if (brandKit.industry) parts.push(`Industry: ${brandKit.industry}`);
         if (brandKit.target_audience) parts.push(`Brand Audience: ${brandKit.target_audience}`);
         brandContext = parts.join('\n');
+
+        // Fetch brand guidelines from Doubleclicker shared tables
+        if (brandKit.brand_username) {
+          try {
+            const { data: bg } = await supabase
+              .from('brand_guidelines')
+              .select('voice_and_tone, target_market, brand_personality, preferred_elements, prohibited_elements')
+              .eq('user_name', brandKit.brand_username)
+              .maybeSingle();
+            if (bg) {
+              const bgParts = [];
+              if (bg.brand_personality) bgParts.push(`Brand Personality: ${bg.brand_personality}`);
+              if (bg.voice_and_tone) bgParts.push(`Voice & Tone: ${bg.voice_and_tone}`);
+              if (bg.target_market) bgParts.push(`Target Market: ${bg.target_market}`);
+              if (bg.preferred_elements) bgParts.push(`Preferred: ${bg.preferred_elements}`);
+              if (bg.prohibited_elements) bgParts.push(`Prohibited: ${bg.prohibited_elements}`);
+              brandGuidelineContext = bgParts.join('\n\n');
+            }
+          } catch {}
+
+          // RAG knowledge search
+          try {
+            const searchQuery = campaign.product_description || campaign.name;
+            const { data: chunks } = await supabase
+              .from('knowledge_chunks')
+              .select('content, url, domain')
+              .eq('user_name', brandKit.brand_username)
+              .textSearch('content_tsv', searchQuery, { type: 'websearch' })
+              .limit(6);
+            if (chunks?.length > 0) {
+              ragContext = chunks
+                .map(c => `- [${c.domain}]: ${c.content.slice(0, 300)}`)
+                .join('\n');
+            }
+          } catch {}
+        }
       }
     } catch {}
 
@@ -101,6 +147,8 @@ export default async function handler(req, res) {
       campaign.landing_url ? `Landing URL: ${campaign.landing_url}` : null,
       campaign.target_audience ? `Target Audience: ${campaign.target_audience}` : null,
       brandContext || null,
+      brandGuidelineContext ? `\nBRAND VOICE GUIDELINES:\n${brandGuidelineContext}` : null,
+      ragContext ? `\nKNOWLEDGE BASE — Real facts about this product/industry:\n${ragContext}` : null,
     ].filter(Boolean).join('\n');
 
     const completion = await client.chat.completions.create({
