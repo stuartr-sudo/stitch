@@ -17,6 +17,7 @@ For each variation, produce:
 - headline: Appears below the image (max 200 characters). Punchy and benefit-focused.
 - description: Supporting text below headline (max 300 characters). Reinforces the value prop.
 - cta: One of: "Apply Now", "Download", "Get Quote", "Learn More", "Sign Up", "Subscribe", "Register", "Request Demo", "Contact Us"
+- image_brief: A 1-sentence visual description of what the ad image should depict to match THIS specific variation's copy. Include the subject (who/what is shown), setting, and mood. If the copy mentions a specific person name, age, gender, or scenario, the image_brief MUST reflect that exactly.
 
 RULES:
 - NO emojis, NO hashtags
@@ -27,13 +28,21 @@ RULES:
 - Each variation should take a different angle (professional/authoritative, conversational/relatable, data-driven/specific)
 - Write for B2B decision-makers unless told otherwise
 
-Return valid JSON: { "variations": [{ "introText": "...", "headline": "...", "description": "...", "cta": "..." }] }`;
+CRITICAL — NO FABRICATION:
+- NEVER invent customer names, testimonials, case studies, or success stories
+- NEVER fabricate statistics, percentages, or data points
+- If RESEARCH CONTEXT is provided, you may ONLY reference details that appear in the research
+- If no research is provided, write about the product's value proposition and benefits in general terms — do NOT create fictional characters or scenarios
+- The copy must be truthful and based ONLY on the product description and any research provided
+
+Return valid JSON: { "variations": [{ "introText": "...", "headline": "...", "description": "...", "cta": "...", "image_brief": "..." }] }`;
 
 const GOOGLE_RSA_SYSTEM = `You are an expert Google Ads copywriter. Generate assets for a Responsive Search Ad.
 
 Produce:
 - 15 headlines (max 30 characters EACH — this is a hard limit, count carefully)
 - 4 descriptions (max 90 characters EACH)
+- image_brief: A 1-sentence visual description of what the ad image should depict. Include the subject, setting, and mood that best represents the product/service.
 
 RULES:
 - No exclamation marks (Google policy)
@@ -45,7 +54,14 @@ RULES:
 - Include at least 2 headlines with numbers/stats
 - Include at least 1 headline as a question
 
-Return valid JSON: { "headlines": ["..."], "descriptions": ["..."] }`;
+CRITICAL — NO FABRICATION:
+- NEVER invent statistics, percentages, or data points you cannot verify
+- NEVER fabricate customer counts, time savings, or ROI figures
+- If RESEARCH CONTEXT is provided, you may reference real facts from it
+- If no research is provided, use general benefit-focused language — do NOT make up numbers
+- All claims must be based on the product description and any research provided
+
+Return valid JSON: { "headlines": ["..."], "descriptions": ["..."], "image_brief": "..." }`;
 
 const META_SYSTEM = `You are an expert Meta/Facebook Ads copywriter. Generate 3 ad variations for Facebook/Instagram feed ads.
 
@@ -54,6 +70,7 @@ For each variation, produce:
 - headline: Bold text below image (max 40 characters). Action-oriented.
 - description: Below headline (max 30 characters). Supporting info.
 - cta: One of: "Book Now", "Contact Us", "Download", "Get Offer", "Get Quote", "Learn More", "Shop Now", "Sign Up", "Watch More"
+- image_brief: A 1-sentence visual description of what the ad image should depict to match THIS specific variation's copy. Include the subject (who/what is shown), setting, and mood. If the copy mentions a specific person, scenario, or emotion, the image_brief MUST reflect that exactly.
 
 RULES:
 - Conversational, not corporate
@@ -62,7 +79,14 @@ RULES:
 - Each variation should take a different angle (emotional, practical, social-proof)
 - Write to stop the scroll - first 5 words matter most
 
-Return valid JSON: { "variations": [{ "primaryText": "...", "headline": "...", "description": "...", "cta": "..." }] }`;
+CRITICAL — NO FABRICATION:
+- NEVER invent customer names, testimonials, or success stories
+- NEVER fabricate statistics or data points
+- If RESEARCH CONTEXT is provided, you may ONLY reference details that appear in the research
+- If no research is provided, write about the product's value proposition — do NOT create fictional characters or scenarios
+- The copy must be truthful and based ONLY on the product description and any research provided
+
+Return valid JSON: { "variations": [{ "primaryText": "...", "headline": "...", "description": "...", "cta": "...", "image_brief": "..." }] }`;
 
 // Strip em dashes and en dashes from all string values in an object
 function stripDashes(obj) {
@@ -105,7 +129,8 @@ Structure the copy as a narrative arc:
 2. Introduce the product/service as the turning point
 3. Paint a "after" picture — the transformation or outcome
 4. End with a clear, specific CTA
-Use vivid, concrete language. Weave in any research context provided. Each variation should feature a different character or scenario.`,
+Use vivid, concrete language. Each variation should take a different angle.
+IMPORTANT: If RESEARCH CONTEXT is provided, base the narrative ONLY on real details from the research. Use real names, companies, and outcomes found in the research — NEVER invent fictional characters or fabricate stories. If no research is available, write about the product benefits in general terms without creating fake testimonials or personas.`,
 
   data_driven: `WRITING STYLE — DATA-DRIVEN:
 Lead with a specific, surprising number or stat when possible (or a strong implied metric).
@@ -134,16 +159,26 @@ Tone: boardroom-ready. Polished, not stiff.`,
 // Exa research helper for Storytelling style
 // ---------------------------------------------------------------------------
 
-async function fetchStorytellingResearch(topic, exaKey) {
+async function fetchAdResearch(topic, exaKey, writingStyle) {
   if (!exaKey) return null;
+
+  // Tailor the search query based on writing style
+  const queryMap = {
+    storytelling: `${topic} customer success story transformation results case study`,
+    data_driven: `${topic} statistics data results ROI benchmark study report`,
+    default: `${topic} benefits features reviews use case`,
+    conversational: `${topic} review experience opinion recommendation`,
+    professional: `${topic} enterprise solution business results ROI case study`,
+  };
+  const query = queryMap[writingStyle] || queryMap.default;
 
   try {
     const res = await fetch('https://api.exa.ai/search', {
       method: 'POST',
       headers: { 'x-api-key': exaKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        query: `${topic} customer success story transformation results case study`,
-        num_results: 4,
+        query,
+        num_results: 5,
         use_autoprompt: true,
         type: 'neural',
         contents: { text: { max_characters: 600 } },
@@ -155,7 +190,7 @@ async function fetchStorytellingResearch(topic, exaKey) {
     const data = await res.json();
     const snippets = (data.results || [])
       .filter(r => r.text?.trim())
-      .map(r => `- ${r.title}: ${r.text.trim().slice(0, 300)}`)
+      .map(r => `- ${r.title} (${r.url}): ${r.text.trim().slice(0, 400)}`)
       .join('\n');
 
     return snippets || null;
@@ -167,14 +202,15 @@ async function fetchStorytellingResearch(topic, exaKey) {
 /**
  * Build a rich image prompt using GPT (same pattern as Cohesive Prompt Builder).
  */
-async function buildAdImagePrompt(openai, { productDescription, platform, platformContext, brandKit, objective, targetAudience, adCopy }) {
+async function buildAdImagePrompt(openai, { productDescription, platform, platformContext, brandKit, objective, targetAudience, adCopy, imageBrief }) {
   const sections = [];
   sections.push('PURPOSE: Generate a compelling advertising image for a paid ad campaign.');
   sections.push(`PLATFORM: ${platform} — ${platformContext}`);
   sections.push(`PRODUCT/SERVICE: ${productDescription}`);
   if (objective) sections.push(`CAMPAIGN OBJECTIVE: ${objective}`);
   if (targetAudience) sections.push(`TARGET AUDIENCE: ${targetAudience}`);
-  if (adCopy) sections.push(`AD COPY (image must visually reinforce this message):\n${adCopy}`);
+  if (imageBrief) sections.push(`IMAGE DIRECTION (follow this closely — it describes exactly what the image should show):\n${imageBrief}`);
+  if (adCopy) sections.push(`AD COPY (image must visually match this message — if the copy mentions a specific person, gender, scenario, or setting, the image MUST reflect that):\n${adCopy}`);
 
   // Brand style guide context
   if (brandKit) {
@@ -196,6 +232,8 @@ async function buildAdImagePrompt(openai, { productDescription, platform, platfo
 
 Rules:
 - Output ONLY the prompt text — no preamble, no explanation, no quotes
+- CRITICAL: If an IMAGE DIRECTION is provided, follow it faithfully — it specifies exactly who/what should be shown
+- CRITICAL: If the AD COPY mentions a specific person (name, gender, age), the image MUST depict a person matching that description. "Mark" = male. "Sarah" = female. Do NOT show a different gender or demographic than what the copy describes.
 - Create a scene that visually represents the product/service and appeals to the target audience
 - Be extremely specific with visual details: setting, lighting, colors, composition, materials, mood
 - If a brand style guide is provided, align the visual style with it
@@ -309,18 +347,16 @@ export default async function handler(req, res) {
     brand?.target_audience ? `Audience: ${brand.target_audience}` : null,
   ].filter(Boolean).join('\n');
 
-  // Resolve writing style and optionally fetch research for Storytelling
+  // Resolve writing style and fetch web research for grounding (all styles)
   const writingStyle = campaign.writing_style || 'default';
-  let storytellingResearch = null;
-  if (writingStyle === 'storytelling') {
-    const exaKey = await resolveExaKey(req.user.id);
-    storytellingResearch = await fetchStorytellingResearch(
-      campaign.product_description || campaign.name,
-      exaKey
-    );
-    if (storytellingResearch) {
-      console.log(`[ads/generate] Storytelling research fetched (${storytellingResearch.length} chars)`);
-    }
+  const exaKey = await resolveExaKey(req.user.id);
+  const webResearch = await fetchAdResearch(
+    campaign.product_description || campaign.name,
+    exaKey,
+    writingStyle
+  );
+  if (webResearch) {
+    console.log(`[ads/generate] Web research fetched for ${writingStyle} (${webResearch.length} chars)`);
   }
 
   const targetPlatforms = platforms || campaign.platforms || ['linkedin'];
@@ -330,7 +366,7 @@ export default async function handler(req, res) {
     campaign.target_audience ? `Target Audience: ${campaign.target_audience}` : null,
     campaign.objective ? `Campaign Objective: ${campaign.objective}` : null,
     brandContext || null,
-    storytellingResearch ? `\nRESEARCH CONTEXT (weave relevant details into the narrative):\n${storytellingResearch}` : null,
+    webResearch ? `\nRESEARCH CONTEXT — REAL information from the web. You may reference ONLY facts, names, companies, and data found here. NEVER invent details beyond what is provided:\n${webResearch}` : null,
     STYLE_MODIFIERS[writingStyle] ? `\n${STYLE_MODIFIERS[writingStyle]}` : null,
   ].filter(Boolean);
   const userMessage = userMessageParts.join('\n');
@@ -377,76 +413,88 @@ export default async function handler(req, res) {
           return { platform, variations: [] };
         }
 
-        // Build a rich image prompt via GPT then generate
-        let imageUrl = null;
-        let imagePrompt = '';
-        if (keys.falKey) {
-          // Extract first variation's copy to ground the image in actual ad content
-          let adCopy = '';
-          if (platform === 'google') {
-            adCopy = parsed.headlines?.[0] || '';
-          } else {
-            const v0 = parsed.variations?.[0] || {};
-            adCopy = [v0.headline, v0.introText || v0.primaryText].filter(Boolean).join('. ').slice(0, 300);
-          }
-          try {
-            imagePrompt = await buildAdImagePrompt(client, {
-              productDescription: campaign.product_description || campaign.name,
-              platform,
-              platformContext: config.platformContext,
-              brandKit: brand,
-              objective: campaign.objective,
-              targetAudience: campaign.target_audience,
-              adCopy: adCopy || undefined,
-            });
-            logCost({
-              username: req.user.email,
-              category: 'openai',
-              operation: `ads_image_prompt_${platform}`,
-              model: 'gpt-4.1-mini',
-            }).catch(() => {});
-            console.log(`[ads/generate] ${platform} image prompt: ${imagePrompt.slice(0, 120)}...`);
-          } catch (err) {
-            console.warn(`[ads/generate] Prompt build failed for ${platform}, using fallback:`, err.message);
-            imagePrompt = `${campaign.product_description || campaign.name}. Professional, high quality advertising image. No text, no logos.`;
-          }
-
-          imageUrl = await generateImage(imagePrompt, keys.falKey, supabase, config.imageAspect);
-          if (imageUrl) {
-            logCost({
-              username: req.user.email,
-              category: 'fal',
-              operation: `ads_image_${platform}`,
-              model: 'nano-banana-2',
-            }).catch(() => {});
-          }
-        }
-
-        // Structure varies by platform
+        // Structure varies by platform — generate per-variation images
         if (platform === 'google') {
-          // Google RSA: single variation with multiple headlines/descriptions
+          // Google RSA: single variation — one image
+          let imageUrl = null;
+          let imagePrompt = '';
+          if (keys.falKey) {
+            const adCopy = [parsed.headlines?.[0], parsed.descriptions?.[0]].filter(Boolean).join('. ');
+            const imageBrief = parsed.image_brief || '';
+            try {
+              imagePrompt = await buildAdImagePrompt(client, {
+                productDescription: campaign.product_description || campaign.name,
+                platform,
+                platformContext: config.platformContext,
+                brandKit: brand,
+                objective: campaign.objective,
+                targetAudience: campaign.target_audience,
+                adCopy: adCopy || undefined,
+                imageBrief: imageBrief || undefined,
+              });
+              logCost({ username: req.user.email, category: 'openai', operation: `ads_image_prompt_${platform}`, model: 'gpt-4.1-mini' }).catch(() => {});
+            } catch (err) {
+              console.warn(`[ads/generate] Prompt build failed for ${platform}:`, err.message);
+              imagePrompt = `${campaign.product_description || campaign.name}. Professional advertising image. No text, no logos.`;
+            }
+            imageUrl = await generateImage(imagePrompt, keys.falKey, supabase, config.imageAspect);
+            if (imageUrl) logCost({ username: req.user.email, category: 'fal', operation: `ads_image_${platform}`, model: 'nano-banana-2' }).catch(() => {});
+          }
           return {
             platform,
             variations: [{
               ad_format: 'responsive_search',
-              copy_data: {
-                headlines: parsed.headlines || [],
-                descriptions: parsed.descriptions || [],
-                pinned: {},
-              },
+              copy_data: { headlines: parsed.headlines || [], descriptions: parsed.descriptions || [], pinned: {} },
               image_urls: imageUrl ? [imageUrl] : [],
               image_prompt: imagePrompt || null,
             }],
           };
         }
 
-        // LinkedIn and Meta: multiple variations
-        const variations = (parsed.variations || []).map(v => ({
-          ad_format: 'single_image',
-          copy_data: v,
-          image_urls: imageUrl ? [imageUrl] : [],
-          image_prompt: imagePrompt || null,
-        }));
+        // LinkedIn and Meta: generate a SEPARATE image per variation
+        const variations = [];
+        // Generate images in parallel (max 3 variations)
+        const imageResults = await Promise.allSettled(
+          (parsed.variations || []).map(async (v) => {
+            if (!keys.falKey) return { imageUrl: null, imagePrompt: '' };
+
+            const adCopy = [v.headline, v.introText || v.primaryText].filter(Boolean).join('. ').slice(0, 400);
+            const imageBrief = v.image_brief || '';
+            let imagePrompt = '';
+            try {
+              imagePrompt = await buildAdImagePrompt(client, {
+                productDescription: campaign.product_description || campaign.name,
+                platform,
+                platformContext: config.platformContext,
+                brandKit: brand,
+                objective: campaign.objective,
+                targetAudience: campaign.target_audience,
+                adCopy: adCopy || undefined,
+                imageBrief: imageBrief || undefined,
+              });
+              logCost({ username: req.user.email, category: 'openai', operation: `ads_image_prompt_${platform}`, model: 'gpt-4.1-mini' }).catch(() => {});
+              console.log(`[ads/generate] ${platform} variation image: ${imagePrompt.slice(0, 120)}...`);
+            } catch (err) {
+              console.warn(`[ads/generate] Prompt build failed for ${platform} variation:`, err.message);
+              imagePrompt = `${campaign.product_description || campaign.name}. Professional advertising image. No text, no logos.`;
+            }
+            const imageUrl = await generateImage(imagePrompt, keys.falKey, supabase, config.imageAspect);
+            if (imageUrl) logCost({ username: req.user.email, category: 'fal', operation: `ads_image_${platform}`, model: 'nano-banana-2' }).catch(() => {});
+            return { imageUrl, imagePrompt };
+          })
+        );
+
+        (parsed.variations || []).forEach((v, i) => {
+          const imgResult = imageResults[i]?.status === 'fulfilled' ? imageResults[i].value : { imageUrl: null, imagePrompt: '' };
+          // Strip image_brief from copy_data before saving (it's internal, not ad copy)
+          const { image_brief, ...copyData } = v;
+          variations.push({
+            ad_format: 'single_image',
+            copy_data: copyData,
+            image_urls: imgResult.imageUrl ? [imgResult.imageUrl] : [],
+            image_prompt: imgResult.imagePrompt || null,
+          });
+        });
 
         return { platform, variations };
       })
