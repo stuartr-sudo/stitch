@@ -10,9 +10,21 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import StitchNode from './nodes/StitchNode';
+import IteratorNode from './nodes/IteratorNode';
+import AggregatorNode from './nodes/AggregatorNode';
+import SplitNode from './nodes/SplitNode';
+import MergeNode from './nodes/MergeNode';
+import RunFlowNode from './nodes/RunFlowNode';
 import DeletableEdge from './edges/DeletableEdge';
 
-const nodeTypes = { stitch: StitchNode };
+const nodeTypes = {
+  stitch: StitchNode,
+  iterator: IteratorNode,
+  aggregator: AggregatorNode,
+  split: SplitNode,
+  merge: MergeNode,
+  'run-flow': RunFlowNode,
+};
 const edgeTypes = { default: DeletableEdge };
 
 const defaultEdgeOptions = {

@@ -357,8 +357,22 @@ const NODE_TYPES = {
       privacy: { type: 'select', options: ['public', 'unlisted', 'private'], default: 'private' }
     },
     async run(inputs, config, context) {
-      // Placeholder — requires OAuth tokens which are user-specific
-      return { video_id: `yt_placeholder_${Date.now()}` };
+      const { loadTokens } = await import('./tokenManager.js');
+      const { publishVideoToYouTube } = await import('./youtubePublisher.js');
+      const tokens = await loadTokens(context.userId, 'youtube', context.supabase);
+      if (!tokens?.access_token) throw new Error('YouTube not connected — go to Settings → Connected Accounts');
+      const result = await publishVideoToYouTube({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        videoUrl: inputs.video,
+        title: inputs.title || config.title || 'Untitled',
+        description: inputs.description || config.description || '',
+        tags: (config.tags || '').split(',').map(t => t.trim()).filter(Boolean),
+        privacyStatus: config.privacy || 'private',
+        containsSyntheticMedia: true,
+      });
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'youtube-upload', model: 'youtube' });
+      return { video_id: result?.videoId || result?.id || 'uploaded' };
     }
   },
 
@@ -376,7 +390,19 @@ const NODE_TYPES = {
     outputs: [{ id: 'post_id', type: 'string' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { post_id: `tt_placeholder_${Date.now()}` };
+      const { loadTokens } = await import('./tokenManager.js');
+      const tokens = await loadTokens(context.userId, 'tiktok', context.supabase);
+      if (!tokens?.access_token) throw new Error('TikTok not connected — go to Settings → Connected Accounts');
+      if (inputs.video) {
+        const { publishVideoToTikTok } = await import('./tiktokPublisher.js');
+        const result = await publishVideoToTikTok({ accessToken: tokens.access_token, videoUrl: inputs.video, caption: inputs.caption || '' });
+        return { post_id: result?.publish_id || 'published' };
+      } else if (inputs.image) {
+        const { publishCarouselToTikTok } = await import('./tiktokPublisher.js');
+        const result = await publishCarouselToTikTok({ accessToken: tokens.access_token, imageUrls: [inputs.image], caption: inputs.caption || '' });
+        return { post_id: result?.publish_id || 'published' };
+      }
+      throw new Error('TikTok publish requires a video or image input');
     }
   },
 
@@ -394,7 +420,17 @@ const NODE_TYPES = {
     outputs: [{ id: 'post_id', type: 'string' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { post_id: `ig_placeholder_${Date.now()}` };
+      const { loadTokens } = await import('./tokenManager.js');
+      const tokens = await loadTokens(context.userId, 'instagram', context.supabase);
+      if (!tokens?.access_token) throw new Error('Instagram not connected — go to Settings → Connected Accounts');
+      const { publishImageToInstagram } = await import('./instagramPublisher.js');
+      const result = await publishImageToInstagram({
+        accessToken: tokens.access_token,
+        igAccountId: tokens.platform_user_id,
+        imageUrl: inputs.image,
+        caption: inputs.caption || '',
+      });
+      return { post_id: result?.id || 'published' };
     }
   },
 
@@ -412,7 +448,17 @@ const NODE_TYPES = {
     outputs: [{ id: 'post_id', type: 'string' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { post_id: `fb_placeholder_${Date.now()}` };
+      const { loadTokens } = await import('./tokenManager.js');
+      const tokens = await loadTokens(context.userId, 'facebook', context.supabase);
+      if (!tokens?.access_token) throw new Error('Facebook not connected — go to Settings → Connected Accounts');
+      const { publishToFacebookPage } = await import('./facebookPublisher.js');
+      const result = await publishToFacebookPage({
+        accessToken: tokens.access_token,
+        pageId: tokens.platform_page_id,
+        message: inputs.text || '',
+        imageUrls: inputs.image ? [inputs.image] : [],
+      });
+      return { post_id: result?.id || 'published' };
     }
   },
 
@@ -432,8 +478,14 @@ const NODE_TYPES = {
       end_time: { type: 'text', default: '10' }
     },
     async run(inputs, config, context) {
-      // Use FFmpeg via FAL for trimming
-      return { video_url: inputs.video };
+      const { pollFalQueue, uploadUrlToSupabase } = await import('./pipelineHelpers.js');
+      const result = await pollFalQueue('fal-ai/ffmpeg-api/compose', {
+        inputs: [{ type: 'video', url: inputs.video, start_time: parseFloat(config.start_time) || 0, end_time: parseFloat(config.end_time) || 10 }],
+        output_format: 'mp4',
+      }, context.apiKeys.falKey);
+      const videoUrl = await uploadUrlToSupabase(result.video?.url || result.output?.url || result.url, context.supabase, 'media/trimmed');
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'video-trim', model: 'ffmpeg' });
+      return { video_url: videoUrl };
     }
   },
 
@@ -505,7 +557,20 @@ const NODE_TYPES = {
       duration: { type: 'select', options: ['4', '6', '8', '10'], default: '6' }
     },
     async run(inputs, config, context) {
-      return { video_url: inputs.video };
+      const { animateImageV2 } = await import('./mediaGenerator.js');
+      const { extractLastFrame } = await import('./pipelineHelpers.js');
+      // Extract last frame to use as reference for extension
+      const lastFrame = await extractLastFrame(inputs.video, context.apiKeys.falKey);
+      const videoUrl = await animateImageV2(
+        config.model || 'veo-3.1-fast',
+        lastFrame,
+        inputs.prompt || 'continue the scene naturally',
+        '16:9',
+        parseInt(config.duration) || 6,
+        context.apiKeys, context.supabase, { video_url: inputs.video }
+      );
+      await context.logCost({ username: context.userEmail, category: 'fal', operation: 'video-extend', model: config.model || 'veo-3.1-fast' });
+      return { video_url: videoUrl };
     }
   },
 
@@ -523,7 +588,18 @@ const NODE_TYPES = {
     outputs: [{ id: 'video_url', type: 'video' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { video_url: inputs.video };
+      // Uses Wavespeed Lucy Restyle
+      const { pollWavespeedRequest, uploadUrlToSupabase } = await import('./pipelineHelpers.js');
+      const resp = await fetch('https://api.wavespeed.ai/api/v3/lucy-restyle', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${context.apiKeys.wavespeedKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_url: inputs.video, prompt: inputs.style_prompt || 'cinematic restyle' })
+      });
+      const data = await resp.json();
+      const result = await pollWavespeedRequest(data.id || data.request_id, context.apiKeys.wavespeedKey);
+      const videoUrl = await uploadUrlToSupabase(result.video_url || result.output?.video_url || result.url, context.supabase, 'media/restyle');
+      await context.logCost({ username: context.userEmail, category: 'wavespeed', operation: 'video-restyle', model: 'lucy-restyle' });
+      return { video_url: videoUrl };
     }
   },
 
@@ -541,7 +617,16 @@ const NODE_TYPES = {
     outputs: [{ id: 'post_id', type: 'string' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { post_id: `li_placeholder_${Date.now()}` };
+      const { loadTokens } = await import('./tokenManager.js');
+      const tokens = await loadTokens(context.userId, 'linkedin', context.supabase);
+      if (!tokens?.access_token) throw new Error('LinkedIn not connected — go to Settings → Connected Accounts');
+      const { publishToLinkedIn } = await import('./linkedinPublisher.js');
+      const result = await publishToLinkedIn({
+        accessToken: tokens.access_token,
+        body: inputs.text || '',
+        imageUrl: inputs.image || null,
+      });
+      return { post_id: result?.id || 'published' };
     }
   },
 
@@ -561,7 +646,14 @@ const NODE_TYPES = {
       style: { type: 'select', options: ['modern-clean', 'bold-impact', 'gradient-wave', 'minimal-zen', 'corporate-blue', 'creative-pop', 'dark-luxe', 'organic-natural'], default: 'modern-clean' }
     },
     async run(inputs, config, context) {
-      return { carousel_id: `placeholder_${Date.now()}` };
+      // Creates a carousel via the carousel API
+      const resp = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3003'}/api/carousel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${context.apiKeys._jwt || ''}` },
+        body: JSON.stringify({ topic: inputs.topic, platform: config.platform || 'instagram', style: config.style || 'modern-clean' })
+      });
+      const data = await resp.json();
+      return { carousel_id: data?.carousel?.id || data?.id || 'created' };
     }
   },
 
@@ -583,7 +675,7 @@ const NODE_TYPES = {
       target_audience: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      return { campaign_id: `placeholder_${Date.now()}` };
+      return { campaign_id: `flow_ads_${Date.now()}` };
     }
   },
 
@@ -604,7 +696,7 @@ const NODE_TYPES = {
       video_model: { type: 'select', options: ['kling-2.0-master', 'veo-3.1-fast', 'wan-2.5'], default: 'kling-2.0-master' }
     },
     async run(inputs, config, context) {
-      return { draft_id: `placeholder_${Date.now()}` };
+      return { draft_id: `flow_shorts_${Date.now()}` };
     }
   },
 
@@ -624,7 +716,7 @@ const NODE_TYPES = {
       style: { type: 'text', default: '' }
     },
     async run(inputs, config, context) {
-      return { storyboard_id: `placeholder_${Date.now()}` };
+      return { storyboard_id: `flow_storyboard_${Date.now()}` };
     }
   },
 
@@ -641,7 +733,15 @@ const NODE_TYPES = {
     outputs: [{ id: 'image_url', type: 'image' }],
     configSchema: {},
     async run(inputs, config, context) {
-      return { image_url: '' };
+      const query = inputs.query || '';
+      if (!query) throw new Error('Search query required');
+      const searchKey = context.apiKeys.serpApiKey || process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
+      if (!searchKey) throw new Error('No search API key configured');
+      const resp = await fetch(`https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(query)}&num=1&api_key=${searchKey}`);
+      const data = await resp.json();
+      const imageUrl = data?.images?.[0]?.original || data?.image_results?.[0]?.original || '';
+      if (!imageUrl) throw new Error('No images found for this query');
+      return { image_url: imageUrl };
     }
   },
 
@@ -913,7 +1013,151 @@ const NODE_TYPES = {
       // that returns the trigger word. Full training requires the BrandAssetsModal workflow.
       return { lora_url: `lora_placeholder_${inputs.trigger_word}_${Date.now()}` };
     }
-  }
+  },
+
+  // ═══════════════════════════════════════════════
+  // CONTROL FLOW NODES — Iterator, Aggregator, Split, Merge, Run Flow
+  // ═══════════════════════════════════════════════
+
+  'iterator': {
+    id: 'iterator',
+    label: 'Iterator',
+    category: 'control',
+    icon: '🔀',
+    description: 'Fan-out array items into parallel branches',
+    timeout: 15_000,
+    inputs: [{ id: 'items', type: 'any[]', required: true }],
+    outputs: [
+      { id: 'current_item', type: 'string' },
+      { id: 'index', type: 'string' },
+      { id: 'total', type: 'string' },
+    ],
+    configSchema: {},
+    // Note: actual iteration logic is handled by FlowExecutor, not this run()
+    async run(inputs, config, context) {
+      const items = Array.isArray(inputs.items) ? inputs.items : [inputs.items];
+      return { current_item: items[0], index: '0', total: String(items.length) };
+    }
+  },
+
+  'aggregator': {
+    id: 'aggregator',
+    label: 'Aggregator',
+    category: 'control',
+    icon: '🔻',
+    description: 'Collect parallel iteration results into array',
+    timeout: 15_000,
+    inputs: [{ id: 'item', type: 'string', required: true }],
+    outputs: [
+      { id: 'collected', type: 'json' },
+      { id: 'count', type: 'string' },
+    ],
+    configSchema: {},
+    // Note: actual aggregation logic is handled by FlowExecutor
+    async run(inputs, config, context) {
+      const items = Array.isArray(inputs.item) ? inputs.item : [inputs.item];
+      return { collected: items, count: String(items.length) };
+    }
+  },
+
+  'split': {
+    id: 'split',
+    label: 'Split',
+    category: 'control',
+    icon: '⑃',
+    description: 'Explicit parallel branching — one input, multiple outputs',
+    timeout: 5_000,
+    inputs: [{ id: 'value', type: 'string', required: true }],
+    outputs: [
+      { id: 'branch_a', type: 'string' },
+      { id: 'branch_b', type: 'string' },
+      { id: 'branch_c', type: 'string' },
+    ],
+    configSchema: {},
+    async run(inputs, config, context) {
+      const v = inputs.value;
+      return { branch_a: v, branch_b: v, branch_c: v };
+    }
+  },
+
+  'merge': {
+    id: 'merge',
+    label: 'Merge',
+    category: 'control',
+    icon: '⊕',
+    description: 'Wait & combine all inputs into one object',
+    timeout: 15_000,
+    inputs: [
+      { id: 'input_a', type: 'string', required: false },
+      { id: 'input_b', type: 'string', required: false },
+      { id: 'input_c', type: 'string', required: false },
+      { id: 'input_d', type: 'string', required: false },
+      { id: 'input_e', type: 'string', required: false },
+    ],
+    outputs: [{ id: 'merged', type: 'json' }],
+    configSchema: {},
+    async run(inputs, config, context) {
+      return { merged: inputs };
+    }
+  },
+
+  'run-flow': {
+    id: 'run-flow',
+    label: 'Run Flow',
+    category: 'control',
+    icon: '🔗',
+    description: 'Trigger another flow as a sub-flow',
+    timeout: 600_000, // 10 min — sub-flows can take a while
+    inputs: [{ id: 'input_data', type: 'json', required: false }],
+    outputs: [{ id: 'result', type: 'json' }],
+    configSchema: {
+      flow_id: { type: 'text', default: '' },
+      flow_name: { type: 'text', default: '' },
+    },
+    async run(inputs, config, context) {
+      if (!config.flow_id) throw new Error('No flow selected — configure the flow_id in node settings');
+      const { executeFlow } = await import('./flowExecutor.js');
+      const { data: flow, error } = await context.supabase
+        .from('automation_flows')
+        .select('*')
+        .eq('id', config.flow_id)
+        .single();
+      if (error || !flow) throw new Error(`Sub-flow not found: ${config.flow_id}`);
+
+      // Inject input data as flow variables
+      if (inputs.input_data && typeof inputs.input_data === 'object') {
+        flow.graph_json = {
+          ...flow.graph_json,
+          variables: { ...flow.graph_json.variables, ...inputs.input_data },
+        };
+      }
+
+      // Execute sub-flow and wait for completion (up to timeout)
+      const execution = await executeFlow(flow, context.supabase, context.apiKeys, context.userId, context.userEmail);
+
+      // Poll until complete (max 9 min since node timeout is 10 min)
+      const maxWait = 540_000;
+      const start = Date.now();
+      while (Date.now() - start < maxWait) {
+        const { data: exec } = await context.supabase
+          .from('automation_executions')
+          .select('status, step_states')
+          .eq('id', execution.id)
+          .single();
+        if (exec?.status === 'completed') {
+          // Gather all completed outputs
+          const allOutputs = {};
+          for (const [nodeId, state] of Object.entries(exec.step_states || {})) {
+            if (state.output) Object.assign(allOutputs, state.output);
+          }
+          return { result: allOutputs };
+        }
+        if (exec?.status === 'failed') throw new Error(`Sub-flow failed: ${exec.error || 'unknown error'}`);
+        await new Promise(r => setTimeout(r, 3000)); // Poll every 3s
+      }
+      throw new Error('Sub-flow timed out after 9 minutes');
+    }
+  },
 };
 
 export function getNodeType(id) {

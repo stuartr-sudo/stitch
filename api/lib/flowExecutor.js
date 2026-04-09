@@ -52,11 +52,27 @@ export class FlowExecutor {
 
   resolveInputs(node) {
     const inputs = {};
+    const portCounts = {}; // Track how many edges target each port
     const incoming = this.getIncomingEdges(node.id);
+
+    // First pass: count edges per target port
+    for (const edge of incoming) {
+      portCounts[edge.targetPort] = (portCounts[edge.targetPort] || 0) + 1;
+    }
+
+    // Second pass: resolve values. Multi-input ports collect as arrays.
     for (const edge of incoming) {
       const sourceOutput = this.stepStates[edge.source]?.output;
       if (sourceOutput && edge.sourcePort in sourceOutput) {
-        inputs[edge.targetPort] = sourceOutput[edge.sourcePort];
+        const value = sourceOutput[edge.sourcePort];
+        if (portCounts[edge.targetPort] > 1) {
+          // Multi-input: collect all values into an array
+          if (!inputs[edge.targetPort]) inputs[edge.targetPort] = [];
+          inputs[edge.targetPort].push(value);
+        } else {
+          // Single input: pass value directly
+          inputs[edge.targetPort] = value;
+        }
       }
     }
     return inputs;

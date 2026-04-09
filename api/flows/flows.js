@@ -86,6 +86,31 @@ export default async function handler(req, res) {
       return res.json({ flow });
     }
 
+    // POST /api/flows/trigger/:flowId — webhook trigger for external events
+    // Allows other tools (script completion, site publish) to trigger a flow.
+    if (pathParts[0] === 'trigger' && pathParts[1] && method === 'POST') {
+      const flowId = pathParts[1];
+      const { data: flow, error } = await supabase
+        .from('automation_flows')
+        .select('*')
+        .eq('id', flowId)
+        .single();
+      if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
+
+      // Inject trigger data as flow variables
+      const triggerData = req.body || {};
+      if (Object.keys(triggerData).length > 0) {
+        flow.graph_json = {
+          ...flow.graph_json,
+          variables: { ...flow.graph_json.variables, ...triggerData, _trigger: 'webhook', _triggered_at: new Date().toISOString() },
+        };
+      }
+
+      const keys = await getUserKeys(flow.user_id, null);
+      const execution = await executeFlow(flow, supabase, keys, flow.user_id, null);
+      return res.json({ execution, triggered: true });
+    }
+
     // Execution routes: /api/flows/executions/:execId/...
     // MUST come before /:id route
     if (pathParts[0] === 'executions' && pathParts[1]) {
