@@ -61,6 +61,34 @@ export class FlowExecutor {
   }
 
   /**
+   * Resolve {{variable}} patterns in config values using flow-level variables.
+   * Supports nested dot notation: {{brand.name}} resolves brand_kit.name
+   */
+  resolveVariables(config) {
+    const variables = this.flow.graph_json?.variables || {};
+    if (!Object.keys(variables).length) return config;
+
+    const resolved = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (typeof value === 'string' && value.includes('{{')) {
+        resolved[key] = value.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, varName) => {
+          // Support dot notation: {{brand.name}} checks variables['brand.name'] first, then variables['brand']?.name
+          if (varName in variables) return variables[varName];
+          const parts = varName.split('.');
+          let val = variables[parts[0]];
+          for (let i = 1; i < parts.length && val != null; i++) {
+            val = typeof val === 'object' ? val[parts[i]] : undefined;
+          }
+          return val != null ? String(val) : match; // Keep original if not found
+        });
+      } else {
+        resolved[key] = value;
+      }
+    }
+    return resolved;
+  }
+
+  /**
    * Queue-based DB update — serializes writes so concurrent node completions
    * don't race on step_states (last-write-wins would lose intermediate state).
    */
@@ -101,12 +129,14 @@ export class FlowExecutor {
     };
 
     const errorHandling = node.config?.errorHandling || 'stop';
+    // Resolve {{variable}} patterns in config values
+    const resolvedConfig = this.resolveVariables(node.config || {});
 
     try {
       // Per-node timeout — uses node type's timeout if defined, else global default
       const timeoutMs = nodeType.timeout || NODE_TIMEOUT_MS;
       const output = await this._withTimeout(
-        nodeType.run(inputs, node.config || {}, context),
+        nodeType.run(inputs, resolvedConfig, context),
         timeoutMs,
         `Node "${nodeType.label}" timed out after ${timeoutMs / 1000}s`
       );

@@ -152,6 +152,39 @@ function CollapsiblePanel({ title, defaultOpen = false, children }) {
   );
 }
 
+/** Variable insertion dropdown — shown next to text/textarea fields when flow has variables */
+function VariableInsertButton({ variables, onInsert }) {
+  const [dropOpen, setDropOpen] = useState(false);
+  const varKeys = Object.keys(variables || {});
+  if (!varKeys.length) return null;
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setDropOpen(!dropOpen)}
+        className="text-[10px] text-violet-500 hover:text-violet-400 font-mono px-1.5 py-0.5 rounded bg-violet-50 hover:bg-violet-100 border border-violet-200 transition-colors"
+        title="Insert flow variable"
+      >
+        {'{{}}'}
+      </button>
+      {dropOpen && (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 max-h-40 overflow-y-auto">
+          {varKeys.map(k => (
+            <button
+              key={k}
+              onClick={() => { onInsert(`{{${k}}}`); setDropOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors flex items-center justify-between"
+            >
+              <span className="font-mono text-violet-600">{`{{${k}}}`}</span>
+              <span className="text-slate-400 truncate ml-2 text-[10px]">{String(variables[k]).slice(0, 20)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AspectRatioButtons({ value, onChange }) {
   const ratios = ['16:9', '9:16', '1:1', '4:5', '3:2'];
   const dims = { '16:9': [28, 16], '9:16': [16, 28], '1:1': [20, 20], '4:5': [20, 24], '3:2': [24, 16] };
@@ -1422,7 +1455,7 @@ function GenericForm({ config, u, schema }) {
 
 export default function NodeConfigModal({
   open, onOpenChange, node, config: initialConfig, onConfigChange,
-  brandKits, connections, edges, nodes,
+  brandKits, connections, edges, nodes, flowVariables = {},
 }) {
   const [config, setConfig] = useState(initialConfig || {});
   const nodeType = node?.data?.nodeType;

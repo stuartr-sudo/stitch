@@ -9,6 +9,7 @@ import NodePalette from '@/components/flows/NodePalette';
 import NodeConfigModal from '@/components/flows/NodeConfigModal';
 import ExecutionLog from '@/components/flows/ExecutionLog';
 import PreflightCheck from '@/components/flows/PreflightCheck';
+import FlowVariables from '@/components/flows/FlowVariables';
 
 export default function FlowBuilderPage() {
   const { id, executionId } = useParams();
@@ -30,6 +31,9 @@ export default function FlowBuilderPage() {
   // Brand kits + connected accounts for config modal
   const [brandKits, setBrandKits] = useState([]);
   const [connections, setConnections] = useState([]);
+
+  // Flow-level variables — stored in graph_json.variables
+  const [flowVariables, setFlowVariables] = useState({});
 
   // Load node types
   useEffect(() => {
@@ -58,6 +62,7 @@ export default function FlowBuilderPage() {
           setFlow(data.flow);
           setNodes(data.flow.graph_json?.nodes || []);
           setEdges(data.flow.graph_json?.edges || []);
+          setFlowVariables(data.flow.graph_json?.variables || {});
         }
       });
     }
@@ -89,7 +94,8 @@ export default function FlowBuilderPage() {
         id: n.id, type: n.type, position: n.position,
         data: { ...n.data, stepState: undefined }
       })),
-      edges
+      edges,
+      variables: flowVariables,
     };
     await apiFetch(`/api/flows/${flow.id}`, {
       method: 'PUT',
@@ -97,15 +103,15 @@ export default function FlowBuilderPage() {
       body: JSON.stringify({ graph_json })
     });
     setSaving(false);
-  }, [flow, nodes, edges]);
+  }, [flow, nodes, edges, flowVariables]);
 
-  // Auto-save on any change (debounced 1.5s)
+  // Auto-save on any change (debounced 1.5s) — includes variables
   useEffect(() => {
     if (!flow?.id) return;
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => saveFlow(), 1500);
     return () => clearTimeout(saveTimeout.current);
-  }, [nodes, edges, saveFlow]);
+  }, [nodes, edges, flowVariables, saveFlow]);
 
   // Connect handler — validates port type compatibility before adding edge
   const onConnect = useCallback((params) => {
@@ -217,7 +223,10 @@ export default function FlowBuilderPage() {
           {saving && <span className="text-[11px] text-slate-500">Saving...</span>}
           {!saving && flow?.id && <span className="text-[11px] text-emerald-400 bg-emerald-900/30 border border-emerald-800/40 px-2 py-0.5 rounded">Saved</span>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {!isExecuting && (
+            <FlowVariables variables={flowVariables} onChange={setFlowVariables} />
+          )}
           {isExecuting ? (
             <>
               <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-900/30 border border-amber-700/40 text-amber-400 rounded-md hover:bg-amber-900/50">Pause</button>
@@ -262,6 +271,7 @@ export default function FlowBuilderPage() {
         connections={connections}
         edges={edges}
         nodes={nodes}
+        flowVariables={flowVariables}
       />
 
       {/* Preflight validation — runs before execution */}
