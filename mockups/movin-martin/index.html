@@ -72,7 +72,22 @@
     /* ═══════════════════════════════════════════════════
        SCROLL ANIMATIONS
        ═══════════════════════════════════════════════════ */
-    /* Scroll animations disabled for mockup — all content visible */
+    /* CSS-only entrance animations — works without JavaScript */
+    .anim {
+      opacity: 0;
+      transform: translateY(24px);
+      animation: slideIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .anim[data-d="1"] { animation-delay: 0.1s; }
+    .anim[data-d="2"] { animation-delay: 0.2s; }
+    .anim[data-d="3"] { animation-delay: 0.3s; }
+    .anim[data-d="4"] { animation-delay: 0.4s; }
+    .anim[data-d="5"] { animation-delay: 0.5s; }
+    @keyframes slideIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Section headers animate in faster */
+    .section-header.anim { animation-delay: 0s; }
     /* No-JS: nav always has readable background when JS is disabled */
     .nav.no-js {
       background: rgba(255, 255, 255, 0.92);
@@ -494,6 +509,14 @@
     .gallery-item:hover { transform: translateY(-4px) scale(1.02); box-shadow: var(--shadow-lg); }
     .gallery-item img {
       width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+      background: linear-gradient(135deg, #E0E7FF, #DDD6FE, #FBCFE8);
+      background-size: 200% 200%;
+      animation: shimmer 1.5s ease infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
     .gallery-item .gi-label {
       position: absolute; bottom: 0; left: 0; right: 0;
@@ -896,14 +919,14 @@
         <p>Different visual directions for the animation series</p>
       </div>
       <div class="gallery-grid">
-        <div class="gallery-item anim" data-d="1"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576625855-l2r5fk.png" alt="3D Kids Animation"><div class="gi-label">3D Kids Animation</div></div>
-        <div class="gallery-item anim" data-d="2"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576642777-ugvp9.png" alt="Kids City"><div class="gi-label">Kids City</div></div>
-        <div class="gallery-item anim" data-d="3"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576968956-cl57wb.png" alt="Storybook"><div class="gi-label">Storybook</div></div>
-        <div class="gallery-item anim" data-d="4"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576636704-5rl3u.png" alt="Whimsical Garden"><div class="gi-label">Whimsical Garden</div></div>
-        <div class="gallery-item anim" data-d="5"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576617977-wmgoow.png" alt="Nature Island"><div class="gi-label">Nature Island</div></div>
-        <div class="gallery-item anim" data-d="1"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577851434-7l5ulp.png" alt="Anime"><div class="gi-label">Anime</div></div>
-        <div class="gallery-item anim" data-d="2"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576631966-wh1vzf.png" alt="Candy City 3D"><div class="gi-label">Candy City 3D</div></div>
-        <div class="gallery-item anim" data-d="3"><img loading="eager" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577853354-p40ziq.png" alt="Stop Motion"><div class="gi-label">Stop Motion</div></div>
+        <div class="gallery-item anim" data-d="1"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576625855-l2r5fk.png" alt="3D Kids Animation"><div class="gi-label">3D Kids Animation</div></div>
+        <div class="gallery-item anim" data-d="2"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576642777-ugvp9.png" alt="Kids City"><div class="gi-label">Kids City</div></div>
+        <div class="gallery-item anim" data-d="3"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576968956-cl57wb.png" alt="Storybook"><div class="gi-label">Storybook</div></div>
+        <div class="gallery-item anim" data-d="4"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576636704-5rl3u.png" alt="Whimsical Garden"><div class="gi-label">Whimsical Garden</div></div>
+        <div class="gallery-item anim" data-d="5"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576617977-wmgoow.png" alt="Nature Island"><div class="gi-label">Nature Island</div></div>
+        <div class="gallery-item anim" data-d="1"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577851434-7l5ulp.png" alt="Anime"><div class="gi-label">Anime</div></div>
+        <div class="gallery-item anim" data-d="2"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774576631966-wh1vzf.png" alt="Candy City 3D"><div class="gi-label">Candy City 3D</div></div>
+        <div class="gallery-item anim" data-d="3"><img loading="lazy" decoding="async" width="400" height="400" src="https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/library/editimage-1774577853354-p40ziq.png" alt="Stop Motion"><div class="gi-label">Stop Motion</div></div>
       </div>
     </div>
   </section>
@@ -992,21 +1015,16 @@
   <!-- puppy removed -->
 
   <script>
-    // JS is available — remove no-js fallback class, enable dynamic nav
+    // Progressive enhancement — these features are nice-to-have, page works fully without them
+    // Remove no-js nav fallback (JS available, enable dynamic scroll nav)
     document.getElementById('nav').classList.remove('no-js');
 
-    // Scroll animations
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
-    }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
-    document.querySelectorAll('.anim').forEach(el => obs.observe(el));
-
-    // Nav scroll
+    // Nav scroll effect (transparent → white)
     window.addEventListener('scroll', () => {
       document.getElementById('nav').classList.toggle('scrolled', scrollY > 80);
     });
 
-    // Quiz
+    // Quiz interactivity
     function check(btn, correct) {
       document.querySelectorAll('#quiz .answer-btn').forEach(b => b.classList.remove('correct','wrong'));
       btn.classList.add(correct ? 'correct' : 'wrong');
@@ -1014,7 +1032,7 @@
       else setTimeout(() => btn.classList.remove('wrong'), 500);
     }
 
-    // Smooth scroll
+    // Smooth scroll (enhancement over default anchor jump)
     document.querySelectorAll('a[href^="#"]').forEach(l => {
       l.addEventListener('click', e => {
         e.preventDefault();
@@ -1022,13 +1040,6 @@
         if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
-
-    // Auto-trigger all animations after short delay as fallback
-    setTimeout(() => {
-      document.querySelectorAll('.anim').forEach(el => el.classList.add('vis'));
-    }, 300);
-
-    /* running puppy removed */
   </script>
   <noscript>
     <style>
