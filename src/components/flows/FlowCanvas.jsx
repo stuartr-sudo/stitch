@@ -20,6 +20,17 @@ const defaultEdgeOptions = {
   animated: false,
 };
 
+// Category colors for minimap nodes
+const MINIMAP_COLORS = {
+  input:   '#94a3b8',
+  image:   '#a855f7',
+  video:   '#3b82f6',
+  audio:   '#10b981',
+  content: '#f59e0b',
+  publish: '#ef4444',
+  utility: '#64748b',
+};
+
 export default function FlowCanvas({
   nodes,
   edges,
@@ -59,6 +70,12 @@ export default function FlowCanvas({
     }
   }));
 
+  // Color minimap nodes by category
+  const minimapNodeColor = (node) => {
+    const cat = node.data?.nodeType?.category;
+    return MINIMAP_COLORS[cat] || '#64748b';
+  };
+
   return (
     <div className="flex-1 h-full" onDragOver={handleDragOver} onDrop={handleDrop}>
       <ReactFlow
@@ -74,13 +91,19 @@ export default function FlowCanvas({
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         deleteKeyCode={['Backspace', 'Delete']}
+        snapToGrid={true}
+        snapGrid={[20, 20]}
         fitView
         proOptions={{ hideAttribution: true }}
-        style={{ background: '#f8fafc' }}
+        style={{ background: '#0f0f14' }}
       >
-        <Controls className="!bg-white !border-slate-200 !shadow-sm !rounded-lg" />
-        <MiniMap className="!bg-white !border-slate-200 !rounded-lg !shadow-sm" nodeColor="#94a3b8" />
-        <Background variant="dots" gap={16} size={1} color="#e2e8f0" />
+        <Controls className="!bg-slate-800/90 !border-slate-600/40 !shadow-lg !rounded-lg [&>button]:!bg-slate-800 [&>button]:!border-slate-600/40 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-700" />
+        <MiniMap
+          className="!bg-slate-900/80 !border-slate-700/40 !rounded-lg !shadow-lg"
+          nodeColor={minimapNodeColor}
+          maskColor="rgba(0, 0, 0, 0.7)"
+        />
+        <Background variant="dots" gap={30} size={1} color="#1a1a2e" />
       </ReactFlow>
     </div>
   );

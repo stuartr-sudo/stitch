@@ -6,7 +6,6 @@ import { useNodesState, useEdgesState, addEdge } from '@xyflow/react';
 import { apiFetch } from '@/lib/api';
 import FlowCanvas from '@/components/flows/FlowCanvas';
 import NodePalette from '@/components/flows/NodePalette';
-import NodeConfigPanel from '@/components/flows/NodeConfigPanel';
 import NodeConfigModal from '@/components/flows/NodeConfigModal';
 import ExecutionLog from '@/components/flows/ExecutionLog';
 
@@ -199,52 +198,47 @@ export default function FlowBuilderPage() {
   const isExecuting = !!executionId;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-[#0a0a12]">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700/50 bg-[#0f0f18]">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/flows')} className="text-slate-400 hover:text-slate-600 text-sm">&larr; Flows</button>
-          <span className="text-sm font-semibold text-slate-800">{flow?.name || 'New Flow'}</span>
-          {saving && <span className="text-[11px] text-slate-400">Saving...</span>}
-          {!saving && flow?.id && <span className="text-[11px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">Saved</span>}
+          <button onClick={() => navigate('/flows')} className="text-slate-400 hover:text-slate-200 text-sm">&larr; Flows</button>
+          <span className="text-sm font-semibold text-slate-100">{flow?.name || 'New Flow'}</span>
+          {saving && <span className="text-[11px] text-slate-500">Saving...</span>}
+          {!saving && flow?.id && <span className="text-[11px] text-emerald-400 bg-emerald-900/30 border border-emerald-800/40 px-2 py-0.5 rounded">Saved</span>}
         </div>
         <div className="flex gap-2">
           {isExecuting ? (
             <>
-              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-md hover:bg-amber-100">Pause</button>
-              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-50 border border-red-200 text-red-600 rounded-md hover:bg-red-100">Cancel</button>
+              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-900/30 border border-amber-700/40 text-amber-400 rounded-md hover:bg-amber-900/50">Pause</button>
+              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-900/30 border border-red-700/40 text-red-400 rounded-md hover:bg-red-900/50">Cancel</button>
             </>
           ) : (
             <>
-              <button className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 text-slate-500 rounded-md hover:bg-slate-100">Schedule</button>
+              <button className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">Schedule</button>
               <button onClick={handleRun} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
             </>
           )}
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Main content — 2-panel layout: palette + canvas */}
       <div className="flex flex-1 overflow-hidden">
-        {!isExecuting && <NodePalette nodeTypes={nodeTypesMap} />}
-        <FlowCanvas
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeSelect={setSelectedNode}
-          onNodeDoubleClick={handleNodeDoubleClick}
-          onDrop={handleDrop}
-          stepStates={execution?.step_states}
-        />
-        {isExecuting ? (
-          <ExecutionLog execution={execution} />
-        ) : (
-          <NodeConfigPanel
-            node={selectedNode}
-            nodeType={selectedNodeType}
+        {!isExecuting && <NodePalette nodeTypes={nodeTypesMap} selectedNode={selectedNode} />}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <FlowCanvas
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeSelect={setSelectedNode}
+            onNodeDoubleClick={handleNodeDoubleClick}
+            onDrop={handleDrop}
+            stepStates={execution?.step_states}
           />
-        )}
+          {isExecuting && <ExecutionLog execution={execution} />}
+        </div>
       </div>
 
       {/* Rich config modal — opens on double-click */}

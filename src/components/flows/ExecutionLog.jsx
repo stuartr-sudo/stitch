@@ -21,9 +21,9 @@ export default function ExecutionLog({ execution }) {
   };
 
   return (
-    <div className="w-[280px] border-l border-slate-200 bg-white flex flex-col flex-shrink-0">
-      <div className="px-4 py-3 border-b border-slate-200">
-        <div className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Execution Log</div>
+    <div className="border-t border-slate-700/40 bg-[#0c0c14] flex flex-col max-h-[200px]">
+      <div className="px-4 py-2 border-b border-slate-700/30 flex-shrink-0">
+        <div className="text-[11px] uppercase tracking-wider text-slate-500 font-medium">Execution Log</div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {entries.map((entry, i) => (
@@ -42,7 +42,7 @@ export default function ExecutionLog({ execution }) {
           </div>
         ))}
         {entries.length === 0 && (
-          <div className="text-[11px] text-slate-400">Waiting for execution to start...</div>
+          <div className="text-[11px] text-slate-500">Waiting for execution to start...</div>
         )}
       </div>
     </div>

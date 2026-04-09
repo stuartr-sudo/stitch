@@ -12,6 +12,7 @@ const SlideOverPanel = React.forwardRef(({
   subtitle,
   icon,
   width,
+  side = 'right',
   className,
   children,
 }, ref) => (
@@ -35,10 +36,12 @@ const SlideOverPanel = React.forwardRef(({
           }
         }}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex flex-col bg-white shadow-2xl outline-none",
+          "fixed inset-y-0 z-50 flex flex-col bg-white shadow-2xl outline-none",
+          side === 'left' ? 'left-0' : 'right-0',
           "w-[95vw] sm:w-[75vw] md:w-[65vw] max-w-[1200px]",
-          "data-[state=open]:animate-in data-[state=open]:slide-in-from-right",
-          "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right",
+          side === 'left'
+            ? "data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left"
+            : "data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right",
           "duration-300",
           className
         )}

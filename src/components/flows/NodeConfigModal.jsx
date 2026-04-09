@@ -1466,6 +1466,7 @@ export default function NodeConfigModal({
       title={nodeType.label}
       subtitle={`Configure ${nodeType.category} node settings`}
       icon={<IconComp className="w-5 h-5" />}
+      side="left"
       width="95vw"
     >
       <SlideOverBody className="p-6 bg-slate-50">

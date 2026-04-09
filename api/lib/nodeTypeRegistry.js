@@ -11,6 +11,7 @@ const NODE_TYPES = {
     label: 'Manual Input',
     category: 'input',
     icon: '📥',
+    description: 'User-supplied text, image, or video',
     inputs: [],
     outputs: [
       { id: 'value', type: 'string' }
@@ -30,6 +31,7 @@ const NODE_TYPES = {
     label: 'Imagineer Generate',
     category: 'image',
     icon: '🖼',
+    description: 'Text-to-image with 11 models + LoRA',
     inputs: [
       { id: 'prompt', type: 'string', required: true },
       { id: 'style', type: 'string', required: false }
@@ -71,6 +73,7 @@ const NODE_TYPES = {
     label: 'JumpStart Animate',
     category: 'video',
     icon: '🎬',
+    description: 'Image-to-video with 13 models',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -99,6 +102,7 @@ const NODE_TYPES = {
     label: 'Save to Library',
     category: 'utility',
     icon: '💾',
+    description: 'Save media to asset library',
     inputs: [
       { id: 'url', type: 'string', required: true },
       { id: 'name', type: 'string', required: false }
@@ -118,6 +122,7 @@ const NODE_TYPES = {
     label: 'Imagineer Edit',
     category: 'image',
     icon: '✏️',
+    description: 'AI image editing and composition',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: true },
@@ -144,6 +149,7 @@ const NODE_TYPES = {
     label: 'Turnaround Sheet',
     category: 'image',
     icon: '🎨',
+    description: 'Multi-pose character reference sheet',
     inputs: [
       { id: 'prompt', type: 'string', required: true },
       { id: 'style', type: 'string', required: false }
@@ -172,6 +178,7 @@ const NODE_TYPES = {
     label: 'Smoosh',
     category: 'image',
     icon: '🔀',
+    description: 'Blend two images together',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'image2', type: 'image', required: true }
@@ -194,6 +201,7 @@ const NODE_TYPES = {
     label: 'Motion Transfer',
     category: 'video',
     icon: '🏃',
+    description: 'Apply motion from video to image',
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'reference_image', type: 'image', required: true }
@@ -212,6 +220,7 @@ const NODE_TYPES = {
     label: 'Voiceover',
     category: 'audio',
     icon: '🎙️',
+    description: 'AI text-to-speech, 30 Gemini voices',
     inputs: [
       { id: 'text', type: 'string', required: true }
     ],
@@ -233,6 +242,7 @@ const NODE_TYPES = {
     label: 'Music',
     category: 'audio',
     icon: '🎵',
+    description: 'Generate background music',
     inputs: [
       { id: 'mood', type: 'string', required: false }
     ],
@@ -254,6 +264,7 @@ const NODE_TYPES = {
     label: 'Captions',
     category: 'audio',
     icon: '💬',
+    description: 'Burn captions onto video',
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -275,6 +286,7 @@ const NODE_TYPES = {
     label: 'Script Generator',
     category: 'content',
     icon: '📝',
+    description: 'AI script writing for 20 niches',
     inputs: [
       { id: 'topic', type: 'string', required: true },
       { id: 'niche', type: 'string', required: false }
@@ -298,6 +310,7 @@ const NODE_TYPES = {
     label: 'Prompt Builder',
     category: 'content',
     icon: '🔧',
+    description: 'GPT-enhanced prompt composition',
     inputs: [
       { id: 'description', type: 'string', required: true },
       { id: 'style', type: 'string', required: false },
@@ -319,6 +332,7 @@ const NODE_TYPES = {
     label: 'YouTube Upload',
     category: 'publish',
     icon: '📺',
+    description: 'Upload video to YouTube',
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'title', type: 'string', required: true },
@@ -339,6 +353,7 @@ const NODE_TYPES = {
     label: 'TikTok Publish',
     category: 'publish',
     icon: '🎵',
+    description: 'Publish to TikTok',
     inputs: [
       { id: 'video', type: 'video', required: false },
       { id: 'image', type: 'image', required: false }
@@ -355,6 +370,7 @@ const NODE_TYPES = {
     label: 'Instagram Post',
     category: 'publish',
     icon: '📸',
+    description: 'Post image to Instagram',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'caption', type: 'string', required: false }
@@ -371,6 +387,7 @@ const NODE_TYPES = {
     label: 'Facebook Post',
     category: 'publish',
     icon: '👤',
+    description: 'Post to Facebook page',
     inputs: [
       { id: 'image', type: 'image', required: false },
       { id: 'text', type: 'string', required: true }
@@ -387,6 +404,7 @@ const NODE_TYPES = {
     label: 'Video Trim',
     category: 'utility',
     icon: '✂️',
+    description: 'Trim video start and end',
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -406,6 +424,7 @@ const NODE_TYPES = {
     label: 'Extract Frame',
     category: 'utility',
     icon: '🖼️',
+    description: 'Get first, middle, or last frame',
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -427,6 +446,7 @@ const NODE_TYPES = {
     label: 'Upscale Image',
     category: 'image',
     icon: '🔍',
+    description: '2-4x resolution upscale via Topaz',
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -453,6 +473,7 @@ const NODE_TYPES = {
     label: 'Video Extend',
     category: 'video',
     icon: '⏩',
+    description: 'Extend video duration 4-10 seconds',
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -472,6 +493,7 @@ const NODE_TYPES = {
     label: 'Video Restyle',
     category: 'video',
     icon: '🎭',
+    description: 'Change video visual style',
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'style_prompt', type: 'string', required: true }
@@ -488,6 +510,7 @@ const NODE_TYPES = {
     label: 'LinkedIn Post',
     category: 'publish',
     icon: '💼',
+    description: 'Publish to LinkedIn',
     inputs: [
       { id: 'text', type: 'string', required: true },
       { id: 'image', type: 'image', required: false }
@@ -504,6 +527,7 @@ const NODE_TYPES = {
     label: 'Carousel Create',
     category: 'content',
     icon: '📊',
+    description: 'Multi-slide carousel for socials',
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -522,6 +546,7 @@ const NODE_TYPES = {
     label: 'Ads Generate',
     category: 'content',
     icon: '📢',
+    description: 'Multi-platform ad copy + images',
     inputs: [
       { id: 'product_description', type: 'string', required: true }
     ],
@@ -542,6 +567,7 @@ const NODE_TYPES = {
     label: 'Shorts Create',
     category: 'content',
     icon: '📱',
+    description: 'Full Shorts pipeline from topic',
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -561,6 +587,7 @@ const NODE_TYPES = {
     label: 'Storyboard Create',
     category: 'content',
     icon: '🎬',
+    description: 'Visual storyboard planning',
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -579,6 +606,7 @@ const NODE_TYPES = {
     label: 'Image Search',
     category: 'input',
     icon: '🔎',
+    description: 'Search web for images',
     inputs: [
       { id: 'query', type: 'string', required: true }
     ],
@@ -594,6 +622,7 @@ const NODE_TYPES = {
     label: 'Text Transform',
     category: 'utility',
     icon: '🔤',
+    description: 'Transform text (upper, lower, trim)',
     inputs: [
       { id: 'text', type: 'string', required: true }
     ],
@@ -621,6 +650,7 @@ const NODE_TYPES = {
     label: 'Delay',
     category: 'utility',
     icon: '⏱️',
+    description: 'Pause flow for 5-300 seconds',
     inputs: [
       { id: 'passthrough', type: 'string', required: false }
     ],
@@ -639,6 +669,7 @@ const NODE_TYPES = {
     label: 'Conditional',
     category: 'utility',
     icon: '🔀',
+    description: 'Branch on value comparison',
     inputs: [
       { id: 'value', type: 'string', required: true }
     ],
@@ -664,6 +695,7 @@ const NODE_TYPES = {
     label: 'Style Preset',
     category: 'input',
     icon: '🎨',
+    description: 'Visual style text output',
     inputs: [],
     outputs: [{ id: 'style', type: 'string' }],
     configSchema: {
@@ -680,6 +712,7 @@ const NODE_TYPES = {
     label: 'Video Style Preset',
     category: 'input',
     icon: '🎬',
+    description: 'Video motion style output',
     inputs: [],
     outputs: [{ id: 'style', type: 'string' }],
     configSchema: {
@@ -696,6 +729,7 @@ const NODE_TYPES = {
     label: 'Prompt Template',
     category: 'input',
     icon: '📋',
+    description: 'Reusable prompt template',
     inputs: [],
     outputs: [{ id: 'prompt', type: 'string' }],
     configSchema: {
@@ -712,6 +746,7 @@ const NODE_TYPES = {
     label: '3D Viewer',
     category: 'image',
     icon: '🧊',
+    description: 'Image to 3D GLB model',
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -727,6 +762,7 @@ const NODE_TYPES = {
     label: 'Background Removal',
     category: 'image',
     icon: '🧹',
+    description: 'Remove image background',
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -748,6 +784,7 @@ const NODE_TYPES = {
     label: 'Inpaint',
     category: 'image',
     icon: '🖌️',
+    description: 'Selective region editing with mask',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: true },
@@ -772,6 +809,7 @@ const NODE_TYPES = {
     label: 'Lens (Multi-Angle)',
     category: 'image',
     icon: '🔄',
+    description: 'Multi-angle image generation',
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -794,6 +832,7 @@ const NODE_TYPES = {
     label: 'Virtual Try-On',
     category: 'image',
     icon: '👗',
+    description: 'Virtual clothing try-on',
     inputs: [
       { id: 'person_image', type: 'image', required: true },
       { id: 'garment_image', type: 'image', required: true }
@@ -820,6 +859,7 @@ const NODE_TYPES = {
     label: 'LoRA Train',
     category: 'utility',
     icon: '🧠',
+    description: 'Fine-tune custom AI model',
     inputs: [
       { id: 'trigger_word', type: 'string', required: true }
     ],
