@@ -90,6 +90,13 @@ app.get('/api/auth/check-keys', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Onboarding status route
+app.all('/api/onboarding/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('onboarding/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // JumpStart routes (with auth)
 app.post('/api/jumpstart/generate', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('jumpstart/generate.js');
@@ -1532,6 +1539,16 @@ app.get('/proposal/:slug', async (req, res) => {
     // Fallback to static file
     res.sendFile(join(__dirname, 'dist', 'proposal', 'hamilton-city-council.html'));
   }
+});
+
+// Movin' Martin mockup — serve static HTML directly (no JS required)
+app.get('/proposals/movin-martin-website-mockup', (req, res) => {
+  const distPath = join(__dirname, 'dist', 'mockups', 'movin-martin', 'index.html');
+  const publicPath = join(__dirname, 'public', 'mockups', 'movin-martin', 'index.html');
+  // Try dist first (production build), fall back to public (dev)
+  res.sendFile(distPath, err => {
+    if (err) res.sendFile(publicPath);
+  });
 });
 
 // Serve Vite build output
