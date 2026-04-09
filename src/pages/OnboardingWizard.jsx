@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Palette, Link2, CheckSquare, ArrowRight } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { Palette, Link2, CheckSquare } from 'lucide-react';
 import OnboardingBrandKit from '@/components/onboarding/OnboardingBrandKit';
 import OnboardingPlatforms from '@/components/onboarding/OnboardingPlatforms';
 import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist';
@@ -14,26 +11,7 @@ const STEPS = [
 ];
 
 export default function OnboardingWizard() {
-  const navigate = useNavigate();
-  const { refreshOnboarding } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
-
-  async function handleSkipAll() {
-    try {
-      await apiFetch('/api/onboarding/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          onboarding_complete: true,
-          skipped_at: new Date().toISOString(),
-        }),
-      });
-      await refreshOnboarding();
-    } catch {
-      // Continue regardless
-    }
-    navigate('/studio', { replace: true });
-  }
 
   function nextStep() {
     if (currentStep < STEPS.length - 1) {
@@ -99,23 +77,6 @@ export default function OnboardingWizard() {
           )}
         </div>
 
-        {/* Skip link */}
-        {currentStep < 2 && (
-          <div className="text-center mt-4">
-            <button
-              onClick={currentStep === 0 ? nextStep : nextStep}
-              className="text-xs text-gray-400 hover:text-gray-600 mr-4"
-            >
-              Skip this step
-            </button>
-            <button
-              onClick={handleSkipAll}
-              className="text-xs text-[#2C666E] hover:text-[#07393C] font-medium inline-flex items-center gap-1"
-            >
-              Skip setup, go to Studio <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

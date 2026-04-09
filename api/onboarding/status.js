@@ -7,8 +7,23 @@ import { createClient } from '@supabase/supabase-js';
 export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const userId = req.user.id;
+  const userEmail = req.user.email || '';
+
+  // Owner always bypasses onboarding
+  const isOwner = process.env.OWNER_EMAIL
+    && userEmail.toLowerCase() === process.env.OWNER_EMAIL.toLowerCase();
 
   if (req.method === 'GET') {
+    if (isOwner) {
+      return res.json({
+        success: true,
+        brand_kit_created: true,
+        platforms_prompted: true,
+        onboarding_complete: true,
+        skipped_at: null,
+        connected_platforms: [],
+      });
+    }
     // Fetch stored onboarding status
     const { data: keysRow } = await supabase
       .from('user_api_keys')
