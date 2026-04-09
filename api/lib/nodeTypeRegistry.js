@@ -12,6 +12,7 @@ const NODE_TYPES = {
     category: 'input',
     icon: '📥',
     description: 'User-supplied text, image, or video',
+    timeout: 15_000,
     inputs: [],
     outputs: [
       { id: 'value', type: 'string' }
@@ -32,6 +33,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🖼',
     description: 'Text-to-image with 11 models + LoRA',
+    timeout: 60_000,
     inputs: [
       { id: 'prompt', type: 'string', required: true },
       { id: 'style', type: 'string', required: false }
@@ -74,6 +76,7 @@ const NODE_TYPES = {
     category: 'video',
     icon: '🎬',
     description: 'Image-to-video with 13 models',
+    timeout: 180_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -103,6 +106,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '💾',
     description: 'Save media to asset library',
+    timeout: 15_000,
     inputs: [
       { id: 'url', type: 'string', required: true },
       { id: 'name', type: 'string', required: false }
@@ -123,6 +127,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '✏️',
     description: 'AI image editing and composition',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: true },
@@ -150,6 +155,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🎨',
     description: 'Multi-pose character reference sheet',
+    timeout: 60_000,
     inputs: [
       { id: 'prompt', type: 'string', required: true },
       { id: 'style', type: 'string', required: false }
@@ -179,6 +185,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🔀',
     description: 'Blend two images together',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'image2', type: 'image', required: true }
@@ -202,6 +209,7 @@ const NODE_TYPES = {
     category: 'video',
     icon: '🏃',
     description: 'Apply motion from video to image',
+    timeout: 180_000,
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'reference_image', type: 'image', required: true }
@@ -221,6 +229,7 @@ const NODE_TYPES = {
     category: 'audio',
     icon: '🎙️',
     description: 'AI text-to-speech, 30 Gemini voices',
+    timeout: 45_000,
     inputs: [
       { id: 'text', type: 'string', required: true }
     ],
@@ -243,6 +252,7 @@ const NODE_TYPES = {
     category: 'audio',
     icon: '🎵',
     description: 'Generate background music',
+    timeout: 45_000,
     inputs: [
       { id: 'mood', type: 'string', required: false }
     ],
@@ -265,6 +275,7 @@ const NODE_TYPES = {
     category: 'audio',
     icon: '💬',
     description: 'Burn captions onto video',
+    timeout: 45_000,
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -287,6 +298,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '📝',
     description: 'AI script writing for 20 niches',
+    timeout: 45_000,
     inputs: [
       { id: 'topic', type: 'string', required: true },
       { id: 'niche', type: 'string', required: false }
@@ -311,6 +323,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '🔧',
     description: 'GPT-enhanced prompt composition',
+    timeout: 45_000,
     inputs: [
       { id: 'description', type: 'string', required: true },
       { id: 'style', type: 'string', required: false },
@@ -333,6 +346,7 @@ const NODE_TYPES = {
     category: 'publish',
     icon: '📺',
     description: 'Upload video to YouTube',
+    timeout: 30_000,
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'title', type: 'string', required: true },
@@ -354,6 +368,7 @@ const NODE_TYPES = {
     category: 'publish',
     icon: '🎵',
     description: 'Publish to TikTok',
+    timeout: 30_000,
     inputs: [
       { id: 'video', type: 'video', required: false },
       { id: 'image', type: 'image', required: false }
@@ -371,6 +386,7 @@ const NODE_TYPES = {
     category: 'publish',
     icon: '📸',
     description: 'Post image to Instagram',
+    timeout: 30_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'caption', type: 'string', required: false }
@@ -388,6 +404,7 @@ const NODE_TYPES = {
     category: 'publish',
     icon: '👤',
     description: 'Post to Facebook page',
+    timeout: 30_000,
     inputs: [
       { id: 'image', type: 'image', required: false },
       { id: 'text', type: 'string', required: true }
@@ -405,6 +422,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '✂️',
     description: 'Trim video start and end',
+    timeout: 30_000,
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -425,6 +443,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '🖼️',
     description: 'Get first, middle, or last frame',
+    timeout: 30_000,
     inputs: [
       { id: 'video', type: 'video', required: true }
     ],
@@ -447,6 +466,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🔍',
     description: '2-4x resolution upscale via Topaz',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -474,6 +494,7 @@ const NODE_TYPES = {
     category: 'video',
     icon: '⏩',
     description: 'Extend video duration 4-10 seconds',
+    timeout: 180_000,
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -494,6 +515,7 @@ const NODE_TYPES = {
     category: 'video',
     icon: '🎭',
     description: 'Change video visual style',
+    timeout: 180_000,
     inputs: [
       { id: 'video', type: 'video', required: true },
       { id: 'style_prompt', type: 'string', required: true }
@@ -511,6 +533,7 @@ const NODE_TYPES = {
     category: 'publish',
     icon: '💼',
     description: 'Publish to LinkedIn',
+    timeout: 30_000,
     inputs: [
       { id: 'text', type: 'string', required: true },
       { id: 'image', type: 'image', required: false }
@@ -528,6 +551,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '📊',
     description: 'Multi-slide carousel for socials',
+    timeout: 45_000,
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -547,6 +571,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '📢',
     description: 'Multi-platform ad copy + images',
+    timeout: 45_000,
     inputs: [
       { id: 'product_description', type: 'string', required: true }
     ],
@@ -568,6 +593,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '📱',
     description: 'Full Shorts pipeline from topic',
+    timeout: 45_000,
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -588,6 +614,7 @@ const NODE_TYPES = {
     category: 'content',
     icon: '🎬',
     description: 'Visual storyboard planning',
+    timeout: 45_000,
     inputs: [
       { id: 'topic', type: 'string', required: true }
     ],
@@ -607,6 +634,7 @@ const NODE_TYPES = {
     category: 'input',
     icon: '🔎',
     description: 'Search web for images',
+    timeout: 15_000,
     inputs: [
       { id: 'query', type: 'string', required: true }
     ],
@@ -623,6 +651,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '🔤',
     description: 'Transform text (upper, lower, trim)',
+    timeout: 15_000,
     inputs: [
       { id: 'text', type: 'string', required: true }
     ],
@@ -651,6 +680,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '⏱️',
     description: 'Pause flow for 5-300 seconds',
+    timeout: 600_000,
     inputs: [
       { id: 'passthrough', type: 'string', required: false }
     ],
@@ -670,6 +700,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '🔀',
     description: 'Branch on value comparison',
+    timeout: 15_000,
     inputs: [
       { id: 'value', type: 'string', required: true }
     ],
@@ -696,6 +727,7 @@ const NODE_TYPES = {
     category: 'input',
     icon: '🎨',
     description: 'Visual style text output',
+    timeout: 15_000,
     inputs: [],
     outputs: [{ id: 'style', type: 'string' }],
     configSchema: {
@@ -713,6 +745,7 @@ const NODE_TYPES = {
     category: 'input',
     icon: '🎬',
     description: 'Video motion style output',
+    timeout: 15_000,
     inputs: [],
     outputs: [{ id: 'style', type: 'string' }],
     configSchema: {
@@ -730,6 +763,7 @@ const NODE_TYPES = {
     category: 'input',
     icon: '📋',
     description: 'Reusable prompt template',
+    timeout: 15_000,
     inputs: [],
     outputs: [{ id: 'prompt', type: 'string' }],
     configSchema: {
@@ -747,6 +781,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🧊',
     description: 'Image to 3D GLB model',
+    timeout: 300_000,
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -763,6 +798,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🧹',
     description: 'Remove image background',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true }
     ],
@@ -785,6 +821,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🖌️',
     description: 'Selective region editing with mask',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: true },
@@ -810,6 +847,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '🔄',
     description: 'Multi-angle image generation',
+    timeout: 60_000,
     inputs: [
       { id: 'image', type: 'image', required: true },
       { id: 'prompt', type: 'string', required: false }
@@ -833,6 +871,7 @@ const NODE_TYPES = {
     category: 'image',
     icon: '👗',
     description: 'Virtual clothing try-on',
+    timeout: 60_000,
     inputs: [
       { id: 'person_image', type: 'image', required: true },
       { id: 'garment_image', type: 'image', required: true }
@@ -860,6 +899,7 @@ const NODE_TYPES = {
     category: 'utility',
     icon: '🧠',
     description: 'Fine-tune custom AI model',
+    timeout: 600_000,
     inputs: [
       { id: 'trigger_word', type: 'string', required: true }
     ],

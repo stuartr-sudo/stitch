@@ -1,5 +1,6 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { getActionableError } from '@/lib/flowErrorMessages';
 
 // Type-based port colors
 const PORT_COLORS = {
@@ -200,9 +201,15 @@ function StitchNode({ data, selected }) {
             </span>
           )}
           {isRunning && <span className="text-[10px] text-blue-400">Processing...</span>}
-          {isFailed && (
-            <span className="text-[10px] text-red-400 line-clamp-2 block">{stepState.error}</span>
-          )}
+          {isFailed && (() => {
+            const err = getActionableError(stepState.error);
+            return (
+              <div>
+                <span className="text-[10px] text-red-400 font-medium block">{err.message}</span>
+                <span className="text-[9px] text-red-400/60 block mt-0.5 line-clamp-2">{err.action}</span>
+              </div>
+            );
+          })()}
         </div>
       )}
 

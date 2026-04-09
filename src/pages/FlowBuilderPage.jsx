@@ -8,6 +8,7 @@ import FlowCanvas from '@/components/flows/FlowCanvas';
 import NodePalette from '@/components/flows/NodePalette';
 import NodeConfigModal from '@/components/flows/NodeConfigModal';
 import ExecutionLog from '@/components/flows/ExecutionLog';
+import PreflightCheck from '@/components/flows/PreflightCheck';
 
 export default function FlowBuilderPage() {
   const { id, executionId } = useParams();
@@ -174,8 +175,17 @@ export default function FlowBuilderPage() {
     ));
   }, [setNodes]);
 
-  // Run flow
-  const handleRun = async () => {
+  // Preflight check state
+  const [preflightOpen, setPreflightOpen] = useState(false);
+
+  // Run flow — opens preflight first
+  const handleRunClick = () => {
+    if (!flow?.id) return;
+    setPreflightOpen(true);
+  };
+
+  const handleRunConfirm = async () => {
+    setPreflightOpen(false);
     if (!flow?.id) return;
     await saveFlow();
     const data = await apiFetch(`/api/flows/${flow.id}/execute`, { method: 'POST' }).then(r => r.json());
@@ -216,7 +226,7 @@ export default function FlowBuilderPage() {
           ) : (
             <>
               <button className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">Schedule</button>
-              <button onClick={handleRun} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
+              <button onClick={handleRunClick} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
             </>
           )}
         </div>
@@ -252,6 +262,17 @@ export default function FlowBuilderPage() {
         connections={connections}
         edges={edges}
         nodes={nodes}
+      />
+
+      {/* Preflight validation — runs before execution */}
+      <PreflightCheck
+        open={preflightOpen}
+        onClose={() => setPreflightOpen(false)}
+        onConfirm={handleRunConfirm}
+        nodes={nodes}
+        edges={edges}
+        nodeTypesMap={nodeTypesMap}
+        connections={connections}
       />
     </div>
   );

@@ -103,11 +103,12 @@ export class FlowExecutor {
     const errorHandling = node.config?.errorHandling || 'stop';
 
     try {
-      // Per-node timeout — wraps the run call in a race with a timer
+      // Per-node timeout — uses node type's timeout if defined, else global default
+      const timeoutMs = nodeType.timeout || NODE_TIMEOUT_MS;
       const output = await this._withTimeout(
         nodeType.run(inputs, node.config || {}, context),
-        NODE_TIMEOUT_MS,
-        `Node "${nodeType.label}" timed out after ${NODE_TIMEOUT_MS / 1000}s`
+        timeoutMs,
+        `Node "${nodeType.label}" timed out after ${timeoutMs / 1000}s`
       );
 
       this.stepStates[node.id] = {
