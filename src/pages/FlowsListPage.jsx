@@ -108,9 +108,14 @@ export default function FlowsListPage() {
             </button>
             <h1 className="text-xl font-bold text-slate-100">Automation Flows</h1>
           </div>
-          <button onClick={handleNewFlow} className="px-5 py-2 text-sm bg-[#2C666E] text-white font-semibold rounded-lg hover:bg-[#07393C] transition-colors">
-            + New Flow
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/flows/campaigns/new')} className="px-4 py-2 text-sm bg-violet-900/30 border border-violet-700/40 text-violet-300 font-medium rounded-lg hover:bg-violet-900/50 transition-colors">
+              + New Campaign
+            </button>
+            <button onClick={handleNewFlow} className="px-5 py-2 text-sm bg-[#2C666E] text-white font-semibold rounded-lg hover:bg-[#07393C] transition-colors">
+              + New Flow
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

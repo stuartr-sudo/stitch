@@ -161,6 +161,12 @@ app.all('/api/autopilot*', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Campaign creation wizard — must be before flows catch-all
+app.all('/api/flows/campaigns*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/flows/campaign-create.js')).default;
+  return handler(req, res);
+});
+
 // Automation Flows — catch-all
 app.all('/api/flows*', authenticateToken, async (req, res) => {
   const handler = (await import('./api/flows/flows.js')).default;
