@@ -200,6 +200,25 @@ export default function FlowBuilderPage() {
     }
   };
 
+  // Dry run — executes without calling APIs
+  const handleDryRun = async () => {
+    if (!flow?.id) return;
+    await saveFlow();
+    const data = await apiFetch(`/api/flows/${flow.id}/dry-run`, { method: 'POST' }).then(r => r.json());
+    if (data?.execution) {
+      navigate(`/flows/${flow.id}/run/${data.execution.id}`);
+    }
+  };
+
+  // Resume from failed — creates new execution keeping completed nodes
+  const handleResume = async () => {
+    if (!executionId) return;
+    const data = await apiFetch(`/api/flows/executions/${executionId}/resume-from-failed`, { method: 'POST' }).then(r => r.json());
+    if (data?.execution) {
+      navigate(`/flows/${flow.id}/run/${data.execution.id}`);
+    }
+  };
+
   // Pause/Cancel
   const handlePause = async () => {
     if (!executionId) return;
@@ -229,11 +248,22 @@ export default function FlowBuilderPage() {
           )}
           {isExecuting ? (
             <>
-              <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-900/30 border border-amber-700/40 text-amber-400 rounded-md hover:bg-amber-900/50">Pause</button>
-              <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-900/30 border border-red-700/40 text-red-400 rounded-md hover:bg-red-900/50">Cancel</button>
+              {execution?.status === 'failed' && (
+                <button onClick={handleResume} className="px-3 py-1.5 text-xs bg-emerald-900/30 border border-emerald-700/40 text-emerald-400 rounded-md hover:bg-emerald-900/50">↻ Resume</button>
+              )}
+              {['running', 'queued'].includes(execution?.status) && (
+                <>
+                  <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-900/30 border border-amber-700/40 text-amber-400 rounded-md hover:bg-amber-900/50">Pause</button>
+                  <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-900/30 border border-red-700/40 text-red-400 rounded-md hover:bg-red-900/50">Cancel</button>
+                </>
+              )}
+              {execution?.status === 'paused' && (
+                <button onClick={handleResume} className="px-3 py-1.5 text-xs bg-blue-900/30 border border-blue-700/40 text-blue-400 rounded-md hover:bg-blue-900/50">▶ Continue</button>
+              )}
             </>
           ) : (
             <>
+              <button onClick={handleDryRun} className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">🔍 Dry Run</button>
               <button className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">Schedule</button>
               <button onClick={handleRunClick} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
             </>

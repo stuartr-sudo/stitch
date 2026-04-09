@@ -5,7 +5,7 @@ const DEFAULT_CONCURRENCY = 3;
 const NODE_TIMEOUT_MS = 300_000; // 5 minutes per node (video gen can take 2-3 min)
 
 export class FlowExecutor {
-  constructor(flow, execution, supabase, apiKeys, userId, userEmail) {
+  constructor(flow, execution, supabase, apiKeys, userId, userEmail, opts = {}) {
     this.flow = flow;
     this.executionId = execution.id;
     this.supabase = supabase;
@@ -19,6 +19,8 @@ export class FlowExecutor {
     this.abortController = new AbortController();
     this.paused = false;
     this.cancelled = false;
+    this.dryRun = opts.dryRun || false;
+    this.resumeFromStates = opts.resumeFromStates || null; // For resume-from-failed
     // Sequential DB write queue to prevent race conditions on step_states
     this._updateQueue = Promise.resolve();
   }
@@ -132,6 +134,28 @@ export class FlowExecutor {
     // Resolve {{variable}} patterns in config values
     const resolvedConfig = this.resolveVariables(node.config || {});
 
+    // ── DRY RUN: skip actual execution, return mock output ──
+    if (this.dryRun) {
+      const mockOutput = {};
+      for (const out of (nodeType.outputs || [])) {
+        if (out.type === 'image') mockOutput[out.id] = '[DRY RUN] image placeholder';
+        else if (out.type === 'video') mockOutput[out.id] = '[DRY RUN] video placeholder';
+        else if (out.type === 'audio') mockOutput[out.id] = '[DRY RUN] audio placeholder';
+        else if (out.type === 'json') mockOutput[out.id] = { _dryRun: true, resolvedInputs: Object.keys(inputs), resolvedConfig: Object.keys(resolvedConfig).filter(k => k !== 'errorHandling') };
+        else mockOutput[out.id] = `[DRY RUN] Would produce ${out.type}: inputs=[${Object.keys(inputs).join(',')}], config=[${Object.keys(resolvedConfig).filter(k => k !== 'errorHandling').join(',')}]`;
+      }
+      this.stepStates[node.id] = {
+        status: 'completed',
+        started_at: this.stepStates[node.id].started_at,
+        completed_at: new Date().toISOString(),
+        output: mockOutput,
+        _dryRun: true,
+      };
+      this.running.delete(node.id);
+      await this.updateExecution({});
+      return;
+    }
+
     try {
       // Per-node timeout — uses node type's timeout if defined, else global default
       const timeoutMs = nodeType.timeout || NODE_TIMEOUT_MS;
@@ -229,7 +253,19 @@ export class FlowExecutor {
   }
 
   async execute() {
-    await this.updateExecution({ status: 'running', started_at: new Date().toISOString() });
+    // ── RESUME FROM FAILED: pre-load completed states from previous execution ──
+    if (this.resumeFromStates) {
+      for (const [nodeId, state] of Object.entries(this.resumeFromStates)) {
+        if (state.status === 'completed') {
+          this.stepStates[nodeId] = state; // Keep completed nodes as-is
+        }
+        // Failed/running nodes are left unset — they'll be re-run
+      }
+      console.log(`[flows] Resuming: ${Object.keys(this.stepStates).length} nodes pre-loaded as completed`);
+    }
+
+    const mode = this.dryRun ? 'dry_run' : 'running';
+    await this.updateExecution({ status: mode, started_at: new Date().toISOString() });
 
     while (!this.cancelled && !this.paused) {
       const ready = this.getReadyNodes();
@@ -285,16 +321,58 @@ export function getActiveExecutor(executionId) {
   return activeExecutors.get(executionId);
 }
 
-export async function executeFlow(flow, supabase, apiKeys, userId, userEmail) {
+export async function executeFlow(flow, supabase, apiKeys, userId, userEmail, opts = {}) {
   const { data: execution, error } = await supabase
     .from('automation_executions')
-    .insert({ flow_id: flow.id, user_id: userId, status: 'queued' })
+    .insert({ flow_id: flow.id, user_id: userId, status: opts.dryRun ? 'dry_run' : 'queued' })
     .select()
     .single();
 
   if (error) throw new Error(`Failed to create execution: ${error.message}`);
 
-  const executor = new FlowExecutor(flow, execution, supabase, apiKeys, userId, userEmail);
+  const executor = new FlowExecutor(flow, execution, supabase, apiKeys, userId, userEmail, opts);
+  activeExecutors.set(execution.id, executor);
+
+  executor.execute().finally(() => {
+    activeExecutors.delete(execution.id);
+  });
+
+  return execution;
+}
+
+/**
+ * Resume a failed execution from the point of failure.
+ * Pre-loads completed step states, re-runs failed + downstream nodes.
+ */
+export async function resumeExecution(executionId, supabase, apiKeys, userId, userEmail) {
+  // Load the failed execution's step states
+  const { data: prevExec, error: execErr } = await supabase
+    .from('automation_executions')
+    .select('*')
+    .eq('id', executionId)
+    .single();
+  if (execErr || !prevExec) throw new Error('Previous execution not found');
+  if (!['failed', 'cancelled'].includes(prevExec.status)) throw new Error('Can only resume failed or cancelled executions');
+
+  // Load the flow
+  const { data: flow, error: flowErr } = await supabase
+    .from('automation_flows')
+    .select('*')
+    .eq('id', prevExec.flow_id)
+    .single();
+  if (flowErr || !flow) throw new Error('Flow not found');
+
+  // Create a new execution record for the resumed run
+  const { data: execution, error: newErr } = await supabase
+    .from('automation_executions')
+    .insert({ flow_id: flow.id, user_id: userId, status: 'queued' })
+    .select()
+    .single();
+  if (newErr) throw new Error(`Failed to create resume execution: ${newErr.message}`);
+
+  const executor = new FlowExecutor(flow, execution, supabase, apiKeys, userId, userEmail, {
+    resumeFromStates: prevExec.step_states || {},
+  });
   activeExecutors.set(execution.id, executor);
 
   executor.execute().finally(() => {

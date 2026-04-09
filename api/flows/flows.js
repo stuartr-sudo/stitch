@@ -20,7 +20,7 @@
  * GET    /api/flows/:id/executions           — list executions for this flow
  */
 
-import { executeFlow, getActiveExecutor } from '../lib/flowExecutor.js';
+import { executeFlow, getActiveExecutor, resumeExecution } from '../lib/flowExecutor.js';
 import { getNodeTypesByCategory } from '../lib/nodeTypeRegistry.js';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { createClient } from '@supabase/supabase-js';
@@ -130,6 +130,17 @@ export default async function handler(req, res) {
         return res.json({ status: 'resumed', executionId: execId });
       }
 
+      // POST /api/flows/executions/:execId/resume-from-failed — new execution keeping completed nodes
+      if (action === 'resume-from-failed' && method === 'POST') {
+        try {
+          const keys = await getUserKeys(userId, req.user?.email);
+          const execution = await resumeExecution(execId, supabase, keys, userId, req.user?.email);
+          return res.json({ execution, resumed: true });
+        } catch (err) {
+          return res.status(400).json({ error: err.message });
+        }
+      }
+
       // POST /api/flows/executions/:execId/retry/:nodeId — retry a failed node
       if (action === 'retry' && pathParts[3] && method === 'POST') {
         const nodeId = pathParts[3];
@@ -217,6 +228,20 @@ export default async function handler(req, res) {
       const keys = await getUserKeys(userId, req.user?.email);
       const execution = await executeFlow(flow, supabase, keys, userId, req.user?.email);
       return res.json({ execution });
+    }
+
+    // POST /api/flows/:id/dry-run — execute without calling APIs
+    if (subPath === 'dry-run' && method === 'POST') {
+      const { data: flow, error } = await supabase
+        .from('automation_flows')
+        .select('*')
+        .eq('id', flowId)
+        .single();
+      if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
+
+      const keys = await getUserKeys(userId, req.user?.email);
+      const execution = await executeFlow(flow, supabase, keys, userId, req.user?.email, { dryRun: true });
+      return res.json({ execution, mode: 'dry_run' });
     }
 
     // GET /api/flows/:id/executions — list executions for this flow
