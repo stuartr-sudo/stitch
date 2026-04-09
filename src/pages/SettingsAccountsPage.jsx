@@ -4,44 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
-
-const PLATFORMS = [
-  {
-    key: 'youtube',
-    label: 'YouTube',
-    color: 'bg-red-500',
-    authUrl: null, // YouTube uses existing brand-based flow
-    description: 'Publish Shorts and videos',
-  },
-  {
-    key: 'linkedin',
-    label: 'LinkedIn',
-    color: 'bg-blue-700',
-    authUrl: '/api/linkedin/oauth/auth',
-    description: 'Publish posts and carousels',
-  },
-  {
-    key: 'instagram',
-    label: 'Instagram',
-    color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600',
-    authUrl: '/api/meta/auth',
-    description: 'Publish photos and carousels',
-  },
-  {
-    key: 'facebook',
-    label: 'Facebook',
-    color: 'bg-blue-600',
-    authUrl: '/api/meta/auth',
-    description: 'Publish to Pages',
-  },
-  {
-    key: 'tiktok',
-    label: 'TikTok',
-    color: 'bg-black',
-    authUrl: '/api/tiktok/auth',
-    description: 'Publish videos and photo carousels',
-  },
-];
+import { OAUTH_PLATFORMS as PLATFORMS } from '@/lib/platforms';
 
 function daysUntilExpiry(expiresAt) {
   if (!expiresAt) return null;

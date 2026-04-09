@@ -31,8 +31,8 @@ export default async function handler(req, res) {
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  // Store code_verifier in nonce metadata for retrieval in callback
-  await storeNonce(req.user.id, 'tiktok', nonce, { code_verifier: codeVerifier }, supabase);
+  // Store code_verifier and optional returnTo in nonce metadata for retrieval in callback
+  await storeNonce(req.user.id, 'tiktok', nonce, { code_verifier: codeVerifier, returnTo: req.query.returnTo || null }, supabase);
 
   const state = Buffer.from(JSON.stringify({
     user_id: req.user.id,

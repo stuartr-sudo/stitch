@@ -90,6 +90,47 @@ export const RATIO_DIMENSIONS = {
   '3:4': { width: 1080, height: 1440 },
 };
 
+/**
+ * OAuth connection platforms for Connected Accounts and Onboarding.
+ */
+export const OAUTH_PLATFORMS = [
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    color: 'bg-red-500',
+    authUrl: null, // YouTube uses existing brand-based flow
+    description: 'Publish Shorts and videos',
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    color: 'bg-blue-700',
+    authUrl: '/api/linkedin/oauth/auth',
+    description: 'Publish posts and carousels',
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600',
+    authUrl: '/api/meta/auth',
+    description: 'Publish photos and carousels',
+  },
+  {
+    key: 'facebook',
+    label: 'Facebook',
+    color: 'bg-blue-600',
+    authUrl: '/api/meta/auth',
+    description: 'Publish to Pages',
+  },
+  {
+    key: 'tiktok',
+    label: 'TikTok',
+    color: 'bg-black',
+    authUrl: '/api/tiktok/auth',
+    description: 'Publish videos and photo carousels',
+  },
+];
+
 export function getPlatformList() {
   return Object.entries(PLATFORMS).map(([key, val]) => ({
     value: key,

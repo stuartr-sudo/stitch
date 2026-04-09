@@ -51,10 +51,12 @@ import FlowBuilderPage from './pages/FlowBuilderPage';
 import AdDiscoveryPage from './pages/AdDiscoveryPage';
 import AdIntelligencePage from './pages/AdIntelligencePage';
 import AgencyPage from './pages/AgencyPage';
+import OnboardingWizard from './pages/OnboardingWizard';
 import { Loader2 } from 'lucide-react';
 
-function ProtectedRoute({ children }) {
-  const { user, loading, hasKeys } = useAuth();
+function ProtectedRoute({ children, skipOnboardingCheck }) {
+  const { user, loading, hasKeys, onboardingComplete } = useAuth();
+  const location = window.location.pathname;
 
   if (loading) {
     return (
@@ -72,11 +74,16 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to onboarding if not complete (skip for /onboarding itself to avoid infinite loop)
+  if (!skipOnboardingCheck && onboardingComplete === false && location !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return children;
 }
 
 function GuestRoute({ children }) {
-  const { user, loading, hasKeys } = useAuth();
+  const { user, loading, hasKeys, onboardingComplete } = useAuth();
 
   if (loading) {
     return (
@@ -87,6 +94,10 @@ function GuestRoute({ children }) {
   }
 
   if (user && hasKeys) {
+    // If onboarding not complete, send to onboarding instead of studio
+    if (onboardingComplete === false) {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to="/studio" replace />;
   }
 
@@ -141,6 +152,16 @@ function App() {
           <Route path="/proposals/movin-martin-website-mockup" element={<MovinMartinMockupPage />} />
           <Route path="/proposals" element={<Navigate to="/proposal/hamilton-city-council" replace />} />
           <Route path="/proposal/hamilton-city-council" element={<ProposalPage />} />
+
+          {/* Onboarding wizard — protected but skips onboarding check */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute skipOnboardingCheck>
+                <OnboardingWizard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected studio */}
           <Route

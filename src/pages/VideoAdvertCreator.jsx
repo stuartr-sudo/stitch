@@ -82,10 +82,45 @@ import TurnaroundSheetModal from '@/components/modals/TurnaroundSheetWizard';
 import { PLATFORMS, getPlatformList } from '@/lib/platforms';
 
 
+function SetupBanner({ onDismiss }) {
+  const [show, setShow] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if setup is actually incomplete — only show if brand kit missing
+    if (sessionStorage.getItem('setup_banner_dismissed')) return;
+    apiFetch('/api/onboarding/status').then(r => r.json()).then(data => {
+      if (data.onboarding_complete && !data.brand_kit_created) {
+        setShow(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="bg-[#2C666E]/10 border-b border-[#2C666E]/20 px-6 py-2 flex items-center justify-between">
+      <p className="text-xs text-[#07393C]">
+        <span className="font-medium">Setup incomplete:</span> Brand Kit not configured yet.
+        <button onClick={() => navigate('/onboarding')} className="ml-2 text-[#2C666E] underline font-medium">
+          Set up now
+        </button>
+      </p>
+      <button
+        onClick={() => { sessionStorage.setItem('setup_banner_dismissed', '1'); onDismiss(); }}
+        className="text-xs text-gray-400 hover:text-gray-600"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
 export default function VideoAdvertCreator() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, signOut } = useAuth();
+  const { user, signOut, onboardingComplete } = useAuth();
+  const [setupBannerDismissed, setSetupBannerDismissed] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [createdVideos, setCreatedVideos] = useState([]);
   const [createdImages, setCreatedImages] = useState([]);
@@ -441,6 +476,8 @@ export default function VideoAdvertCreator() {
 
   return (
     <div className="h-[100dvh] bg-gray-100 flex flex-col overflow-hidden">
+      {/* Setup banner for incomplete onboarding */}
+      {!setupBannerDismissed && <SetupBanner onDismiss={() => setSetupBannerDismissed(true)} />}
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="px-6 py-4">

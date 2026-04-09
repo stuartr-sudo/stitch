@@ -156,5 +156,6 @@ export default async function handler(req, res) {
 
   const uniqueConnected = [...new Set(connected)];
   console.log(`[meta/callback] Connected for user ${user_id}: ${uniqueConnected.join(', ')}`);
-  return res.redirect(`/settings/accounts?connected=${uniqueConnected.join(',')}`);
+  const returnTo = nonceRow.metadata?.returnTo || '/settings/accounts';
+  return res.redirect(`${returnTo}?connected=${uniqueConnected.join(',')}`);
 }

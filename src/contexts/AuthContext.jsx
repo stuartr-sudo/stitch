@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasKeys, setHasKeys] = useState(null); // null = unknown, true/false after check
+  const [onboardingComplete, setOnboardingComplete] = useState(null); // null = unknown
 
   const checkUserKeys = async (userId) => {
     if (!userId || !supabase) { setHasKeys(false); return; }
@@ -32,6 +33,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const checkOnboardingStatus = async () => {
+    try {
+      const resp = await apiFetch('/api/onboarding/status');
+      const data = await resp.json();
+      setOnboardingComplete(!!data?.onboarding_complete);
+    } catch {
+      // If API unavailable, don't block — assume complete to avoid trapping user
+      setOnboardingComplete(true);
+    }
+  };
+
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
@@ -42,9 +54,13 @@ export function AuthProvider({ children }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkUserKeys(session.user.id).then(() => setLoading(false));
+        checkUserKeys(session.user.id).then(async () => {
+          await checkOnboardingStatus();
+          setLoading(false);
+        });
       } else {
         setHasKeys(false);
+        setOnboardingComplete(null);
         setLoading(false);
       }
     });
@@ -54,8 +70,10 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkUserKeys(session.user.id);
+        checkOnboardingStatus();
       } else {
         setHasKeys(false);
+        setOnboardingComplete(null);
       }
     });
 
@@ -80,7 +98,12 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, hasKeys, refreshKeys: () => checkUserKeys(user?.id), signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{
+      user, session, loading, hasKeys, onboardingComplete,
+      refreshKeys: () => checkUserKeys(user?.id),
+      refreshOnboarding: checkOnboardingStatus,
+      signUp, signIn, signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );

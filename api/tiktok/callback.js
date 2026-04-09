@@ -95,5 +95,6 @@ export default async function handler(req, res) {
   }, supabase);
 
   console.log(`[tiktok/callback] Connected TikTok for user ${user_id} → ${displayName}`);
-  return res.redirect('/settings/accounts?connected=tiktok');
+  const returnTo = nonceRow.metadata?.returnTo || '/settings/accounts';
+  return res.redirect(`${returnTo}?connected=tiktok`);
 }

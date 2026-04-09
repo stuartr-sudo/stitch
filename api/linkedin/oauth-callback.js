@@ -92,5 +92,6 @@ export default async function handler(req, res) {
   }, { onConflict: 'user_id' });
 
   console.log(`[linkedin/oauth-callback] Connected LinkedIn for user ${user_id} → ${profileName}`);
-  return res.redirect('/settings/accounts?connected=linkedin');
+  const returnTo = nonceRow.metadata?.returnTo || '/settings/accounts';
+  return res.redirect(`${returnTo}?connected=linkedin`);
 }

@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   const nonce = crypto.randomBytes(16).toString('hex');
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  await storeNonce(req.user.id, 'linkedin', nonce, {}, supabase);
+  await storeNonce(req.user.id, 'linkedin', nonce, { returnTo: req.query.returnTo || null }, supabase);
 
   const state = Buffer.from(JSON.stringify({
     user_id: req.user.id,

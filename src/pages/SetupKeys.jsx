@@ -23,10 +23,10 @@ export default function SetupKeys() {
   const navigate = useNavigate();
   const { signIn, signUp, user, hasKeys, refreshKeys } = useAuth();
 
-  // If user is logged in and already has keys, go straight to studio
+  // If user is logged in and already has keys, go to onboarding (or studio if complete)
   React.useEffect(() => {
     if (user && hasKeys) {
-      navigate('/studio', { replace: true });
+      navigate('/onboarding', { replace: true });
     }
   }, [user, hasKeys, navigate]);
 
@@ -87,7 +87,7 @@ export default function SetupKeys() {
           .maybeSingle();
 
         if (data?.fal_key && data?.openai_key) {
-          navigate('/studio');
+          navigate('/onboarding');
         } else {
           setStep('keys');
         }
@@ -128,7 +128,7 @@ export default function SetupKeys() {
       if (error) throw error;
 
       await refreshKeys();
-      navigate('/studio');
+      navigate('/onboarding');
     } catch (error) {
       toast.error('Failed to save keys: ' + error.message);
     } finally {
