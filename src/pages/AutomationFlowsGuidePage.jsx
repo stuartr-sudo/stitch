@@ -1,8 +1,10 @@
 /**
  * AutomationFlowsGuidePage — comprehensive training guide for Automation Flows.
  *
- * Covers the visual DAG flow builder, all 33 node types, connections,
- * execution, scheduling, the config modal, templates, and troubleshooting.
+ * Covers the dark-themed visual pipeline builder, 45+ node types, campaign wizard,
+ * control flow nodes, preflight validation, dry run, variables, and troubleshooting.
+ *
+ * Updated April 2026 — complete overhaul for the new Flows UX.
  */
 
 import React, { useState } from 'react';
@@ -14,7 +16,8 @@ import {
   Pause, Square, Upload, Download, Scissors, Image as ImageIcon,
   MessageSquare, PenTool, RotateCcw, Share2, RefreshCw, Eye,
   Shield, CircleDot, Link2, Plug, Save, Monitor, Smartphone,
-  MousePointerClick, Maximize2, ArrowDown, Box, Grip,
+  MousePointerClick, Maximize2, ArrowDown, Box, Grip, Variable,
+  Split, Merge, Workflow, Rocket, BrainCircuit, FlaskConical,
 } from 'lucide-react';
 
 // ── Expandable Section ──
@@ -80,6 +83,12 @@ function Warning({ children }) {
   );
 }
 
+// ── New feature badge ──
+
+function NewBadge() {
+  return <span className="ml-1 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wide rounded">New</span>;
+}
+
 // ── Inline badge ──
 
 function Badge({ icon: Icon, label, color = 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }) {
@@ -114,6 +123,8 @@ function NodeCard({ emoji, name, id, category, description, inputs, outputs, con
     Content: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
     Publish: 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300',
     Utility: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+    Control: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300',
+    Brand: 'bg-fuchsia-100 dark:bg-fuchsia-900/40 text-fuchsia-700 dark:text-fuchsia-300',
   };
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -158,14 +169,9 @@ function NodeCard({ emoji, name, id, category, description, inputs, outputs, con
           {config && config.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Configuration</p>
-              {config.map((c, i) => (
-                <div key={i} className="mt-1 pl-3 border-l-2 border-gray-200 dark:border-gray-600">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{c.name}</span>
-                  {c.options && <span className="text-gray-400 ml-1">— {c.options.join(', ')}</span>}
-                  {c.defaultVal && <span className="text-gray-400 ml-1">(default: {c.defaultVal})</span>}
-                  {c.note && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{c.note}</p>}
-                </div>
-              ))}
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-0.5">
+                {config.map((c, i) => <li key={i}>{c}</li>)}
+              </ul>
             </div>
           )}
           {children}
@@ -175,1835 +181,714 @@ function NodeCard({ emoji, name, id, category, description, inputs, outputs, con
   );
 }
 
-// ── Visual Mockup: Canvas Layout ──
+// ── Port type color key ──
 
-function CanvasMockup() {
+function PortColorKey() {
+  const ports = [
+    { type: 'string', color: 'bg-slate-400', label: 'Text / URL' },
+    { type: 'image', color: 'bg-purple-500', label: 'Image' },
+    { type: 'video', color: 'bg-blue-500', label: 'Video' },
+    { type: 'audio', color: 'bg-emerald-500', label: 'Audio' },
+    { type: 'json', color: 'bg-amber-500', label: 'JSON / Object' },
+    { type: 'any[]', color: 'bg-cyan-500', label: 'Array' },
+  ];
   return (
-    <div className="mt-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
-      <div className="bg-gray-100 dark:bg-gray-750 px-3 py-1.5 border-b border-gray-300 dark:border-gray-600 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-        <span className="font-semibold text-gray-700 dark:text-gray-300">Flow Builder Layout</span>
-        <span className="ml-auto italic">Visual mockup</span>
-      </div>
-      <div className="flex h-64">
-        {/* Left: Node Palette */}
-        <div className="w-48 shrink-0 border-r border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 flex flex-col gap-2">
-          <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Node Palette</div>
-          <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded flex items-center px-2">
-            <Search className="w-3 h-3 text-gray-400 mr-1" />
-            <span className="text-[10px] text-gray-400">Search nodes...</span>
-          </div>
-          <div className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1">INPUT</div>
-          <div className="h-5 bg-emerald-50 dark:bg-emerald-900/20 rounded px-2 flex items-center text-[10px] text-emerald-700 dark:text-emerald-300">Manual Input</div>
-          <div className="h-5 bg-emerald-50 dark:bg-emerald-900/20 rounded px-2 flex items-center text-[10px] text-emerald-700 dark:text-emerald-300">Image Search</div>
-          <div className="text-[9px] font-semibold text-violet-600 dark:text-violet-400 mt-1">IMAGE</div>
-          <div className="h-5 bg-violet-50 dark:bg-violet-900/20 rounded px-2 flex items-center text-[10px] text-violet-700 dark:text-violet-300">Imagineer Generate</div>
-          <div className="h-5 bg-violet-50 dark:bg-violet-900/20 rounded px-2 flex items-center text-[10px] text-violet-700 dark:text-violet-300">Imagineer Edit</div>
-          <div className="text-[9px] text-gray-400 mt-auto">7 categories, 33 nodes</div>
+    <div className="flex flex-wrap gap-3 mt-2">
+      {ports.map(p => (
+        <div key={p.type} className="flex items-center gap-1.5">
+          <span className={`w-3 h-3 rounded-full ${p.color}`} />
+          <span className="text-xs text-gray-600 dark:text-gray-400">{p.label} <code className="text-gray-400">({p.type})</code></span>
         </div>
-
-        {/* Center: Canvas */}
-        <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden p-4 flex flex-col" style={{ backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-          {/* Example nodes on canvas — using flexbox to avoid overlap */}
-          <div className="flex items-center justify-center gap-6 flex-1">
-            <NodeMockupSmall name="Manual Input" category="Input" color="emerald" />
-            <div className="text-[#2C666E]">&rarr;</div>
-            <NodeMockupSmall name="Imagineer" category="Image" color="violet" />
-            <div className="text-[#2C666E]">&rarr;</div>
-            <NodeMockupSmall name="JumpStart" category="Video" color="blue" />
-          </div>
-          <div className="text-center text-[10px] text-gray-400 dark:text-gray-500 bg-white/80 dark:bg-gray-800/80 px-2 py-0.5 rounded self-center mt-auto">
-            Scroll to zoom &middot; Drag to pan &middot; Double-click node to configure
-          </div>
-        </div>
-
-        {/* Right: Info Strip */}
-        <div className="w-48 shrink-0 border-l border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 flex flex-col gap-2">
-          <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Info Strip</div>
-          <div className="h-5 bg-violet-50 dark:bg-violet-900/20 rounded px-2 flex items-center text-[10px] text-violet-700 dark:text-violet-300 font-medium">Imagineer Generate</div>
-          <div className="text-[9px] text-gray-500 dark:text-gray-400">Category: <span className="text-violet-600 dark:text-violet-400">Image</span></div>
-          <div className="text-[9px] text-gray-500 dark:text-gray-400">Inputs: prompt, style</div>
-          <div className="text-[9px] text-gray-500 dark:text-gray-400">Outputs: image_url</div>
-          <div className="text-[9px] text-gray-500 dark:text-gray-400">Error mode: Stop</div>
-          <div className="mt-1 px-2 py-1 bg-[#2C666E]/10 rounded text-[9px] text-[#2C666E] dark:text-teal-300 font-medium text-center">
-            4 settings configured
-          </div>
-          <div className="mt-auto px-2 py-1.5 border border-dashed border-[#2C666E]/40 rounded text-[9px] text-[#2C666E] dark:text-teal-300 text-center">
-            Double-click to configure
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Small node for canvas mockup ──
-
-function NodeMockupSmall({ name, category, color }) {
-  const bgMap = { emerald: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700', violet: 'bg-violet-50 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700', blue: 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700', pink: 'bg-pink-50 dark:bg-pink-900/30 border-pink-300 dark:border-pink-700', amber: 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700', sky: 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700', gray: 'bg-gray-50 dark:bg-gray-700/30 border-gray-300 dark:border-gray-600' };
-  return (
-    <div className={`relative px-3 py-2 rounded-lg border ${bgMap[color] || bgMap.gray} shadow-sm`} style={{ zIndex: 1 }}>
-      {/* Input port */}
-      <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-indigo-400 border-2 border-white dark:border-gray-800" />
-      <div className="text-[10px] font-semibold text-gray-800 dark:text-gray-200">{name}</div>
-      <div className="text-[8px] text-gray-500 dark:text-gray-400">{category}</div>
-      {/* Output port */}
-      <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white dark:border-gray-800" />
-    </div>
-  );
-}
-
-// ── Full Node Mockup (detailed for reference) ──
-
-function NodeMockup() {
-  return (
-    <div className="mt-4 flex justify-center">
-      <div className="relative border-2 border-violet-300 dark:border-violet-600 rounded-xl bg-white dark:bg-gray-800 shadow-lg w-72 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-900/30 border-b border-violet-200 dark:border-violet-700">
-          <span className="text-base">&#127912;</span>
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1">Imagineer Generate</span>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">Image</span>
-        </div>
-        {/* Ports */}
-        <div className="px-3 py-2 text-[10px] text-gray-500 dark:text-gray-400 space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
-            <span>prompt</span>
-            <span className="text-gray-400">(string)</span>
-            <span className="text-red-400 text-[8px]">required</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
-            <span>style</span>
-            <span className="text-gray-400">(string)</span>
-          </div>
-          <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-            <span>image_url</span>
-            <span className="text-gray-400">(image)</span>
-            <ArrowRight className="w-3 h-3 text-gray-400 ml-auto" />
-          </div>
-        </div>
-        {/* Status overlay mockups */}
-        <div className="flex gap-2 px-3 pb-2 text-[9px]">
-          <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500">idle</span>
-          <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600">running</span>
-          <span className="px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-600">done 4.2s</span>
-          <span className="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600">error</span>
-        </div>
-        {/* Port circles on edges */}
-        <div className="absolute left-0 top-16 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-indigo-400 border-2 border-white dark:border-gray-800" />
-        <div className="absolute right-0 top-20 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-white dark:border-gray-800" />
-      </div>
-    </div>
-  );
-}
-
-// ── Config Modal Mockup ──
-
-function ConfigModalMockup() {
-  return (
-    <div className="mt-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
-      <div className="bg-gray-100 dark:bg-gray-750 px-3 py-1.5 border-b border-gray-300 dark:border-gray-600 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-        <span className="font-semibold text-gray-700 dark:text-gray-300">Config Modal — Imagineer Generate</span>
-        <span className="ml-auto italic">Visual mockup</span>
-      </div>
-      <div className="bg-white dark:bg-gray-800 p-4 space-y-4 max-h-[480px] overflow-y-auto">
-        {/* Header bar */}
-        <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-          <span className="text-xl">&#127912;</span>
-          <div className="flex-1">
-            <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Imagineer Generate</div>
-            <div className="text-[10px] text-violet-600 dark:text-violet-400">Image &middot; Text-to-Image generation</div>
-          </div>
-          <div className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500">
-            <XCircle className="w-3 h-3 inline mr-1" />Close
-          </div>
-        </div>
-
-        {/* Prompt section */}
-        <div>
-          <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Prompt</div>
-          <div className="h-16 bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-[10px] text-gray-500 dark:text-gray-400">
-            A majestic dragon perched on a crystal cliff at sunset, detailed scales reflecting prismatic light...
-          </div>
-        </div>
-
-        {/* Connected port banner mockup */}
-        <div className="px-3 py-2 bg-[#2C666E]/10 border border-[#2C666E]/30 rounded-lg flex items-center gap-2 text-[10px]">
-          <Link2 className="w-3.5 h-3.5 text-[#2C666E] dark:text-teal-300" />
-          <span className="text-[#2C666E] dark:text-teal-300 font-medium">Connected via &quot;prompt&quot; input port</span>
-          <span className="text-gray-400 ml-auto">from Manual Input #1</span>
-        </div>
-
-        {/* Model grid */}
-        <div>
-          <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Model</div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {['Nano Banana 2', 'Flux 2', 'SeedDream v4.5', 'Imagen 4', 'Kling Img v3', 'Grok Imagine', 'Ideogram v2', 'Wavespeed', 'Flux LoRA'].map((m, i) => (
-              <div key={m} className={`px-2 py-1.5 rounded border text-[9px] text-center ${i === 0 ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E] dark:text-teal-300 font-medium' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`}>
-                {m}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Visual Style stub */}
-        <div>
-          <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Visual Style (StyleGrid &middot; 123 styles)</div>
-          <div className="grid grid-cols-5 gap-1">
-            {['Cinematic', 'Anime', 'Watercolor', 'Photographic', '3D Render'].map((s, i) => (
-              <div key={s} className={`h-10 rounded flex items-end p-1 text-[7px] font-medium ${i === 0 ? 'bg-gradient-to-t from-[#2C666E] to-[#2C666E]/40 text-white' : 'bg-gradient-to-t from-gray-300 dark:from-gray-600 to-gray-200 dark:to-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                {s}
-              </div>
-            ))}
-          </div>
-          <div className="text-[8px] text-gray-400 mt-0.5">+ 118 more styles scrollable</div>
-        </div>
-
-        {/* Controls row */}
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Aspect Ratio</div>
-            <div className="flex gap-1">
-              {['16:9', '9:16', '1:1'].map((r, i) => (
-                <div key={r} className={`flex-1 text-center py-1 rounded text-[9px] ${i === 0 ? 'bg-[#2C666E] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{r}</div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Lighting</div>
-            <div className="flex gap-1 flex-wrap">
-              {['Golden Hour', 'Studio', 'Neon'].map(l => (
-                <span key={l} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] text-gray-600 dark:text-gray-400">{l}</span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Camera Angle</div>
-            <div className="flex gap-1 flex-wrap">
-              {['Wide', 'Close-up', 'Bird Eye'].map(c => (
-                <span key={c} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] text-gray-600 dark:text-gray-400">{c}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* More sections */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Brand Guide</div>
-            <div className="h-7 bg-gray-50 dark:bg-gray-750 rounded border border-gray-200 dark:border-gray-700 flex items-center px-2 text-[9px] text-gray-400">Select brand kit...</div>
-          </div>
-          <div>
-            <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">LoRA</div>
-            <div className="h-7 bg-gray-50 dark:bg-gray-750 rounded border border-gray-200 dark:border-gray-700 flex items-center px-2 text-[9px] text-gray-400">Select trained LoRA...</div>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Negative Prompt</div>
-          <div className="h-7 bg-gray-50 dark:bg-gray-750 rounded border border-gray-200 dark:border-gray-700 flex items-center px-2 text-[9px] text-gray-400">blurry, low quality, text, watermark...</div>
-        </div>
-
-        {/* Error handling */}
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Error Handling</div>
-          <div className="flex gap-2">
-            {['Stop', 'Skip', 'Retry'].map((e, i) => (
-              <div key={e} className={`flex-1 text-center py-1 rounded text-[9px] ${i === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{e}</div>
-            ))}
-          </div>
-        </div>
-
-        {/* Save button */}
-        <button className="w-full py-2 bg-[#2C666E] text-white rounded-lg text-xs font-semibold">
-          Save Configuration
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Pipeline Diagram (enhanced) ──
-
-function PipelineDiagram({ title, description, steps, notes }) {
-  const catColor = {
-    Input: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700',
-    Image: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border-violet-300 dark:border-violet-700',
-    Video: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-    Audio: 'bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-700',
-    Content: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700',
-    Publish: 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-700',
-    Utility: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
-  };
-  return (
-    <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
-        <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{title}</div>
-        {description && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
-      </div>
-      <div className="px-4 py-4 bg-white dark:bg-gray-800 space-y-3">
-        {steps.map((row, ri) => (
-          <div key={ri}>
-            {row.label && <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1.5 pl-1">{row.label}</div>}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {row.nodes.map((node, ni) => (
-                <React.Fragment key={ni}>
-                  {ni > 0 && <ArrowRight className="w-3.5 h-3.5 text-[#2C666E]/60 shrink-0" />}
-                  <div className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-medium shrink-0 ${catColor[node.cat] || catColor.Utility}`}>
-                    <span className="mr-1">{node.emoji}</span>
-                    {node.name}
-                  </div>
-                </React.Fragment>
-              ))}
-              {row.parallel && <span className="text-[9px] text-gray-400 dark:text-gray-500 italic ml-1">(parallel)</span>}
-            </div>
-          </div>
-        ))}
-        {notes && <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 pl-1 border-t border-gray-100 dark:border-gray-700 pt-2">{notes}</p>}
-      </div>
+      ))}
     </div>
   );
 }
 
 
-// ======================================================================
-// ===  MAIN GUIDE CONTENT  ===
-// ======================================================================
+// ════════════════════════════════════════════════════════════════
+// ██ MAIN GUIDE CONTENT
+// ════════════════════════════════════════════════════════════════
 
 export function AutomationFlowsGuideContent() {
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-
-      {/* ── Header ── */}
-      <div className="text-center space-y-3 pb-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-full text-indigo-700 dark:text-indigo-300 text-sm font-medium">
-          <GitBranch className="w-4 h-4" />
-          Automation Flows
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          Automation Flows — Complete Training Guide
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-          Build visual pipelines that chain Stitch tools together. Drag nodes, wire connections,
-          double-click to configure each step with the full tool interface, then run — or schedule
-          to run automatically. 33 node types across 7 categories.
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+      {/* Hero */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Automation Flows</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-2xl mx-auto">
+          A visual pipeline builder for chaining AI tools together. Drag nodes onto a dark canvas,
+          wire them up, hit play, and watch data flow through your pipeline — images, videos, audio,
+          and text, all generated and published automatically.
         </p>
+        <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
+          <Badge icon={Layers} label="45+ Node Types" color="bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300" />
+          <Badge icon={Zap} label="Parallel Execution" color="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" />
+          <Badge icon={Variable} label="Flow Variables" color="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" />
+          <Badge icon={Shield} label="Preflight Validation" color="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" />
+          <Badge icon={FlaskConical} label="Dry Run Mode" color="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" />
+        </div>
       </div>
 
-      {/* ================================================================ */}
-      {/* 1. OVERVIEW & CONCEPTS */}
       {/* ================================================================ */}
 
       <Section icon={Layers} title="1. What Are Automation Flows?" defaultOpen>
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
           <p>
-            Automation Flows let you compose any Stitch tool into a multi-step pipeline using a
-            <strong className="text-gray-900 dark:text-gray-200"> visual DAG (Directed Acyclic Graph) canvas</strong>.
-            Instead of manually running each tool one at a time, you wire them together and run the entire
-            pipeline with one click.
+            Automation Flows let you chain any Stitch tool into a visual pipeline. Each tool becomes a <strong>node</strong> on an
+            infinite dark canvas. You connect nodes by dragging wires between <strong>typed ports</strong> — the system ensures only
+            compatible types can connect (image to image, video to video, etc.).
           </p>
-          <p>Think of it like a visual programming environment where:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Nodes</strong> are individual tools (generate image, animate video, add voiceover, create shorts, publish to YouTube, etc.)</li>
-            <li><strong>Connections</strong> are wires between nodes that pass data — an image output flows into a video input</li>
-            <li><strong>The canvas</strong> is where you arrange and wire everything visually</li>
-            <li><strong>Double-click</strong> any node to open the full configuration modal with all the tool's settings</li>
-            <li><strong>Execution</strong> runs nodes in dependency order with up to 3 nodes in parallel</li>
+          <p>When you hit <strong>Run</strong>, the executor walks the graph from source nodes (no inputs) to destination nodes (publish, save),
+            running up to 3 nodes in parallel. You see live progress bars, output previews, and animated data flowing along the wires.</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Key concepts</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Nodes</strong> — 280px-wide dark cards with type-colored port dots, labels, preview area, and config summary</li>
+            <li><strong>Edges</strong> — type-colored bezier curves (purple=image, blue=video, green=audio, amber=text) with animated flow during execution</li>
+            <li><strong>Ports</strong> — input dots on the left, output dots on the right. Each port has a type that determines what data it accepts</li>
+            <li><strong>Canvas</strong> — dark background with dot grid, snap-to-grid (20px), minimap, zoom/pan controls</li>
+            <li><strong>Config Modal</strong> — full-width slide-over (opens from the left) for detailed node configuration. Double-click any node to open it.</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Key Concepts</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">DAG Execution</p>
-              <p className="text-xs mt-0.5">Nodes run in topological order — a node only executes once all its upstream dependencies are done. Up to 3 independent nodes run in parallel.</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Port Types</p>
-              <p className="text-xs mt-0.5">Each port has a type: <code>string</code>, <code>image</code>, <code>video</code>, <code>audio</code>, or <code>json</code>. Connections are validated — you can't wire an audio output into an image input.</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Error Handling</p>
-              <p className="text-xs mt-0.5">Each node has its own error mode: <strong>Stop</strong> (halt pipeline), <strong>Skip</strong> (continue without this node), or <strong>Retry</strong> (attempt up to 3 times).</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Auto-Save</p>
-              <p className="text-xs mt-0.5">Your flow auto-saves every 1.5 seconds after any change. A "Saving..." indicator appears in the toolbar.</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Config Modal</p>
-              <p className="text-xs mt-0.5">Double-click any node to open a full-width slide-over panel with every configuration option for that tool — models, styles, LoRA, brand guides, and more.</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Independent Config</p>
-              <p className="text-xs mt-0.5">Each node instance stores its own independent configuration. Two "Imagineer Generate" nodes can have completely different models, styles, and prompts.</p>
-            </div>
-          </div>
+          <PortColorKey />
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">What Can You Build?</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>A <strong>content calendar pipeline</strong> that generates a Short every day and publishes to YouTube + TikTok</li>
-            <li>A <strong>brand asset pipeline</strong> that creates turnaround sheets, animates them, and saves to your library</li>
-            <li>A <strong>multi-platform social</strong> flow that creates carousels, LinkedIn posts, and paid ads from a single topic</li>
-            <li>A <strong>research-to-production</strong> pipeline that turns a topic into a fully captioned, published video</li>
-          </ul>
+          <Tip>The canvas is a 2-panel layout: <strong>Node Palette</strong> on the left (260px) and the <strong>canvas</strong> filling the rest. No right sidebar — the config modal slides over from the left when you need it.</Tip>
         </div>
       </Section>
 
-      {/* ================================================================ */}
-      {/* 2. GETTING STARTED */}
       {/* ================================================================ */}
 
       <Section icon={Play} title="2. Getting Started — Your First Flow" defaultOpen>
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
-          <p>Here's how to create your very first automation flow, step by step.</p>
+          <p>Two ways to create a flow:</p>
 
           <Step number="1" title="Navigate to Flows">
-            <p>
-              Go to <strong>/flows</strong> from the sidebar (under the <em>Automation</em> section)
-              or visit <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">stitchstudios.app/flows</code> directly.
-              You'll see the Flows dashboard with three tabs: <strong>My Flows</strong>, <strong>Templates</strong>, and <strong>Executions</strong>.
-            </p>
+            <p>Click <strong>Automation Flows</strong> in the sidebar, or go to <code>/flows</code>. The dark-themed dashboard shows your flows, templates, and execution history.</p>
           </Step>
 
-          <Step number="2" title="Create a New Flow">
-            <p>
-              Click the <strong>+ New Flow</strong> button in the top-right corner. This creates a blank flow
-              and opens the Flow Builder — a three-panel workspace.
-            </p>
+          <Step number="2" title="Create a new flow">
+            <p>Click <strong>+ New Flow</strong> for a blank canvas, or <strong>+ New Campaign</strong> to use the brand context wizard (see Section 8).</p>
           </Step>
 
-          <Step number="3" title="Understand the Layout">
-            <p>The Flow Builder has three panels:</p>
-            <ul className="list-disc pl-5 space-y-1 mt-1">
-              <li><strong>Left Panel — Node Palette</strong>: Draggable list of all 33 node types, organized by 7 categories. Use the search bar to filter.</li>
-              <li><strong>Center — Canvas</strong>: The React Flow workspace where you place and wire nodes. Scroll to zoom, drag to pan.</li>
-              <li><strong>Right Panel — Info Strip</strong>: A slim panel (240px) that shows the selected node's name, category, ports, error mode, a count of configured settings, and a "Double-click to configure" hint. During execution, this panel shows the live execution log.</li>
-            </ul>
-            <CanvasMockup />
+          <Step number="3" title="Add nodes from the palette">
+            <p>The left sidebar shows all 45+ node types organized by category (Image, Video, Audio, Content, Publish, Utility, Control, Brand). <strong>Drag</strong> any node onto the canvas. Use the search bar or press <kbd>/</kbd> to filter.</p>
+            <p>When you select a node on the canvas, the palette shows a <strong>"Compatible Next Steps"</strong> section at the top — nodes whose input types match your selected node's outputs.</p>
           </Step>
 
-          <Step number="4" title="Add Nodes to the Canvas">
-            <p>
-              <strong>Drag</strong> a node type from the left palette and <strong>drop</strong> it onto the canvas.
-              The node appears where you drop it. Add as many as you need.
-            </p>
-            <Tip>Start with a simple 2-node flow: drag "Imagineer Generate" and then "Save to Library" onto the canvas.</Tip>
+          <Step number="4" title="Connect nodes">
+            <p>Drag from an output port (right side dot) to an input port (left side dot) on another node. The wire color matches the data type. Invalid connections are silently rejected — you can only connect compatible types.</p>
           </Step>
 
-          <Step number="5" title="Configure a Node — Double-Click">
-            <p>
-              <strong>Double-click any node</strong> on the canvas to open the full configuration panel. This opens a
-              slide-over modal with every setting for that tool — the same rich interface you'd see in the standalone tool.
-            </p>
-            <p className="mt-1">
-              The right-side info strip also shows a summary: node name, category badge, port list, error mode,
-              and a count of how many settings are configured (e.g., "4 settings configured"). But the real configuration
-              happens in the double-click modal.
-            </p>
-            <ul className="list-disc pl-5 space-y-1 mt-1">
-              <li><strong>Text fields</strong> — type values like prompts, titles, URLs</li>
-              <li><strong>Model grids</strong> — select from available AI models shown as cards</li>
-              <li><strong>StyleGrids</strong> — browse and pick from 123 visual styles</li>
-              <li><strong>Dropdowns, sliders, toggles</strong> — model-specific settings</li>
-              <li><strong>Brand Guide & LoRA</strong> — select from your configured brand kits and trained LoRAs</li>
-              <li><strong>Error Handling</strong> — always shown at the bottom (Stop / Skip / Retry)</li>
-            </ul>
-            <p className="mt-2">
-              Click <strong>Save Configuration</strong> (teal button at the bottom) to save and close the modal.
-              Each node instance stores independent configuration — two "Imagineer Generate" nodes can have
-              completely different models, styles, and settings.
-            </p>
-            <Tip>If an input port has an incoming connection from another node, the corresponding text field in the config modal is replaced with a teal "Connected via [port] input port" banner — you don't need to fill it manually.</Tip>
+          <Step number="5" title="Configure nodes">
+            <p><strong>Double-click</strong> any node to open the full config modal (slides from the left). Set the model, parameters, style, LoRA, and other options. The node shows a config summary on the canvas so you can see key settings at a glance.</p>
           </Step>
 
-          <Step number="6" title="Wire Nodes Together">
-            <p>
-              Each node has colored <strong>ports</strong> — input ports on the left edge, output ports on the right edge.
-              To connect two nodes:
-            </p>
-            <ol className="list-decimal pl-5 space-y-1 mt-1">
-              <li>Hover over an <strong>output port</strong> (right side of a node) — your cursor changes</li>
-              <li><strong>Click and drag</strong> from the output port</li>
-              <li><strong>Drop</strong> onto an input port (left side of another node)</li>
-            </ol>
-            <p className="mt-2">
-              The connection validates automatically. If the port types are incompatible
-              (e.g., audio → image), the connection simply won't form — no error message, it just doesn't connect.
-              <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">string</code> type is universal and can connect to any input.
-            </p>
-            <Warning>Connections must go left-to-right (output → input). You cannot create loops — the system enforces DAG structure.</Warning>
+          <Step number="6" title="Run with preflight check">
+            <p>Click <strong>&#9654; Run Flow</strong>. A <strong>Preflight Check</strong> modal appears first, validating: all required inputs connected, type compatibility, no cycles, API keys valid, OAuth tokens active, and estimated cost. Fix any red items, then confirm to execute.</p>
           </Step>
 
-          <Step number="7" title="Run the Flow">
-            <p>
-              Click the <strong>Run Flow</strong> button in the top toolbar. The flow saves first, then execution begins:
-            </p>
-            <ul className="list-disc pl-5 space-y-1 mt-1">
-              <li>The right panel switches to the <strong>Execution Log</strong></li>
-              <li>Nodes light up with <strong>status colors</strong>: blue border = running, green = completed, red = failed</li>
-              <li>Completed nodes show a <CheckCircle2 className="w-3 h-3 inline text-green-500" /> with elapsed time</li>
-              <li>The log shows a timestamped event for every step</li>
-            </ul>
-          </Step>
-
-          <Step number="8" title="Pause or Cancel">
-            <p>
-              During execution, the toolbar shows <strong>Pause</strong> and <strong>Cancel</strong> buttons.
-              Pause halts new nodes from starting (running nodes finish). Cancel stops everything.
-            </p>
-          </Step>
-
-          <Tip>
-            Your flow auto-saves continuously as you work. You can close the tab and come back later — your flow will be exactly as you left it.
-          </Tip>
+          <Tip>Your flow auto-saves every 1.5 seconds after any change. You'll see a green "Saved" badge in the toolbar.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 3. THE FLOW BUILDER — DETAILED WALKTHROUGH */}
-      {/* ================================================================ */}
 
-      <Section icon={Settings2} title="3. Flow Builder — Detailed Walkthrough">
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-4 mt-3">
+      <Section icon={Settings2} title="3. The Canvas — Layout & Controls">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200">Two-Panel Layout</h4>
+          <p>The flow builder is a clean two-panel layout:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Left: Node Palette</strong> (260px) — searchable tool catalog with collapsible categories, descriptions, port type badges, and context-aware suggestions</li>
+            <li><strong>Right: Canvas</strong> — dark infinite canvas with dot grid, snap-to-grid, zoom/pan, minimap</li>
+          </ul>
+          <p>There is no right sidebar. All configuration happens via the <strong>slide-over config modal</strong> (double-click a node) which opens from the left side.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">3.1 Top Toolbar</h4>
-          <p>The toolbar across the top of the builder provides:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Flow Name</strong> — editable text field (click to rename)</li>
-            <li><strong>Saving indicator</strong> — shows "Saving..." during auto-save, then disappears</li>
-            <li><strong>Run Flow</strong> button — starts execution (saves first)</li>
-            <li><strong>Pause / Cancel</strong> — appear during execution, replacing Run</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Node Design</h4>
+          <p>Each node is a 280px-wide dark card with:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Header</strong> — category-colored strip with icon, name, and category badge</li>
+            <li><strong>Input ports</strong> — type-colored dots on the left with labels (e.g., "prompt", "image", "style")</li>
+            <li><strong>Preview area</strong> (80px) — shows output thumbnails after execution (images, video play icon, audio waveform, text preview)</li>
+            <li><strong>Config summary</strong> — shows key settings (e.g., "Model: Nano Banana 2, Ratio: 16:9")</li>
+            <li><strong>Output ports</strong> — type-colored dots on the right with labels</li>
+            <li><strong>Progress bar</strong> — thin bar below the header that animates during execution</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">3.2 Node Palette (Left Panel)</h4>
-          <p>All 33 node types organized into 7 categories:</p>
-          <div className="mt-2 space-y-1">
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-emerald-500" /> <strong>Input</strong> (2) — starting points that provide data (Manual Input, Image Search)</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-violet-500" /> <strong>Image</strong> (6) — generate, edit, turnaround, smoosh, upscale, 3D</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-blue-500" /> <strong>Video</strong> (4) — animate, motion transfer, extend, restyle</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-pink-500" /> <strong>Audio</strong> (3) — voiceover, music, captions</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-amber-500" /> <strong>Content</strong> (8) — script, prompt builder, carousel, shorts, storyboard, ads, linkedin, text transform</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-sky-500" /> <strong>Publish</strong> (5) — YouTube, TikTok, Instagram, Facebook, Save to Library</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-gray-500" /> <strong>Utility</strong> (5) — delay, conditional, video trim, extract frame, image search</div>
-          </div>
-          <p className="mt-2">Use the <strong>search bar</strong> at the top to filter nodes by name or description. Each node in the palette shows its name, category color dot, and a brief one-line description.</p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">3.3 Canvas (Center)</h4>
-          <p>The main workspace where you build your flow:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Zoom</strong> — scroll wheel or pinch on trackpad</li>
-            <li><strong>Pan</strong> — click and drag on empty canvas space</li>
-            <li><strong>Select node</strong> — single click on it (shows info in right panel)</li>
-            <li><strong>Configure node</strong> — double-click on it (opens full config modal)</li>
-            <li><strong>Move node</strong> — click and drag a node to reposition</li>
-            <li><strong>Delete connection</strong> — click the edge, then press Delete/Backspace</li>
-            <li><strong>Delete node</strong> — select the node, then press Delete/Backspace</li>
-            <li><strong>Multi-select</strong> — click and drag an empty area to create a selection box</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Edge Design</h4>
+          <p>Connections (edges) are type-colored bezier curves:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Purple</strong> — image data</li>
+            <li><strong>Blue</strong> — video data</li>
+            <li><strong>Green</strong> — audio data</li>
+            <li><strong>Amber</strong> — text/JSON data</li>
+            <li><strong>Slate</strong> — generic string data</li>
           </ul>
+          <p>During execution, edges show an <strong>animated dash pattern</strong> flowing in the data direction. Each edge has a subtle glow layer behind it matching the type color.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">3.4 What a Node Looks Like on the Canvas</h4>
-          <p>Each node on the canvas displays:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>An <strong>emoji icon</strong> and the <strong>node type name</strong> in the header</li>
-            <li>A <strong>category badge</strong> (colored: Image, Video, Audio, etc.)</li>
-            <li><strong>Input ports</strong> as small colored circles on the left edge (indigo for inputs)</li>
-            <li><strong>Output ports</strong> as small colored circles on the right edge (emerald for outputs)</li>
-            <li><strong>Status overlays</strong> during execution: idle (no border), running (blue + spinner), completed (green + checkmark + time), failed (red + X)</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Toolbar</h4>
+          <p>The top toolbar contains:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>← Flows</strong> — back to dashboard</li>
+            <li><strong>Flow name</strong> + save status</li>
+            <li><strong>Variables</strong> button — flow-level variable editor (see Section 6)</li>
+            <li><strong>Dry Run</strong> — test without API calls (see Section 7)</li>
+            <li><strong>Schedule</strong> — set up cron-based triggers</li>
+            <li><strong>▶ Run Flow</strong> — execute with preflight validation</li>
+            <li>During execution: <strong>Pause</strong> and <strong>Cancel</strong> buttons</li>
+            <li>After failure: <strong>↻ Resume</strong> button to continue from the failed node</li>
           </ul>
-          <NodeMockup />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">3.5 Info Strip (Right Panel)</h4>
-          <p>When you <strong>single-click a node</strong> on the canvas, the right-side info strip (240px wide) shows:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Node type name</strong> with the category badge</li>
-            <li><strong>Category</strong> label</li>
-            <li><strong>Input ports</strong> — listed with types (e.g., "prompt (string)")</li>
-            <li><strong>Output ports</strong> — listed with types (e.g., "image_url (image)")</li>
-            <li><strong>Error Handling Mode</strong> — current mode (Stop, Skip, or Retry)</li>
-            <li><strong>Settings count</strong> — "X settings configured" showing how many config values have been set</li>
-            <li><strong>"Double-click to configure"</strong> hint — a teal-bordered prompt reminding you to double-click for full config</li>
-          </ul>
-          <p className="mt-2">
-            If no node is selected, the panel shows "Select a node to view info" with a brief help message.
-            The info strip is intentionally slim — it gives you a quick summary at a glance. The full
-            configuration interface lives in the double-click config modal (see Section 4).
-          </p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">3.6 Execution Log (Right Panel — During Execution)</h4>
-          <p>When a flow is running, the right panel switches from the info strip to the Execution Log:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Each executed step is shown with a <strong>timestamp</strong> and <strong>elapsed time</strong></li>
-            <li><span className="text-green-500 font-medium">Green</span> = completed, <span className="text-red-500 font-medium">Red</span> = failed, <span className="text-gray-500 font-medium">Gray</span> = pending</li>
-            <li>Failed steps show the error message inline</li>
-            <li>The log updates in real-time (polls every 2 seconds)</li>
-          </ul>
-
-          <Tip>
-            Every change you make in the config modal is saved when you click "Save Configuration". The flow
-            itself auto-saves 1.5 seconds after any structural change (adding nodes, wiring connections, moving nodes).
-          </Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 4. THE CONFIG MODAL — FULL TOOL CONFIGURATION */}
-      {/* ================================================================ */}
 
-      <Section icon={MousePointerClick} title="4. The Config Modal — Full Tool Configuration">
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-4 mt-3">
+      <Section icon={MousePointerClick} title="4. Configuring Nodes">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <p><strong>Double-click</strong> any node to open the full-width config modal. It slides in from the <strong>left side</strong> and contains all settings for that tool — model selection, parameters, style grids, LoRA pickers, voice selectors, and more.</p>
 
-          <p>
-            The config modal is where you do all the real configuration work. <strong>Double-click any node</strong> on
-            the canvas to open a full-width slide-over panel that contains every setting for that tool type.
-          </p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">4.1 How It Works</h4>
-          <ul className="list-disc pl-5 space-y-1.5">
-            <li><strong>Double-click</strong> a node on the canvas to open the config modal</li>
-            <li>The modal slides in from the right as a full-height panel, matching the main site's white/light theme</li>
-            <li>Each node type has a <strong>dedicated configuration form</strong> that mirrors the interface of the real tool</li>
-            <li>An "Imagineer Generate" node shows the same model grid, StyleGrid, lighting pills, and brand guide picker you see in the standalone Imagineer tool</li>
-            <li>Fill in your settings, then click the <strong>Save Configuration</strong> button (teal, at the bottom) to save and close</li>
-            <li>Each node instance stores <strong>independent configuration</strong> — you can have two Imagineer nodes with completely different models and styles</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">What you'll see in the config modal:</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Model picker</strong> — grid of available AI models with descriptions (e.g., "Nano Banana 2 — Fastest, great all-rounder")</li>
+            <li><strong>Aspect ratio</strong> — visual buttons showing ratio previews</li>
+            <li><strong>Style Grid</strong> — 123 visual style presets for image/content nodes</li>
+            <li><strong>LoRA Picker</strong> — select trained LoRA models for character/style consistency</li>
+            <li><strong>Brand Kit</strong> — apply brand identity (colors, voice, guidelines)</li>
+            <li><strong>Voice selector</strong> — 30 Gemini TTS voices for voiceover nodes</li>
+            <li><strong>Error handling</strong> — per-node: Stop (halt flow), Skip (continue), Retry (3 attempts with backoff)</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">4.2 Visual Mockup — Config Modal</h4>
-          <p>Here's what the config modal looks like for an Imagineer Generate node:</p>
-          <ConfigModalMockup />
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Wired ports</h4>
+          <p>When an input port has a connection from an upstream node, the config modal shows a <strong>teal "Connected"</strong> banner for that field. The wired value overrides whatever you set in config — but config acts as a fallback if the wire provides no data.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">4.3 Wired Port Detection</h4>
-          <p>
-            When an input port has an incoming connection from another node, the corresponding text field in the
-            config modal is <strong>automatically replaced</strong> with a teal banner that reads:
-          </p>
-          <div className="mt-2 px-3 py-2 bg-[#2C666E]/10 border border-[#2C666E]/30 rounded-lg flex items-center gap-2 text-xs">
-            <Link2 className="w-4 h-4 text-[#2C666E] dark:text-teal-300" />
-            <span className="text-[#2C666E] dark:text-teal-300 font-medium">Connected via "prompt" input port</span>
-            <span className="text-gray-400 ml-auto">from Manual Input #1</span>
-          </div>
-          <p className="mt-2">
-            This tells you that the value will come from the upstream node at runtime — you don't need to type
-            anything for that field. Only unconnected ports show editable text fields.
-          </p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Multi-input ports</h4>
+          <p>A single input port can receive connections from <strong>multiple upstream nodes</strong>. When it does, the values are collected into an array. This is useful for the Merge node or when combining data from multiple sources.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">4.4 Config by Node Category</h4>
-          <p>Each node category has different configuration sections in the modal. Here's what to expect:</p>
-
-          {/* Image nodes config */}
-          <div className="mt-3 px-4 py-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
-            <h5 className="font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-sm bg-violet-500" /> Image Nodes (Imagineer Generate, Imagineer Edit, Turnaround Sheet, etc.)
-            </h5>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-violet-800 dark:text-violet-200">
-              <li><strong>Prompt</strong> — multi-line text area for the generation prompt</li>
-              <li><strong>Model</strong> — grid of 9 model cards (Nano Banana 2, Flux 2, SeedDream v4.5, Imagen 4, Kling Image v3, Grok Imagine, Ideogram v2, Wavespeed, Flux LoRA). Selected model is highlighted teal.</li>
-              <li><strong>Visual Style (StyleGrid)</strong> — browse 123 visual styles as thumbnail cards (Cinematic, Anime, Watercolor, Photographic, 3D Render, etc.). Scrollable grid.</li>
-              <li><strong>Aspect Ratio</strong> — button group (16:9, 9:16, 1:1, 4:5, 3:2)</li>
-              <li><strong>Lighting</strong> — pill selectors (Golden Hour, Studio, Neon, Natural, Dramatic, etc.)</li>
-              <li><strong>Camera Angle</strong> — pill selectors (Wide, Close-up, Bird Eye, Low Angle, Dutch Angle, etc.)</li>
-              <li><strong>Mood</strong> — pill selectors (Ethereal, Dark, Vibrant, Serene, etc.)</li>
-              <li><strong>Color Palette</strong> — swatch selectors for dominant color tones</li>
-              <li><strong>Brand Guide</strong> — dropdown to select a configured brand kit (logo, colors, guidelines)</li>
-              <li><strong>LoRA</strong> — multi-select picker for trained LoRA models (subject or style)</li>
-              <li><strong>Negative Prompt</strong> — text field for things to avoid</li>
-              <li><strong>Advanced</strong> — collapsible section with seed, guidance scale</li>
-            </ul>
-          </div>
-
-          {/* Video nodes config */}
-          <div className="mt-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <h5 className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-sm bg-blue-500" /> Video Nodes (JumpStart Animate, Video Extend, Video Restyle, Motion Transfer)
-            </h5>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-blue-800 dark:text-blue-200">
-              <li><strong>Prompt</strong> — motion/scene description for the animation</li>
-              <li><strong>Model</strong> — grid of 13 video model cards (Kling 2.0 Master, Kling V3 Pro, Kling O3 Pro, Veo 2, Veo 3.1, Veo 3.1 Lite, Wan 2.5, Wan Pro, PixVerse v4.5, PixVerse V6, Hailuo/MiniMax, Grok Video, Wavespeed WAN)</li>
-              <li><strong>Duration</strong> — selector appropriate to the model (4s/6s/8s for Veo, 5/10 for Kling/Wan, etc.)</li>
-              <li><strong>Audio Toggle</strong> — shown only for models that support it: Kling v3, Kling O3, Veo 3.1, Veo 3.1 Lite, Grok R2V, PixVerse V6 (<code>generate_audio_switch</code>). Off by default for flow clips.</li>
-              <li><strong>Visual Style</strong> — StyleGrid for cinematography direction</li>
-              <li><strong>Brand Guide</strong> — dropdown to select brand kit</li>
-            </ul>
-          </div>
-
-          {/* Audio nodes config */}
-          <div className="mt-3 px-4 py-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
-            <h5 className="font-semibold text-pink-700 dark:text-pink-300 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-sm bg-pink-500" /> Audio Nodes (Voiceover, Music, Captions)
-            </h5>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-pink-800 dark:text-pink-200">
-              <li><strong>Voiceover</strong> — 30 Gemini TTS voice cards (5 featured prominently, 25 in a collapsible "More voices" section). Each card shows the voice name and a personality tag. Speed slider (0.8x - 1.5x, default 1.15x). Style instructions text field for performance direction ("Speak with warmth and authority").</li>
-              <li><strong>Captions</strong> — 8 caption style previews as visual cards: word_pop, karaoke_glow, word_highlight, news_ticker, and 4 more. Each preview shows a mockup of how the text appears. Font, size, color, stroke, and position overrides in an advanced section.</li>
-              <li><strong>Music</strong> — mood text field (or connected from upstream), duration selector (15s, 30s, 60s). Always generates instrumental tracks — no lyrics.</li>
-            </ul>
-          </div>
-
-          {/* Content nodes config */}
-          <div className="mt-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-            <h5 className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-sm bg-amber-500" /> Content Nodes (Shorts Create, Storyboard Create, Carousel Create, Ads Generate, etc.)
-            </h5>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-amber-800 dark:text-amber-200">
-              <li><strong>Shorts Create</strong> — full wizard config: niche selector (20 niches), topic, duration (30/60/90s), tone, voice (Gemini TTS, 30 voices), voice speed, image model, video model, visual style (StyleGrid), caption style, music mood, brand guide, LoRA. This is the most comprehensive config modal.</li>
-              <li><strong>Storyboard Create</strong> — name, brief/description, duration, tone, mood, image model, video model, visual style, brand guide, LoRA, characters</li>
-              <li><strong>Carousel Create</strong> — platform selector (LinkedIn, Instagram, Facebook, TikTok), topic, carousel style (8 templates), visual style (StyleGrid), brand guide</li>
-              <li><strong>Ads Generate</strong> — multi-platform selector, objective (traffic/conversions/awareness/leads), product description, target audience, landing URL, visual style, brand guide</li>
-              <li><strong>LinkedIn Post</strong> — topic or URL, writing style, brand guide, image layout, visual style</li>
-              <li><strong>Script Generator</strong> — topic, niche, target duration</li>
-              <li><strong>Prompt Builder</strong> — description, style, props inputs (typically wired from upstream)</li>
-              <li><strong>Text Transform</strong> — input text, transformation type (summarize, expand, rephrase, translate, etc.)</li>
-            </ul>
-          </div>
-
-          {/* Publish nodes config */}
-          <div className="mt-3 px-4 py-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
-            <h5 className="font-semibold text-sky-700 dark:text-sky-300 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-sm bg-sky-500" /> Publish Nodes (YouTube, TikTok, Instagram, Facebook, Save to Library)
-            </h5>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-sky-800 dark:text-sky-200">
-              <li><strong>Account connection status</strong> — a green "Connected" or red "Not Connected" badge at the top, showing whether you've authorized the platform in Settings → Connected Accounts</li>
-              <li><strong>Platform-specific fields</strong> — YouTube: title, description, tags, privacy (public/unlisted/private). TikTok: caption. Instagram: caption. Facebook: text, page selection.</li>
-              <li><strong>Save to Library</strong> — name/label for the saved asset, optional tags</li>
-            </ul>
-          </div>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">4.5 Error Handling (Bottom of Every Modal)</h4>
-          <p>
-            Every config modal has an <strong>Error Handling</strong> section at the bottom, regardless of node type.
-            This is where you set what happens if this node fails during execution:
-          </p>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <div className="px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800 text-center">
-              <p className="font-medium text-red-700 dark:text-red-300 text-xs">Stop</p>
-              <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5">Halt entire pipeline</p>
-            </div>
-            <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800 text-center">
-              <p className="font-medium text-amber-700 dark:text-amber-300 text-xs">Skip</p>
-              <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Continue past failure</p>
-            </div>
-            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-              <p className="font-medium text-blue-700 dark:text-blue-300 text-xs">Retry</p>
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Try up to 3 times</p>
-            </div>
-          </div>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">4.6 Save Configuration</h4>
-          <p>
-            At the very bottom of the modal, below Error Handling, is the <strong>Save Configuration</strong> button
-            — a full-width teal (#2C666E) button. Clicking it saves all the settings to this specific node instance
-            and closes the modal. The info strip on the right will update its "X settings configured" count.
-          </p>
-
-          <Warning>
-            Configuration is saved per node instance. If you delete a node and add a new one of the same type,
-            you'll need to configure it from scratch. Use templates to avoid repetitive setup.
-          </Warning>
+          <Tip>The config summary shown on the node card updates immediately as you change settings in the modal — you can see the effect without closing it.</Tip>
         </div>
       </Section>
 
-      {/* ================================================================ */}
-      {/* 5. CONNECTIONS & PORT TYPES */}
       {/* ================================================================ */}
 
       <Section icon={Link2} title="5. Connections & Port Types">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <p>
-            Connections carry data between nodes. Every port has a <strong>type</strong> that determines what data it can send or receive.
-          </p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200">Port Type System</h4>
+          <p>Every input and output port has a <strong>type</strong> that determines compatibility. Connections are validated on creation — incompatible types are silently rejected.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Port Types</h4>
-          <div className="mt-2 space-y-2">
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <KV label="string">Text data — prompts, titles, descriptions, URLs. <strong>Universal</strong>: string ports can connect to any other type.</KV>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <KV label="image">Image URL — output of generation/editing. Connects to image inputs only (or string).</KV>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <KV label="video">Video URL — output of animation/recording. Connects to video inputs only (or string).</KV>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <KV label="audio">Audio URL — voiceover or music output. Connects to audio inputs only (or string).</KV>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <KV label="json">Structured data — scripts, metadata objects. Connects to json inputs only (or string).</KV>
-            </div>
-          </div>
+          <PortColorKey />
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Connection Rules</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Same type</strong> always connects: image → image, video → video, etc.</li>
-            <li><strong>String is universal</strong>: a string output can connect to any input, and any output can connect to a string input.</li>
-            <li><strong>Incompatible types silently reject</strong>: if you try to drag audio → image, the connection just won't form. No error — just nothing happens.</li>
-            <li><strong>One input, one source</strong>: each input port accepts one incoming connection.</li>
-            <li><strong>One output, many destinations</strong>: an output port can fan out to multiple downstream nodes.</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Compatibility Rules</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>string</strong> is the universal receiver — any type can connect to a string port</li>
+            <li><strong>image</strong> ports accept image and string (URL) outputs</li>
+            <li><strong>video</strong> ports accept video and string (URL) outputs</li>
+            <li><strong>audio</strong> ports accept audio and string (URL) outputs</li>
+            <li><strong>json</strong> ports accept json and string outputs</li>
+            <li><strong>Array types</strong> (image[], video[], any[]) — used by Iterator/Aggregator control nodes</li>
           </ul>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">How to Make a Connection</h4>
-          <ol className="list-decimal pl-5 space-y-1">
-            <li>Hover over the <strong>output port</strong> (small circle on the right edge of a node)</li>
-            <li>Click and hold, then drag — a line follows your cursor</li>
-            <li>Drop on the <strong>input port</strong> (small circle on the left edge of the target node)</li>
-            <li>If types are compatible, the connection snaps in place</li>
-          </ol>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Fan-out</h4>
+          <p>One output port can connect to <strong>multiple downstream nodes</strong>. All receive the same data. This enables parallel processing branches.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">How Connections Affect the Config Modal</h4>
-          <p>
-            When you wire a connection into a node's input port, the config modal for that node reflects it.
-            The corresponding field is replaced with a teal "Connected" banner showing the source node and port name.
-            This makes it clear which values are coming from upstream versus configured manually.
-          </p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Multi-input</h4>
+          <p>One input port can receive from <strong>multiple upstream nodes</strong>. When 2+ edges target the same port, the values are collected into an array.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">How to Delete a Connection</h4>
-          <ol className="list-decimal pl-5 space-y-1">
-            <li>Click the connection line (edge) on the canvas</li>
-            <li>Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">Delete</kbd> or <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">Backspace</kbd></li>
-          </ol>
+          <Tip>Hover over a port to see its name and type. The dot color matches the type: purple for image, blue for video, green for audio, amber for JSON, slate for string.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 6. FLOWS LIST DASHBOARD */}
-      {/* ================================================================ */}
 
-      <Section icon={LayoutGrid} title="6. Flows Dashboard">
+      <Section icon={Variable} title="6. Flow Variables">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <p>
-            The Flows dashboard at <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">/flows</code> is your home base.
-            It has three tabs and a stats bar.
-          </p>
+          <NewBadge />
+          <p>Flow variables let you define <strong>reusable values</strong> that any node in the flow can reference. Set them once, use them everywhere.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Stats Bar</h4>
-          <p>Four metrics at the top:</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg text-center">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Active Flows</p>
-              <p className="text-xs">Total flows you've created</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg text-center">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Total Runs</p>
-              <p className="text-xs">Sum of all execution counts</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg text-center">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Scheduled</p>
-              <p className="text-xs">Flows with cron schedules</p>
-            </div>
-            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg text-center">
-              <p className="font-medium text-gray-900 dark:text-gray-200">Success Rate</p>
-              <p className="text-xs">% of successful runs</p>
-            </div>
-          </div>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">How to use</h4>
+          <Step number="1" title="Open the Variables panel">
+            <p>Click the <strong>Variables</strong> button in the toolbar. A dropdown appears showing all defined variables.</p>
+          </Step>
+          <Step number="2" title="Add a variable">
+            <p>Type a name (e.g., <code>brand_name</code>) and value (e.g., <code>Stitch Studios</code>). Click + to add.</p>
+          </Step>
+          <Step number="3" title="Use in config fields">
+            <p>In any text field in the config modal, type <code>{'{{brand_name}}'}</code> and it will be resolved at execution time. You can also click the <code>{'{{}}'}</code> button next to text fields to insert variables from a dropdown.</p>
+          </Step>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">My Flows Tab</h4>
-          <p>Shows all your flows as cards in a grid. Each card displays:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Flow name and description</li>
-            <li>Run count badge</li>
-            <li>Schedule badge (if scheduled)</li>
-            <li>Last run timestamp</li>
-            <li><strong>Run</strong> button — executes the flow immediately from the dashboard</li>
-          </ul>
-          <p><strong>Click a card</strong> to open it in the Flow Builder.</p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Dot notation</h4>
+          <p>Variables support nested access: <code>{'{{brand.colors}}'}</code> resolves to the <code>colors</code> property of the <code>brand</code> variable (if it's a JSON object).</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Templates Tab</h4>
-          <p>Pre-built flow templates you can clone to your account:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Image → Video Pipeline</strong> — generate image, animate to video, save to library</li>
-            <li><strong>Script to Voiceover</strong> — generate script, create voiceover, save</li>
-            <li><strong>Social Media Post</strong> — generate image, post to Instagram</li>
-            <li><strong>Full Video Pipeline</strong> — script → image → video → voiceover → captions → YouTube</li>
-            <li><strong>Character Sheet Pipeline</strong> — turnaround → animate → save</li>
-          </ul>
-          <p className="mt-1">Click <strong>Use Template</strong> to clone it as a new flow in your account. You can then customize it freely.</p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Where variables are stored</h4>
+          <p>Variables are saved as part of the flow's <code>graph_json</code> — they persist across sessions and are included in the auto-save.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Executions Tab</h4>
-          <p>History of all flow executions across all flows, sorted newest first. Each entry shows:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Flow name</li>
-            <li>Status badge (completed / failed / running / paused / cancelled)</li>
-            <li>Execution timestamp</li>
-          </ul>
+          <Tip>When you create a campaign via the Campaign Wizard, the brand name and username are automatically set as flow variables.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 7. EXECUTION ENGINE */}
-      {/* ================================================================ */}
 
-      <Section icon={Zap} title="7. Execution — How Flows Run">
+      <Section icon={FlaskConical} title="7. Dry Run & Preflight Validation">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <p>Understanding how the execution engine works helps you design better flows.</p>
+          <NewBadge />
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Execution Order — Topological Sort</h4>
-          <p>
-            The engine analyzes your flow graph and determines the correct execution order using
-            <strong> topological sorting</strong>. This means:
-          </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Nodes with <strong>no inputs</strong> (or only manual inputs) run first</li>
-            <li>A node only runs <strong>after all upstream nodes</strong> it depends on have completed</li>
-            <li>Independent branches <strong>run in parallel</strong> (up to 3 concurrent nodes)</li>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-2">Preflight Validation</h4>
+          <p>Every time you click <strong>▶ Run Flow</strong>, a <strong>Preflight Check</strong> modal appears. It validates:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Flow is not empty</li>
+            <li>All required input ports have connections or config defaults</li>
+            <li>All connections are type-compatible</li>
+            <li>No disconnected orphan nodes (warning, not blocking)</li>
+            <li>No cycles in the graph (DAG validation)</li>
+            <li>Publishing nodes have valid OAuth tokens</li>
+            <li>API providers are healthy (FAL.ai, OpenAI, Wavespeed)</li>
+            <li>Estimated cost breakdown</li>
           </ul>
+          <p>Green checkmarks for passing checks, red X for errors, amber warnings for non-critical issues. You can click <strong>"Run Anyway"</strong> for warnings, but errors must be fixed first.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Concurrency Pool</h4>
-          <p>
-            Up to <strong>3 nodes</strong> can execute simultaneously. If you have a flow with two independent
-            branches (e.g., generate an image AND generate a voiceover at the same time), both branches
-            start immediately. The third slot is available for any other ready node.
-          </p>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Dry Run Mode</h4>
+          <p>Click <strong>Dry Run</strong> in the toolbar to test your flow without making any API calls or spending credits. Each node shows what it <em>would</em> do: the resolved inputs, config values, and mock output types. Perfect for verifying your wiring before committing real resources.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Data Passing</h4>
-          <p>
-            When a node completes, its outputs are passed as inputs to downstream nodes. For example,
-            if "Imagineer Generate" outputs an <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">image_url</code>,
-            and you've connected it to "JumpStart Animate"'s <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">image</code> input,
-            the URL flows automatically. The config modal for JumpStart would show "Connected via image input port" for that field.
-          </p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Error Handling Modes</h4>
-          <div className="space-y-2 mt-2">
-            <div className="px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
-              <p className="font-medium text-red-700 dark:text-red-300">Stop (Default)</p>
-              <p className="text-xs text-red-600 dark:text-red-400">If this node fails, the entire pipeline halts immediately. No downstream nodes run.</p>
-            </div>
-            <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-              <p className="font-medium text-amber-700 dark:text-amber-300">Skip</p>
-              <p className="text-xs text-amber-600 dark:text-amber-400">If this node fails, skip it and continue. Downstream nodes receive null for this node's outputs. Useful for optional steps like publishing.</p>
-            </div>
-            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="font-medium text-blue-700 dark:text-blue-300">Retry</p>
-              <p className="text-xs text-blue-600 dark:text-blue-400">If this node fails, retry up to 3 times before stopping. Good for nodes that call external APIs which may have transient failures.</p>
-            </div>
-          </div>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Pause & Resume</h4>
-          <p>
-            <strong>Pause</strong> lets currently-running nodes finish but prevents new nodes from starting.
-            You can resume later and execution continues from where it left off.
-          </p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Cancel</h4>
-          <p>
-            <strong>Cancel</strong> stops everything. Currently-running nodes are marked as cancelled.
-            The execution is marked as cancelled and cannot be resumed.
-          </p>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Visual Feedback During Execution</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Blue border + spinner</strong> = node is currently running</li>
-            <li><strong>Green border + checkmark</strong> = node completed successfully (shows elapsed time)</li>
-            <li><strong>Red border + X</strong> = node failed (shows error message on hover)</li>
-            <li><strong>No border</strong> = pending (hasn't started yet)</li>
-          </ul>
-
-          <Tip>
-            The execution log on the right panel polls every 2 seconds. Node status updates are near real-time.
-          </Tip>
+          <Tip>Dry run resolves flow variables and wired inputs — you'll see the actual values each node would receive, including any <code>{'{{variable}}'}</code> substitutions.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 8. SCHEDULING */}
-      {/* ================================================================ */}
 
-      <Section icon={Clock} title="8. Scheduling Flows">
+      <Section icon={Rocket} title="8. Campaign Creation Wizard">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <p>
-            Flows can be scheduled to run automatically on a recurring basis using cron expressions.
-          </p>
+          <NewBadge />
+          <p>The Campaign Wizard creates a flow pre-loaded with your brand context, so you can start building pipelines without manually setting up every input.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">How to Schedule a Flow</h4>
-          <p>
-            When editing a flow, set the <strong>trigger type</strong> to "scheduled" and provide a
-            <strong> cron expression</strong>. The system checks for due flows every 60 seconds.
-          </p>
+          <Step number="1" title="Name your campaign">
+            <p>Give it a descriptive name (e.g., "Q3 Product Launch Shorts"). Optional description.</p>
+          </Step>
+          <Step number="2" title="Select a brand">
+            <p>Choose from your configured Brand Kits. This determines which brand data is available in the next step.</p>
+          </Step>
+          <Step number="3" title="Select context modules">
+            <p>This is the key screen. The wizard queries <strong>16+ database tables</strong> and presents each as a toggleable module:</p>
+            <ul className="list-disc list-inside space-y-0.5 mt-2">
+              <li><strong>Brand Identity</strong> — name, colors, logo, voice, taglines, visual style</li>
+              <li><strong>Content Guidelines</strong> — tone, style rules, prohibited/preferred elements</li>
+              <li><strong>Image Style</strong> — AI image generation rules, mood, composition</li>
+              <li><strong>Target Market</strong> — demographics, pain points, channels</li>
+              <li><strong>Company Info</strong> — website, blurb, competitors</li>
+              <li><strong>LoRA Models</strong> — each trained LoRA listed individually</li>
+              <li><strong>Visual Subjects</strong> — characters with reference images</li>
+              <li><strong>Characters</strong> — named characters with descriptions</li>
+              <li><strong>Prompt Templates</strong> — saved reusable templates</li>
+              <li><strong>Publishing Credentials</strong> — YouTube, TikTok, Instagram, Facebook, LinkedIn (with live OAuth status)</li>
+            </ul>
+            <p className="mt-2">Each module is expandable — click the arrow to preview the actual field data before selecting.</p>
+          </Step>
+          <Step number="4" title="Generate Workspace">
+            <p>Click <strong>Generate Workspace</strong>. A new flow is created with each selected module as a <strong>source node</strong> on the left side of the canvas. Each source node has <strong>individual output ports per field</strong> — so you can wire specific brand data to specific generation nodes.</p>
+          </Step>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Cron Expression Examples</h4>
-          <div className="mt-2 font-mono text-xs space-y-1">
-            <div className="flex gap-3"><code className="text-indigo-600 dark:text-indigo-400 w-32">0 9 * * *</code><span className="font-sans text-gray-600 dark:text-gray-400">Every day at 9:00 AM</span></div>
-            <div className="flex gap-3"><code className="text-indigo-600 dark:text-indigo-400 w-32">0 */6 * * *</code><span className="font-sans text-gray-600 dark:text-gray-400">Every 6 hours</span></div>
-            <div className="flex gap-3"><code className="text-indigo-600 dark:text-indigo-400 w-32">0 9 * * 1-5</code><span className="font-sans text-gray-600 dark:text-gray-400">Weekdays at 9 AM</span></div>
-            <div className="flex gap-3"><code className="text-indigo-600 dark:text-indigo-400 w-32">30 14 * * 1</code><span className="font-sans text-gray-600 dark:text-gray-400">Every Monday at 2:30 PM</span></div>
-            <div className="flex gap-3"><code className="text-indigo-600 dark:text-indigo-400 w-32">0 0 1 * *</code><span className="font-sans text-gray-600 dark:text-gray-400">First of every month at midnight</span></div>
-          </div>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Saved Defaults</h4>
+          <p>Check "Save as default for this brand" to remember your module selections. Next time you create a campaign for the same brand, your preferred modules are pre-checked.</p>
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Deduplication</h4>
-          <p>
-            The scheduler tracks <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">last_triggered_at</code> to prevent
-            duplicate executions. If the server restarts or polls overlap, the same scheduled run won't fire twice.
-          </p>
-
-          <Warning>
-            Scheduled flows run on the server — they use your stored API keys. Make sure your keys are configured
-            in Settings before scheduling flows that call external AI providers.
-          </Warning>
+          <Tip>Publishing credential nodes show live OAuth status — green for connected, red for expired. If a token is expired, go to Settings → Connected Accounts to reconnect before running.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 9. NODE REFERENCE (ALL 33 NODES) */}
+
+      <Section icon={Zap} title="9. Execution — How Flows Run">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200">Execution Model</h4>
+          <p>The executor walks the graph using topological ordering (upstream before downstream). Up to <strong>3 nodes run simultaneously</strong> when they have no dependencies on each other.</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Visual Feedback</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Running</strong> — blue pulsing border, spinner in header, progress bar animating, edges show flowing dash pattern</li>
+            <li><strong>Completed</strong> — green border flash, checkmark badge, preview area updates with actual output</li>
+            <li><strong>Failed</strong> — red border, error message with <strong>actionable fix suggestion</strong> (not just a raw error code)</li>
+            <li><strong>Paused</strong> — amber border, pause icon</li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Actionable Error Messages</h4>
+          <p>When a node fails, you see a clear message like <em>"API rate limit hit"</em> with a fix: <em>"Wait 30 seconds and retry, or switch to a different model."</em> The system matches 28+ error patterns to human-readable advice covering rate limits, timeouts, safety filters, auth failures, model-specific issues, and more.</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Per-Node Timeouts</h4>
+          <p>Each node type has an appropriate timeout:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li><strong>Utility nodes</strong> — 15 seconds</li>
+            <li><strong>Publishing</strong> — 30 seconds</li>
+            <li><strong>Audio/Content (LLM)</strong> — 45 seconds</li>
+            <li><strong>Image generation</strong> — 60 seconds</li>
+            <li><strong>Video generation</strong> — 180 seconds</li>
+            <li><strong>3D generation</strong> — 5 minutes</li>
+            <li><strong>LoRA training / Delay</strong> — 10 minutes</li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Error Handling Modes</h4>
+          <p>Each node can be configured with one of three error handling modes (set in the config modal):</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Stop</strong> (default) — halt the entire flow on error</li>
+            <li><strong>Skip</strong> — continue to the next ready nodes, passing null for the failed output</li>
+            <li><strong>Retry</strong> — retry up to 3 times with exponential backoff (2s → 4s → 8s)</li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Resume from Failed <NewBadge /></h4>
+          <p>When a flow fails partway through, click the <strong>↻ Resume</strong> button in the toolbar. This creates a <strong>new execution</strong> that keeps all completed nodes' results and only re-runs the failed node and everything downstream. You don't pay again for nodes that already succeeded.</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Pause & Cancel</h4>
+          <p>During execution, use <strong>Pause</strong> to freeze the flow (in-progress nodes finish, no new ones start) and <strong>Cancel</strong> to abort immediately.</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Execution Log</h4>
+          <p>During execution, a log bar appears at the bottom of the canvas showing a timeline of node events (started, completed, failed) with durations.</p>
+        </div>
+      </Section>
+
       {/* ================================================================ */}
 
-      <Section icon={CircleDot} title="9. Node Reference — All 33 Node Types">
+      <Section icon={GitBranch} title="10. Control Flow Nodes">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <p>
-            Click any node below to expand its full documentation — inputs, outputs, configuration fields, and usage notes.
-            All 33 nodes are organized by their 7 categories.
-          </p>
+          <NewBadge />
+          <p>Five special nodes for advanced pipeline logic:</p>
 
-          {/* ── INPUT ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-2 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-emerald-500" /> Input Nodes (2)
-          </h4>
-
-          <div className="space-y-2">
-            <NodeCard
-              emoji="&#128229;" name="Manual Input" id="manual-input" category="Input"
-              description="The starting point for most flows. Provides a manually-entered value (text, image URL, or video URL) that feeds into downstream nodes. Every flow typically starts with one or more Manual Input nodes."
-              inputs={[]}
-              outputs={[{ name: 'value', type: 'string' }]}
-              config={[
-                { name: 'label', defaultVal: 'Input', note: 'Display label for this input' },
-                { name: 'inputType', options: ['string', 'image', 'video'], defaultVal: 'string', note: 'What kind of data this input provides' },
-                { name: 'defaultValue', note: 'The actual value to send downstream — a text prompt, a URL, etc.' },
-              ]}
+          <div className="space-y-3 mt-3">
+            <NodeCard emoji="🔀" name="Iterator" id="iterator" category="Control"
+              description="Fan-out: takes an array and runs the downstream chain once per item, in parallel. Each iteration gets the current item, its index, and the total count."
+              inputs={[{ name: 'items', type: 'any[]', required: true }]}
+              outputs={[{ name: 'current_item', type: 'any' }, { name: 'index', type: 'string' }, { name: 'total', type: 'string' }]}
             >
-              <Tip>Use the <strong>defaultValue</strong> field to set the actual content. For image/video types, paste a URL. For string, type your prompt or text.</Tip>
+              <p className="text-gray-500 mt-2">Use case: A script generator outputs 5 scenes. The Iterator fans them out so you can generate a keyframe image for each scene in parallel.</p>
             </NodeCard>
 
-            <NodeCard
-              emoji="&#128269;" name="Image Search" id="image-search" category="Input"
-              description="Searches for images using SERP/Google CSE and returns image URLs. Useful as a starting point when you need reference images or stock imagery from the web."
-              inputs={[
-                { name: 'query', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'image_url', type: 'image' },
-                { name: 'results', type: 'json' },
-              ]}
-              config={[
-                { name: 'count', defaultVal: '1', note: 'Number of results to return' },
-                { name: 'safe_search', options: ['on', 'off'], defaultVal: 'on' },
-              ]}
+            <NodeCard emoji="🔻" name="Aggregator" id="aggregator" category="Control"
+              description="Fan-in: collects all results from parallel Iterator branches into a single array. Waits for all iterations to complete before passing the collected array downstream."
+              inputs={[{ name: 'item', type: 'any', required: true }]}
+              outputs={[{ name: 'collected', type: 'json' }, { name: 'count', type: 'string' }]}
             >
-              <Tip>Wire a Manual Input with a search query into this node to find reference images, then pipe the result into Imagineer Edit or Smoosh.</Tip>
+              <p className="text-gray-500 mt-2">Use case: After iterating 5 scenes through frame generation, the Aggregator collects all 5 images into an array for the Assemble node.</p>
             </NodeCard>
-          </div>
 
-          {/* ── IMAGE ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-violet-500" /> Image Nodes (6)
-          </h4>
-
-          <div className="space-y-2">
-            <NodeCard
-              emoji="&#127912;" name="Imagineer Generate" id="imagineer-generate" category="Image"
-              description="Generates images from text prompts using AI. This is your primary image creation node. Double-click to access the full config: 9 models, 123 visual styles via StyleGrid, aspect ratio, lighting, camera angle, mood, brand guide, LoRA, and negative prompt."
-              inputs={[
-                { name: 'prompt', type: 'string', required: true },
-                { name: 'style', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[
-                { name: 'model', options: ['nano-banana-2', 'fal-flux', 'seeddream-v4.5', 'imagen-4', 'kling-image-v3', 'grok-imagine', 'ideogram-v2', 'wavespeed', 'flux-lora'], defaultVal: 'nano-banana-2', note: '9 models available. Nano Banana 2 is fastest, SeedDream v4.5 is highest quality.' },
-                { name: 'aspect_ratio', options: ['16:9', '9:16', '1:1', '4:5', '3:2'], defaultVal: '16:9' },
-                { name: 'visual_style', note: 'One of 123 visual styles from the StyleGrid (Cinematic, Anime, Watercolor, etc.)' },
-                { name: 'lighting', note: 'Optional: Golden Hour, Studio, Neon, Natural, Dramatic, etc.' },
-                { name: 'camera_angle', note: 'Optional: Wide, Close-up, Bird Eye, Low Angle, etc.' },
-                { name: 'brand_guide', note: 'Optional: Select a configured brand kit' },
-                { name: 'lora', note: 'Optional: Select one or more trained LoRA models' },
-                { name: 'negative_prompt', note: 'Things to avoid in generation (blurry, watermark, etc.)' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#9999;" name="Imagineer Edit" id="imagineer-edit" category="Image"
-              description="Edits an existing image using text instructions. Feed in an image and a prompt describing what to change. Supports multi-image composition — blend a character into a scene backdrop. Double-click to configure model, style, and editing parameters."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-                { name: 'prompt', type: 'string', required: true },
-                { name: 'style', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[
-                { name: 'model', options: ['nano-banana-2', 'seeddream-v4', 'wavespeed-nano-ultra', 'qwen-image-edit'], defaultVal: 'nano-banana-2', note: 'Nano Banana 2 and Wavespeed Nano Ultra support multi-image composition' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#127912;" name="Turnaround Sheet" id="turnaround-sheet" category="Image"
-              description="Creates multi-angle character reference sheets. 8 pose set presets from 4-cell 3D-optimized grids to full 24-cell standard sheets. Great for establishing consistent character design before generating videos."
-              inputs={[
-                { name: 'prompt', type: 'string', required: true },
-                { name: 'style', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[
-                { name: 'model', options: ['nano-banana-2', 'fal-flux', 'seeddream-v4'], defaultVal: 'nano-banana-2' },
-                { name: 'pose_set', options: ['standard-24', '3d-angles', '3d-action', 'r2v-reference', 'expressions-focus', 'action-heavy', 'fashion-outfit', 'creature-non-human'], defaultVal: 'standard-24', note: '8 pose set presets. 3D sets are 2x2 (4 cells, 6x more pixels per cell). R2V is 3x2 (6 cells). Standard is 4x6 (24 cells).' },
-                { name: 'background_mode', options: ['white', 'gray', 'scene'], defaultVal: 'white', note: 'Use "scene" for R2V references — Veo 3.1 R2V fails on white backgrounds' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128256;" name="Smoosh" id="smoosh" category="Image"
-              description="Blends two images together into a seamless composite. Connect two image sources and get a merged result."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-                { name: 'image2', type: 'image', required: true },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[
-                { name: 'model', options: ['nano-banana-2', 'wavespeed-nano-ultra'], defaultVal: 'nano-banana-2' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128396;" name="Upscale Image" id="upscale-image" category="Image"
-              description="Upscales an image to 2x resolution using Topaz AI (Standard V2). Good for improving quality before publishing, animating, or using as a reference."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[]}
-            />
-
-            <NodeCard
-              emoji="&#128230;" name="3D Viewer" id="3d-viewer" category="Image"
-              description="Converts a front-facing image into a 3D GLB model using Hunyuan 3D Pro. The output is a 3D model URL stored in Supabase. Supports up to 7 optional additional angle images for higher quality."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-              ]}
-              outputs={[
-                { name: 'model_url', type: 'string' },
-              ]}
-              config={[]}
+            <NodeCard emoji="⑃" name="Split" id="split" category="Control"
+              description="Explicit parallel branching. Takes one input and fires it to 3 output branches simultaneously. Makes parallel paths visually clear."
+              inputs={[{ name: 'value', type: 'any', required: true }]}
+              outputs={[{ name: 'branch_a', type: 'string' }, { name: 'branch_b', type: 'string' }, { name: 'branch_c', type: 'string' }]}
             >
-              <Tip>Cell images are automatically upscaled via Topaz before submission for better 3D quality.</Tip>
+              <p className="text-gray-500 mt-2">Use case: Split a generated video to YouTube, TikTok, and Instagram publish nodes simultaneously.</p>
+            </NodeCard>
+
+            <NodeCard emoji="⊕" name="Merge" id="merge" category="Control"
+              description="Synchronization point. Waits for up to 5 different inputs to arrive, then bundles them into a single JSON object. Different from Aggregator — Merge combines heterogeneous data types."
+              inputs={[
+                { name: 'input_a', type: 'any' }, { name: 'input_b', type: 'any' }, { name: 'input_c', type: 'any' },
+                { name: 'input_d', type: 'any' }, { name: 'input_e', type: 'any' },
+              ]}
+              outputs={[{ name: 'merged', type: 'json' }]}
+            >
+              <p className="text-gray-500 mt-2">Use case: Wait for the video, voiceover, and music to all finish generating, then pass all three to an Assembly node.</p>
+            </NodeCard>
+
+            <NodeCard emoji="🔗" name="Run Flow" id="run-flow" category="Control"
+              description="Flow chaining. Triggers another flow as a sub-flow, passing input data as variables. Waits for the sub-flow to complete and passes its outputs through. Max depth: 5 levels."
+              inputs={[{ name: 'input_data', type: 'json' }]}
+              outputs={[{ name: 'result', type: 'json' }]}
+              config={['flow_id — select another flow to chain', 'flow_name — display name']}
+            >
+              <p className="text-gray-500 mt-2">Use case: A "Daily Content" master flow triggers separate "Generate Short", "Generate Carousel", and "Generate LinkedIn Post" sub-flows.</p>
             </NodeCard>
           </div>
 
-          {/* ── VIDEO ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-blue-500" /> Video Nodes (4)
-          </h4>
+          <Warning>Iterator and Aggregator must be paired. An Iterator without an Aggregator downstream means parallel results are never collected.</Warning>
+        </div>
+      </Section>
 
+      {/* ================================================================ */}
+
+      <Section icon={CircleDot} title="11. Node Reference — All 45+ Node Types">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
+          <p>All nodes organized by category. Click any node to see its inputs, outputs, and configuration options.</p>
+
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Input Nodes</h3>
           <div className="space-y-2">
-            <NodeCard
-              emoji="&#127916;" name="JumpStart Animate" id="jumpstart-animate" category="Video"
-              description="Converts a static image into an animated video. The primary image-to-video node — give it an image and an optional motion prompt. Supports 13 video models including Veo 3.1, Kling V3/O3, PixVerse V6, and more. Double-click to configure model, duration, audio toggle, and style."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-                { name: 'prompt', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[
-                { name: 'model', options: ['kling-2.0-master', 'kling-v3-pro', 'kling-o3-pro', 'veo-2', 'veo-3.1', 'veo-3.1-lite', 'wan-2.5', 'wan-pro', 'pixverse-v4.5', 'pixverse-v6', 'hailuo', 'grok-video', 'wavespeed-wan'], defaultVal: 'kling-2.0-master', note: '13 video models. Kling 2.0 is the default all-rounder. Veo 3.1 is highest quality.' },
-                { name: 'duration', note: 'Model-dependent: Veo accepts 4s/6s/8s, Kling/Wan use 5/10, some models have fixed duration' },
-                { name: 'generate_audio', options: ['true', 'false'], defaultVal: 'false', note: 'Only for Kling v3/O3, Veo 3.1/Lite, Grok R2V, PixVerse V6. Off by default for flow clips.' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#127939;" name="Motion Transfer" id="motion-transfer" category="Video"
-              description="Transfers motion from a source video onto a reference image. The character in the image inherits the movements from the video."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-                { name: 'reference_image', type: 'image', required: true },
-              ]}
-              outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[]}
-            >
-              <Tip>Great for applying dance moves or actions from a real video to an AI-generated character.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#128260;" name="Video Extend" id="video-extend" category="Video"
-              description="Extends an existing video clip by generating additional seconds. Supports Seedance 1.5 Pro (4-12s via Wavespeed), Veo 3.1 Fast Extend (fixed 7s via FAL), and Grok Imagine Extend (2-10s, returns original + extension stitched)."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-                { name: 'prompt', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[
-                { name: 'model', options: ['seedance-1.5-pro', 'veo-3.1-fast-extend', 'grok-imagine-extend'], defaultVal: 'seedance-1.5-pro' },
-                { name: 'duration', note: 'Extension duration in seconds (model-dependent)' },
-              ]}
-            >
-              <Warning>Grok Imagine Extend requires input video to be MP4 (H.264/H.265/AV1), 2-15 seconds long. It returns the original + extension stitched together, not just the extension.</Warning>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#128260;" name="Video Restyle" id="video-restyle" category="Video"
-              description="Applies a new visual style to an existing video while preserving the original motion and composition. Uses Kling O3 V2V for video-to-video restyle/refinement."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-                { name: 'style_prompt', type: 'string', required: true },
-              ]}
-              outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[]}
-            />
+            <NodeCard emoji="📥" name="Manual Input" id="manual-input" category="Input"
+              description="User-supplied text, image, or video. Starting point for most flows."
+              inputs={[]} outputs={[{ name: 'value', type: 'string' }]}
+              config={['inputType — string, image, or video', 'defaultValue — fallback when not wired']} />
+            <NodeCard emoji="🎨" name="Style Preset" id="style-preset" category="Input"
+              description="Visual style text output from 123+ presets."
+              inputs={[]} outputs={[{ name: 'style', type: 'string' }]}
+              config={['style_key — preset identifier', 'style_text — full style description']} />
+            <NodeCard emoji="🎬" name="Video Style Preset" id="video-style-preset" category="Input"
+              description="Video motion style output from 86 cinematography presets."
+              inputs={[]} outputs={[{ name: 'style', type: 'string' }]}
+              config={['style_key', 'style_text']} />
+            <NodeCard emoji="📋" name="Prompt Template" id="prompt-template" category="Input"
+              description="Reusable prompt template with variable placeholders."
+              inputs={[]} outputs={[{ name: 'prompt', type: 'string' }]}
+              config={['template — JSON template with sections']} />
+            <NodeCard emoji="🔎" name="Image Search" id="image-search" category="Input"
+              description="Search the web for images by keyword."
+              inputs={[{ name: 'query', type: 'string', required: true }]} outputs={[{ name: 'image_url', type: 'image' }]} />
           </div>
 
-          {/* ── AUDIO ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-pink-500" /> Audio Nodes (3)
-          </h4>
-
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Image Nodes</h3>
           <div className="space-y-2">
-            <NodeCard
-              emoji="&#127897;" name="Voiceover" id="voiceover" category="Audio"
-              description="Converts text to speech using Gemini TTS. 30 available voices with personality tags. Double-click to browse voice cards (5 featured + 25 in collapsible section), set speed, and add style instructions for performance direction."
-              inputs={[
-                { name: 'text', type: 'string', required: true },
-              ]}
+            <NodeCard emoji="🖼" name="Imagineer Generate" id="imagineer-generate" category="Image"
+              description="Text-to-image with 11 models + LoRA support. Uses the Cohesive Prompt Builder for optimized prompts."
+              inputs={[{ name: 'prompt', type: 'string', required: true }, { name: 'style', type: 'string' }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['model — Nano Banana 2, Flux 2, SeedDream, Imagen 4, Kling, Grok, Ideogram, Wavespeed, Wan', 'aspect_ratio — 16:9, 9:16, 1:1, 4:5, 3:2', 'negative_prompt', 'brand_kit — apply brand guidelines', 'LoRA models']} />
+            <NodeCard emoji="✏️" name="Imagineer Edit" id="imagineer-edit" category="Image"
+              description="AI image editing and composition. Supports single and multi-image input."
+              inputs={[{ name: 'image', type: 'image', required: true }, { name: 'prompt', type: 'string', required: true }, { name: 'style', type: 'string' }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['model — Nano Banana 2, SeedDream, Wavespeed Nano Ultra, Qwen Edit']} />
+            <NodeCard emoji="🎨" name="Turnaround Sheet" id="turnaround-sheet" category="Image"
+              description="Multi-pose character reference sheet with 8 pose set options."
+              inputs={[{ name: 'prompt', type: 'string', required: true }, { name: 'style', type: 'string' }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['model', 'pose_set — standard-24, 3d-angles, 3d-action, r2v-reference', 'background_mode — white, gray, scene']} />
+            <NodeCard emoji="🔀" name="Smoosh" id="smoosh" category="Image"
+              description="Blend two images together with AI compositing."
+              inputs={[{ name: 'image', type: 'image', required: true }, { name: 'image2', type: 'image', required: true }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['model', 'blend_prompt']} />
+            <NodeCard emoji="🔍" name="Upscale Image" id="upscale-image" category="Image"
+              description="2-4x resolution upscale via Topaz Standard V2."
+              inputs={[{ name: 'image', type: 'image', required: true }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['upscale_factor — 2x or 4x']} />
+          </div>
+
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Video Nodes</h3>
+          <div className="space-y-2">
+            <NodeCard emoji="🎬" name="JumpStart Animate" id="jumpstart-animate" category="Video"
+              description="Image-to-video with 13 models. Supports FLF (First-Last-Frame) and I2V modes."
+              inputs={[{ name: 'image', type: 'image', required: true }, { name: 'prompt', type: 'string' }]}
+              outputs={[{ name: 'video_url', type: 'video' }]}
+              config={['model — Kling 2.0, Kling V3, Kling O3, Veo 2, Veo 3.1, Veo 3.1 Lite, PixVerse V6, Wan 2.5, Hailuo, Grok, Wavespeed', 'duration — 3-15 seconds', 'aspect_ratio']} />
+            <NodeCard emoji="⏩" name="Video Extend" id="video-extend" category="Video"
+              description="Extend video duration by 4-10 seconds. Extracts last frame and continues the scene."
+              inputs={[{ name: 'video', type: 'video', required: true }, { name: 'prompt', type: 'string' }]}
+              outputs={[{ name: 'video_url', type: 'video' }]}
+              config={['model — Seedance, Veo 3.1 Extend, Grok Extend', 'duration — 4-10s']} />
+            <NodeCard emoji="🎭" name="Video Restyle" id="video-restyle" category="Video"
+              description="Change the visual style of a video using Lucy Restyle (Wavespeed)."
+              inputs={[{ name: 'video', type: 'video', required: true }, { name: 'style_prompt', type: 'string', required: true }]}
+              outputs={[{ name: 'video_url', type: 'video' }]} />
+            <NodeCard emoji="🏃" name="Motion Transfer" id="motion-transfer" category="Video"
+              description="Transfer motion from a reference video onto a static image."
+              inputs={[{ name: 'video', type: 'video', required: true }, { name: 'reference_image', type: 'image', required: true }]}
+              outputs={[{ name: 'video_url', type: 'video' }]} />
+            <NodeCard emoji="✂️" name="Video Trim" id="video-trim" category="Video"
+              description="Trim video to a specific start and end time using FFmpeg."
+              inputs={[{ name: 'video', type: 'video', required: true }]}
+              outputs={[{ name: 'video_url', type: 'video' }]}
+              config={['start_time — seconds', 'end_time — seconds']} />
+            <NodeCard emoji="🖼️" name="Extract Frame" id="extract-frame" category="Video"
+              description="Get the first, middle, or last frame from a video as an image."
+              inputs={[{ name: 'video', type: 'video', required: true }]}
+              outputs={[{ name: 'image_url', type: 'image' }]}
+              config={['frame_type — first, middle, or last']} />
+          </div>
+
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Audio Nodes</h3>
+          <div className="space-y-2">
+            <NodeCard emoji="🎙️" name="Voiceover" id="voiceover" category="Audio"
+              description="AI text-to-speech with 30 Gemini voices. Supports speed control and style instructions."
+              inputs={[{ name: 'text', type: 'string', required: true }]}
               outputs={[{ name: 'audio_url', type: 'audio' }]}
-              config={[
-                { name: 'voice', options: ['Kore', 'Charon', 'Fenrir', 'Aoede', 'Puck', '+ 25 more'], defaultVal: 'Kore', note: '30 Gemini TTS voices. Kore = female authoritative, Charon = male deep, Puck = male energetic.' },
-                { name: 'speed', defaultVal: '1.15', note: 'Speed slider from 0.8x to 1.5x. 1.15x is the recommended default for engaging content.' },
-                { name: 'style_instructions', note: 'Performance direction: "Speak with warmth and authority" or "Energetic and playful tone"' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#127925;" name="Music" id="music" category="Audio"
-              description="Generates instrumental background music via ElevenLabs Music through the FAL proxy. Always produces instrumental tracks (no vocals/lyrics). Connect a mood description for genre control."
-              inputs={[
-                { name: 'mood', type: 'string', required: false },
-              ]}
+              config={['voice — 30 Gemini voices', 'speed — 1.0x to 1.3x', 'style_instructions — performance direction']} />
+            <NodeCard emoji="🎵" name="Music" id="music" category="Audio"
+              description="Generate instrumental background music. Always instrumental, never lyrics."
+              inputs={[{ name: 'mood', type: 'string' }]}
               outputs={[{ name: 'audio_url', type: 'audio' }]}
-              config={[
-                { name: 'duration', options: ['15', '30', '60'], defaultVal: '30', note: 'Track length in seconds' },
-              ]}
-            >
-              <Tip>If no mood input is connected, defaults to upbeat instrumental. Connect a Manual Input with text like "cinematic tension" or "lo-fi chill" for genre control.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#128172;" name="Captions" id="captions" category="Audio"
-              description="Burns auto-generated captions/subtitles onto a video using speech recognition. Double-click to browse 8 caption style previews as visual cards, plus advanced font, size, color, stroke, and position overrides."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-              ]}
+              config={['duration — 10-90 seconds', 'mood — genre/style description']} />
+            <NodeCard emoji="💬" name="Captions" id="captions" category="Audio"
+              description="Burn captions onto a video with 4 style presets."
+              inputs={[{ name: 'video', type: 'video', required: true }]}
               outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[
-                { name: 'style', options: ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker', '+ 4 more'], defaultVal: 'word_pop', note: 'Caption animation style — each shown as a visual preview card in the config modal' },
-              ]}
-            >
-              <Tip><strong>word_pop</strong> = words appear one at a time with scale animation. <strong>karaoke_glow</strong> = words highlight as spoken. <strong>news_ticker</strong> = scrolling lower-third.</Tip>
-            </NodeCard>
+              config={['style — word_pop, karaoke_glow, word_highlight, news_ticker', 'font_size — small, medium, large', 'position — bottom, center, top']} />
           </div>
 
-          {/* ── CONTENT ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-amber-500" /> Content Nodes (8)
-          </h4>
-
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Content Nodes</h3>
           <div className="space-y-2">
-            <NodeCard
-              emoji="&#128221;" name="Script Generator" id="script-generator" category="Content"
-              description="Generates a structured video script using GPT-4.1-mini. Outputs a JSON script with narration segments, overlay text, and scene labels. No visual prompts — words only."
-              inputs={[
-                { name: 'topic', type: 'string', required: true },
-                { name: 'niche', type: 'string', required: false },
-              ]}
+            <NodeCard emoji="📝" name="Script Generator" id="script-generator" category="Content"
+              description="AI script writing for 20 niches. GPT-powered narrative generation."
+              inputs={[{ name: 'topic', type: 'string', required: true }, { name: 'niche', type: 'string' }]}
               outputs={[{ name: 'script', type: 'json' }]}
-              config={[
-                { name: 'duration', options: ['30', '60', '90'], defaultVal: '60', note: 'Target script duration in seconds' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128295;" name="Prompt Builder" id="prompt-builder" category="Content"
-              description="Assembles structured creative inputs into a single optimized generation prompt using GPT. Accepts description, style, props, negative prompt, brand guide, lighting, camera angle, mood, and more."
-              inputs={[
-                { name: 'description', type: 'string', required: true },
-                { name: 'style', type: 'string', required: false },
-                { name: 'props', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'prompt', type: 'string' }]}
-              config={[]}
-            >
-              <Tip>Chain this before Imagineer Generate for better results: description + style → Prompt Builder → Imagineer. The Prompt Builder uses GPT to create a cohesive, optimized prompt.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#127904;" name="Carousel Create" id="carousel-create" category="Content"
-              description="Creates a branded carousel post with AI-generated slides. Auto-triggers 2-stage GPT content pipeline (research synthesis → slide writing), then generates images and composes slides via Satori."
-              inputs={[
-                { name: 'topic', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'carousel_id', type: 'string' },
-                { name: 'slides', type: 'json' },
-              ]}
-              config={[
-                { name: 'platform', options: ['linkedin', 'instagram', 'facebook', 'tiktok'], defaultVal: 'linkedin', note: 'Each platform gets optimized aspect ratio and content density' },
-                { name: 'style', note: 'One of 8 carousel style templates (text layout, scrim, typography)' },
-                { name: 'visual_style', note: 'Visual style from StyleGrid for background image generation' },
-                { name: 'brand_guide', note: 'Optional: brand kit for colors, logo, font' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#127909;" name="Shorts Create" id="shorts-create" category="Content"
-              description="Creates a complete Short (vertical video) end-to-end. This is the most comprehensive node — it runs the full Shorts pipeline: script, voiceover, timing, images, video clips, music, assembly, and captioning. Double-click to configure the full wizard."
-              inputs={[
-                { name: 'topic', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'video_url', type: 'video' },
-                { name: 'draft_id', type: 'string' },
-              ]}
-              config={[
-                { name: 'niche', note: 'One of 20 niches (AI/Tech, Paranormal, Fitness, Cooking, etc.)' },
-                { name: 'duration', options: ['30', '60', '90'], defaultVal: '60' },
-                { name: 'tone', note: 'Script tone — informative, dramatic, humorous, etc.' },
-                { name: 'voice', note: 'Gemini TTS voice (30 options)' },
-                { name: 'voice_speed', defaultVal: '1.15' },
-                { name: 'image_model', note: 'Model for keyframe generation' },
-                { name: 'video_model', note: 'Model for scene animation (FLF or I2V mode auto-selected)' },
-                { name: 'visual_style', note: 'StyleGrid selection for image generation' },
-                { name: 'caption_style', options: ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker'], defaultVal: 'word_pop' },
-                { name: 'music_mood', note: 'Mood for instrumental background music generation' },
-                { name: 'brand_guide', note: 'Optional: brand kit' },
-                { name: 'lora', note: 'Optional: trained LoRA models' },
-              ]}
-            >
-              <Tip>This is the most powerful single node — it runs the entire Shorts Workbench pipeline in one step. Schedule this daily with a topic input for automated content creation.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#127916;" name="Storyboard Create" id="storyboard-create" category="Content"
-              description="Creates a new storyboard project with AI-generated script, scene breakdown, and preview images. Uses the 2-stage narrative + visual director pipeline."
-              inputs={[
-                { name: 'brief', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'storyboard_id', type: 'string' },
-                { name: 'frames', type: 'json' },
-              ]}
-              config={[
-                { name: 'name', note: 'Storyboard project name' },
-                { name: 'duration', note: 'Target video duration' },
-                { name: 'tone', note: 'Narrative tone' },
-                { name: 'mood', note: 'Visual mood direction' },
-                { name: 'image_model', note: 'Model for preview image generation' },
-                { name: 'video_model', note: 'Model for production video generation' },
-                { name: 'visual_style', note: 'StyleGrid selection' },
-                { name: 'brand_guide', note: 'Optional: brand kit' },
-                { name: 'lora', note: 'Optional: trained LoRA models' },
-                { name: 'characters', note: 'Optional: character descriptions for consistency' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128202;" name="Ads Generate" id="ads-generate" category="Content"
-              description="Generates multi-platform paid ad creative (copy + images). Creates platform-specific variations: LinkedIn (introText, headline, description), Google RSA (15 headlines + 4 descriptions), Meta (primaryText, headline, description)."
-              inputs={[
-                { name: 'product_description', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'campaign_id', type: 'string' },
-                { name: 'variations', type: 'json' },
-              ]}
-              config={[
-                { name: 'platforms', note: 'Multi-select: LinkedIn, Google, Meta' },
-                { name: 'objective', options: ['traffic', 'conversions', 'awareness', 'leads'], defaultVal: 'traffic' },
-                { name: 'target_audience', note: 'Target audience description' },
-                { name: 'landing_url', note: 'Landing page URL' },
-                { name: 'visual_style', note: 'StyleGrid selection for ad images' },
-                { name: 'brand_guide', note: 'Optional: brand kit for logo and brand context' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128101;" name="LinkedIn Post" id="linkedin-post" category="Content"
-              description="Creates a LinkedIn post with AI-generated text and a branded image. Uses GPT-4.1 to generate 3 variations, selects the best one. Image composed via Satori with branded 1080x1080 layout."
-              inputs={[
-                { name: 'topic', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'post_id', type: 'string' },
-                { name: 'content', type: 'json' },
-              ]}
-              config={[
-                { name: 'writing_style', note: 'Writing style direction for post generation' },
-                { name: 'brand_guide', note: 'Optional: brand kit' },
-                { name: 'image_layout', note: 'Image layout template' },
-                { name: 'visual_style', note: 'StyleGrid selection for image background' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128295;" name="Text Transform" id="text-transform" category="Content"
-              description="Transforms input text using AI — summarize, expand, rephrase, translate, or apply custom instructions. Useful as a utility step between content generation and publishing."
-              inputs={[
-                { name: 'text', type: 'string', required: true },
-              ]}
-              outputs={[{ name: 'result', type: 'string' }]}
-              config={[
-                { name: 'transformation', options: ['summarize', 'expand', 'rephrase', 'translate', 'custom'], defaultVal: 'summarize', note: 'Type of transformation to apply' },
-                { name: 'instructions', note: 'Custom instructions (required for "custom" mode, optional for others)' },
-                { name: 'target_language', note: 'Target language for "translate" mode' },
-              ]}
-            />
+              config={['duration — 30, 60, or 90 seconds', 'niche — 20 options from AI/Tech to Paranormal', 'tone — custom voice direction']} />
+            <NodeCard emoji="🔧" name="Prompt Builder" id="prompt-builder" category="Content"
+              description="GPT-enhanced prompt composition from structured inputs."
+              inputs={[{ name: 'description', type: 'string', required: true }, { name: 'style', type: 'string' }, { name: 'props', type: 'string' }]}
+              outputs={[{ name: 'prompt', type: 'string' }]} />
+            <NodeCard emoji="📊" name="Carousel Create" id="carousel-create" category="Content"
+              description="Create a multi-slide carousel for Instagram, LinkedIn, TikTok, or Facebook."
+              inputs={[{ name: 'topic', type: 'string', required: true }]}
+              outputs={[{ name: 'carousel_id', type: 'string' }]}
+              config={['platform — instagram, linkedin, tiktok, facebook', 'style — 8 carousel style templates']} />
+            <NodeCard emoji="📢" name="Ads Generate" id="ads-generate" category="Content"
+              description="Generate multi-platform ad copy with images."
+              inputs={[{ name: 'product_description', type: 'string', required: true }]}
+              outputs={[{ name: 'campaign_id', type: 'string' }]}
+              config={['platform — linkedin, google, meta', 'objective — traffic, conversions, awareness, leads']} />
           </div>
 
-          {/* ── PUBLISH ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-sky-500" /> Publish Nodes (5)
-          </h4>
-
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Publish Nodes</h3>
           <div className="space-y-2">
-            <NodeCard
-              emoji="&#128250;" name="YouTube Upload" id="youtube-upload" category="Publish"
-              description="Uploads a video to YouTube via resumable upload. Auto-detects Shorts (vertical < 60s) and appends #Shorts tag. Sets containsSyntheticMedia: true on all uploads. Double-click to see connection status and configure title, description, privacy."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-                { name: 'title', type: 'string', required: true },
-                { name: 'description', type: 'string', required: false },
-              ]}
+            <NodeCard emoji="📺" name="YouTube Upload" id="youtube-upload" category="Publish"
+              description="Upload video to YouTube. Auto-detects Shorts (vertical < 60s). Sets synthetic media disclosure."
+              inputs={[{ name: 'video', type: 'video', required: true }, { name: 'title', type: 'string', required: true }, { name: 'description', type: 'string' }]}
               outputs={[{ name: 'video_id', type: 'string' }]}
-              config={[
-                { name: 'privacy', options: ['public', 'unlisted', 'private'], defaultVal: 'private', note: 'Upload as private first, then publish manually for safety' },
-                { name: 'tags', note: 'Optional: comma-separated tags' },
-              ]}
-            >
-              <Warning>You must connect YouTube in Settings → Connected Accounts before using this node. The config modal shows a green/red connection status badge at the top.</Warning>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#127925;" name="TikTok Publish" id="tiktok-publish" category="Publish"
-              description="Publishes videos or images to TikTok. Requires TikTok OAuth connection. Supports both video and photo carousel posting."
-              inputs={[
-                { name: 'video', type: 'video', required: false },
-                { name: 'image', type: 'image', required: false },
-                { name: 'caption', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'post_id', type: 'string' }]}
-              config={[]}
-            />
-
-            <NodeCard
-              emoji="&#128248;" name="Instagram Post" id="instagram-post" category="Publish"
-              description="Posts images to Instagram with a caption. Requires Meta OAuth connection (covers both Instagram and Facebook). Supports single image and carousel container posting."
-              inputs={[
-                { name: 'image', type: 'image', required: true },
-                { name: 'caption', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'post_id', type: 'string' }]}
-              config={[]}
-            />
-
-            <NodeCard
-              emoji="&#128100;" name="Facebook Post" id="facebook-post" category="Publish"
-              description="Creates posts on your Facebook page with text and optional media. Requires Meta OAuth connection."
-              inputs={[
-                { name: 'image', type: 'image', required: false },
-                { name: 'text', type: 'string', required: true },
-              ]}
-              outputs={[{ name: 'post_id', type: 'string' }]}
-              config={[]}
-            />
-
-            <NodeCard
-              emoji="&#128190;" name="Save to Library" id="save-to-library" category="Publish"
-              description="Saves any media URL to your Stitch library for permanent storage in Supabase. FAL CDN URLs expire within hours — always use this node to persist generated content."
-              inputs={[
-                { name: 'url', type: 'string', required: true },
-                { name: 'name', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'saved_url', type: 'string' }]}
-              config={[
-                { name: 'tags', note: 'Optional: tags to assign to the saved asset' },
-              ]}
-            >
-              <Warning>AI-generated URLs from FAL expire within hours. Always end your flow with a Save to Library node if you want to keep the output.</Warning>
-            </NodeCard>
+              config={['privacy — public, unlisted, private']} />
+            <NodeCard emoji="🎵" name="TikTok Publish" id="tiktok-publish" category="Publish"
+              description="Publish video or image carousel to TikTok."
+              inputs={[{ name: 'video', type: 'video' }, { name: 'image', type: 'image' }]}
+              outputs={[{ name: 'post_id', type: 'string' }]} />
+            <NodeCard emoji="📸" name="Instagram Post" id="instagram-post" category="Publish"
+              description="Post image to Instagram. Requires Business/Creator account."
+              inputs={[{ name: 'image', type: 'image', required: true }, { name: 'caption', type: 'string' }]}
+              outputs={[{ name: 'post_id', type: 'string' }]} />
+            <NodeCard emoji="👤" name="Facebook Post" id="facebook-post" category="Publish"
+              description="Post to a Facebook page with optional images."
+              inputs={[{ name: 'text', type: 'string', required: true }, { name: 'image', type: 'image' }]}
+              outputs={[{ name: 'post_id', type: 'string' }]} />
+            <NodeCard emoji="💼" name="LinkedIn Post" id="linkedin-post" category="Publish"
+              description="Publish text + image post to LinkedIn."
+              inputs={[{ name: 'text', type: 'string', required: true }, { name: 'image', type: 'image' }]}
+              outputs={[{ name: 'post_id', type: 'string' }]} />
           </div>
 
-          {/* ── UTILITY ── */}
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-sm bg-gray-500" /> Utility Nodes (5)
-          </h4>
-
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-5 mb-2">Utility Nodes</h3>
           <div className="space-y-2">
-            <NodeCard
-              emoji="&#9203;" name="Delay" id="delay" category="Utility"
-              description="Pauses execution for a specified duration before passing data through to downstream nodes. Useful for rate-limiting or waiting for external processes."
-              inputs={[
-                { name: 'input', type: 'string', required: false },
-              ]}
-              outputs={[{ name: 'output', type: 'string' }]}
-              config={[
-                { name: 'seconds', defaultVal: '5', note: 'How long to wait (in seconds) before passing data through' },
-              ]}
-            >
-              <Tip>Use between API-heavy nodes to avoid rate limiting. A 5-10 second delay between Imagineer and JumpStart calls can prevent 429 errors.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#128256;" name="Conditional" id="conditional" category="Utility"
-              description="Routes data to different downstream branches based on a condition. Evaluates a simple expression and outputs to the 'true' or 'false' output port."
-              inputs={[
-                { name: 'value', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'true_output', type: 'string' },
-                { name: 'false_output', type: 'string' },
-              ]}
-              config={[
-                { name: 'condition', options: ['contains', 'equals', 'not_empty', 'is_empty'], defaultVal: 'not_empty', note: 'How to evaluate the input value' },
-                { name: 'compare_value', note: 'Value to compare against (for contains/equals conditions)' },
-              ]}
-            >
-              <Tip>Use to build flows that handle success/failure cases differently. For example: if image generation returns a result, animate it; otherwise, skip to the next topic.</Tip>
-            </NodeCard>
-
-            <NodeCard
-              emoji="&#9986;" name="Video Trim" id="video-trim" category="Utility"
-              description="Trims a video to a specific start/end time range using FFmpeg."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-              ]}
-              outputs={[{ name: 'video_url', type: 'video' }]}
-              config={[
-                { name: 'start_time', defaultVal: '0', note: 'Start position in seconds' },
-                { name: 'end_time', defaultVal: '10', note: 'End position in seconds' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#127748;" name="Extract Frame" id="extract-frame" category="Utility"
-              description="Extracts a single frame from a video as an image. Useful for getting a thumbnail, a reference image for the next generation step, or a last frame for continuity."
-              inputs={[
-                { name: 'video', type: 'video', required: true },
-              ]}
-              outputs={[{ name: 'image_url', type: 'image' }]}
-              config={[
-                { name: 'frame_type', options: ['first', 'middle', 'last'], defaultVal: 'first', note: 'Which frame to extract. "last" is useful for scene continuity.' },
-              ]}
-            />
-
-            <NodeCard
-              emoji="&#128269;" name="Image Search" id="image-search-utility" category="Utility"
-              description="Searches for images via SERP/Google CSE (same as the Input category version). Listed in both Input and Utility for convenience."
-              inputs={[
-                { name: 'query', type: 'string', required: true },
-              ]}
-              outputs={[
-                { name: 'image_url', type: 'image' },
-                { name: 'results', type: 'json' },
-              ]}
-              config={[
-                { name: 'count', defaultVal: '1', note: 'Number of results to return' },
-              ]}
-            />
+            <NodeCard emoji="💾" name="Save to Library" id="save-to-library" category="Utility"
+              description="Save any media URL to your asset library."
+              inputs={[{ name: 'url', type: 'string', required: true }, { name: 'name', type: 'string' }]}
+              outputs={[{ name: 'saved_url', type: 'string' }]} />
+            <NodeCard emoji="🔤" name="Text Transform" id="text-transform" category="Utility"
+              description="Transform text: uppercase, lowercase, trim, extract first line, add prefix/suffix."
+              inputs={[{ name: 'text', type: 'string', required: true }]}
+              outputs={[{ name: 'text', type: 'string' }]}
+              config={['transform — uppercase, lowercase, trim, extract_first_line, add_prefix, add_suffix', 'value — for prefix/suffix']} />
+            <NodeCard emoji="⏱️" name="Delay" id="delay" category="Utility"
+              description="Pause flow for 5-300 seconds. Useful for rate limiting."
+              inputs={[{ name: 'passthrough', type: 'string' }]}
+              outputs={[{ name: 'passthrough', type: 'string' }]}
+              config={['seconds — 5, 10, 30, 60, 120, 300']} />
+            <NodeCard emoji="🔀" name="Conditional" id="conditional" category="Utility"
+              description="Branch on value comparison. Passes value through if condition is met, empty string if not."
+              inputs={[{ name: 'value', type: 'string', required: true }]}
+              outputs={[{ name: 'result', type: 'string' }]}
+              config={['condition — not_empty, contains, equals', 'compare_value']} />
           </div>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 10. EXAMPLE FLOWS */}
-      {/* ================================================================ */}
 
-      <Section icon={Share2} title="10. Example Flows — Common Patterns">
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-6 mt-3">
+      <Section icon={Share2} title="12. Example Flows — Common Patterns">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-4 mt-3">
 
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 1: Simple Image → Video</h4>
-          <PipelineDiagram
-            title="Image → Video Pipeline"
-            description="3 nodes, 3 connections. Takes a text prompt, generates an image, animates it, and saves permanently."
-            steps={[
-              { nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (prompt)', cat: 'Input' },
-                { emoji: '&#127912;', name: 'Imagineer Generate', cat: 'Image' },
-                { emoji: '&#127916;', name: 'JumpStart Animate', cat: 'Video' },
-                { emoji: '&#128190;', name: 'Save to Library', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Simple linear pipeline. Good for your first flow. Takes ~40 seconds total (5s image + 30s video + 5s save)."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 2: Parallel Branches — Video with Voiceover</h4>
-          <PipelineDiagram
-            title="Parallel Branch Pipeline"
-            description="Two independent branches run in parallel, saving time. Image generation and voiceover happen simultaneously."
-            steps={[
-              { label: 'Branch A — Visual', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (prompt)', cat: 'Input' },
-                { emoji: '&#127912;', name: 'Imagineer Generate', cat: 'Image' },
-                { emoji: '&#127916;', name: 'JumpStart Animate', cat: 'Video' },
-              ], parallel: true },
-              { label: 'Branch B — Audio', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (script)', cat: 'Input' },
-                { emoji: '&#127897;', name: 'Voiceover', cat: 'Audio' },
-              ], parallel: true },
-              { label: 'Merge', nodes: [
-                { emoji: '&#128190;', name: 'Save to Library', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Both branches start immediately since they're independent. The engine's 3-node concurrency pool handles them in parallel."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 3: Full Production Pipeline</h4>
-          <PipelineDiagram
-            title="Topic → Published Video"
-            description="Complete production: topic research → script → parallel visuals + audio → captioned video → YouTube."
-            steps={[
-              { label: 'Step 1 — Script', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (topic)', cat: 'Input' },
-                { emoji: '&#128221;', name: 'Script Generator', cat: 'Content' },
-              ]},
-              { label: 'Step 2a — Visual Branch', nodes: [
-                { emoji: '&#128295;', name: 'Prompt Builder', cat: 'Content' },
-                { emoji: '&#127912;', name: 'Imagineer Generate', cat: 'Image' },
-                { emoji: '&#127916;', name: 'JumpStart Animate', cat: 'Video' },
-                { emoji: '&#128172;', name: 'Captions', cat: 'Audio' },
-              ], parallel: true },
-              { label: 'Step 2b — Audio Branch', nodes: [
-                { emoji: '&#127897;', name: 'Voiceover', cat: 'Audio' },
-              ], parallel: true },
-              { label: 'Step 3 — Publish', nodes: [
-                { emoji: '&#128250;', name: 'YouTube Upload', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Script fans out to both branches. Visual and audio branches run in parallel. Set YouTube Upload to 'Skip' error mode so the pipeline completes even if upload fails."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 4: Content Calendar Pipeline (Scheduled Daily)</h4>
-          <PipelineDiagram
-            title="Daily Content Calendar"
-            description="Scheduled to run daily at 9 AM. Generates a new Short from a topic, then publishes to YouTube and TikTok simultaneously."
-            steps={[
-              { label: 'Step 1 — Generate', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (topic)', cat: 'Input' },
-                { emoji: '&#128221;', name: 'Script Generator', cat: 'Content' },
-                { emoji: '&#127909;', name: 'Shorts Create', cat: 'Content' },
-              ]},
-              { label: 'Step 2 — Publish (parallel fan-out)', nodes: [
-                { emoji: '&#128250;', name: 'YouTube Upload', cat: 'Publish' },
-              ], parallel: true },
-              { label: '', nodes: [
-                { emoji: '&#127925;', name: 'TikTok Publish', cat: 'Publish' },
-              ], parallel: true },
-              { label: 'Step 3 — Save', nodes: [
-                { emoji: '&#128190;', name: 'Save to Library', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Set trigger type to 'scheduled' with cron '0 9 * * *' (daily 9 AM). Set publish nodes to 'Skip' error mode. Update the Manual Input topic each week, or wire from an external source."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 5: Brand Asset Pipeline</h4>
-          <PipelineDiagram
-            title="Brand Asset Creation"
-            description="Creates character turnaround sheets with your brand's LoRA and visual style, then saves to library for use across projects."
-            steps={[
-              { label: 'Step 1 — Character Description', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (character)', cat: 'Input' },
-                { emoji: '&#128295;', name: 'Prompt Builder', cat: 'Content' },
-              ]},
-              { label: 'Step 2 — Generate Sheet', nodes: [
-                { emoji: '&#127912;', name: 'Imagineer Generate', cat: 'Image' },
-                { emoji: '&#127912;', name: 'Turnaround Sheet', cat: 'Image' },
-              ]},
-              { label: 'Step 3 — Save', nodes: [
-                { emoji: '&#128190;', name: 'Save to Library', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Double-click Imagineer and Turnaround nodes to set your brand guide and LoRA. Use 'scene' background mode on the Turnaround Sheet if you plan to use results with Veo 3.1 R2V."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 6: Multi-Platform Social (Fan-Out)</h4>
-          <PipelineDiagram
-            title="Multi-Platform Social Distribution"
-            description="A single topic fans out to create a carousel, a LinkedIn post, and paid ad variations simultaneously."
-            steps={[
-              { label: 'Step 1 — Topic', nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (topic)', cat: 'Input' },
-              ]},
-              { label: 'Step 2a — Carousel', nodes: [
-                { emoji: '&#127904;', name: 'Carousel Create', cat: 'Content' },
-              ], parallel: true },
-              { label: 'Step 2b — LinkedIn', nodes: [
-                { emoji: '&#128101;', name: 'LinkedIn Post', cat: 'Content' },
-              ], parallel: true },
-              { label: 'Step 2c — Ads', nodes: [
-                { emoji: '&#128202;', name: 'Ads Generate', cat: 'Content' },
-              ], parallel: true },
-            ]}
-            notes="The Manual Input's output fans out to all 3 content nodes via separate connections from the same output port. All 3 run in parallel (within the 3-node concurrency pool). Each content node is configured independently — different platforms, styles, and audiences."
-          />
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Example 7: Video Extension Chain</h4>
-          <PipelineDiagram
-            title="Video Extension Chain"
-            description="Generate a video, extend it twice, then save. Creates longer content from a single starting image."
-            steps={[
-              { nodes: [
-                { emoji: '&#128229;', name: 'Manual Input (image URL)', cat: 'Input' },
-                { emoji: '&#127916;', name: 'JumpStart Animate', cat: 'Video' },
-                { emoji: '&#128260;', name: 'Video Extend', cat: 'Video' },
-                { emoji: '&#128260;', name: 'Video Extend #2', cat: 'Video' },
-                { emoji: '&#128190;', name: 'Save to Library', cat: 'Publish' },
-              ]},
-            ]}
-            notes="Each Video Extend node adds 4-12 seconds depending on the model. Chain multiple extends for longer videos. Set all Video Extend nodes to 'Retry' error mode for resilience."
-          />
-        </div>
-      </Section>
-
-      {/* ================================================================ */}
-      {/* 11. TIPS & BEST PRACTICES */}
-      {/* ================================================================ */}
-
-      <Section icon={Shield} title="11. Tips & Best Practices">
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Flow Design</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Start simple</strong> — get a 2-3 node flow working first, then add complexity.</li>
-            <li><strong>Use Manual Input nodes</strong> to parameterize your flows. Instead of hardcoding a prompt in the Imagineer config, create a Manual Input and wire it in — this makes the flow reusable with different inputs.</li>
-            <li><strong>Fan out for parallelism</strong> — if two operations don't depend on each other, keep them on separate branches. The engine runs up to 3 nodes in parallel.</li>
-            <li><strong>Always end with Save to Library</strong> — AI-generated URLs expire. Without saving, your output disappears within hours.</li>
-            <li><strong>Use the config modal</strong> — don't skip configuration. Double-click each node and set up model selection, visual style, brand guide, and other settings. Well-configured nodes produce much better results.</li>
-            <li><strong>Use Prompt Builder</strong> before generation nodes — it produces higher-quality, more cohesive prompts than raw text input.</li>
-          </ul>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Error Handling</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Set <strong>Retry</strong> on API-heavy nodes (Imagineer, JumpStart, Shorts Create) — transient failures are common with AI providers.</li>
-            <li>Set <strong>Skip</strong> on optional publish nodes (YouTube, TikTok, Instagram, Facebook) — you don't want a publishing failure to lose your generated content.</li>
-            <li>Keep <strong>Stop</strong> (default) on critical path nodes where downstream results would be meaningless without this step.</li>
-            <li>Use <strong>Delay</strong> nodes between heavy API calls if you're hitting rate limits.</li>
-            <li>Use <strong>Conditional</strong> nodes to handle success/failure cases differently — e.g., if image generation fails, skip to a fallback path.</li>
-          </ul>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Performance</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Image generation takes 5-30 seconds depending on the model.</li>
-            <li>Video generation (animate) takes 30-120 seconds — it's the slowest step.</li>
-            <li>Voiceover and music take 5-15 seconds.</li>
-            <li>Shorts Create runs the entire pipeline internally — it can take 3-8 minutes depending on scene count and models.</li>
-            <li>Design your flow so the video generation branch starts early, while other work happens in parallel.</li>
-          </ul>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Configuration Tips</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Nano Banana 2</strong> is the fastest image model — use it for prototyping flows.</li>
-            <li><strong>SeedDream v4.5</strong> produces the highest quality images — use it for final production.</li>
-            <li><strong>Kling 2.0 Master</strong> is the most reliable video model — good default choice.</li>
-            <li><strong>Veo 3.1</strong> produces the highest quality video but is slower and more expensive.</li>
-            <li>When using LoRAs, make sure the image model is compatible (Flux LoRA models work with Flux 2).</li>
-            <li>Set <strong>generate_audio: false</strong> on video nodes in flows — add voiceover separately via the Voiceover node for better control.</li>
-          </ul>
-
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mt-4">Troubleshooting</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Connection won't form</strong> — check port types. You can't connect audio → image. Try using a string-type output instead.</li>
-            <li><strong>Node shows red on execution</strong> — double-click the node to check its config. Common causes: missing config (empty prompt), expired API keys, provider downtime.</li>
-            <li><strong>Config modal shows "Connected" but execution fails</strong> — the upstream node may have failed or produced null. Check the execution log for upstream errors.</li>
-            <li><strong>Flow won't save</strong> — check your browser console. Network errors or auth issues can prevent saves.</li>
-            <li><strong>Scheduled flow not running</strong> — verify your cron expression is valid. The scheduler checks every 60 seconds, so there can be up to a 1-minute delay.</li>
-            <li><strong>Publishing fails</strong> — ensure you've connected the target platform in Settings → Connected Accounts with valid OAuth tokens. The config modal shows connection status.</li>
-            <li><strong>Video generation 422 error</strong> — check for brand names in prompts (Veo 3.1 rejects these) or incompatible duration values.</li>
-          </ul>
-
-          <Warning>
-            AI-generated media URLs from FAL.ai expire within a few hours. If a flow generates content but doesn't save it to the library,
-            the URLs in the execution log will stop working. Always include a Save to Library node for any output you want to keep.
-          </Warning>
-        </div>
-      </Section>
-
-      {/* ================================================================ */}
-      {/* 12. KEYBOARD SHORTCUTS & NAVIGATION */}
-      {/* ================================================================ */}
-
-      <Section icon={Target} title="12. Keyboard Shortcuts & Navigation">
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Double-click</kbd>
-              <span>Open full config modal for selected node</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Click</kbd>
-              <span>Select node (shows info in right strip)</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Delete</kbd>
-              <span>Delete selected node or connection</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Backspace</kbd>
-              <span>Delete selected node or connection</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Scroll</kbd>
-              <span>Zoom in/out on canvas</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Click + Drag (canvas)</kbd>
-              <span>Pan canvas (on empty space)</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Click + Drag (node)</kbd>
-              <span>Move node to new position</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Drag (empty area)</kbd>
-              <span>Multi-select nodes with selection box</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Drag (port → port)</kbd>
-              <span>Create connection between nodes</span>
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs font-mono">Click (edge)</kbd>
-              <span>Select a connection line</span>
-            </div>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200">Short-Form Video Pipeline</h4>
+          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 font-mono text-xs space-y-1">
+            <p>[Topic Input] → [Script Generator] → scenes[]</p>
+            <p>&nbsp;&nbsp;&nbsp;&nbsp;→ [Iterator] → [Generate Frame] → [Generate Clip] → [Aggregator] → clips[]</p>
+            <p>[Voiceover] ────────────────────────────────────────→ [Merge] → [Assemble] → [Captions] → [YouTube]</p>
+            <p>[Music] ────────────────────────────────────────────→</p>
           </div>
 
-          <Tip>
-            <strong>Double-click</strong> is the most important interaction in the Flow Builder. Single-click selects a node
-            and shows the info strip. Double-click opens the full configuration modal where you set up all the node's settings.
-          </Tip>
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Multi-Platform Social Blast</h4>
+          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 font-mono text-xs space-y-1">
+            <p>[Manual Input] → [Script Generator] → [Imagineer Generate]</p>
+            <p>&nbsp;&nbsp;&nbsp;&nbsp;→ [Split] → [YouTube Upload]</p>
+            <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ [TikTok Publish]</p>
+            <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ [Instagram Post]</p>
+          </div>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Character Asset Pipeline</h4>
+          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 font-mono text-xs space-y-1">
+            <p>[Manual Input: character description] → [Imagineer Generate] → [Turnaround Sheet] → [Save to Library]</p>
+          </div>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Campaign with Brand Context</h4>
+          <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 font-mono text-xs space-y-1">
+            <p>[Brand Identity] ──→ voice_style ──→ [Voiceover]</p>
+            <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──→ visual_style ─→ [Imagineer Generate] → [JumpStart Animate]</p>
+            <p>[Target Market] ───→ pain_points ──→ [Script Generator]</p>
+            <p>[YouTube Creds] ───→ credential ──→ [YouTube Upload]</p>
+          </div>
+
+          <Tip>Use the <strong>Campaign Wizard</strong> to auto-generate the brand context source nodes. Then just add your generation and publishing nodes and wire them up.</Tip>
         </div>
       </Section>
 
       {/* ================================================================ */}
-      {/* 13. GLOSSARY */}
+
+      <Section icon={Shield} title="13. Tips & Best Practices">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <ul className="list-disc list-inside space-y-2">
+            <li><strong>Start simple.</strong> Build a 3-node flow first (Input → Generate → Save). Get comfortable with the canvas before building complex pipelines.</li>
+            <li><strong>Use Dry Run first.</strong> Before running a flow with real API calls, hit Dry Run to verify all wiring is correct and variables resolve properly.</li>
+            <li><strong>Check preflight.</strong> The preflight validation catches most common issues — missing connections, expired OAuth tokens, incompatible types. Don't skip it.</li>
+            <li><strong>Set error mode per node.</strong> Use Retry for generation nodes (they can fail transiently) and Skip for optional enhancements (captions, music).</li>
+            <li><strong>Use flow variables.</strong> Instead of hardcoding brand names or style descriptions in every node, set them as flow variables and reference with <code>{'{{name}}'}</code>.</li>
+            <li><strong>Save Library outputs.</strong> Add a Save to Library node after generation steps so you can reuse assets later without re-generating.</li>
+            <li><strong>Clone templates.</strong> Start from a template and customize rather than building from scratch. The templates section has pre-built pipelines for common workflows.</li>
+            <li><strong>Use Iterator for batch work.</strong> If you need to generate 5 images with different styles, use an Iterator over a style array instead of 5 separate Imagineer nodes.</li>
+            <li><strong>Mind the concurrency.</strong> Only 3 nodes run simultaneously. If you have 10 parallel branches, they'll queue — not all run at once.</li>
+            <li><strong>Check OAuth before publishing.</strong> Publishing nodes need active OAuth tokens. Go to Settings → Connected Accounts if a token is expired. The preflight check flags this.</li>
+          </ul>
+
+          <Warning>Video generation is the most expensive operation (~$0.30/clip). Use Dry Run to estimate costs before running video-heavy flows.</Warning>
+        </div>
+      </Section>
+
       {/* ================================================================ */}
 
-      <Section icon={FileText} title="13. Glossary">
+      <Section icon={Target} title="14. Keyboard Shortcuts">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
+          <div className="grid grid-cols-2 gap-2">
+            <KV label={<kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">/</kbd>}>Focus palette search</KV>
+            <KV label={<kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Backspace</kbd>}>Delete selected node or edge</KV>
+            <KV label={<kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Delete</kbd>}>Delete selected node or edge</KV>
+            <KV label="Double-click node">Open config modal</KV>
+            <KV label="Click canvas">Deselect all</KV>
+            <KV label="Scroll wheel">Zoom in/out</KV>
+            <KV label="Click + drag canvas">Pan</KV>
+            <KV label="Drag from port">Create connection</KV>
+          </div>
+        </div>
+      </Section>
+
+      {/* ================================================================ */}
+
+      <Section icon={FileText} title="15. Glossary">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <KV label="DAG">Directed Acyclic Graph — a flow structure where connections only go forward (no loops).</KV>
-          <KV label="Node">A single processing step in your flow (e.g., generate image, add voiceover). Each node instance stores independent config.</KV>
-          <KV label="Edge / Connection">A wire between two nodes that carries data from output to input.</KV>
-          <KV label="Port">An input or output connector on a node. Each port has a type (string, image, video, audio, json).</KV>
-          <KV label="Config Modal">The full-width slide-over panel opened by double-clicking a node. Contains all settings for that tool.</KV>
-          <KV label="Info Strip">The slim right-side panel (240px) that shows a node's summary when single-clicked.</KV>
+          <KV label="Node">A single processing step in your flow (e.g., generate image, add voiceover). 280px dark card with ports, preview, and config.</KV>
+          <KV label="Edge / Connection">A type-colored bezier curve between two nodes that carries data from output to input.</KV>
+          <KV label="Port">An input or output connector on a node. Type-colored dot with label. Types: string, image, video, audio, json, arrays.</KV>
+          <KV label="Config Modal">The full-width slide-over panel opened by double-clicking a node. Opens from the left. Contains all settings.</KV>
           <KV label="Wired Port">An input port with an incoming connection. Shown as a teal "Connected" banner in the config modal.</KV>
-          <KV label="Topological Sort">The algorithm that determines execution order — upstream nodes always run before downstream.</KV>
+          <KV label="Flow Variable">A named value (e.g., {'{{brand_name}}'}) defined at the flow level and resolvable in any node config field.</KV>
+          <KV label="Preflight Check">Validation modal that runs before execution — checks wiring, types, OAuth, API health, and estimates cost.</KV>
+          <KV label="Dry Run">Execute the flow without making API calls — shows what each node would do with resolved inputs.</KV>
+          <KV label="Iterator">Control node that fans out an array into parallel branches.</KV>
+          <KV label="Aggregator">Control node that collects parallel iteration results back into an array.</KV>
+          <KV label="Split">Control node for explicit parallel branching (one input, multiple outputs).</KV>
+          <KV label="Merge">Control node that waits for multiple inputs and bundles them into one object.</KV>
+          <KV label="Run Flow">Control node that triggers another flow as a sub-flow (flow chaining).</KV>
+          <KV label="Resume">Re-run a failed flow from the point of failure, keeping completed nodes' results.</KV>
           <KV label="Concurrency Pool">Up to 3 independent nodes can execute simultaneously.</KV>
           <KV label="Fan-Out">One output port connected to multiple downstream nodes — all receive the same data.</KV>
+          <KV label="Multi-Input">One input port receiving from multiple upstream nodes — values collected as array.</KV>
+          <KV label="Campaign Wizard">4-step wizard that creates a flow pre-loaded with brand context source nodes.</KV>
           <KV label="Cron Expression">A scheduling format (e.g., <code>0 9 * * *</code> = every day at 9 AM).</KV>
           <KV label="Error Mode">Per-node setting: Stop (halt on error), Skip (continue past error), Retry (try 3 times).</KV>
           <KV label="Auto-Save">Flows save automatically 1.5 seconds after any structural change.</KV>
           <KV label="Template">A pre-built flow you can clone and customize.</KV>
-          <KV label="StyleGrid">A visual picker with 123 style presets used in Image and Content node config modals.</KV>
           <KV label="LoRA">Low-Rank Adaptation — a trained model fine-tune for specific subjects or styles.</KV>
-          <KV label="Brand Guide">A brand kit with logo, colors, and guidelines that can be applied to generation nodes.</KV>
         </div>
       </Section>
 
       {/* ── Footer ── */}
       <div className="text-center text-xs text-gray-400 dark:text-gray-500 pt-4 pb-8">
-        Automation Flows Guide — Last updated April 2026 &middot; 33 node types across 7 categories
+        Automation Flows Guide — Updated April 2026 &middot; 45+ node types across 9 categories &middot; 9-phase overhaul
       </div>
     </div>
   );
