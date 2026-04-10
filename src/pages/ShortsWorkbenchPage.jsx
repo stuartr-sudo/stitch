@@ -1148,7 +1148,7 @@ export default function ShortsWorkbenchPage() {
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Niche</label>
-                  <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-4 gap-1.5">
                     {NICHES.map(n => (
                       <button key={n.key} onClick={() => handleNicheChange(n.key)}
                         className={cn('p-2 rounded-lg border text-center transition-all text-[11px]',

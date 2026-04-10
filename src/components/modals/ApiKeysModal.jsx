@@ -238,7 +238,7 @@ export default function ApiKeysModal({ isOpen, onClose }) {
                   {showOpenai ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Used for AI storyboard generation (gpt-4o-mini)</p>
+              <p className="text-xs text-slate-500 mt-1">Used for AI storyboard generation (GPT-4.1-mini)</p>
             </div>
 
             {/* ElevenLabs Key */}

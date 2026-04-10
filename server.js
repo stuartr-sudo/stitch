@@ -173,6 +173,12 @@ app.all('/api/flows*', authenticateToken, async (req, res) => {
   return handler(req, res);
 });
 
+// Client Briefs
+app.all('/api/briefs*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/briefs/briefs.js')).default;
+  return handler(req, res);
+});
+
 // Command Center — AI Marketing Team
 // Chat SSE endpoint (must be before other command-center routes)
 app.post('/api/command-center/chat', authenticateToken, async (req, res) => {

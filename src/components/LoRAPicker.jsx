@@ -47,10 +47,20 @@ export default function LoRAPicker({ value = [], onChange, brandUsername }) {
   async function loadLoras() {
     setLoading(true);
     try {
-      // Fetch pre-built library
-      const libRes = await apiFetch('/api/lora/library');
-      const libData = await libRes.json();
-      if (libData.success) setLibraryLoras(libData.loras || []);
+      // Fetch pre-built library with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const libRes = await apiFetch('/api/lora/library', { signal: controller.signal });
+        clearTimeout(timeout);
+        if (libRes.ok) {
+          const libData = await libRes.json();
+          if (libData.success) setLibraryLoras(libData.loras || []);
+        }
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        console.warn('[LoRAPicker] Library fetch failed:', fetchErr.message);
+      }
 
       // Fetch user's custom trained LoRAs
       if (user) {

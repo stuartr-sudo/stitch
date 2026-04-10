@@ -688,9 +688,13 @@ export default function JumpStartVideoStudioModal({
                         {video.thumbnail_url ? (
                           <img src={video.thumbnail_url} alt={video.title || 'Video'} className="w-full h-full object-cover" />
                         ) : video.url ? (
-                          <video src={video.url} muted preload="metadata" className="w-full h-full object-cover" onLoadedData={(e) => { e.target.currentTime = 0.1; }} />
-                        ) : (
-                          <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                          <video src={video.url} muted crossOrigin="anonymous" preload="metadata" className="w-full h-full object-cover"
+                            onLoadedMetadata={(e) => { e.target.currentTime = 0.1; }}
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                          />
+                        ) : null}
+                        {!video.thumbnail_url && (
+                          <div className="w-full h-full bg-slate-800 flex items-center justify-center absolute inset-0" style={video.url ? { display: 'none' } : {}}>
                             <Video className="w-8 h-8 text-slate-500" />
                           </div>
                         )}

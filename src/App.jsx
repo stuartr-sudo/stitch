@@ -46,6 +46,9 @@ import MotionTransferGuidePage from './pages/MotionTransferGuidePage';
 import SetupKeys from './pages/SetupKeys';
 import EducatePage from './pages/EducatePage';
 import LearnPage from './pages/LearnPage';
+import BriefsListPage from './pages/BriefsListPage';
+import BriefWizardPage from './pages/BriefWizardPage';
+import BriefDetailPage from './pages/BriefDetailPage';
 import FlowsListPage from './pages/FlowsListPage';
 import FlowBuilderPage from './pages/FlowBuilderPage';
 import CampaignCreatorPage from './pages/CampaignCreatorPage';
@@ -378,6 +381,12 @@ function App() {
 
           {/* Agency Mode */}
           <Route path="/agency" element={<ProtectedRoute><AgencyPage /></ProtectedRoute>} />
+
+          {/* Client Briefs */}
+          <Route path="/briefs" element={<ProtectedRoute><BriefsListPage /></ProtectedRoute>} />
+          <Route path="/briefs/new" element={<ProtectedRoute><BriefWizardPage /></ProtectedRoute>} />
+          <Route path="/briefs/:id" element={<ProtectedRoute><BriefDetailPage /></ProtectedRoute>} />
+          <Route path="/briefs/:id/edit" element={<ProtectedRoute><BriefWizardPage /></ProtectedRoute>} />
 
           {/* Automation Flows */}
           <Route path="/flows" element={<ProtectedRoute><FlowsListPage /></ProtectedRoute>} />

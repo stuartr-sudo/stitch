@@ -49,6 +49,7 @@ import {
   ListOrdered,
   Scissors,
   GitBranch,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -829,6 +830,16 @@ export default function VideoAdvertCreator() {
               </button>
               {expandedSections.socialTools && (
                 <div className="mt-2 space-y-1">
+                  <div
+                    onClick={() => navigate('/briefs')}
+                    className="group bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg p-2 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-medium text-emerald-900">Client Briefs</span>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 mt-0.5 ml-6">Start with a brief, get AI recommendations</p>
+                  </div>
                   <div
                     onClick={() => navigate('/command-center')}
                     className="group bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-2 cursor-pointer transition-colors"

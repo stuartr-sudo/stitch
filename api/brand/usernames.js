@@ -34,8 +34,14 @@ export default async function handler(req, res) {
     .order('username');
 
   if (companies?.length) {
+    const seen = new Set();
     companyUsernames = companies
       .filter(c => c.username?.trim())
+      .filter(c => {
+        if (seen.has(c.username)) return false;
+        seen.add(c.username);
+        return true;
+      })
       .map(c => ({
         username: c.username,
         brand_name: c.client_namespace || c.username,
