@@ -10,6 +10,7 @@ import NodeConfigModal from '@/components/flows/NodeConfigModal';
 import ExecutionLog from '@/components/flows/ExecutionLog';
 import PreflightCheck from '@/components/flows/PreflightCheck';
 import FlowVariables from '@/components/flows/FlowVariables';
+import FlowRunnerForm from '@/components/flows/FlowRunnerForm';
 
 export default function FlowBuilderPage() {
   const { id, executionId } = useParams();
@@ -181,12 +182,40 @@ export default function FlowBuilderPage() {
     ));
   }, [setNodes]);
 
-  // Preflight check state
+  // Preflight + input form state
   const [preflightOpen, setPreflightOpen] = useState(false);
+  const [inputFormOpen, setInputFormOpen] = useState(false);
+  const [inputFormLoading, setInputFormLoading] = useState(false);
 
-  // Run flow — opens preflight first
+  // Run flow — shows input form if source nodes exist, then preflight
   const handleRunClick = () => {
     if (!flow?.id) return;
+    // Check if there are source nodes that need input
+    const nodesWithIncoming = new Set((edges || []).map(e => e.target));
+    const sourceNodes = nodes.filter(n => {
+      if (nodesWithIncoming.has(n.id)) return false;
+      const nt = n.data?.nodeType;
+      return nt?.category === 'input' || nt?.category === 'brand' || nt?.inputs?.length === 0;
+    });
+    if (sourceNodes.length > 0) {
+      setInputFormOpen(true);
+    } else {
+      setPreflightOpen(true);
+    }
+  };
+
+  const handleInputFormSubmit = async (inputValues) => {
+    setInputFormOpen(false);
+    setInputFormLoading(false);
+    // Inject values into source nodes
+    if (Object.keys(inputValues).length > 0) {
+      setNodes(prev => prev.map(n =>
+        inputValues[n.id] !== undefined
+          ? { ...n, data: { ...n.data, config: { ...n.data?.config, resolvedValue: inputValues[n.id] } } }
+          : n
+      ));
+    }
+    // Now show preflight
     setPreflightOpen(true);
   };
 
@@ -303,6 +332,26 @@ export default function FlowBuilderPage() {
         nodes={nodes}
         flowVariables={flowVariables}
       />
+
+      {/* Input form modal — collects source node values before run */}
+      {inputFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-filter backdrop-blur-sm" onClick={() => setInputFormOpen(false)} />
+          <div className="relative bg-[#12121f] border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-700/40 flex-shrink-0">
+              <h2 className="text-lg font-semibold text-slate-100">Flow Inputs</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Fill in the required inputs, then run.</p>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto flex-1">
+              <FlowRunnerForm
+                flow={{ ...flow, graph_json: { ...flow?.graph_json, nodes, edges } }}
+                onSubmit={handleInputFormSubmit}
+                loading={inputFormLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preflight validation — runs before execution */}
       <PreflightCheck

@@ -49,6 +49,7 @@ import LearnPage from './pages/LearnPage';
 import FlowsListPage from './pages/FlowsListPage';
 import FlowBuilderPage from './pages/FlowBuilderPage';
 import CampaignCreatorPage from './pages/CampaignCreatorPage';
+import FlowRunPage from './pages/FlowRunPage';
 import AdDiscoveryPage from './pages/AdDiscoveryPage';
 import AdIntelligencePage from './pages/AdIntelligencePage';
 import AgencyPage from './pages/AgencyPage';
@@ -383,6 +384,7 @@ function App() {
           <Route path="/flows/campaigns/new" element={<ProtectedRoute><CampaignCreatorPage /></ProtectedRoute>} />
           <Route path="/flows/new" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
           <Route path="/flows/:id" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
+          <Route path="/flows/:id/input" element={<ProtectedRoute><FlowRunPage /></ProtectedRoute>} />
           <Route path="/flows/:id/run/:executionId" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
 
           {/* Catch-all */}

@@ -255,6 +255,40 @@ export default async function handler(req, res) {
       return res.json({ execution });
     }
 
+    // POST /api/flows/:id/execute-with-inputs — run with dynamic form values injected
+    if (subPath === 'execute-with-inputs' && method === 'POST') {
+      const { data: flow, error } = await supabase
+        .from('automation_flows')
+        .select('*')
+        .eq('id', flowId)
+        .single();
+      if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
+
+      // Inject user-supplied input values into source node configs
+      const { inputs = {} } = req.body;
+      if (Object.keys(inputs).length > 0) {
+        flow.graph_json = {
+          ...flow.graph_json,
+          nodes: (flow.graph_json.nodes || []).map(n => {
+            if (inputs[n.id] !== undefined) {
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  config: { ...n.data?.config, resolvedValue: inputs[n.id] },
+                },
+              };
+            }
+            return n;
+          }),
+        };
+      }
+
+      const keys = await getUserKeys(userId, req.user?.email);
+      const execution = await executeFlow(flow, supabase, keys, userId, req.user?.email);
+      return res.json({ execution });
+    }
+
     // POST /api/flows/:id/dry-run — execute without calling APIs
     if (subPath === 'dry-run' && method === 'POST') {
       const { data: flow, error } = await supabase
