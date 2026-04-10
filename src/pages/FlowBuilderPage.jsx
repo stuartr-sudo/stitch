@@ -55,15 +55,35 @@ export default function FlowBuilderPage() {
     }).catch(() => {});
   }, []);
 
-  // Load flow
+  // Load flow — hydrate node types from registry if they only have an id
   useEffect(() => {
     if (id && id !== 'new') {
-      apiFetch(`/api/flows/${id}`).then(r => r.json()).then(data => {
-        if (data?.flow) {
-          setFlow(data.flow);
-          setNodes(data.flow.graph_json?.nodes || []);
-          setEdges(data.flow.graph_json?.edges || []);
-          setFlowVariables(data.flow.graph_json?.variables || {});
+      Promise.all([
+        apiFetch(`/api/flows/${id}`).then(r => r.json()),
+        nodeTypesMap ? Promise.resolve(null) : apiFetch('/api/flows/node-types').then(r => r.json())
+      ]).then(([flowData, typesData]) => {
+        if (typesData?.nodeTypes && !nodeTypesMap) setNodeTypesMap(typesData.nodeTypes);
+        const registry = typesData?.nodeTypes || nodeTypesMap || {};
+
+        if (flowData?.flow) {
+          setFlow(flowData.flow);
+          // Hydrate minimal nodeType defs with full registry data
+          const hydratedNodes = (flowData.flow.graph_json?.nodes || []).map(node => {
+            const ntId = node.data?.nodeType?.id;
+            if (ntId && !node.data.nodeType.inputs) {
+              // Find full definition in registry
+              for (const catNodes of Object.values(registry)) {
+                const fullDef = (catNodes || []).find(n => n.id === ntId);
+                if (fullDef) {
+                  return { ...node, data: { ...node.data, nodeType: { ...fullDef, ...node.data.nodeType, inputs: fullDef.inputs, outputs: fullDef.outputs } } };
+                }
+              }
+            }
+            return node;
+          });
+          setNodes(hydratedNodes);
+          setEdges(flowData.flow.graph_json?.edges || []);
+          setFlowVariables(flowData.flow.graph_json?.variables || {});
         }
       });
     }

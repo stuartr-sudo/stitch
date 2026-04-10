@@ -162,9 +162,9 @@ function StitchNode({ data, selected }) {
       </div>
 
       {/* Input ports */}
-      {nodeType.inputs.length > 0 && (
+      {(nodeType.inputs || []).length > 0 && (
         <div className="px-3 py-1.5 space-y-1 border-b border-slate-700/20">
-          {nodeType.inputs.map((input, i) => (
+          {(nodeType.inputs || []).map((input, i) => (
             <div key={`in-${input.id}`} className="flex items-center gap-1.5 relative">
               <Handle
                 type="target"
@@ -228,9 +228,9 @@ function StitchNode({ data, selected }) {
       )}
 
       {/* Output ports */}
-      {nodeType.outputs.length > 0 && (
+      {(nodeType.outputs || []).length > 0 && (
         <div className="px-3 py-1.5 space-y-1 border-t border-slate-700/20">
-          {nodeType.outputs.map((output, i) => (
+          {(nodeType.outputs || []).map((output, i) => (
             <div key={`out-${output.id}`} className="flex items-center justify-end gap-1.5 relative">
               <span className="text-[10px] text-slate-400">{humanizeKey(output.id)}</span>
               <PortDot type={output.type} />
