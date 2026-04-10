@@ -102,10 +102,10 @@ export default function BriefDetailPage() {
           {(brief.platforms || []).length > 0 && (
             <div className="flex items-center gap-1">
               <span className="text-slate-500">Platforms:</span>
-              {brief.platforms.map(p => <span key={p} title={p} className="text-base">{PLATFORM_ICONS[p]}</span>)}
+              {(brief.platforms || []).map(p => <span key={p} title={p} className="text-base">{PLATFORM_ICONS[p]}</span>)}
             </div>
           )}
-          {(brief.tone || []).length > 0 && <div><span className="text-slate-500">Tone:</span> <span className="ml-1 capitalize">{brief.tone.join(', ')}</span></div>}
+          {(brief.tone || []).length > 0 && <div><span className="text-slate-500">Tone:</span> <span className="ml-1 capitalize">{(brief.tone || []).join(', ')}</span></div>}
           {brief.budget_range && <div><span className="text-slate-500">Budget:</span> <span className="ml-1">{brief.budget_range.replace(/_/g, ' ')}</span></div>}
           {brief.urgency && <div><span className="text-slate-500">Urgency:</span> <span className="ml-1 capitalize">{brief.urgency}</span></div>}
         </div>
@@ -113,7 +113,7 @@ export default function BriefDetailPage() {
           <div className="mt-3 pt-3 border-t">
             <span className="text-sm text-slate-500 flex items-center gap-1 mb-2"><Package className="w-3.5 h-3.5" /> Deliverables</span>
             <div className="flex flex-wrap gap-2">
-              {brief.deliverables.map((d, i) => (
+              {(brief.deliverables || []).map((d, i) => (
                 <span key={i} className="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-medium">
                   {d.quantity || 1}x {d.type}{d.platform ? ` (${d.platform})` : ''}
                 </span>

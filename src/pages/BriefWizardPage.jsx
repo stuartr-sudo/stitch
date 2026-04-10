@@ -216,7 +216,7 @@ export default function BriefWizardPage() {
               {TONES.map(t => {
                 const selected = (brief.tone || []).includes(t);
                 return (
-                  <button key={t} onClick={() => update('tone', selected ? brief.tone.filter(x => x !== t) : [...(brief.tone || []), t])}
+                  <button key={t} onClick={() => update('tone', selected ? (brief.tone || []).filter(x => x !== t) : [...(brief.tone || []), t])}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-all capitalize
                       ${selected ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
                     {t}
@@ -238,7 +238,7 @@ export default function BriefWizardPage() {
               {PLATFORMS.map(p => {
                 const selected = (brief.platforms || []).includes(p.key);
                 return (
-                  <button key={p.key} onClick={() => update('platforms', selected ? brief.platforms.filter(x => x !== p.key) : [...(brief.platforms || []), p.key])}
+                  <button key={p.key} onClick={() => update('platforms', selected ? (brief.platforms || []).filter(x => x !== p.key) : [...(brief.platforms || []), p.key])}
                     className={`p-3 rounded-xl border-2 text-center transition-all ${selected ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300'}`}>
                     <span className="text-2xl block">{p.icon}</span>
                     <p className="text-xs font-medium mt-1">{p.label}</p>
@@ -266,7 +266,7 @@ export default function BriefWizardPage() {
                   <option value="">Any platform</option>
                   {PLATFORMS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
                 </select>
-                <button onClick={() => update('deliverables', brief.deliverables.filter((_, j) => j !== i))}
+                <button onClick={() => update('deliverables', (brief.deliverables || []).filter((_, j) => j !== i))}
                   className="text-slate-400 hover:text-red-500 p-1">x</button>
               </div>
             ))}
