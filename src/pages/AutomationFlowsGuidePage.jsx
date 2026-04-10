@@ -20,6 +20,12 @@ import {
   Split, Merge, Workflow, Rocket, BrainCircuit, FlaskConical,
 } from 'lucide-react';
 
+const IMG_BASE = 'https://uscmvlfleccbctuvhhcj.supabase.co/storage/v1/object/public/media/learn/flows';
+
+function Img({ src, alt }) {
+  return <img src={`${IMG_BASE}/${src}`} alt={alt} className="max-w-2xl mx-auto block rounded-xl border border-zinc-200 shadow-lg my-4" />;
+}
+
 // ── Expandable Section ──
 
 function Section({ icon: Icon, title, children, defaultOpen = false }) {
@@ -252,6 +258,8 @@ export function AutomationFlowsGuideContent() {
 
           <PortColorKey />
 
+          <Img src="06-flow-builder-palette.jpg" alt="Flow builder showing dark canvas with node palette on the left" />
+
           <Tip>The canvas is a 2-panel layout: <strong>Node Palette</strong> on the left (260px) and the <strong>canvas</strong> filling the rest. No right sidebar — the config modal slides over from the left when you need it.</Tip>
         </div>
       </Section>
@@ -264,6 +272,7 @@ export function AutomationFlowsGuideContent() {
 
           <Step number="1" title="Navigate to Flows">
             <p>Click <strong>Automation Flows</strong> in the sidebar, or go to <code>/flows</code>. The dark-themed dashboard shows your flows, templates, and execution history.</p>
+            <Img src="01-flows-dashboard.jpg" alt="Flows dashboard with dark theme showing My Flows tab" />
           </Step>
 
           <Step number="2" title="Create a new flow">
@@ -273,6 +282,7 @@ export function AutomationFlowsGuideContent() {
           <Step number="3" title="Add nodes from the palette">
             <p>The left sidebar shows all 45+ node types organized by category (Image, Video, Audio, Content, Publish, Utility, Control, Brand). <strong>Drag</strong> any node onto the canvas. Use the search bar or press <kbd>/</kbd> to filter.</p>
             <p>When you select a node on the canvas, the palette shows a <strong>"Compatible Next Steps"</strong> section at the top — nodes whose input types match your selected node's outputs.</p>
+            <Img src="02-flow-builder-empty.jpg" alt="Empty flow builder canvas with node palette on the left" />
           </Step>
 
           <Step number="4" title="Connect nodes">
@@ -337,6 +347,7 @@ export function AutomationFlowsGuideContent() {
             <li>During execution: <strong>Pause</strong> and <strong>Cancel</strong> buttons</li>
             <li>After failure: <strong>↻ Resume</strong> button to continue from the failed node</li>
           </ul>
+          <Img src="09-toolbar-highlighted.jpg" alt="Flow builder toolbar with Variables, Dry Run, Schedule, and Run buttons" />
         </div>
       </Section>
 
@@ -460,9 +471,11 @@ export function AutomationFlowsGuideContent() {
 
           <Step number="1" title="Name your campaign">
             <p>Give it a descriptive name (e.g., "Q3 Product Launch Shorts"). Optional description.</p>
+            <Img src="03-campaign-wizard-name.jpg" alt="Campaign wizard step 1 — naming the campaign" />
           </Step>
           <Step number="2" title="Select a brand">
             <p>Choose from your configured Brand Kits. This determines which brand data is available in the next step.</p>
+            <Img src="04-campaign-wizard-brand.jpg" alt="Campaign wizard step 2 — selecting a brand" />
           </Step>
           <Step number="3" title="Select context modules">
             <p>This is the key screen. The wizard queries <strong>16+ database tables</strong> and presents each as a toggleable module:</p>
@@ -819,7 +832,32 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Shield} title="13. Tips & Best Practices">
+      <Section icon={Plug} title="13. Dynamic Input Form & Shareable Run Page">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <NewBadge />
+          <p>Every flow with source nodes (Manual Input, Style Preset, Brand Context, etc.) automatically generates a <strong>dynamic input form</strong>. Two ways to use it:</p>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Pre-Run Modal (inside the builder)</h4>
+          <p>When you click <strong>▶ Run Flow</strong> and the flow has source nodes, a modal appears with typed input fields for each source node. Fill in your values, then the preflight check runs, and the flow executes with your inputs injected.</p>
+          <p>The form renders different field types based on the source node:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Text/String</strong> — textarea for typing prompts, topics, descriptions</li>
+            <li><strong>Image</strong> — URL paste field + file upload button with live preview</li>
+            <li><strong>Video/Audio</strong> — URL paste field</li>
+            <li><strong>JSON</strong> — monospace textarea for structured data</li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mt-4">Shareable Run Page</h4>
+          <p>Every flow has a shareable page at <code>/flows/:id/input</code>. Share this URL with team members who need to run the flow without seeing the canvas. They fill in the form and click Run.</p>
+          <Img src="10-flow-run-page.jpg" alt="Shareable flow run page with dynamic input form" />
+
+          <Tip>The dynamic form only shows source nodes that have no incoming edges. If a source node is wired to another node upstream, it won't appear in the form — it gets its value from the wire instead.</Tip>
+        </div>
+      </Section>
+
+      {/* ================================================================ */}
+
+      <Section icon={Shield} title="14. Tips & Best Practices">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
           <ul className="list-disc list-inside space-y-2">
             <li><strong>Start simple.</strong> Build a 3-node flow first (Input → Generate → Save). Get comfortable with the canvas before building complex pipelines.</li>
@@ -840,7 +878,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Target} title="14. Keyboard Shortcuts">
+      <Section icon={Target} title="15. Keyboard Shortcuts">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <div className="grid grid-cols-2 gap-2">
             <KV label={<kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">/</kbd>}>Focus palette search</KV>
@@ -857,7 +895,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={FileText} title="15. Glossary">
+      <Section icon={FileText} title="16. Glossary">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <KV label="DAG">Directed Acyclic Graph — a flow structure where connections only go forward (no loops).</KV>
           <KV label="Node">A single processing step in your flow (e.g., generate image, add voiceover). 280px dark card with ports, preview, and config.</KV>
@@ -888,7 +926,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ── Footer ── */}
       <div className="text-center text-xs text-gray-400 dark:text-gray-500 pt-4 pb-8">
-        Automation Flows Guide — Updated April 2026 &middot; 45+ node types across 9 categories &middot; 9-phase overhaul
+        Automation Flows Guide — Updated April 2026 &middot; 45+ node types across 9 categories &middot; 16 sections with screenshots
       </div>
     </div>
   );
