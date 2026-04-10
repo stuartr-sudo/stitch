@@ -7,7 +7,7 @@ import { Handle, Position } from '@xyflow/react';
  * Visually makes parallel branches clear on the canvas.
  */
 function SplitNode({ data, selected }) {
-  const { stepState } = data;
+  const { stepState, onDelete } = data;
   const isCompleted = stepState?.status === 'completed';
 
   return (
@@ -23,7 +23,19 @@ function SplitNode({ data, selected }) {
           <span className="text-lg">⑃</span>
           <span className="text-xs font-semibold text-amber-200">Split</span>
         </div>
-        <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/20 text-amber-400/60">control</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/20 text-amber-400/60">control</span>
+          {selected && onDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="w-5 h-5 rounded-full bg-black/30 border border-slate-600/40 text-slate-400 hover:bg-red-900/60 hover:border-red-500/50 hover:text-red-400 flex items-center justify-center transition-colors"
+              style={{ fontSize: 10, lineHeight: 1 }}
+              title="Delete node"
+            >
+              &#10005;
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="px-3 py-2 flex items-center justify-center">

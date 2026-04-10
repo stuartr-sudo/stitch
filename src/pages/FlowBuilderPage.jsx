@@ -190,6 +190,18 @@ export default function FlowBuilderPage() {
     setConfigModalNode(prev => prev ? { ...prev, data: { ...prev.data, config: newConfig } } : prev);
   }, [configModalNode, setNodes]);
 
+  // Delete node — removes node, connected edges, and clears selection/modal
+  const handleDeleteNode = useCallback((nodeId) => {
+    setNodes(nds => nds.filter(n => n.id !== nodeId));
+    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
+    setSelectedNode(prev => prev?.id === nodeId ? null : prev);
+    // Close config modal if it was open for this node
+    setConfigModalNode(prev => {
+      if (prev?.id === nodeId) { setConfigModalOpen(false); return null; }
+      return prev;
+    });
+  }, [setNodes, setEdges]);
+
   // Config change — also stores errorHandling at the node level for the executor
   const handleConfigChange = useCallback((nodeId, config) => {
     setNodes(prev => prev.map(n =>
@@ -332,6 +344,7 @@ export default function FlowBuilderPage() {
             onConnect={onConnect}
             onNodeSelect={setSelectedNode}
             onNodeDoubleClick={handleNodeDoubleClick}
+            onDeleteNode={handleDeleteNode}
             onDrop={handleDrop}
             stepStates={execution?.step_states}
           />

@@ -51,6 +51,7 @@ export default function FlowCanvas({
   onConnect,
   onNodeSelect,
   onNodeDoubleClick,
+  onDeleteNode,
   onDrop,
   stepStates,
 }) {
@@ -73,12 +74,18 @@ export default function FlowCanvas({
     if (onNodeSelect) onNodeSelect(null);
   }, [onNodeSelect]);
 
-  // Merge step states into node data for status overlays
+  // Clear selection when nodes are deleted via keyboard
+  const handleNodesDelete = useCallback(() => {
+    if (onNodeSelect) onNodeSelect(null);
+  }, [onNodeSelect]);
+
+  // Merge step states + delete handler into node data
   const nodesWithStatus = nodes.map(node => ({
     ...node,
     data: {
       ...node.data,
       stepState: stepStates?.[node.id] || null,
+      onDelete: onDeleteNode ? () => onDeleteNode(node.id) : undefined,
     }
   }));
 
@@ -98,6 +105,7 @@ export default function FlowCanvas({
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodesDelete={handleNodesDelete}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
