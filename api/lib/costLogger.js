@@ -34,6 +34,16 @@ const PRICING = {
   'lora-training':    { input: 0, output: 0, per_training: 0.50 },
   'elevenlabs-tts':   { input: 0, output: 0, per_character: 0.00030 },
   'whisper':          { input: 0, output: 0, per_audio_sec: 0.0001 },
+  // Anthropic Claude
+  'claude-opus-4-6':             { input: 15.00, output: 75.00 },
+  'claude-sonnet-4-6':           { input: 3.00,  output: 15.00 },
+  'claude-haiku-4-5-20251001':   { input: 0.80,  output: 4.00  },
+  // Google Gemini
+  'gemini-2.5-pro':              { input: 1.25,  output: 10.00 },
+  'gemini-2.5-flash':            { input: 0.15,  output: 0.60  },
+  'gemini-2.0-flash':            { input: 0.10,  output: 0.40  },
+  // OpenAI reasoning
+  'o3-mini':                     { input: 1.10,  output: 4.40  },
 };
 
 export async function logCost({

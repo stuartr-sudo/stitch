@@ -53,6 +53,7 @@ import FlowsListPage from './pages/FlowsListPage';
 import FlowBuilderPage from './pages/FlowBuilderPage';
 import CampaignCreatorPage from './pages/CampaignCreatorPage';
 import FlowRunPage from './pages/FlowRunPage';
+import ChecklistFlowsPage from './pages/ChecklistFlowsPage';
 import AdDiscoveryPage from './pages/AdDiscoveryPage';
 import AdIntelligencePage from './pages/AdIntelligencePage';
 import AgencyPage from './pages/AgencyPage';
@@ -395,6 +396,7 @@ function App() {
           <Route path="/flows/:id" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
           <Route path="/flows/:id/input" element={<ProtectedRoute><FlowRunPage /></ProtectedRoute>} />
           <Route path="/flows/:id/run/:executionId" element={<ProtectedRoute><FlowBuilderPage /></ProtectedRoute>} />
+          <Route path="/checklist-flows" element={<ProtectedRoute><ChecklistFlowsPage /></ProtectedRoute>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

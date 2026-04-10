@@ -340,6 +340,92 @@ const NODE_TYPES = {
     }
   },
 
+  'llm-call': {
+    id: 'llm-call',
+    label: 'LLM Call',
+    category: 'content',
+    icon: '🤖',
+    description: 'Call any LLM (GPT, Claude, Gemini)',
+    timeout: 120_000,
+    inputs: [
+      { id: 'prompt', type: 'string', required: true },
+      { id: 'system_prompt', type: 'string', required: false },
+      { id: 'context', type: 'string', required: false },
+    ],
+    outputs: [
+      { id: 'response', type: 'string' },
+      { id: 'usage', type: 'json' },
+    ],
+    configSchema: {
+      model: { type: 'select', options: [
+        'gpt-4.1', 'gpt-4.1-mini', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'o3-mini',
+        'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001',
+        'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
+      ], default: 'gpt-4.1-mini' },
+      system_prompt: { type: 'textarea', default: '' },
+      prompt: { type: 'textarea', default: '' },
+      temperature: { type: 'text', default: '0.7' },
+      max_tokens: { type: 'text', default: '4096' },
+      top_p: { type: 'text', default: '' },
+      // OpenAI-specific
+      frequency_penalty: { type: 'text', default: '' },
+      presence_penalty: { type: 'text', default: '' },
+      response_format: { type: 'select', options: ['text', 'json_object'], default: 'text' },
+      seed: { type: 'text', default: '' },
+      // Anthropic-specific
+      top_k: { type: 'text', default: '' },
+      stop_sequences: { type: 'text', default: '' },
+      // Gemini-specific
+      responseMimeType: { type: 'select', options: ['text/plain', 'application/json'], default: 'text/plain' },
+    },
+    async run(inputs, config, context) {
+      const { callLlm } = await import('./llmProvider.js');
+
+      // Build user prompt — prepend context if piped from upstream
+      let userPrompt = inputs.prompt || config.prompt || '';
+      if (inputs.context) {
+        userPrompt = `<context>\n${inputs.context}\n</context>\n\n${userPrompt}`;
+      }
+
+      const systemPrompt = inputs.system_prompt || config.system_prompt || '';
+      const model = config.model || 'gpt-4.1-mini';
+
+      const result = await callLlm(model, systemPrompt, userPrompt, {
+        temperature: config.temperature ? parseFloat(config.temperature) : 0.7,
+        max_tokens: config.max_tokens ? parseInt(config.max_tokens) : 4096,
+        top_p: config.top_p ? parseFloat(config.top_p) : undefined,
+        frequency_penalty: config.frequency_penalty ? parseFloat(config.frequency_penalty) : undefined,
+        presence_penalty: config.presence_penalty ? parseFloat(config.presence_penalty) : undefined,
+        response_format: config.response_format !== 'text' ? config.response_format : undefined,
+        seed: config.seed ? parseInt(config.seed) : undefined,
+        top_k: config.top_k ? parseInt(config.top_k) : undefined,
+        stop_sequences: config.stop_sequences ? config.stop_sequences.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        responseMimeType: config.responseMimeType !== 'text/plain' ? config.responseMimeType : undefined,
+      }, context.apiKeys, context.abortSignal);
+
+      // Determine cost category from provider
+      const category = model.startsWith('claude-') ? 'anthropic' : model.startsWith('gemini-') ? 'google' : 'openai';
+
+      await context.logCost({
+        username: context.userEmail,
+        category,
+        operation: 'llm-call',
+        model,
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
+      });
+
+      return {
+        response: result.text,
+        usage: {
+          model,
+          input_tokens: result.usage.input_tokens,
+          output_tokens: result.usage.output_tokens,
+        },
+      };
+    }
+  },
+
   'youtube-upload': {
     id: 'youtube-upload',
     label: 'YouTube Upload',

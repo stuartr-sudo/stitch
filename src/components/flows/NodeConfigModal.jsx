@@ -8,6 +8,8 @@ import { GEMINI_VOICES, FEATURED_VOICES } from '@/lib/geminiVoices';
 import { CAPTION_STYLES } from '@/lib/captionStylePresets';
 import { apiFetch } from '@/lib/api';
 import { STYLE_CATEGORIES } from '@/lib/stylePresets';
+import { MappableInput, MappableTextarea } from './MappableField';
+import { getUpstreamNodes, buildOutputMap } from '@/lib/flowGraphUtils';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,27 @@ const CAROUSEL_STYLES = [
   { id: 'corporate-blue', label: 'Corporate Blue' }, { id: 'creative-pop', label: 'Creative Pop' },
   { id: 'dark-luxe', label: 'Dark Luxe' }, { id: 'organic-natural', label: 'Organic Natural' },
 ];
+
+const LLM_MODELS = [
+  { id: 'gpt-4.1', label: 'GPT-4.1', desc: 'Flagship — $2/$8', provider: 'openai' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', desc: 'Best value — $0.40/$1.60', provider: 'openai' },
+  { id: 'gpt-5-mini', label: 'GPT-5 Mini', desc: '$0.40/$1.60', provider: 'openai' },
+  { id: 'gpt-4o', label: 'GPT-4o', desc: '$2.50/$10', provider: 'openai' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', desc: 'Cheapest — $0.15/$0.60', provider: 'openai' },
+  { id: 'o3-mini', label: 'o3-mini', desc: 'Reasoning — $1.10/$4.40', provider: 'openai' },
+  { id: 'claude-opus-4-6', label: 'Claude Opus 4', desc: 'Most capable — $15/$75', provider: 'anthropic' },
+  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4', desc: 'Balanced — $3/$15', provider: 'anthropic' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', desc: 'Fast — $0.80/$4', provider: 'anthropic' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Thinking — $1.25/$10', provider: 'google' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: '$0.15/$0.60', provider: 'google' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Cheapest — $0.10/$0.40', provider: 'google' },
+];
+
+function getLlmProvider(modelId) {
+  if (modelId?.startsWith('claude-')) return 'anthropic';
+  if (modelId?.startsWith('gemini-')) return 'google';
+  return 'openai';
+}
 
 const CATEGORY_ICONS = {
   input: Type, image: Sparkles, video: Film, audio: Mic,
@@ -152,38 +175,7 @@ function CollapsiblePanel({ title, defaultOpen = false, children }) {
   );
 }
 
-/** Variable insertion dropdown — shown next to text/textarea fields when flow has variables */
-function VariableInsertButton({ variables, onInsert }) {
-  const [dropOpen, setDropOpen] = useState(false);
-  const varKeys = Object.keys(variables || {});
-  if (!varKeys.length) return null;
-  return (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setDropOpen(!dropOpen)}
-        className="text-[10px] text-violet-500 hover:text-violet-400 font-mono px-1.5 py-0.5 rounded bg-violet-50 hover:bg-violet-100 border border-violet-200 transition-colors"
-        title="Insert flow variable"
-      >
-        {'{{}}'}
-      </button>
-      {dropOpen && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 max-h-40 overflow-y-auto">
-          {varKeys.map(k => (
-            <button
-              key={k}
-              onClick={() => { onInsert(`{{${k}}}`); setDropOpen(false); }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors flex items-center justify-between"
-            >
-              <span className="font-mono text-violet-600">{`{{${k}}}`}</span>
-              <span className="text-slate-400 truncate ml-2 text-[10px]">{String(variables[k]).slice(0, 20)}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// VariableInsertButton removed — replaced by MappableField slash-command picker
 
 function AspectRatioButtons({ value, onChange }) {
   const ratios = ['16:9', '9:16', '1:1', '4:5', '3:2'];
@@ -221,8 +213,9 @@ function resolveStylePresetText(keys) {
 
 // ── ImageForm (Imagineer Generate, Imagineer Edit, Turnaround, Upscale, Smoosh) ──
 
-function ImageForm({ config, u, nodeType, wired }) {
+function ImageForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables }) {
   const nodeId = nodeType.id;
+  const mp = { upstreamOutputs, flowVariables };
 
   // Simple image tools with their own dedicated forms
   if (nodeId === 'background-removal') {
@@ -270,8 +263,8 @@ function ImageForm({ config, u, nodeType, wired }) {
       <div className="space-y-5">
         {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
           <Panel title="Edit Prompt">
-            <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
-              placeholder="Describe what should appear in the masked region..." rows={3} className={TEXTAREA} />
+            <MappableTextarea value={config.prompt || ''} onChange={val => u('prompt', val)}
+              placeholder="Describe what should appear in the masked region..." rows={3} className={TEXTAREA} {...mp} />
           </Panel>
         )}
         <Panel title="About">
@@ -286,8 +279,8 @@ function ImageForm({ config, u, nodeType, wired }) {
       {/* Prompt */}
       {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
         <Panel title="Prompt" description="Describe what you want to generate">
-          <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
-            placeholder="A cinematic wide shot of..." rows={4} className={TEXTAREA} />
+          <MappableTextarea value={config.prompt || ''} onChange={val => u('prompt', val)}
+            placeholder="A cinematic wide shot of..." rows={4} className={TEXTAREA} {...mp} />
         </Panel>
       )}
 
@@ -348,14 +341,14 @@ function ImageForm({ config, u, nodeType, wired }) {
 
       {/* Mood */}
       <Panel title="Mood / Atmosphere">
-        <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
-          placeholder="e.g. ethereal and dreamlike, dark and gritty, vibrant and energetic" rows={2} className={TEXTAREA} />
+        <MappableTextarea value={config.mood || ''} onChange={val => u('mood', val)}
+          placeholder="e.g. ethereal and dreamlike, dark and gritty, vibrant and energetic" rows={2} className={TEXTAREA} {...mp} />
       </Panel>
 
       {/* Color Palette */}
       <Panel title="Color Palette">
-        <textarea value={config.color_palette || ''} onChange={e => u('color_palette', e.target.value)}
-          placeholder="e.g. warm earth tones, neon pink and cyan, muted pastels" rows={2} className={TEXTAREA} />
+        <MappableTextarea value={config.color_palette || ''} onChange={val => u('color_palette', val)}
+          placeholder="e.g. warm earth tones, neon pink and cyan, muted pastels" rows={2} className={TEXTAREA} {...mp} />
       </Panel>
 
       {/* Brand Guide */}
@@ -370,8 +363,8 @@ function ImageForm({ config, u, nodeType, wired }) {
 
       {/* Negative Prompt */}
       <Panel title="Negative Prompt">
-        <textarea value={config.negative_prompt || ''} onChange={e => u('negative_prompt', e.target.value)}
-          placeholder="Things to avoid..." rows={2} className={TEXTAREA} />
+        <MappableTextarea value={config.negative_prompt || ''} onChange={val => u('negative_prompt', val)}
+          placeholder="Things to avoid..." rows={2} className={TEXTAREA} {...mp} />
       </Panel>
 
       {/* Advanced */}
@@ -441,8 +434,8 @@ function ImageForm({ config, u, nodeType, wired }) {
       {/* Smoosh */}
       {nodeId === 'smoosh' && (
         <Panel title="Blend Instructions">
-          <textarea value={config.blend_prompt || ''} onChange={e => u('blend_prompt', e.target.value)}
-            placeholder="e.g. blend these images seamlessly, matching lighting and perspective" rows={3} className={TEXTAREA} />
+          <MappableTextarea value={config.blend_prompt || ''} onChange={val => u('blend_prompt', val)}
+            placeholder="e.g. blend these images seamlessly, matching lighting and perspective" rows={3} className={TEXTAREA} {...mp} />
         </Panel>
       )}
     </div>
@@ -452,9 +445,10 @@ function ImageForm({ config, u, nodeType, wired }) {
 
 // ── VideoForm ────────────────────────────────────────────────────────────────
 
-function VideoForm({ config, u, nodeType, wired }) {
+function VideoForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables }) {
   const schema = nodeType.configSchema || {};
   const nodeId = nodeType.id;
+  const mp = { upstreamOutputs, flowVariables };
   const modelOptions = schema.model?.options ? VIDEO_MODELS.filter(m => schema.model.options.includes(m.id)) : VIDEO_MODELS;
   const selectedModel = config.model || schema.model?.default || modelOptions[0]?.id;
 
@@ -462,8 +456,8 @@ function VideoForm({ config, u, nodeType, wired }) {
     <div className="space-y-5">
       {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
         <Panel title="Prompt" description="Describe the motion and scene">
-          <textarea value={config.prompt || ''} onChange={e => u('prompt', e.target.value)}
-            placeholder="A cinematic slow-motion shot of..." rows={4} className={TEXTAREA} />
+          <MappableTextarea value={config.prompt || ''} onChange={val => u('prompt', val)}
+            placeholder="A cinematic slow-motion shot of..." rows={4} className={TEXTAREA} {...mp} />
         </Panel>
       )}
 
@@ -526,8 +520,9 @@ function VideoForm({ config, u, nodeType, wired }) {
 
 // ── VoiceoverForm ────────────────────────────────────────────────────────────
 
-function VoiceoverForm({ config, u, wired }) {
+function VoiceoverForm({ config, u, wired, upstreamOutputs, flowVariables }) {
   const [showAll, setShowAll] = useState(false);
+  const mp = { upstreamOutputs, flowVariables };
   const featured = GEMINI_VOICES.filter(v => FEATURED_VOICES.includes(v.id));
   const remaining = GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id));
   const sel = config.voice || 'Kore';
@@ -536,8 +531,8 @@ function VoiceoverForm({ config, u, wired }) {
     <div className="space-y-5">
       {wired.has('text') ? <WiredBanner portName="text" /> : (
         <Panel title="Script">
-          <textarea value={config.script || ''} onChange={e => u('script', e.target.value)}
-            placeholder="Enter voiceover script..." rows={5} className={TEXTAREA} />
+          <MappableTextarea value={config.script || ''} onChange={val => u('script', val)}
+            placeholder="Enter voiceover script..." rows={5} className={TEXTAREA} {...mp} />
         </Panel>
       )}
 
@@ -583,8 +578,8 @@ function VoiceoverForm({ config, u, wired }) {
       </Panel>
 
       <Panel title="Style Instructions">
-        <textarea value={config.style_instructions || ''} onChange={e => u('style_instructions', e.target.value)}
-          placeholder="e.g. Speak with dramatic tension, emphasize key points, pause before reveals..." rows={3} className={TEXTAREA} />
+        <MappableTextarea value={config.style_instructions || ''} onChange={val => u('style_instructions', val)}
+          placeholder="e.g. Speak with dramatic tension, emphasize key points, pause before reveals..." rows={3} className={TEXTAREA} {...mp} />
       </Panel>
     </div>
   );
@@ -641,12 +636,13 @@ function CaptionsForm({ config, u }) {
 
 // ── MusicForm ────────────────────────────────────────────────────────────────
 
-function MusicForm({ config, u }) {
+function MusicForm({ config, u, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   return (
     <div className="space-y-5">
       <Panel title="Mood" description="Describe the music mood (always instrumental)">
-        <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
-          placeholder="e.g. cinematic tension, lo-fi chill, upbeat electronic, dark ambient" rows={3} className={TEXTAREA} />
+        <MappableTextarea value={config.mood || ''} onChange={val => u('mood', val)}
+          placeholder="e.g. cinematic tension, lo-fi chill, upbeat electronic, dark ambient" rows={3} className={TEXTAREA} {...mp} />
       </Panel>
       <Panel title="Duration">
         <PillGroup options={['10','15','20','30','45','60','90'].map(d => ({ id: d, label: `${d}s` }))}
@@ -659,18 +655,20 @@ function MusicForm({ config, u }) {
 
 // ── AudioForm router ─────────────────────────────────────────────────────────
 
-function AudioForm({ config, u, nodeType, wired }) {
-  if (nodeType.id === 'voiceover') return <VoiceoverForm config={config} u={u} wired={wired} />;
+function AudioForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
+  if (nodeType.id === 'voiceover') return <VoiceoverForm config={config} u={u} wired={wired} {...mp} />;
   if (nodeType.id === 'captions') return <CaptionsForm config={config} u={u} />;
-  if (nodeType.id === 'music') return <MusicForm config={config} u={u} />;
-  return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
+  if (nodeType.id === 'music') return <MusicForm config={config} u={u} {...mp} />;
+  return <GenericForm config={config} u={u} schema={nodeType.configSchema} {...mp} />;
 }
 
 
 // ── ShortsCreateForm ─────────────────────────────────────────────────────────
 
-function ShortsCreateForm({ config, u, wired }) {
+function ShortsCreateForm({ config, u, wired, upstreamOutputs, flowVariables }) {
   const [showAllVoices, setShowAllVoices] = useState(false);
+  const mp = { upstreamOutputs, flowVariables };
   const featured = GEMINI_VOICES.filter(v => FEATURED_VOICES.includes(v.id));
   const remaining = GEMINI_VOICES.filter(v => !FEATURED_VOICES.includes(v.id));
   const selVoice = config.voice || 'Kore';
@@ -686,8 +684,8 @@ function ShortsCreateForm({ config, u, wired }) {
 
       {wired.has('topic') ? <WiredBanner portName="topic" /> : (
         <Panel title="Topic">
-          <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
-            placeholder="What should the short be about?" rows={3} className={TEXTAREA} />
+          <MappableTextarea value={config.topic || ''} onChange={val => u('topic', val)}
+            placeholder="What should the short be about?" rows={3} className={TEXTAREA} {...mp} />
         </Panel>
       )}
 
@@ -748,8 +746,8 @@ function ShortsCreateForm({ config, u, wired }) {
           <p className="text-xs text-slate-400 mt-1">1.15x recommended</p>
         </Panel>
         <Panel title="Voice Style Instructions">
-          <textarea value={config.voice_style_instructions || ''} onChange={e => u('voice_style_instructions', e.target.value)}
-            placeholder="e.g. Speak with dramatic tension..." rows={2} className={TEXTAREA} />
+          <MappableTextarea value={config.voice_style_instructions || ''} onChange={val => u('voice_style_instructions', val)}
+            placeholder="e.g. Speak with dramatic tension..." rows={2} className={TEXTAREA} {...mp} />
         </Panel>
       </div>
 
@@ -792,8 +790,8 @@ function ShortsCreateForm({ config, u, wired }) {
 
       {/* Music */}
       <Panel title="Background Music Mood" description="Leave empty for niche default. Always instrumental.">
-        <textarea value={config.music_mood || ''} onChange={e => u('music_mood', e.target.value)}
-          placeholder="e.g. dark ambient, cinematic tension, upbeat electronic" rows={2} className={TEXTAREA} />
+        <MappableTextarea value={config.music_mood || ''} onChange={val => u('music_mood', val)}
+          placeholder="e.g. dark ambient, cinematic tension, upbeat electronic" rows={2} className={TEXTAREA} {...mp} />
       </Panel>
 
       {/* Brand & LoRA */}
@@ -810,18 +808,19 @@ function ShortsCreateForm({ config, u, wired }) {
 
 // ── StoryboardCreateForm ─────────────────────────────────────────────────────
 
-function StoryboardCreateForm({ config, u, wired }) {
+function StoryboardCreateForm({ config, u, wired, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   return (
     <div className="space-y-5">
       <Panel title="Name">
-        <input type="text" value={config.name || ''} onChange={e => u('name', e.target.value)}
-          placeholder="Storyboard name..." className={INPUT} />
+        <MappableInput value={config.name || ''} onChange={val => u('name', val)}
+          placeholder="Storyboard name..." className={INPUT} {...mp} />
       </Panel>
 
       {wired.has('topic') ? <WiredBanner portName="topic" /> : (
         <Panel title="Brief / Description" description="Describe the video you want to create">
-          <textarea value={config.description || ''} onChange={e => u('description', e.target.value)}
-            placeholder="Narrative, purpose, key scenes, visual direction..." rows={4} className={TEXTAREA} />
+          <MappableTextarea value={config.description || ''} onChange={val => u('description', val)}
+            placeholder="Narrative, purpose, key scenes, visual direction..." rows={4} className={TEXTAREA} {...mp} />
         </Panel>
       )}
 
@@ -838,8 +837,8 @@ function StoryboardCreateForm({ config, u, wired }) {
           </select>
         </Panel>
         <Panel title="Mood / Atmosphere">
-          <textarea value={config.mood || ''} onChange={e => u('mood', e.target.value)}
-            placeholder="e.g. cinematic, mysterious" rows={2} className={TEXTAREA} />
+          <MappableTextarea value={config.mood || ''} onChange={val => u('mood', val)}
+            placeholder="e.g. cinematic, mysterious" rows={2} className={TEXTAREA} {...mp} />
         </Panel>
       </div>
 
@@ -864,8 +863,8 @@ function StoryboardCreateForm({ config, u, wired }) {
       </Panel>
 
       <CollapsiblePanel title="Characters">
-        <textarea value={config.characters || ''} onChange={e => u('characters', e.target.value)}
-          placeholder="Describe recurring characters — name, appearance, clothing, personality..." rows={3} className={TEXTAREA} />
+        <MappableTextarea value={config.characters || ''} onChange={val => u('characters', val)}
+          placeholder="Describe recurring characters — name, appearance, clothing, personality..." rows={3} className={TEXTAREA} {...mp} />
         <p className="text-xs text-slate-400 mt-1">Used for consistent character rendering across scenes</p>
       </CollapsiblePanel>
     </div>
@@ -875,7 +874,8 @@ function StoryboardCreateForm({ config, u, wired }) {
 
 // ── CarouselCreateForm ───────────────────────────────────────────────────────
 
-function CarouselCreateForm({ config, u }) {
+function CarouselCreateForm({ config, u, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   return (
     <div className="space-y-5">
       <Panel title="Platform">
@@ -891,8 +891,8 @@ function CarouselCreateForm({ config, u }) {
       </Panel>
 
       <Panel title="Content Topic">
-        <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
-          placeholder="What should the carousel be about?" rows={3} className={TEXTAREA} />
+        <MappableTextarea value={config.topic || ''} onChange={val => u('topic', val)}
+          placeholder="What should the carousel be about?" rows={3} className={TEXTAREA} {...mp} />
       </Panel>
 
       <Panel title="Carousel Style">
@@ -913,7 +913,8 @@ function CarouselCreateForm({ config, u }) {
 
 // ── AdsGenerateForm ──────────────────────────────────────────────────────────
 
-function AdsGenerateForm({ config, u }) {
+function AdsGenerateForm({ config, u, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   return (
     <div className="space-y-5">
       <Panel title="Platform">
@@ -932,18 +933,18 @@ function AdsGenerateForm({ config, u }) {
 
       <div className="grid grid-cols-2 gap-5">
         <Panel title="Product Description">
-          <textarea value={config.product_description || ''} onChange={e => u('product_description', e.target.value)}
-            placeholder="What are you advertising?" rows={3} className={TEXTAREA} />
+          <MappableTextarea value={config.product_description || ''} onChange={val => u('product_description', val)}
+            placeholder="What are you advertising?" rows={3} className={TEXTAREA} {...mp} />
         </Panel>
         <Panel title="Target Audience">
-          <textarea value={config.target_audience || ''} onChange={e => u('target_audience', e.target.value)}
-            placeholder="e.g. SaaS founders, 25-45, US/UK" rows={3} className={TEXTAREA} />
+          <MappableTextarea value={config.target_audience || ''} onChange={val => u('target_audience', val)}
+            placeholder="e.g. SaaS founders, 25-45, US/UK" rows={3} className={TEXTAREA} {...mp} />
         </Panel>
       </div>
 
       <Panel title="Landing URL">
-        <input type="text" value={config.landing_url || ''} onChange={e => u('landing_url', e.target.value)}
-          placeholder="https://..." className={INPUT} />
+        <MappableInput value={config.landing_url || ''} onChange={val => u('landing_url', val)}
+          placeholder="https://..." className={INPUT} {...mp} />
       </Panel>
 
       <Panel title="Visual Style">
@@ -958,23 +959,185 @@ function AdsGenerateForm({ config, u }) {
 }
 
 
+// ── LlmCallForm ─────────────────────────────────────────────────────────────
+
+function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
+  const provider = getLlmProvider(config.model);
+
+  return (
+    <div className="space-y-5">
+      {/* Model */}
+      <Panel title="Model" description="Choose an LLM provider and model. Prices shown as input/output per 1M tokens.">
+        <select value={config.model || 'gpt-4.1-mini'} onChange={e => u('model', e.target.value)} className={SELECT}>
+          <optgroup label="OpenAI">
+            {LLM_MODELS.filter(m => m.provider === 'openai').map(m => (
+              <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Anthropic / Claude">
+            {LLM_MODELS.filter(m => m.provider === 'anthropic').map(m => (
+              <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Google Gemini">
+            {LLM_MODELS.filter(m => m.provider === 'google').map(m => (
+              <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
+            ))}
+          </optgroup>
+        </select>
+      </Panel>
+
+      {/* System Prompt */}
+      {wired.has('system_prompt') ? <WiredBanner portName="system_prompt" /> : (
+        <Panel title="System Prompt" description="Instructions that define the AI's behavior and persona.">
+          <MappableTextarea value={config.system_prompt || ''} onChange={val => u('system_prompt', val)}
+            placeholder="You are a helpful assistant that..." rows={4} className={TEXTAREA} {...mp} />
+        </Panel>
+      )}
+
+      {/* User Prompt */}
+      {wired.has('prompt') ? <WiredBanner portName="prompt" /> : (
+        <Panel title="User Prompt" description="The message to send to the LLM.">
+          <MappableTextarea value={config.prompt || ''} onChange={val => u('prompt', val)}
+            placeholder="Write a summary of..." rows={4} className={TEXTAREA} {...mp} />
+        </Panel>
+      )}
+
+      {/* Context */}
+      {wired.has('context') ? <WiredBanner portName="context" /> : (
+        <Panel title="Context Input">
+          <p className="text-sm text-slate-500">Connect an upstream node to the <span className="font-medium text-slate-700">context</span> input port to inject data into the prompt. Context is prepended automatically.</p>
+        </Panel>
+      )}
+
+      {/* Common Settings */}
+      <Panel title="Generation Settings">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Temperature</Label>
+            <input type="number" min="0" max="2" step="0.1" value={config.temperature ?? '0.7'}
+              onChange={e => u('temperature', e.target.value)} className={INPUT} />
+            <p className="text-[11px] text-slate-400 mt-1">0 = deterministic, 2 = creative</p>
+          </div>
+          <div>
+            <Label>Max Tokens</Label>
+            <input type="number" min="1" max="128000" value={config.max_tokens ?? '4096'}
+              onChange={e => u('max_tokens', e.target.value)} className={INPUT} />
+            <p className="text-[11px] text-slate-400 mt-1">Max output length</p>
+          </div>
+          <div>
+            <Label>Top P</Label>
+            <input type="number" min="0" max="1" step="0.05" value={config.top_p ?? ''}
+              onChange={e => u('top_p', e.target.value)} className={INPUT} placeholder="1.0" />
+            <p className="text-[11px] text-slate-400 mt-1">Nucleus sampling</p>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Provider-specific Advanced Settings */}
+      <CollapsiblePanel title="Advanced Settings">
+        <div className="space-y-4">
+          {provider === 'openai' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Frequency Penalty</Label>
+                  <input type="number" min="-2" max="2" step="0.1" value={config.frequency_penalty ?? ''}
+                    onChange={e => u('frequency_penalty', e.target.value)} className={INPUT} placeholder="0" />
+                  <p className="text-[11px] text-slate-400 mt-1">-2 to 2. Penalizes repeated tokens.</p>
+                </div>
+                <div>
+                  <Label>Presence Penalty</Label>
+                  <input type="number" min="-2" max="2" step="0.1" value={config.presence_penalty ?? ''}
+                    onChange={e => u('presence_penalty', e.target.value)} className={INPUT} placeholder="0" />
+                  <p className="text-[11px] text-slate-400 mt-1">-2 to 2. Encourages new topics.</p>
+                </div>
+              </div>
+              <div>
+                <Label>Response Format</Label>
+                <PillGroup options={[{ id: 'text', label: 'Text' }, { id: 'json_object', label: 'JSON Object' }]}
+                  value={config.response_format || 'text'} onChange={v => u('response_format', v)} columns={2} />
+                <p className="text-[11px] text-slate-400 mt-1">JSON mode forces valid JSON output. Mention JSON in your prompt.</p>
+              </div>
+              <div>
+                <Label>Seed</Label>
+                <input type="number" value={config.seed ?? ''} onChange={e => u('seed', e.target.value)}
+                  className={INPUT} placeholder="Optional — for reproducible outputs" />
+              </div>
+            </>
+          )}
+
+          {provider === 'anthropic' && (
+            <>
+              <div>
+                <Label>Top K</Label>
+                <input type="number" min="1" value={config.top_k ?? ''} onChange={e => u('top_k', e.target.value)}
+                  className={INPUT} placeholder="Optional" />
+                <p className="text-[11px] text-slate-400 mt-1">Only sample from the top K most likely tokens.</p>
+              </div>
+              <div>
+                <Label>Stop Sequences</Label>
+                <MappableInput value={config.stop_sequences || ''} onChange={val => u('stop_sequences', val)}
+                  placeholder="Comma-separated, e.g.: END, STOP" className={INPUT} {...mp} />
+                <p className="text-[11px] text-slate-400 mt-1">Generation stops when any sequence is produced.</p>
+              </div>
+            </>
+          )}
+
+          {provider === 'google' && (
+            <>
+              <div>
+                <Label>Top K</Label>
+                <input type="number" min="1" value={config.top_k ?? ''} onChange={e => u('top_k', e.target.value)}
+                  className={INPUT} placeholder="Optional" />
+                <p className="text-[11px] text-slate-400 mt-1">Only sample from the top K most likely tokens.</p>
+              </div>
+              <div>
+                <Label>Response MIME Type</Label>
+                <PillGroup options={[{ id: 'text/plain', label: 'Text' }, { id: 'application/json', label: 'JSON' }]}
+                  value={config.responseMimeType || 'text/plain'} onChange={v => u('responseMimeType', v)} columns={2} />
+                <p className="text-[11px] text-slate-400 mt-1">JSON mode forces structured JSON output.</p>
+              </div>
+              <div>
+                <Label>Stop Sequences</Label>
+                <MappableInput value={config.stop_sequences || ''} onChange={val => u('stop_sequences', val)}
+                  placeholder="Comma-separated, e.g.: END, STOP" className={INPUT} {...mp} />
+              </div>
+            </>
+          )}
+
+          {provider === 'openai' && config.model === 'o3-mini' && (
+            <div className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+              <p className="text-sm text-amber-700">Reasoning model — temperature and top_p are ignored. Only max_tokens applies.</p>
+            </div>
+          )}
+        </div>
+      </CollapsiblePanel>
+    </div>
+  );
+}
+
+
 // ── ContentForm router ───────────────────────────────────────────────────────
 
-function ContentForm({ config, u, nodeType, wired }) {
+function ContentForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables }) {
   const nodeId = nodeType.id;
+  const mp = { upstreamOutputs, flowVariables };
 
-  if (nodeId === 'shorts-create') return <ShortsCreateForm config={config} u={u} wired={wired} />;
-  if (nodeId === 'storyboard-create') return <StoryboardCreateForm config={config} u={u} wired={wired} />;
-  if (nodeId === 'carousel-create') return <CarouselCreateForm config={config} u={u} />;
-  if (nodeId === 'ads-generate') return <AdsGenerateForm config={config} u={u} />;
+  if (nodeId === 'llm-call') return <LlmCallForm config={config} u={u} wired={wired} {...mp} />;
+  if (nodeId === 'shorts-create') return <ShortsCreateForm config={config} u={u} wired={wired} {...mp} />;
+  if (nodeId === 'storyboard-create') return <StoryboardCreateForm config={config} u={u} wired={wired} {...mp} />;
+  if (nodeId === 'carousel-create') return <CarouselCreateForm config={config} u={u} {...mp} />;
+  if (nodeId === 'ads-generate') return <AdsGenerateForm config={config} u={u} {...mp} />;
 
   if (nodeId === 'script-generator') {
     return (
       <div className="space-y-5">
         {wired.has('topic') ? <WiredBanner portName="topic" /> : (
           <Panel title="Topic">
-            <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
-              placeholder="What should the script be about?" rows={3} className={TEXTAREA} />
+            <MappableTextarea value={config.topic || ''} onChange={val => u('topic', val)}
+              placeholder="What should the script be about?" rows={3} className={TEXTAREA} {...mp} />
           </Panel>
         )}
         <div className="grid grid-cols-3 gap-5">
@@ -1004,8 +1167,8 @@ function ContentForm({ config, u, nodeType, wired }) {
       <div className="space-y-5">
         {wired.has('text') ? <WiredBanner portName="text" /> : (
           <Panel title="Input Text">
-            <textarea value={config.input_text || ''} onChange={e => u('input_text', e.target.value)}
-              placeholder="Text to transform..." rows={4} className={TEXTAREA} />
+            <MappableTextarea value={config.input_text || ''} onChange={val => u('input_text', val)}
+              placeholder="Text to transform..." rows={4} className={TEXTAREA} {...mp} />
           </Panel>
         )}
         <Panel title="Operation">
@@ -1017,8 +1180,8 @@ function ContentForm({ config, u, nodeType, wired }) {
           {(config.transform === 'add_prefix' || config.transform === 'add_suffix') && (
             <div className="mt-3">
               <Label>Value</Label>
-              <input type="text" value={config.value || ''} onChange={e => u('value', e.target.value)}
-                placeholder={config.transform === 'add_prefix' ? 'Text to prepend...' : 'Text to append...'} className={INPUT} />
+              <MappableInput value={config.value || ''} onChange={val => u('value', val)}
+                placeholder={config.transform === 'add_prefix' ? 'Text to prepend...' : 'Text to append...'} className={INPUT} {...mp} />
             </div>
           )}
         </Panel>
@@ -1039,8 +1202,8 @@ function ContentForm({ config, u, nodeType, wired }) {
       <div className="space-y-5">
         {wired.has('text') ? <WiredBanner portName="text" /> : (
           <Panel title="Post Topic">
-            <textarea value={config.topic || ''} onChange={e => u('topic', e.target.value)}
-              placeholder="What should the post be about?" rows={3} className={TEXTAREA} />
+            <MappableTextarea value={config.topic || ''} onChange={val => u('topic', val)}
+              placeholder="What should the post be about?" rows={3} className={TEXTAREA} {...mp} />
           </Panel>
         )}
         <Panel title="Writing Style">
@@ -1057,13 +1220,14 @@ function ContentForm({ config, u, nodeType, wired }) {
     );
   }
 
-  return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
+  return <GenericForm config={config} u={u} schema={nodeType.configSchema} {...mp} />;
 }
 
 
 // ── PublishForm ───────────────────────────────────────────────────────────────
 
-function PublishForm({ config, u, nodeType, connections, wired }) {
+function PublishForm({ config, u, nodeType, connections, wired, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   const platformMap = { 'youtube-upload': 'youtube', 'tiktok-publish': 'tiktok', 'instagram-post': 'instagram', 'facebook-post': 'facebook' };
   const platform = platformMap[nodeType.id];
   const conn = connections?.find(c => c.platform === platform);
@@ -1099,8 +1263,8 @@ function PublishForm({ config, u, nodeType, connections, wired }) {
           {wired.has('video') && <WiredBanner portName="video" />}
           <div className="grid grid-cols-2 gap-5">
             <Panel title="Title">
-              <input type="text" value={config.title || ''} onChange={e => u('title', e.target.value)}
-                placeholder="Video title..." className={INPUT} />
+              <MappableInput value={config.title || ''} onChange={val => u('title', val)}
+                placeholder="Video title..." className={INPUT} {...mp} />
             </Panel>
             <Panel title="Privacy">
               <PillGroup options={[{ id: 'public', label: 'Public' }, { id: 'unlisted', label: 'Unlisted' }, { id: 'private', label: 'Private' }]}
@@ -1108,12 +1272,12 @@ function PublishForm({ config, u, nodeType, connections, wired }) {
             </Panel>
           </div>
           <Panel title="Description">
-            <textarea value={config.description || ''} onChange={e => u('description', e.target.value)}
-              placeholder="Video description..." rows={3} className={TEXTAREA} />
+            <MappableTextarea value={config.description || ''} onChange={val => u('description', val)}
+              placeholder="Video description..." rows={3} className={TEXTAREA} {...mp} />
           </Panel>
           <Panel title="Tags">
-            <input type="text" value={config.tags || ''} onChange={e => u('tags', e.target.value)}
-              placeholder="tag1, tag2, tag3" className={INPUT} />
+            <MappableInput value={config.tags || ''} onChange={val => u('tags', val)}
+              placeholder="tag1, tag2, tag3" className={INPUT} {...mp} />
             <p className="text-xs text-slate-400 mt-1">Comma-separated</p>
           </Panel>
         </>
@@ -1137,9 +1301,10 @@ function PublishForm({ config, u, nodeType, connections, wired }) {
 
 // ── UtilityForm ──────────────────────────────────────────────────────────────
 
-function UtilityForm({ config, u, nodeType, wired }) {
+function UtilityForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables }) {
   const nodeId = nodeType.id;
   const schema = nodeType.configSchema || {};
+  const mp = { upstreamOutputs, flowVariables };
 
   if (nodeId === 'delay') {
     return (
@@ -1159,8 +1324,8 @@ function UtilityForm({ config, u, nodeType, wired }) {
           {(config.condition === 'contains' || config.condition === 'equals') && (
             <div className="mt-3">
               <Label>Compare Value</Label>
-              <input type="text" value={config.compare_value || ''} onChange={e => u('compare_value', e.target.value)}
-                placeholder="Value to compare against..." className={INPUT} />
+              <MappableInput value={config.compare_value || ''} onChange={val => u('compare_value', val)}
+                placeholder="Value to compare against..." className={INPUT} {...mp} />
             </div>
           )}
         </Panel>
@@ -1173,8 +1338,8 @@ function UtilityForm({ config, u, nodeType, wired }) {
       <div className="space-y-5">
         {wired.has('query') ? <WiredBanner portName="query" /> : (
           <Panel title="Search Query">
-            <textarea value={config.query || ''} onChange={e => u('query', e.target.value)}
-              placeholder="What images are you looking for?" rows={2} className={TEXTAREA} />
+            <MappableTextarea value={config.query || ''} onChange={val => u('query', val)}
+              placeholder="What images are you looking for?" rows={2} className={TEXTAREA} {...mp} />
           </Panel>
         )}
         <Panel title="Result Count">
@@ -1234,14 +1399,15 @@ function UtilityForm({ config, u, nodeType, wired }) {
     );
   }
 
-  return <GenericForm config={config} u={u} schema={schema} />;
+  return <GenericForm config={config} u={u} schema={schema} {...mp} />;
 }
 
 
 // ── InputForm ────────────────────────────────────────────────────────────────
 
-function InputForm({ config, u, nodeType }) {
+function InputForm({ config, u, nodeType, upstreamOutputs, flowVariables }) {
   const nodeId = nodeType?.id;
+  const mp = { upstreamOutputs, flowVariables };
 
   // Style Preset node — pick from StyleGrid, stores both key and promptText
   if (nodeId === 'style-preset') {
@@ -1258,12 +1424,12 @@ function InputForm({ config, u, nodeType }) {
     return (
       <div className="space-y-5">
         <Panel title="Prompt Template" description="Write a reusable prompt template that outputs to downstream nodes">
-          <textarea value={config.template || ''} onChange={e => u('template', e.target.value)}
-            placeholder="A cinematic wide shot of a character standing on a cliff overlooking a futuristic city..." rows={6} className={TEXTAREA} />
+          <MappableTextarea value={config.template || ''} onChange={val => u('template', val)}
+            placeholder="A cinematic wide shot of a character standing on a cliff overlooking a futuristic city..." rows={6} className={TEXTAREA} {...mp} />
         </Panel>
         <Panel title="Display Label">
-          <input type="text" value={config.label || ''} onChange={e => u('label', e.target.value)}
-            placeholder="e.g. Hero Shot, Product Close-up..." className={INPUT} />
+          <MappableInput value={config.label || ''} onChange={val => u('label', val)}
+            placeholder="e.g. Hero Shot, Product Close-up..." className={INPUT} {...mp} />
           <p className="text-xs text-slate-400 mt-1">Shown as the node label on the canvas</p>
         </Panel>
       </div>
@@ -1283,16 +1449,16 @@ function InputForm({ config, u, nodeType }) {
       </Panel>
       <Panel title="Default Value">
         {inputType === 'string' ? (
-          <textarea value={config.defaultValue || ''} onChange={e => u('defaultValue', e.target.value)}
-            placeholder="Enter default text..." rows={5} className={TEXTAREA} />
+          <MappableTextarea value={config.defaultValue || ''} onChange={val => u('defaultValue', val)}
+            placeholder="Enter default text..." rows={5} className={TEXTAREA} {...mp} />
         ) : (
-          <input type="text" value={config.defaultValue || ''} onChange={e => u('defaultValue', e.target.value)}
-            placeholder={`Paste ${inputType} URL...`} className={INPUT} />
+          <MappableInput value={config.defaultValue || ''} onChange={val => u('defaultValue', val)}
+            placeholder={`Paste ${inputType} URL...`} className={INPUT} {...mp} />
         )}
       </Panel>
       <Panel title="Display Label">
-        <input type="text" value={config.label || ''} onChange={e => u('label', e.target.value)}
-          placeholder="e.g. Topic, Reference Image..." className={INPUT} />
+        <MappableInput value={config.label || ''} onChange={val => u('label', val)}
+          placeholder="e.g. Topic, Reference Image..." className={INPUT} {...mp} />
         <p className="text-xs text-slate-400 mt-1">Shown as the node label on the canvas</p>
       </Panel>
     </div>
@@ -1401,7 +1567,8 @@ function VideoStylePresetForm({ config, u }) {
 
 // ── Generic fallback ─────────────────────────────────────────────────────────
 
-function GenericForm({ config, u, schema }) {
+function GenericForm({ config, u, schema, upstreamOutputs, flowVariables }) {
+  const mp = { upstreamOutputs, flowVariables };
   const TEXTAREA_KEYS = ['prompt', 'description', 'text', 'script', 'topic', 'instructions', 'style'];
   if (!schema || Object.keys(schema).length === 0) {
     return (
@@ -1431,8 +1598,8 @@ function GenericForm({ config, u, schema }) {
         if (TEXTAREA_KEYS.some(k => key.toLowerCase().includes(k))) {
           return (
             <Panel key={key} title={label}>
-              <textarea value={value} onChange={e => u(key, e.target.value)}
-                placeholder={`Enter ${label.toLowerCase()}...`} rows={3} className={TEXTAREA} />
+              <MappableTextarea value={value} onChange={val => u(key, val)}
+                placeholder={`Enter ${label.toLowerCase()}...`} rows={3} className={TEXTAREA} {...mp} />
               {fs.description && <p className="text-xs text-slate-400 mt-1">{fs.description}</p>}
             </Panel>
           );
@@ -1440,8 +1607,8 @@ function GenericForm({ config, u, schema }) {
 
         return (
           <Panel key={key} title={label}>
-            <input type="text" value={value} onChange={e => u(key, e.target.value)}
-              placeholder={`Enter ${label.toLowerCase()}...`} className={INPUT} />
+            <MappableInput value={value} onChange={val => u(key, val)}
+              placeholder={`Enter ${label.toLowerCase()}...`} className={INPUT} {...mp} />
             {fs.description && <p className="text-xs text-slate-400 mt-1">{fs.description}</p>}
           </Panel>
         );
@@ -1474,12 +1641,19 @@ export default function NodeConfigModal({
     return set;
   }, [edges, node]);
 
+  // Compute upstream node outputs for the slash-command data mapper
+  const upstreamOutputs = useMemo(() => {
+    if (!node || !nodes || !edges) return [];
+    return buildOutputMap(getUpstreamNodes(node.id, edges, nodes));
+  }, [node, nodes, edges]);
+
   if (!node || !nodeType) return null;
 
   const IconComp = CATEGORY_ICONS[nodeType.category] || Settings;
+  const mp = { upstreamOutputs, flowVariables }; // mapping props shorthand
 
   const renderForm = () => {
-    const props = { config, u, nodeType, wired, connections };
+    const props = { config, u, nodeType, wired, connections, ...mp };
     switch (nodeType.category) {
       case 'image': return <ImageForm {...props} />;
       case 'video': return <VideoForm {...props} />;
@@ -1487,8 +1661,8 @@ export default function NodeConfigModal({
       case 'content': return <ContentForm {...props} />;
       case 'publish': return <PublishForm {...props} />;
       case 'utility': return <UtilityForm {...props} />;
-      case 'input': return <InputForm config={config} u={u} nodeType={nodeType} />;
-      default: return <GenericForm config={config} u={u} schema={nodeType.configSchema} />;
+      case 'input': return <InputForm config={config} u={u} nodeType={nodeType} {...mp} />;
+      default: return <GenericForm config={config} u={u} schema={nodeType.configSchema} {...mp} />;
     }
   };
 

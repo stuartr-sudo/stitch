@@ -20,7 +20,7 @@ export async function getUserKeys(userId, userEmail) {
 
   const { data, error } = await supabase
     .from('user_api_keys')
-    .select('fal_key, wavespeed_key, openai_key, elevenlabs_key, huggingface_key')
+    .select('fal_key, wavespeed_key, openai_key, elevenlabs_key, huggingface_key, anthropic_key, google_ai_key')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -41,6 +41,8 @@ export async function getUserKeys(userId, userEmail) {
     openaiKey:      envFallback(data?.openai_key,      'OPENAI_API_KEY'),
     elevenlabsKey:  envFallback(data?.elevenlabs_key,  'ELEVENLABS_API_KEY'),
     huggingfaceKey: envFallback(data?.huggingface_key, 'HUGGINGFACE_API_KEY'),
+    anthropicKey:   envFallback(data?.anthropic_key,   'ANTHROPIC_API_KEY'),
+    googleAiKey:    envFallback(data?.google_ai_key,   'GOOGLE_AI_API_KEY'),
   };
 
   console.log('[getUserKeys] isOwner:', isOwner, '| email:', userEmail, '| keys found:', {

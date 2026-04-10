@@ -107,6 +107,31 @@ export class FlowExecutor {
   }
 
   /**
+   * Resolve {{@node_id.output_port}} references in config values.
+   * Replaces references with actual output values from completed upstream nodes.
+   * Runs AFTER resolveVariables() — the @ prefix ensures no collisions.
+   */
+  resolveNodeReferences(config) {
+    const resolved = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (typeof value === 'string' && value.includes('{{@')) {
+        resolved[key] = value.replace(/\{\{@(\w+)\.(\w+)\}\}/g, (match, refNodeId, outputPort) => {
+          const sourceState = this.stepStates[refNodeId];
+          if (sourceState?.status === 'completed' && sourceState.output) {
+            const val = sourceState.output[outputPort];
+            if (val == null) return match;
+            return typeof val === 'object' ? JSON.stringify(val) : String(val);
+          }
+          return match; // Node hasn't completed yet — keep reference
+        });
+      } else {
+        resolved[key] = value;
+      }
+    }
+    return resolved;
+  }
+
+  /**
    * Queue-based DB update — serializes writes so concurrent node completions
    * don't race on step_states (last-write-wins would lose intermediate state).
    */
@@ -147,8 +172,9 @@ export class FlowExecutor {
     };
 
     const errorHandling = node.config?.errorHandling || 'stop';
-    // Resolve {{variable}} patterns in config values
-    const resolvedConfig = this.resolveVariables(node.config || {});
+    // Resolve {{variable}} patterns then {{@node.output}} references in config values
+    const variableResolved = this.resolveVariables(node.config || {});
+    const resolvedConfig = this.resolveNodeReferences(variableResolved);
 
     // ── DRY RUN: skip actual execution, return mock output ──
     if (this.dryRun) {
