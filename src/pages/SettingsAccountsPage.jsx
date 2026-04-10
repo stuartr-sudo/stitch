@@ -59,7 +59,15 @@ export default function SettingsAccountsPage() {
     }
 
     try {
-      const res = await apiFetch(platform.authUrl);
+      let url = platform.authUrl;
+      // YouTube auth requires brand_username — fetch first brand kit if available
+      if (platform.key === 'youtube') {
+        const brandRes = await apiFetch('/api/brand/kit').then(r => r.json()).catch(() => null);
+        const brand = brandRes?.brands?.[0] || brandRes?.brand;
+        const username = brand?.brand_username || 'default';
+        url = `${platform.authUrl}?brand_username=${encodeURIComponent(username)}`;
+      }
+      const res = await apiFetch(url);
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;

@@ -98,7 +98,7 @@ export const OAUTH_PLATFORMS = [
     key: 'youtube',
     label: 'YouTube',
     color: 'bg-red-500',
-    authUrl: null, // YouTube uses existing brand-based flow
+    authUrl: '/api/youtube/auth',
     description: 'Publish Shorts and videos',
   },
   {
