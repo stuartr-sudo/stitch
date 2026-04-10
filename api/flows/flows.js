@@ -48,6 +48,60 @@ export default async function handler(req, res) {
       return res.json({ nodeTypes: getNodeTypesByCategory() });
     }
 
+    // POST /api/flows/test-node — execute a single node with provided config
+    // MUST come before /:id route
+    if (pathParts[0] === 'test-node' && method === 'POST') {
+      const { nodeTypeId, config: nodeConfig } = req.body || {};
+      if (nodeTypeId !== 'llm-call') {
+        return res.status(400).json({ error: 'Per-node test only supported for llm-call nodes' });
+      }
+      if (!nodeConfig?.prompt && !nodeConfig?.system_prompt) {
+        return res.status(400).json({ error: 'A prompt is required to test the node' });
+      }
+
+      const keys = await getUserKeys(userId, req.user?.email);
+      const { callLlm } = await import('../lib/llmProvider.js');
+      const { logCost } = await import('../lib/costLogger.js');
+
+      const model = nodeConfig.model || 'gpt-4.1-mini';
+      const hasSchema = Array.isArray(nodeConfig.output_schema) && nodeConfig.output_schema.length > 0;
+
+      try {
+        const result = await callLlm(model, nodeConfig.system_prompt || '', nodeConfig.prompt || '', {
+          temperature: nodeConfig.temperature ? parseFloat(nodeConfig.temperature) : 0.7,
+          max_tokens: nodeConfig.max_tokens ? parseInt(nodeConfig.max_tokens) : 4096,
+          top_p: nodeConfig.top_p ? parseFloat(nodeConfig.top_p) : undefined,
+          frequency_penalty: nodeConfig.frequency_penalty ? parseFloat(nodeConfig.frequency_penalty) : undefined,
+          presence_penalty: nodeConfig.presence_penalty ? parseFloat(nodeConfig.presence_penalty) : undefined,
+          response_format: (!hasSchema && nodeConfig.response_format !== 'text') ? nodeConfig.response_format : undefined,
+          seed: nodeConfig.seed ? parseInt(nodeConfig.seed) : undefined,
+          top_k: nodeConfig.top_k ? parseInt(nodeConfig.top_k) : undefined,
+          stop_sequences: nodeConfig.stop_sequences ? nodeConfig.stop_sequences.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+          responseMimeType: (!hasSchema && nodeConfig.responseMimeType !== 'text/plain') ? nodeConfig.responseMimeType : undefined,
+          output_schema: hasSchema ? nodeConfig.output_schema : undefined,
+        }, keys);
+
+        let testOutput;
+        if (hasSchema) {
+          const parsed = JSON.parse(result.text);
+          testOutput = {};
+          for (const field of nodeConfig.output_schema) {
+            testOutput[field.key] = parsed[field.key] ?? null;
+          }
+          testOutput.usage = { model, input_tokens: result.usage.input_tokens, output_tokens: result.usage.output_tokens };
+        } else {
+          testOutput = { response: result.text, usage: { model, input_tokens: result.usage.input_tokens, output_tokens: result.usage.output_tokens } };
+        }
+
+        const category = model.startsWith('claude-') ? 'anthropic' : model.startsWith('gemini-') ? 'google' : 'openai';
+        await logCost({ username: req.user?.email, category, operation: 'llm-call-test', model, input_tokens: result.usage.input_tokens, output_tokens: result.usage.output_tokens });
+
+        return res.json({ success: true, output: testOutput, raw: result.text });
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+    }
+
     // GET /api/flows/templates — list pre-built templates
     // MUST come before /:id route
     if (pathParts[0] === 'templates' && method === 'GET') {

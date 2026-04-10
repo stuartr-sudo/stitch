@@ -11,6 +11,7 @@ import ExecutionLog from '@/components/flows/ExecutionLog';
 import PreflightCheck from '@/components/flows/PreflightCheck';
 import FlowVariables from '@/components/flows/FlowVariables';
 import FlowRunnerForm from '@/components/flows/FlowRunnerForm';
+import { getEffectiveOutputs } from '@/lib/flowGraphUtils';
 
 export default function FlowBuilderPage() {
   const { id, executionId } = useParams();
@@ -140,7 +141,7 @@ export default function FlowBuilderPage() {
     const sourceNode = nodes.find(n => n.id === params.source);
     const targetNode = nodes.find(n => n.id === params.target);
     if (sourceNode?.data?.nodeType && targetNode?.data?.nodeType) {
-      const sourcePort = sourceNode.data.nodeType.outputs?.find(o => o.id === params.sourceHandle);
+      const sourcePort = getEffectiveOutputs(sourceNode).find(o => o.id === params.sourceHandle);
       const targetPort = targetNode.data.nodeType.inputs?.find(i => i.id === params.targetHandle);
       if (sourcePort && targetPort) {
         // string is universal — any type can connect to string. Otherwise must match.

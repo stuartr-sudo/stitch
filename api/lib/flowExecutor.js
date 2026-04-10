@@ -179,12 +179,22 @@ export class FlowExecutor {
     // ── DRY RUN: skip actual execution, return mock output ──
     if (this.dryRun) {
       const mockOutput = {};
-      for (const out of (nodeType.outputs || [])) {
-        if (out.type === 'image') mockOutput[out.id] = '[DRY RUN] image placeholder';
-        else if (out.type === 'video') mockOutput[out.id] = '[DRY RUN] video placeholder';
-        else if (out.type === 'audio') mockOutput[out.id] = '[DRY RUN] audio placeholder';
-        else if (out.type === 'json') mockOutput[out.id] = { _dryRun: true, resolvedInputs: Object.keys(inputs), resolvedConfig: Object.keys(resolvedConfig).filter(k => k !== 'errorHandling') };
-        else mockOutput[out.id] = `[DRY RUN] Would produce ${out.type}: inputs=[${Object.keys(inputs).join(',')}], config=[${Object.keys(resolvedConfig).filter(k => k !== 'errorHandling').join(',')}]`;
+      // Dynamic schema outputs (structured output mode)
+      const outputSchema = resolvedConfig.output_schema;
+      if (Array.isArray(outputSchema) && outputSchema.length > 0) {
+        for (const field of outputSchema) {
+          mockOutput[field.key] = `[DRY RUN] ${field.type}: ${field.description || field.key}`;
+        }
+        mockOutput.usage = { _dryRun: true };
+      } else {
+        // Standard static outputs from node type definition
+        for (const out of (nodeType.outputs || [])) {
+          if (out.type === 'image') mockOutput[out.id] = '[DRY RUN] image placeholder';
+          else if (out.type === 'video') mockOutput[out.id] = '[DRY RUN] video placeholder';
+          else if (out.type === 'audio') mockOutput[out.id] = '[DRY RUN] audio placeholder';
+          else if (out.type === 'json') mockOutput[out.id] = { _dryRun: true, resolvedInputs: Object.keys(inputs), resolvedConfig: Object.keys(resolvedConfig).filter(k => k !== 'errorHandling') };
+          else mockOutput[out.id] = `[DRY RUN] Would produce ${out.type}: inputs=[${Object.keys(inputs).join(',')}], config=[${Object.keys(resolvedConfig).filter(k => k !== 'errorHandling').join(',')}]`;
+        }
       }
       this.stepStates[node.id] = {
         status: 'completed',

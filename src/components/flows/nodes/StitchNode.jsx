@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { getActionableError } from '@/lib/flowErrorMessages';
+import { getEffectiveOutputs } from '@/lib/flowGraphUtils';
 
 // Type-based port colors
 const PORT_COLORS = {
@@ -124,6 +125,7 @@ function NodePreviewArea({ stepState }) {
 
 function StitchNode({ data, selected }) {
   const { nodeType, config, stepState, onDelete } = data;
+  const effectiveOutputs = getEffectiveOutputs({ data });
   const style = CATEGORY_STYLES[nodeType.category] || CATEGORY_STYLES.utility;
   const statusStyle = stepState ? STATUS_STYLES[stepState.status] : null;
   const isRunning = stepState?.status === 'running';
@@ -237,10 +239,10 @@ function StitchNode({ data, selected }) {
         </div>
       )}
 
-      {/* Output ports */}
-      {(nodeType.outputs || []).length > 0 && (
+      {/* Output ports — uses effective outputs (dynamic from schema if configured) */}
+      {(effectiveOutputs).length > 0 && (
         <div className="px-3 py-1.5 space-y-1 border-t border-slate-700/20">
-          {(nodeType.outputs || []).map((output, i) => (
+          {(effectiveOutputs).map((output, i) => (
             <div key={`out-${output.id}`} className="flex items-center justify-end gap-1.5 relative">
               <span className="text-[10px] text-slate-400">{humanizeKey(output.id)}</span>
               <PortDot type={output.type} />

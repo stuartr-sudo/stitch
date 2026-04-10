@@ -390,17 +390,20 @@ const NODE_TYPES = {
       const systemPrompt = inputs.system_prompt || config.system_prompt || '';
       const model = config.model || 'gpt-4.1-mini';
 
+      const hasSchema = Array.isArray(config.output_schema) && config.output_schema.length > 0;
+
       const result = await callLlm(model, systemPrompt, userPrompt, {
         temperature: config.temperature ? parseFloat(config.temperature) : 0.7,
         max_tokens: config.max_tokens ? parseInt(config.max_tokens) : 4096,
         top_p: config.top_p ? parseFloat(config.top_p) : undefined,
         frequency_penalty: config.frequency_penalty ? parseFloat(config.frequency_penalty) : undefined,
         presence_penalty: config.presence_penalty ? parseFloat(config.presence_penalty) : undefined,
-        response_format: config.response_format !== 'text' ? config.response_format : undefined,
+        response_format: (!hasSchema && config.response_format !== 'text') ? config.response_format : undefined,
         seed: config.seed ? parseInt(config.seed) : undefined,
         top_k: config.top_k ? parseInt(config.top_k) : undefined,
         stop_sequences: config.stop_sequences ? config.stop_sequences.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        responseMimeType: config.responseMimeType !== 'text/plain' ? config.responseMimeType : undefined,
+        responseMimeType: (!hasSchema && config.responseMimeType !== 'text/plain') ? config.responseMimeType : undefined,
+        output_schema: hasSchema ? config.output_schema : undefined,
       }, context.apiKeys, context.abortSignal);
 
       // Determine cost category from provider
@@ -414,6 +417,22 @@ const NODE_TYPES = {
         input_tokens: result.usage.input_tokens,
         output_tokens: result.usage.output_tokens,
       });
+
+      // Structured output mode: parse JSON and return individual fields
+      if (hasSchema) {
+        let parsed;
+        try {
+          parsed = JSON.parse(result.text);
+        } catch (e) {
+          throw new Error(`LLM returned invalid JSON: ${e.message}\nRaw: ${result.text.slice(0, 500)}`);
+        }
+        const output = {};
+        for (const field of config.output_schema) {
+          output[field.key] = parsed[field.key] ?? null;
+        }
+        output.usage = { model, input_tokens: result.usage.input_tokens, output_tokens: result.usage.output_tokens };
+        return output;
+      }
 
       return {
         response: result.text,

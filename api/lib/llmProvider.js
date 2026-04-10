@@ -18,6 +18,55 @@ function getProvider(model) {
 
 const REASONING_MODELS = new Set(['o3-mini', 'o3', 'o4-mini']);
 
+// ── Structured output schema helpers ────────────────────────────────────────
+
+function buildOpenAIJsonSchema(outputSchema) {
+  const properties = {};
+  for (const f of outputSchema) {
+    if (f.type === 'array') {
+      properties[f.key] = { type: 'array', items: { type: 'string' }, description: f.description || '' };
+    } else if (f.type === 'number') {
+      properties[f.key] = { type: 'number', description: f.description || '' };
+    } else if (f.type === 'boolean') {
+      properties[f.key] = { type: 'boolean', description: f.description || '' };
+    } else {
+      properties[f.key] = { type: 'string', description: f.description || '' };
+    }
+  }
+  return {
+    type: 'json_schema',
+    json_schema: {
+      name: 'structured_output',
+      strict: true,
+      schema: {
+        type: 'object',
+        properties,
+        required: outputSchema.map(f => f.key),
+        additionalProperties: false,
+      },
+    },
+  };
+}
+
+function buildGeminiResponseSchema(outputSchema) {
+  const properties = {};
+  for (const f of outputSchema) {
+    const gemType = f.type === 'array' ? 'ARRAY' : f.type === 'number' ? 'NUMBER' : f.type === 'boolean' ? 'BOOLEAN' : 'STRING';
+    properties[f.key] = { type: gemType, description: f.description || '' };
+    if (gemType === 'ARRAY') properties[f.key].items = { type: 'STRING' };
+  }
+  return {
+    type: 'OBJECT',
+    properties,
+    required: outputSchema.map(f => f.key),
+  };
+}
+
+function buildAnthropicSchemaPrompt(outputSchema) {
+  const fields = outputSchema.map(f => `  "${f.key}": ${f.type}${f.description ? ` // ${f.description}` : ''}`).join(',\n');
+  return `You must respond with ONLY a valid JSON object matching this exact schema (no other text before or after):\n{\n${fields}\n}`;
+}
+
 // ── OpenAI ──────────────────────────────────────────────────────────────────
 
 async function callOpenAI(model, systemPrompt, userPrompt, config, apiKeys, abortSignal) {
@@ -46,7 +95,10 @@ async function callOpenAI(model, systemPrompt, userPrompt, config, apiKeys, abor
   if (config.presence_penalty != null) params.presence_penalty = config.presence_penalty;
   if (config.seed != null) params.seed = config.seed;
 
-  if (config.response_format === 'json_object') {
+  // Structured output schema takes priority over simple json_object mode
+  if (Array.isArray(config.output_schema) && config.output_schema.length > 0) {
+    params.response_format = buildOpenAIJsonSchema(config.output_schema);
+  } else if (config.response_format === 'json_object') {
     params.response_format = { type: 'json_object' };
   }
 
@@ -74,7 +126,13 @@ async function callAnthropic(model, systemPrompt, userPrompt, config, apiKeys, a
     max_tokens: config.max_tokens || 4096,
   };
 
-  if (systemPrompt) body.system = systemPrompt;
+  // Build system prompt — prepend schema instructions if structured output
+  if (Array.isArray(config.output_schema) && config.output_schema.length > 0) {
+    const schemaInstruction = buildAnthropicSchemaPrompt(config.output_schema);
+    body.system = systemPrompt ? `${schemaInstruction}\n\n${systemPrompt}` : schemaInstruction;
+  } else if (systemPrompt) {
+    body.system = systemPrompt;
+  }
   if (config.temperature != null) body.temperature = config.temperature;
   if (config.top_p != null) body.top_p = config.top_p;
   if (config.top_k != null) body.top_k = config.top_k;
@@ -126,7 +184,14 @@ async function callGemini(model, systemPrompt, userPrompt, config, apiKeys, abor
   if (config.top_p != null) gc.topP = config.top_p;
   if (config.top_k != null) gc.topK = config.top_k;
   if (config.stop_sequences?.length) gc.stopSequences = config.stop_sequences;
-  if (config.responseMimeType) gc.responseMimeType = config.responseMimeType;
+
+  // Structured output schema takes priority over manual responseMimeType
+  if (Array.isArray(config.output_schema) && config.output_schema.length > 0) {
+    gc.responseMimeType = 'application/json';
+    gc.responseSchema = buildGeminiResponseSchema(config.output_schema);
+  } else if (config.responseMimeType) {
+    gc.responseMimeType = config.responseMimeType;
+  }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeys.googleAiKey}`;
 

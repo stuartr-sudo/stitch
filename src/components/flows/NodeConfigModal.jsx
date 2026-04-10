@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Zap, ChevronDown, Sparkles, Film, Mic, FileText, Share2, Settings, Type } from 'lucide-react';
+import { Zap, ChevronDown, Sparkles, Film, Mic, FileText, Share2, Settings, Type, Plus, X, Loader2, Play } from 'lucide-react';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import StyleGrid from '@/components/ui/StyleGrid';
 import BrandStyleGuideSelector from '@/components/ui/BrandStyleGuideSelector';
@@ -964,6 +964,39 @@ function AdsGenerateForm({ config, u, upstreamOutputs, flowVariables }) {
 function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
   const mp = { upstreamOutputs, flowVariables };
   const provider = getLlmProvider(config.model);
+  const hasSchema = Array.isArray(config.output_schema) && config.output_schema.length > 0;
+
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [testError, setTestError] = useState(null);
+
+  const handleTest = async () => {
+    setTestLoading(true);
+    setTestError(null);
+    setTestResult(null);
+    try {
+      const resp = await apiFetch('/api/flows/test-node', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeTypeId: 'llm-call', config }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      setTestResult(data.output);
+      u('lastTestOutput', data.output);
+    } catch (err) {
+      setTestError(err.message);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  // Schema CRUD helpers
+  const schema = config.output_schema || [];
+  const setSchema = (next) => u('output_schema', next?.length ? next : null);
+  const addField = () => setSchema([...schema, { key: '', type: 'string', description: '' }]);
+  const updateField = (i, key, val) => { const s = [...schema]; s[i] = { ...s[i], [key]: val }; setSchema(s); };
+  const removeField = (i) => setSchema(schema.filter((_, j) => j !== i));
 
   return (
     <div className="space-y-5">
@@ -1011,6 +1044,72 @@ function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
         </Panel>
       )}
 
+      {/* ── Structured Output Schema ── */}
+      <Panel title="Structured Output" description="Define a JSON schema for the LLM response. Each field becomes a separate, mappable output port.">
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={() => hasSchema ? setSchema(null) : addField()}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasSchema ? 'bg-[#2C666E]' : 'bg-slate-300'}`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasSchema ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+          <span className="text-sm text-slate-600">{hasSchema ? 'Enabled — LLM will return structured JSON' : 'Disabled — LLM returns free text'}</span>
+        </div>
+
+        {hasSchema && (
+          <div className="space-y-2">
+            {schema.map((field, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <input value={field.key} onChange={e => updateField(i, 'key', e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                  placeholder="field_name" className={`${INPUT} flex-1 font-mono text-xs`} />
+                <select value={field.type} onChange={e => updateField(i, 'type', e.target.value)} className={`${SELECT} w-28`}>
+                  <option value="string">string</option>
+                  <option value="number">number</option>
+                  <option value="boolean">boolean</option>
+                  <option value="array">array</option>
+                </select>
+                <input value={field.description} onChange={e => updateField(i, 'description', e.target.value)}
+                  placeholder="Description (helps the LLM)" className={`${INPUT} flex-[2]`} />
+                <button onClick={() => removeField(i)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            <button onClick={addField} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#2C666E] hover:bg-[#2C666E]/5 rounded-lg transition-colors">
+              <Plus className="w-3.5 h-3.5" /> Add Field
+            </button>
+          </div>
+        )}
+      </Panel>
+
+      {/* ── Test Node ── */}
+      <Panel title="Test Node" description="Execute this node once with the current settings to verify output structure.">
+        <div className="flex items-center gap-3">
+          <button onClick={handleTest}
+            disabled={testLoading || (!config.prompt && !wired.has('prompt'))}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2C666E] hover:bg-[#07393C] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
+            {testLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Running...</> : <><Play className="w-4 h-4" /> Test Node</>}
+          </button>
+          {testResult && <span className="text-xs text-green-600 font-medium">Test passed</span>}
+        </div>
+
+        {testError && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{testError}</div>
+        )}
+
+        {testResult && (
+          <div className="mt-3 space-y-1.5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Output</p>
+            {Object.entries(testResult).map(([key, value]) => (
+              <div key={key} className="flex items-start gap-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
+                <span className="text-xs font-mono font-semibold text-[#2C666E] min-w-[120px] pt-0.5">{key}</span>
+                <span className="text-xs text-slate-600 break-all whitespace-pre-wrap">
+                  {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
       {/* Common Settings */}
       <Panel title="Generation Settings">
         <div className="grid grid-cols-3 gap-4">
@@ -1054,12 +1153,14 @@ function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
                   <p className="text-[11px] text-slate-400 mt-1">-2 to 2. Encourages new topics.</p>
                 </div>
               </div>
-              <div>
-                <Label>Response Format</Label>
-                <PillGroup options={[{ id: 'text', label: 'Text' }, { id: 'json_object', label: 'JSON Object' }]}
-                  value={config.response_format || 'text'} onChange={v => u('response_format', v)} columns={2} />
-                <p className="text-[11px] text-slate-400 mt-1">JSON mode forces valid JSON output. Mention JSON in your prompt.</p>
-              </div>
+              {!hasSchema && (
+                <div>
+                  <Label>Response Format</Label>
+                  <PillGroup options={[{ id: 'text', label: 'Text' }, { id: 'json_object', label: 'JSON Object' }]}
+                    value={config.response_format || 'text'} onChange={v => u('response_format', v)} columns={2} />
+                  <p className="text-[11px] text-slate-400 mt-1">JSON mode forces valid JSON output. Mention JSON in your prompt.</p>
+                </div>
+              )}
               <div>
                 <Label>Seed</Label>
                 <input type="number" value={config.seed ?? ''} onChange={e => u('seed', e.target.value)}
@@ -1093,12 +1194,14 @@ function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
                   className={INPUT} placeholder="Optional" />
                 <p className="text-[11px] text-slate-400 mt-1">Only sample from the top K most likely tokens.</p>
               </div>
-              <div>
-                <Label>Response MIME Type</Label>
-                <PillGroup options={[{ id: 'text/plain', label: 'Text' }, { id: 'application/json', label: 'JSON' }]}
-                  value={config.responseMimeType || 'text/plain'} onChange={v => u('responseMimeType', v)} columns={2} />
-                <p className="text-[11px] text-slate-400 mt-1">JSON mode forces structured JSON output.</p>
-              </div>
+              {!hasSchema && (
+                <div>
+                  <Label>Response MIME Type</Label>
+                  <PillGroup options={[{ id: 'text/plain', label: 'Text' }, { id: 'application/json', label: 'JSON' }]}
+                    value={config.responseMimeType || 'text/plain'} onChange={v => u('responseMimeType', v)} columns={2} />
+                  <p className="text-[11px] text-slate-400 mt-1">JSON mode forces structured JSON output.</p>
+                </div>
+              )}
               <div>
                 <Label>Stop Sequences</Label>
                 <MappableInput value={config.stop_sequences || ''} onChange={val => u('stop_sequences', val)}
