@@ -1055,22 +1055,34 @@ function LlmCallForm({ config, u, wired, upstreamOutputs, flowVariables }) {
         </div>
 
         {hasSchema && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {schema.map((field, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <input value={field.key} onChange={e => updateField(i, 'key', e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                  placeholder="field_name" className={`${INPUT} flex-1 font-mono text-xs`} />
-                <select value={field.type} onChange={e => updateField(i, 'type', e.target.value)} className={`${SELECT} w-28`}>
-                  <option value="string">string</option>
-                  <option value="number">number</option>
-                  <option value="boolean">boolean</option>
-                  <option value="array">array</option>
-                </select>
-                <input value={field.description} onChange={e => updateField(i, 'description', e.target.value)}
-                  placeholder="Description (helps the LLM)" className={`${INPUT} flex-[2]`} />
-                <button onClick={() => removeField(i)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+              <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1 block">Field Name</label>
+                    <input value={field.key} onChange={e => updateField(i, 'key', e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                      placeholder="e.g. start_time" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] bg-white" />
+                  </div>
+                  <div className="w-28">
+                    <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1 block">Type</label>
+                    <select value={field.type} onChange={e => updateField(i, 'type', e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] bg-white cursor-pointer">
+                      <option value="string">string</option>
+                      <option value="number">number</option>
+                      <option value="boolean">boolean</option>
+                      <option value="array">array</option>
+                    </select>
+                  </div>
+                  <button onClick={() => removeField(i)} className="mt-5 p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1 block">Description (helps the LLM understand this field)</label>
+                  <input value={field.description} onChange={e => updateField(i, 'description', e.target.value)}
+                    placeholder="e.g. Start time in HH:MM format" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2C666E]/30 focus:border-[#2C666E] bg-white" />
+                </div>
               </div>
             ))}
             <button onClick={addField} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#2C666E] hover:bg-[#2C666E]/5 rounded-lg transition-colors">
