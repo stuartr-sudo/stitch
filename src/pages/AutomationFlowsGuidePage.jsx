@@ -612,7 +612,91 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={CircleDot} title="11. Node Reference — All 45+ Node Types">
+      <Section icon={BrainCircuit} title="11. LLM Call Node — Structured Output & Test">
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
+          <p>The <strong>LLM Call</strong> node lets you call any LLM (OpenAI GPT, Anthropic Claude, Google Gemini) with full control over prompts, model selection, and generation parameters. Its killer feature is <strong>Structured Output</strong> — define a JSON schema, and each field becomes an individually mappable output port.</p>
+
+          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-4">Available Models (12)</h4>
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs uppercase tracking-wide mb-1">OpenAI</p>
+              <ul className="text-xs space-y-0.5">
+                <li>GPT-4.1 — $2/$8</li>
+                <li>GPT-4.1 Mini — $0.40/$1.60</li>
+                <li>GPT-5 Mini — $0.40/$1.60</li>
+                <li>GPT-4o — $2.50/$10</li>
+                <li>GPT-4o Mini — $0.15/$0.60</li>
+                <li>o3-mini (reasoning) — $1.10/$4.40</li>
+              </ul>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs uppercase tracking-wide mb-1">Anthropic / Claude</p>
+              <ul className="text-xs space-y-0.5">
+                <li>Claude Opus 4 — $15/$75</li>
+                <li>Claude Sonnet 4 — $3/$15</li>
+                <li>Claude Haiku 4.5 — $0.80/$4</li>
+              </ul>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs uppercase tracking-wide mb-1">Google Gemini</p>
+              <ul className="text-xs space-y-0.5">
+                <li>Gemini 2.5 Pro — $1.25/$10</li>
+                <li>Gemini 2.5 Flash — $0.15/$0.60</li>
+                <li>Gemini 2.0 Flash — $0.10/$0.40</li>
+              </ul>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Prices shown as input/output per 1M tokens.</p>
+
+          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-5">Structured Output — N8N/Make.com Style</h4>
+          <p>By default, the LLM Call returns a single <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">response</code> string. Toggle <strong>Structured Output</strong> on to define a JSON schema — the LLM's output is then parsed into individual fields, each becoming its own output port.</p>
+
+          <Step number="1" title="Toggle Structured Output On">
+            <p>In the node config, scroll to the <strong>Structured Output</strong> panel and flip the toggle to "Enabled". This tells the LLM to return JSON matching your schema.</p>
+          </Step>
+
+          <Step number="2" title="Define Your Schema Fields">
+            <p>Add fields with a <strong>Field Name</strong> (e.g. <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">start_time</code>), a <strong>Type</strong> (string, number, boolean, array), and a <strong>Description</strong> that helps the LLM understand what to put there (e.g. "Start time in HH:MM format").</p>
+            <p>Each field you define becomes a separate output port on the canvas node — visible immediately after saving.</p>
+          </Step>
+
+          <Step number="3" title="Test the Node">
+            <p>Click <strong>Test Node</strong> to execute the LLM call once with your current settings. The parsed result appears inline — each field shows its key and value. This confirms the schema works before wiring it into a larger flow.</p>
+          </Step>
+
+          <Step number="4" title="Wire Individual Fields">
+            <p>On the canvas, the node now shows your schema fields as output ports (e.g. <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">start_time</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">end_time</code>) instead of a single <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">response</code>. Wire each field to different downstream nodes. You can also reference them in text fields using the <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">/</code> slash command.</p>
+          </Step>
+
+          <Tip>The schema enforcement is provider-native where possible: OpenAI uses <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">json_schema</code> strict mode, Gemini uses <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">responseSchema</code>, and Anthropic uses a system prompt injection. OpenAI and Gemini guarantee valid JSON; Anthropic is best-effort.</Tip>
+
+          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-5">Context Input Port</h4>
+          <p>The <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">context</code> input port lets you pipe data from upstream nodes into the LLM prompt. Connect any text output (a scraped article, a generated script, database results) and it's automatically prepended as context. This keeps the user prompt clean while feeding the LLM rich background information.</p>
+
+          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-5">Provider-Specific Settings</h4>
+          <p>The <strong>Advanced Settings</strong> panel shows different options depending on the selected model's provider:</p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>OpenAI</strong> — Frequency penalty, presence penalty, response format (text/JSON), seed for reproducibility</li>
+            <li><strong>Anthropic</strong> — Top K sampling, stop sequences</li>
+            <li><strong>Gemini</strong> — Top K, response MIME type (text/JSON), stop sequences</li>
+          </ul>
+          <p className="mt-2">When Structured Output is enabled, the manual JSON/response format controls are hidden since the schema handles that automatically.</p>
+
+          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-5">Example Use Cases</h4>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>Time range extraction</strong> — Schema: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">start_time</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">end_time</code> → wire to Video Trim node</li>
+            <li><strong>Content classification</strong> — Schema: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">category</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">sentiment</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">keywords</code> → wire to conditional branching</li>
+            <li><strong>Script analysis</strong> — Pipe a script via context, schema: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">summary</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">tone</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">target_audience</code> → wire to downstream ad generation</li>
+            <li><strong>Multi-language translation</strong> — Schema: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">english</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">spanish</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">french</code> → wire each to separate LinkedIn Post nodes</li>
+          </ul>
+
+          <Warning>Claude and Gemini API keys must be added in Settings → API Keys before using those providers. OpenAI keys are already configured if you use other Stitch features (storyboards, scripts, etc.).</Warning>
+        </div>
+      </Section>
+
+      {/* ================================================================ */}
+
+      <Section icon={CircleDot} title="12. Node Reference — All 45+ Node Types">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <p>All nodes organized by category. Click any node to see its inputs, outputs, and configuration options.</p>
 
@@ -730,6 +814,24 @@ export function AutomationFlowsGuideContent() {
               description="GPT-enhanced prompt composition from structured inputs."
               inputs={[{ name: 'description', type: 'string', required: true }, { name: 'style', type: 'string' }, { name: 'props', type: 'string' }]}
               outputs={[{ name: 'prompt', type: 'string' }]} />
+            <NodeCard emoji="🤖" name="LLM Call" id="llm-call" category="Content"
+              description="Call any LLM (GPT, Claude, Gemini) with full parameter control. Supports structured JSON output with per-field mapping and per-node test execution."
+              inputs={[{ name: 'prompt', type: 'string', required: true }, { name: 'system_prompt', type: 'string' }, { name: 'context', type: 'string' }]}
+              outputs={[{ name: 'response', type: 'string' }, { name: 'usage', type: 'json' }]}
+              config={[
+                'model — 12 models: GPT-4.1, GPT-4.1 Mini, GPT-5 Mini, GPT-4o, GPT-4o Mini, o3-mini, Claude Opus 4, Claude Sonnet 4, Claude Haiku 4.5, Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.0 Flash',
+                'system_prompt — instructions that define the AI behavior',
+                'temperature — 0 (deterministic) to 2 (creative)',
+                'max_tokens — max output length (default 4096)',
+                'top_p — nucleus sampling threshold',
+                'Structured Output — toggle to define a JSON schema; each field becomes an individual output port',
+                'Test Node — execute once to verify output structure before wiring',
+                'OpenAI-only: frequency_penalty, presence_penalty, response_format (text/JSON), seed',
+                'Anthropic-only: top_k, stop_sequences',
+                'Gemini-only: topK, responseMimeType, stopSequences',
+              ]}>
+              <Tip>When Structured Output is enabled, the node's output ports change dynamically to match your schema fields. The "response" port is replaced by individual field ports (e.g. "start_time", "end_time") that can each be wired to different downstream nodes.</Tip>
+            </NodeCard>
             <NodeCard emoji="📊" name="Carousel Create" id="carousel-create" category="Content"
               description="Create a multi-slide carousel for Instagram, LinkedIn, TikTok, or Facebook."
               inputs={[{ name: 'topic', type: 'string', required: true }]}
@@ -794,7 +896,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Share2} title="12. Example Flows — Common Patterns">
+      <Section icon={Share2} title="13. Example Flows — Common Patterns">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-4 mt-3">
 
           <h4 className="font-semibold text-gray-800 dark:text-gray-200">Short-Form Video Pipeline</h4>
@@ -832,7 +934,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Plug} title="13. Dynamic Input Form & Shareable Run Page">
+      <Section icon={Plug} title="14. Dynamic Input Form & Shareable Run Page">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
           <NewBadge />
           <p>Every flow with source nodes (Manual Input, Style Preset, Brand Context, etc.) automatically generates a <strong>dynamic input form</strong>. Two ways to use it:</p>
@@ -857,7 +959,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Shield} title="14. Tips & Best Practices">
+      <Section icon={Shield} title="15. Tips & Best Practices">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-3 mt-3">
           <ul className="list-disc list-inside space-y-2">
             <li><strong>Start simple.</strong> Build a 3-node flow first (Input → Generate → Save). Get comfortable with the canvas before building complex pipelines.</li>
@@ -878,7 +980,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={Target} title="15. Keyboard Shortcuts">
+      <Section icon={Target} title="16. Keyboard Shortcuts">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <div className="grid grid-cols-2 gap-2">
             <KV label={<kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">/</kbd>}>Focus palette search</KV>
@@ -895,7 +997,7 @@ export function AutomationFlowsGuideContent() {
 
       {/* ================================================================ */}
 
-      <Section icon={FileText} title="16. Glossary">
+      <Section icon={FileText} title="17. Glossary">
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-3">
           <KV label="DAG">Directed Acyclic Graph — a flow structure where connections only go forward (no loops).</KV>
           <KV label="Node">A single processing step in your flow (e.g., generate image, add voiceover). 280px dark card with ports, preview, and config.</KV>
