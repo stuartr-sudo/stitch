@@ -12,8 +12,10 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { logCost } from './costLogger.js';
 
 // ── Niche → 4 search queries (breaking, viral, controversy, human impact) ────
-const currentYear = new Date().getFullYear();
-const NICHE_SEARCH_QUERIES = {
+// NOTE: currentYear is computed per-call (not module-level) to avoid stale cache after year rollover
+function getNicheSearchQueries() {
+  const currentYear = new Date().getFullYear();
+  return {
   ai_tech_news: [`AI breakthrough news this week ${currentYear}`, 'AI surprising development most people don\'t know', `AI controversy debate ${currentYear}`, 'AI changing everyday life real story'],
   finance_money: [`stock market news this week ${currentYear}`, 'money fact most people get wrong', `financial controversy scandal ${currentYear}`, 'money changing someone\'s life real story'],
   motivation: [`motivational comeback story ${currentYear}`, 'self improvement secret most people miss', `motivation debate hustle culture ${currentYear}`, 'life transformation real story inspiring'],
@@ -33,8 +35,9 @@ const NICHE_SEARCH_QUERIES = {
   animals_nature: [`animal discovery species ${currentYear}`, 'animal ability superpower nobody knows about', `wildlife conservation controversy ${currentYear}`, 'animal rescued saved real story'],
   sports: [`sports news this week ${currentYear}`, 'sports record statistic most people don\'t know', `sports controversy scandal ${currentYear}`, 'athlete comeback against all odds real story'],
   education: [`education change policy ${currentYear}`, 'school fact most people get wrong', `education system controversy ${currentYear}`, 'education changed someone life real story'],
-  paranormal_ufo: [`UFO sighting report ${currentYear}`, 'paranormal event documented evidence nobody talks about', `UFO disclosure controversy ${currentYear}`, 'paranormal experience real person testimony'],
-};
+    paranormal_ufo: [`UFO sighting report ${currentYear}`, 'paranormal event documented evidence nobody talks about', `UFO disclosure controversy ${currentYear}`, 'paranormal experience real person testimony'],
+  };
+}
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 const TopicDiscoverySchema = z.object({
@@ -61,7 +64,7 @@ async function searchNicheArticles(niche) {
     return null;
   }
 
-  const queries = NICHE_SEARCH_QUERIES[niche];
+  const queries = getNicheSearchQueries()[niche];
   if (!queries) {
     console.log(`[topicDiscovery] No search queries for niche "${niche}", falling back to GPT-only`);
     return null;
@@ -143,7 +146,7 @@ export async function discoverTopics({
   // ── Step 1: Web search for real articles ─────────────────────────────────
   const articles = await searchNicheArticles(niche);
   const hasArticles = articles && articles.length > 0;
-  const queryCount = hasArticles ? (NICHE_SEARCH_QUERIES[niche]?.length || 0) : 0;
+  const queryCount = hasArticles ? (getNicheSearchQueries()[niche]?.length || 0) : 0;
 
   // ── Step 2: Build prompt based on mode ───────────────────────────────────
   const hookPattern = framework?.narrative?.hookPattern || 'mystery-reveal';
@@ -162,7 +165,8 @@ export async function discoverTopics({
     articlesBlock = `\nREAL ARTICLES FROM WEB SEARCH (use these as source material — cite real facts, names, dates):\n${articleSummaries}\n\nYou MUST ground your topics in these real articles. Extract specific facts, names, and events. Do not invent stories.`;
   }
 
-  const systemPrompt = `You are a viral content researcher specializing in short-form video. Generate ${count} specific, research-backed topic suggestions for ${niche} content.
+  const today = new Date().toISOString().split('T')[0];
+  const systemPrompt = `You are a viral content researcher specializing in short-form video. Today's date is ${today}. Generate ${count} specific, research-backed topic suggestions for ${niche} content.
 
 HOOK PATTERN: ${hookPattern}
 ${hookExamples.length > 0 ? `HOOK EXAMPLES (match this style):\n${hookExamples.map(h => `  - "${h}"`).join('\n')}` : ''}

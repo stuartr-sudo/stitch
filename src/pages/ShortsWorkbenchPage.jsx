@@ -152,7 +152,7 @@ function StepRail({ current, completed, onSelect }) {
     setTimeout(() => setShake(null), 600);
   };
   return (
-    <div className="flex gap-1 bg-slate-800/50 rounded-xl p-3 border border-slate-700/40 mb-6 overflow-x-auto">
+    <div className="flex gap-1 bg-white rounded-xl p-3 border border-slate-200 mb-6 overflow-x-auto">
       {STEPS.map((s) => {
         const isCurrent = current === s.key;
         const isDone = completed.includes(s.key);
@@ -162,8 +162,8 @@ function StepRail({ current, completed, onSelect }) {
             className={cn(
               'flex-1 min-w-[100px] rounded-lg px-3 py-2 text-center transition-all border-2',
               isCurrent && 'bg-[#2C666E] text-white border-[#2C666E]',
-              isDone && !isCurrent && 'bg-emerald-900/30 text-emerald-400 border-emerald-500 cursor-pointer',
-              !isCurrent && !isDone && 'bg-slate-800/40 text-slate-400 border-transparent cursor-default',
+              isDone && !isCurrent && 'bg-emerald-50 text-emerald-700 border-emerald-500 cursor-pointer',
+              !isCurrent && !isDone && 'bg-slate-50 text-slate-400 border-transparent cursor-default',
               shake === s.key && 'animate-[shake_0.5s_ease-in-out]',
             )}>
             <div className="text-[10px] font-bold uppercase tracking-wider">Step {s.num}</div>
@@ -177,7 +177,7 @@ function StepRail({ current, completed, onSelect }) {
 
 function CostBadge({ amount, label }) {
   return (
-    <span className="inline-flex items-center gap-1 bg-amber-900/30 border border-amber-700/40 text-amber-400 px-2 py-0.5 rounded-md text-[10px] font-semibold">
+    <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-md text-[10px] font-semibold">
       ${typeof amount === 'number' ? amount.toFixed(2) : amount}{label && ` · ${label}`}
     </span>
   );
@@ -185,21 +185,21 @@ function CostBadge({ amount, label }) {
 
 function Tag({ children, color = 'slate' }) {
   const colors = {
-    slate: 'bg-slate-700/40 text-slate-400',
-    teal: 'bg-emerald-900/30 text-emerald-400',
-    amber: 'bg-amber-900/30 text-amber-400',
-    red: 'bg-red-900/30 text-red-400',
-    blue: 'bg-blue-900/30 text-blue-400',
+    slate: 'bg-slate-100 text-slate-600',
+    teal: 'bg-emerald-50 text-emerald-700',
+    amber: 'bg-amber-50 text-amber-700',
+    red: 'bg-red-50 text-red-600',
+    blue: 'bg-blue-50 text-blue-700',
   };
   return <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', colors[color])}>{children}</span>;
 }
 
 function Panel({ title, right, children }) {
   return (
-    <div className="bg-slate-800/50 rounded-2xl border border-slate-700/40 mb-5 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
       {title && (
-        <div className="px-5 py-3 border-b border-slate-700/30 flex justify-between items-center">
-          <h2 className="text-sm font-bold text-slate-100">{title}</h2>
+        <div className="px-5 py-3 border-b border-slate-100 flex justify-between items-center">
+          <h2 className="text-sm font-bold text-slate-800">{title}</h2>
           {right}
         </div>
       )}
@@ -222,7 +222,7 @@ function AudioPlayer({ url, speed, onSpeedChange }) {
   };
 
   return (
-    <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-3">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
       <audio ref={audioRef} src={url}
         onTimeUpdate={() => setProgress(audioRef.current?.currentTime || 0)}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
@@ -234,12 +234,12 @@ function AudioPlayer({ url, speed, onSpeedChange }) {
           {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
         </button>
         <div className="flex-1">
-          <div className="h-2 bg-slate-700/30 rounded-full overflow-hidden cursor-pointer"
+          <div className="h-2 bg-slate-200 rounded-full overflow-hidden cursor-pointer"
             onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const pct = (e.clientX - rect.left) / rect.width; if (audioRef.current) audioRef.current.currentTime = pct * duration; }}>
             <div className="h-full bg-[#2C666E] rounded-full transition-all" style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }} />
           </div>
         </div>
-        <span className="text-[11px] text-slate-400 font-mono tabular-nums w-20 text-right">
+        <span className="text-[11px] text-slate-500 font-mono tabular-nums w-20 text-right">
           {Math.floor(progress / 60)}:{String(Math.floor(progress % 60)).padStart(2, '0')} / {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
         </span>
       </div>
@@ -249,7 +249,7 @@ function AudioPlayer({ url, speed, onSpeedChange }) {
           {SPEED_OPTIONS.map(s => (
             <button key={s} onClick={() => { onSpeedChange(s); if (audioRef.current) audioRef.current.playbackRate = s; }}
               className={cn('px-2 py-0.5 rounded text-[10px] font-bold border transition-all',
-                speed === s ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-slate-800/40 text-slate-400 border-slate-700/40 hover:border-slate-600/50')}>
+                speed === s ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300')}>
               {s}x
             </button>
           ))}
@@ -265,19 +265,19 @@ function AudioPlayer({ url, speed, onSpeedChange }) {
 function FramePair({ startUrl, endUrl, startLabel, endLabel, onRegenStart, onRegenEnd, loading }) {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center max-w-md mx-auto">
-      <div className="border border-slate-700/40 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 rounded-lg overflow-hidden">
         {startUrl ? (
           <img src={startUrl} alt="Start frame" className="w-full aspect-[9/16] object-cover" />
         ) : (
-          <div className="w-full aspect-[9/16] bg-slate-800/40 flex items-center justify-center">
-            <ImageIcon className="w-6 h-6 text-slate-600" />
+          <div className="w-full aspect-[9/16] bg-slate-50 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-slate-300" />
           </div>
         )}
-        <div className="px-2 py-1.5 bg-emerald-900/30 text-center border-t border-emerald-700/40">
-          <span className="text-[9px] font-bold text-emerald-400 uppercase">{startLabel || 'Start Frame'}</span>
+        <div className="px-2 py-1.5 bg-emerald-50 text-center border-t border-emerald-100">
+          <span className="text-[9px] font-bold text-emerald-700 uppercase">{startLabel || 'Start Frame'}</span>
         </div>
         {startUrl && (
-          <div className="px-2 py-1 flex justify-center border-t border-slate-700/30">
+          <div className="px-2 py-1 flex justify-center border-t border-slate-100">
             <button onClick={onRegenStart} disabled={loading} className="text-[9px] text-[#2C666E] font-semibold hover:underline disabled:opacity-50">
               <RotateCcw className="w-2.5 h-2.5 inline mr-0.5" />Redo
             </button>
@@ -287,16 +287,16 @@ function FramePair({ startUrl, endUrl, startLabel, endLabel, onRegenStart, onReg
 
       <div className="text-lg text-slate-400">→</div>
 
-      <div className="border border-slate-700/40 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 rounded-lg overflow-hidden">
         {endUrl ? (
           <img src={endUrl} alt="End frame" className="w-full aspect-[9/16] object-cover" />
         ) : (
-          <div className="w-full aspect-[9/16] bg-slate-800/40 flex items-center justify-center">
-            <ImageIcon className="w-6 h-6 text-slate-600" />
+          <div className="w-full aspect-[9/16] bg-slate-50 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-slate-300" />
           </div>
         )}
-        <div className="px-2 py-1.5 bg-amber-900/30 text-center border-t border-amber-700/40">
-          <span className="text-[9px] font-bold text-amber-400 uppercase">{endLabel || 'End Frame'}</span>
+        <div className="px-2 py-1.5 bg-amber-50 text-center border-t border-amber-100">
+          <span className="text-[9px] font-bold text-amber-700 uppercase">{endLabel || 'End Frame'}</span>
         </div>
         {endUrl && (
           <div className="px-2 py-1 flex justify-center border-t border-slate-100">
@@ -312,16 +312,16 @@ function FramePair({ startUrl, endUrl, startLabel, endLabel, onRegenStart, onReg
 
 function SingleFrame({ url, label, onRegen, loading }) {
   return (
-    <div className="border-2 border-slate-700/40 rounded-xl overflow-hidden max-w-[200px]">
+    <div className="border-2 border-slate-200 rounded-xl overflow-hidden max-w-[200px]">
       {url ? (
         <img src={url} alt={label} className="w-full aspect-[9/16] object-cover" />
       ) : (
-        <div className="w-full aspect-[9/16] bg-slate-800/40 flex items-center justify-center">
-          <ImageIcon className="w-8 h-8 text-slate-600" />
+        <div className="w-full aspect-[9/16] bg-slate-100 flex items-center justify-center">
+          <ImageIcon className="w-8 h-8 text-slate-300" />
         </div>
       )}
-      <div className="px-3 py-2 bg-slate-800/40 text-center">
-        <span className="text-[10px] font-bold text-slate-400 uppercase block">{label}</span>
+      <div className="px-3 py-2 bg-slate-50 text-center">
+        <span className="text-[10px] font-bold text-slate-600 uppercase block">{label}</span>
         {url && (
           <button onClick={onRegen} disabled={loading}
             className="mt-1.5 px-3 py-1.5 bg-[#2C666E] text-white rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-[#234f56] transition-colors w-full">
@@ -344,15 +344,15 @@ function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, 
 
   if (ref?.url) {
     return (
-      <div className="flex items-center gap-2.5 mt-2 bg-blue-900/30 border border-blue-700/40 rounded-lg p-2">
-        <img src={ref.url} alt="Reference" className="w-10 h-14 object-cover rounded border border-blue-700/40" />
+      <div className="flex items-center gap-2.5 mt-2 bg-indigo-50/80 border border-indigo-200 rounded-lg p-2">
+        <img src={ref.url} alt="Reference" className="w-10 h-14 object-cover rounded border border-indigo-200" />
         <div className="flex-1 min-w-0">
-          <div className="text-[9px] font-bold text-blue-400 uppercase">I2I Reference ({ref.source})</div>
-          <div className="text-[9px] text-blue-300 truncate">{ref.url.split('/').pop()}</div>
+          <div className="text-[9px] font-bold text-indigo-700 uppercase">I2I Reference ({ref.source})</div>
+          <div className="text-[9px] text-indigo-400 truncate">{ref.url.split('/').pop()}</div>
         </div>
         <button onClick={() => { clearRef(); setShowOptions(true); }}
-          className="text-[9px] text-blue-400 hover:text-blue-300 font-medium">Change</button>
-        <button onClick={clearRef} className="p-1 text-blue-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+          className="text-[9px] text-indigo-500 hover:text-indigo-700 font-medium">Change</button>
+        <button onClick={clearRef} className="p-1 text-indigo-300 hover:text-red-500"><X className="w-3 h-3" /></button>
       </div>
     );
   }
@@ -361,12 +361,12 @@ function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, 
     return (
       <div className="mt-2 flex gap-1.5 items-center">
         <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="Paste image URL..."
-          className="flex-1 border border-slate-700/40 bg-slate-900 rounded-lg px-2.5 py-1.5 text-[10px] text-slate-200 focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]/20 outline-none" autoFocus />
+          className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[10px] focus:border-[#2C666E] focus:ring-1 focus:ring-[#2C666E]/20 outline-none" autoFocus />
         <button onClick={() => { if (urlInput.trim()) { setRef(urlInput.trim(), 'url'); setUrlInput(''); } }}
           disabled={!urlInput.trim()}
           className="px-2.5 py-1.5 bg-[#2C666E] text-white rounded-lg text-[9px] font-semibold disabled:opacity-50">Use</button>
         <button onClick={() => { setShowUrlInput(false); setShowOptions(true); }}
-          className="px-2 py-1.5 text-slate-400 text-[9px] hover:text-slate-200">Back</button>
+          className="px-2 py-1.5 text-slate-400 text-[9px] hover:text-slate-600">Back</button>
       </div>
     );
   }
@@ -375,7 +375,7 @@ function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, 
     return (
       <div className="mt-2">
         <button onClick={() => setShowOptions(true)}
-          className="text-[10px] text-slate-400 font-medium hover:text-[#2C666E] flex items-center gap-1 transition-colors">
+          className="text-[10px] text-slate-500 font-medium hover:text-[#2C666E] flex items-center gap-1 transition-colors">
           <ImageIcon className="w-3 h-3" />Add reference image (I2I)
         </button>
       </div>
@@ -387,19 +387,19 @@ function ReferenceImageInput({ sceneIdx, sceneRefs, setSceneRefs, prevFrameUrl, 
       <span className="text-[9px] font-semibold text-slate-400 uppercase">Ref:</span>
       {prevFrameUrl && (
         <button onClick={() => setRef(prevFrameUrl, prevLabel || 'prev scene')}
-          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-900/30 text-blue-400 rounded-md text-[9px] font-semibold hover:bg-blue-900/50 border border-blue-700/40 transition-colors">
+          className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-semibold hover:bg-indigo-100 border border-indigo-200 transition-colors">
           <Film className="w-2.5 h-2.5" />{prevLabel || 'Prev frame'}
         </button>
       )}
       <button onClick={() => onOpenLibrary?.(sceneIdx)}
-        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-900/30 text-amber-400 rounded-md text-[9px] font-semibold hover:bg-amber-900/50 border border-amber-700/40 transition-colors">
+        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded-md text-[9px] font-semibold hover:bg-amber-100 border border-amber-200 transition-colors">
         <FolderOpen className="w-2.5 h-2.5" />Library
       </button>
       <button onClick={() => { setShowOptions(false); setShowUrlInput(true); }}
-        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800/40 text-slate-400 rounded-md text-[9px] font-semibold hover:bg-slate-800/60 border border-slate-700/40 transition-colors">
+        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md text-[9px] font-semibold hover:bg-slate-100 border border-slate-200 transition-colors">
         <Link className="w-2.5 h-2.5" />Paste URL
       </button>
-      <button onClick={() => setShowOptions(false)} className="text-[9px] text-slate-400 hover:text-slate-200 ml-1">Cancel</button>
+      <button onClick={() => setShowOptions(false)} className="text-[9px] text-slate-400 hover:text-slate-600 ml-1">Cancel</button>
     </div>
   );
 }
@@ -1199,16 +1199,16 @@ export default function ShortsWorkbenchPage() {
   // ═══════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen bg-[#0a0a12]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <header className="bg-slate-800/50 border-b border-slate-700/40 sticky top-0 z-40">
+      <header className="bg-white border-b shadow-sm sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/campaigns')} className="p-2 hover:bg-slate-700/40 rounded-lg">
-              <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <button onClick={() => navigate('/campaigns')} className="p-2 hover:bg-slate-100 rounded-lg">
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
             <div>
-              <h1 className="text-lg font-bold text-slate-100">Shorts Workbench</h1>
+              <h1 className="text-lg font-bold text-slate-900">Shorts Workbench</h1>
               <p className="text-[11px] text-slate-400">Step by step · {mode === 'flf' ? 'First-Last Frame' : 'Image-to-Video'} mode</p>
             </div>
           </div>
@@ -1221,9 +1221,9 @@ export default function ShortsWorkbenchPage() {
               className="text-xs text-white bg-[#2C666E] px-2.5 py-1.5 rounded-lg font-semibold disabled:opacity-50 hover:bg-[#234f56]">
               {savingDraft ? 'Saving...' : draftId ? 'Save' : 'Save Draft'}
             </button>
-            <button onClick={() => navigate('/')} className="text-xs text-slate-400 hover:text-slate-200 font-medium">Home</button>
-            <button onClick={() => navigate('/campaigns')} className="text-xs text-slate-400 hover:text-slate-200 font-medium">Campaigns</button>
-            <span className="inline-flex items-center gap-1 bg-red-900/30 border border-red-700/40 text-red-400 px-2 py-1 rounded-md text-[9px] font-bold uppercase">
+            <button onClick={() => navigate('/')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Home</button>
+            <button onClick={() => navigate('/campaigns')} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Campaigns</button>
+            <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-md text-[9px] font-bold uppercase">
               🔇 No audio in clips
             </span>
           </div>
@@ -1232,11 +1232,11 @@ export default function ShortsWorkbenchPage() {
 
       {/* Drafts dropdown */}
       {showDrafts && (
-        <div className="bg-slate-800/50 border-b border-slate-700/40">
+        <div className="bg-white border-b shadow-md">
           <div className="max-w-5xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-200">Saved Drafts</h3>
+                <h3 className="text-sm font-bold text-slate-700">Saved Drafts</h3>
                 {draftList.length > 0 && (
                   <button onClick={() => { setBulkSelectMode(!bulkSelectMode); setSelectedDrafts(new Set()); }}
                     className="text-xs text-[#2C666E] font-semibold px-2 py-1 rounded hover:bg-[#2C666E]/10">
@@ -1257,36 +1257,36 @@ export default function ShortsWorkbenchPage() {
             ) : (
               <div className="grid gap-2">
                 {bulkSelectMode && (
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700/40 bg-slate-800/40">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-slate-50">
                     <input type="checkbox" checked={selectedDrafts.size === draftList.length && draftList.length > 0}
-                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-600 text-[#2C666E]" />
-                    <span className="text-xs font-medium text-slate-400">
+                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#2C666E]" />
+                    <span className="text-xs font-medium text-slate-600">
                       {selectedDrafts.size === draftList.length && draftList.length > 0 ? 'Deselect All' : 'Select All'}
                     </span>
                   </div>
                 )}
                 {draftList.map(d => (
                   <div key={d.id} className={cn('flex items-center gap-3 px-4 py-3 rounded-lg border transition-all',
-                    bulkSelectMode ? 'bg-slate-800/40' : d.id === draftId ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-700/40 hover:bg-slate-800/40')}>
+                    bulkSelectMode ? 'bg-slate-50' : d.id === draftId ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:bg-slate-50')}>
                     {bulkSelectMode && (
                       <input type="checkbox" checked={selectedDrafts.has(d.id)} onChange={() => toggleSelectDraft(d.id)}
-                        className="w-4 h-4 rounded border-slate-600 text-[#2C666E]" />
+                        className="w-4 h-4 rounded border-slate-300 text-[#2C666E]" />
                     )}
                     <button onClick={() => !bulkSelectMode && loadDraft(d.id)} disabled={bulkSelectMode}
                       className="flex-1 text-left disabled:cursor-default">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-200">{d.topic}</span>
+                        <span className="text-sm font-semibold text-slate-800">{d.topic}</span>
                         <span className="text-[10px] text-slate-400">{new Date(d.updated_at).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        {d.niche && <span className="text-[10px] bg-slate-700/40 text-slate-400 px-2 py-0.5 rounded">{d.niche}</span>}
+                        {d.niche && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{d.niche}</span>}
                         <span className="text-[10px] text-slate-400">Step {d.step || '?'}</span>
-                        {d.has_video && <span className="text-[10px] text-emerald-400 font-bold">Video ready</span>}
+                        {d.has_video && <span className="text-[10px] text-emerald-600 font-bold">Video ready</span>}
                       </div>
                     </button>
                     {!bulkSelectMode && (
                       <button onClick={() => deleteDraft(d.id)}
-                        className="text-slate-400 hover:text-red-400 transition-colors p-1.5 hover:bg-red-900/30 rounded-lg"
+                        className="text-slate-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
                         title="Delete draft">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1310,19 +1310,19 @@ export default function ShortsWorkbenchPage() {
             <Panel title="Niche & Topic" right={<CostBadge amount="0.03" label="script + voice" />}>
               <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Niche</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Niche</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {NICHES.map(n => (
                       <button key={n.key} onClick={() => handleNicheChange(n.key)}
                         className={cn('p-2 rounded-lg border text-center transition-all text-[11px]',
-                          niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-700/40 hover:border-slate-600/50')}>
+                          niche === n.key ? 'border-[#2C666E] bg-[#2C666E]/5 ring-1 ring-[#2C666E]' : 'border-slate-200 hover:border-slate-300')}>
                         <div className="text-base">{n.icon}</div>
-                        <div className="font-medium text-slate-200 mt-0.5">{n.label}</div>
+                        <div className="font-medium text-slate-700 mt-0.5">{n.label}</div>
                       </button>
                     ))}
                   </div>
 
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mt-4 mb-1">Framework</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-4 mb-1">Framework</label>
                   {(() => {
                     const allFw = niche ? getFrameworksForNiche(niche) : FRAMEWORK_CARDS;
                     const nicheFw = niche ? allFw.filter(f => f.applicableNiches) : [];
@@ -1330,7 +1330,7 @@ export default function ShortsWorkbenchPage() {
                     const fwButton = (fw) => (
                       <button key={fw.id} onClick={() => { setFramework(fw); if (fw.supportedDurations?.length) setDuration(fw.supportedDurations[0]); }}
                         className={cn('px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all',
-                          framework?.id === fw.id ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-700/40 text-slate-400 hover:border-slate-600/50')}>
+                          framework?.id === fw.id ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-200 text-slate-600 hover:border-slate-300')}>
                         {fw.name}
                       </button>
                     );
@@ -1347,19 +1347,19 @@ export default function ShortsWorkbenchPage() {
                     );
                   })()}
 
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mt-4 mb-1">Duration</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-4 mb-1">Duration</label>
                   <div className="flex gap-2">
                     {[30, 45, 60, 90].map(d => (
                       <button key={d} onClick={() => setDuration(d)}
                         className={cn('px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-all',
-                          duration === d ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-700/40 text-slate-400')}>
+                          duration === d ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200 text-slate-600')}>
                         {d}s
                       </button>
                     ))}
                   </div>
 
                   {/* Avatar Mode */}
-                  <div className="mt-4 pt-3 border-t border-slate-700/30">
+                  <div className="mt-4 pt-3 border-t border-slate-100">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={avatarMode} onChange={e => {
                         setAvatarMode(e.target.checked);
@@ -1369,8 +1369,8 @@ export default function ShortsWorkbenchPage() {
                           setAvatarLipsyncUrl(null); setAvatarStage(null);
                         }
                       }}
-                        className="w-4 h-4 rounded border-slate-600 text-[#2C666E] focus:ring-[#2C666E]" />
-                      <span className="text-[11px] font-semibold text-slate-200">Avatar Mode</span>
+                        className="w-4 h-4 rounded border-slate-300 text-[#2C666E] focus:ring-[#2C666E]" />
+                      <span className="text-[11px] font-semibold text-slate-700">Avatar Mode</span>
                       <span className="text-[9px] text-slate-400">(split-screen talking head)</span>
                     </label>
 
@@ -1387,7 +1387,7 @@ export default function ShortsWorkbenchPage() {
                                 setAvatarPortraitUrl(null); setAvatarVideoUrl(null);
                                 setAvatarLipsyncUrl(null); setAvatarStage(null);
                               }}
-                              className="w-full text-xs border border-slate-700/40 rounded-lg px-3 py-1.5 bg-slate-900 text-slate-200"
+                              className="w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white"
                             >
                               <option value="">Select a character...</option>
                               {avatarSubjects.map(s => (
@@ -1398,7 +1398,7 @@ export default function ShortsWorkbenchPage() {
                               const subject = avatarSubjects.find(s => s.id === avatarSubjectId);
                               return subject?.reference_image_url ? (
                                 <img src={subject.reference_image_url} alt={subject.name}
-                                  className="w-16 h-16 rounded-lg object-cover border border-slate-700/40" />
+                                  className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
                               ) : null;
                             })()}
                           </div>
@@ -1415,7 +1415,7 @@ export default function ShortsWorkbenchPage() {
 
                 <div className="w-1/2">
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Topic</label>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Topic</label>
                     <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()}
                       className="text-[11px] font-semibold text-[#2C666E] hover:underline disabled:opacity-50 flex items-center gap-1">
                       {researchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
@@ -1423,7 +1423,7 @@ export default function ShortsWorkbenchPage() {
                     </button>
                   </div>
                   <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Type a topic or pick from suggestions below..."
-                    className="w-full border border-slate-700/40 rounded-lg px-3 py-2 text-sm mb-3 bg-slate-900 text-slate-200" />
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3" />
 
                   {/* Discover Trending Topics — primary path */}
                   {niche && (
@@ -1480,11 +1480,11 @@ export default function ShortsWorkbenchPage() {
                           setStoryContext(idea.hook);
                         }}
                           className={cn('w-full text-left p-3 border-2 rounded-xl text-xs transition-all',
-                            topic === idea.topic ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-700/40 hover:border-slate-600/50')}>
-                          <div className="font-semibold text-slate-200 mb-0.5">{idea.title}</div>
-                          <div className="text-slate-400 mb-1">{idea.hook}</div>
+                            topic === idea.topic ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
+                          <div className="font-semibold text-slate-800 mb-0.5">{idea.title}</div>
+                          <div className="text-slate-500 mb-1">{idea.hook}</div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] bg-slate-700/40 text-slate-400 px-1.5 py-0.5 rounded">{idea.category}</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{idea.category}</span>
                             <span className="text-[10px] text-slate-400">{idea.angle}</span>
                           </div>
                         </button>
@@ -1495,10 +1495,10 @@ export default function ShortsWorkbenchPage() {
 
                   {/* Manual topic funnel — secondary path */}
                   {niche && TOPIC_SUGGESTIONS[niche] && (
-                    <div className="mb-3 border border-slate-700/40 rounded-lg p-3 bg-slate-800/40">
+                    <div className="mb-3 border border-slate-200 rounded-lg p-3 bg-slate-50">
                       <button
                         onClick={() => setShowTopicFunnel(!showTopicFunnel)}
-                        className="w-full text-left text-[10px] text-slate-400 uppercase font-medium hover:text-slate-200 select-none"
+                        className="w-full text-left text-[10px] text-slate-400 uppercase font-medium hover:text-slate-600 select-none"
                       >
                         {showTopicFunnel ? '▼ Or choose a topic manually' : '▶ Or choose a topic manually'}
                       </button>
@@ -1522,7 +1522,7 @@ export default function ShortsWorkbenchPage() {
                                 setTopic(t.label);
                               }}
                                 className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
-                                  topicL1 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-slate-800/40 text-slate-400 border-slate-700/40 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                  topicL1 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
                                 {t.label}
                               </button>
                             ))}
@@ -1539,7 +1539,7 @@ export default function ShortsWorkbenchPage() {
                                   setTopic(`${topicL1} — ${t.label}`);
                                 }}
                                   className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
-                                    topicL2 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-slate-800/40 text-slate-400 border-slate-700/40 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                    topicL2 === t.label ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
                                   {t.label}
                                 </button>
                               ))}
@@ -1556,7 +1556,7 @@ export default function ShortsWorkbenchPage() {
                                   setTopic(`${topicL1} — ${topicL2} — ${t}`);
                                 }}
                                   className={cn('text-[11px] px-2.5 py-1 rounded-full border transition-colors',
-                                    topicL3 === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-slate-800/40 text-slate-400 border-slate-700/40 hover:border-[#2C666E] hover:text-[#2C666E]')}>
+                                    topicL3 === t ? 'bg-[#2C666E] text-white border-[#2C666E]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#2C666E] hover:text-[#2C666E]')}>
                                   {t}
                                 </button>
                               ))}
@@ -1592,9 +1592,9 @@ export default function ShortsWorkbenchPage() {
                           setStoryContext(s.story_context || s.summary || '');
                         }}
                           className={cn('w-full text-left p-3 border-2 rounded-xl text-xs transition-all',
-                            selectedStoryIdx === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-700/40 hover:border-slate-600/50')}>
+                            selectedStoryIdx === i ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
                           <div className="flex items-start justify-between gap-2">
-                            <div className="font-semibold text-slate-200">{s.title}</div>
+                            <div className="font-semibold text-slate-800">{s.title}</div>
                             <div className="flex gap-1 shrink-0">
                               {s.trending_score && (
                                 <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium',
@@ -1614,7 +1614,7 @@ export default function ShortsWorkbenchPage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-slate-400 mt-1 leading-relaxed">{s.summary || s.angle}</div>
+                          <div className="text-slate-500 mt-1 leading-relaxed">{s.summary || s.angle}</div>
                           {selectedStoryIdx === i && (
                             <div className="mt-1.5 text-[9px] text-[#2C666E] font-medium">Selected</div>
                           )}
@@ -1629,7 +1629,7 @@ export default function ShortsWorkbenchPage() {
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={creativeMode} onChange={e => setCreativeMode(e.target.checked)}
                           className="sr-only peer" />
-                        <div className="w-8 h-[18px] bg-slate-600 peer-focus:ring-2 peer-focus:ring-[#2C666E]/30 rounded-full peer peer-checked:bg-[#2C666E] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-200 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5" />
+                        <div className="w-8 h-[18px] bg-slate-600 peer-focus:ring-2 peer-focus:ring-[#2C666E]/30 rounded-full peer peer-checked:bg-[#2C666E] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5" />
                       </label>
                       <span className="text-[11px] font-semibold text-slate-200">Creative Mode</span>
                     </div>
@@ -1639,7 +1639,7 @@ export default function ShortsWorkbenchPage() {
                   </div>
 
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Script</label>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Script</label>
                     <button onClick={generateScript} disabled={scriptLoading || !niche || !topic.trim()}
                       className="text-[11px] font-semibold text-[#2C666E] hover:underline disabled:opacity-50 flex items-center gap-1">
                       {scriptLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
@@ -1647,7 +1647,7 @@ export default function ShortsWorkbenchPage() {
                     </button>
                   </div>
                   <textarea value={script} onChange={e => setScript(e.target.value)} placeholder="Write or generate your narration script..."
-                    className="w-full border border-slate-700/40 rounded-lg px-3 py-2 text-sm min-h-[160px] resize-y bg-slate-900 text-slate-200" />
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[160px] resize-y" />
                   <div className="text-[10px] text-slate-400 mt-1">{script.split(/\s+/).filter(Boolean).length} words · ~{Math.round(script.split(/\s+/).filter(Boolean).length / 2.7)}s at 2.7 wps</div>
                 </div>
               </div>
@@ -1656,39 +1656,39 @@ export default function ShortsWorkbenchPage() {
             <Panel title="Voice & Voiceover" right={<CostBadge amount="0.01" />}>
               <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Voice</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Voice</label>
                   <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
                     {sortedVoices.slice(0, 12).map(v => (
                       <div key={v.id} className={cn('p-2 rounded-lg border text-left transition-all group relative',
-                        geminiVoice === v.id ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-700/40 hover:border-slate-600/50')}>
+                        geminiVoice === v.id ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
                         <button onClick={() => setGeminiVoice(v.id)} className="w-full text-left">
-                          <div className="text-[11px] font-semibold text-slate-200">{v.label}</div>
+                          <div className="text-[11px] font-semibold text-slate-700">{v.label}</div>
                           <div className="text-[9px] text-slate-400">{v.description}</div>
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); playVoicePreview(v.id); }}
-                          className="absolute top-1 right-1 p-1 rounded bg-slate-700/40 hover:bg-slate-600/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                          className="absolute top-1 right-1 p-1 rounded bg-slate-200 hover:bg-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
                           {previewVoiceLoading === v.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+                            <Loader2 className="w-3 h-3 animate-spin text-slate-700" />
                           ) : (
-                            <Play className="w-3 h-3 text-slate-400 ml-0.5" />
+                            <Play className="w-3 h-3 text-slate-700 ml-0.5" />
                           )}
                         </button>
                       </div>
                     ))}
                   </div>
 
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mt-3 mb-1">Voice Style</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mt-3 mb-1">Voice Style</label>
                   <div className="flex gap-1 flex-wrap mb-1.5">
                     {(niche && NICHE_VOICE_STYLES[niche] ? [{ label: NICHES.find(n => n.key === niche)?.label || 'Niche', value: NICHE_VOICE_STYLES[niche] }, ...VOICE_STYLE_PRESETS] : VOICE_STYLE_PRESETS).map(p => (
                       <button key={p.label} onClick={() => setStyleInstructions(p.value)}
                         className={cn('px-2 py-0.5 rounded text-[9px] font-medium border transition-all',
-                          styleInstructions === p.value ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-700/40 text-slate-400 hover:border-slate-600/50')}>
+                          styleInstructions === p.value ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200 text-slate-500 hover:border-slate-300')}>
                         {p.label}
                       </button>
                     ))}
                   </div>
                   <textarea value={styleInstructions} onChange={e => setStyleInstructions(e.target.value)}
-                    className="w-full border border-slate-700/40 rounded-lg px-3 py-2 text-[11px] h-14 resize-none bg-slate-900 text-slate-200" placeholder="Custom voice style instructions..." />
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[11px] h-14 resize-none text-slate-600" placeholder="Custom voice style instructions..." />
                 </div>
 
                 <div className="w-1/2">
@@ -1704,11 +1704,11 @@ export default function ShortsWorkbenchPage() {
                       <div className="mt-3 flex gap-2">
                         <button onClick={() => setVoiceApproved(true)}
                           className={cn('flex-1 px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all',
-                            voiceApproved ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400' : 'border-slate-700/40 text-slate-400 hover:border-emerald-400')}>
+                            voiceApproved ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'border-slate-200 text-slate-600 hover:border-emerald-300')}>
                           <Check className="w-3 h-3 inline mr-1" />{voiceApproved ? 'Approved' : 'Approve Voiceover'}
                         </button>
                         <button onClick={generateVoiceover} disabled={voiceLoading}
-                          className="px-3 py-2 rounded-lg text-xs text-slate-400 border border-slate-700/40 hover:bg-slate-800/40">
+                          className="px-3 py-2 rounded-lg text-xs text-slate-500 border border-slate-200 hover:bg-slate-50">
                           <RotateCcw className="w-3 h-3 inline mr-1" />Redo
                         </button>
                       </div>
@@ -1733,19 +1733,19 @@ export default function ShortsWorkbenchPage() {
         {step === 'timing' && (
           <>
             <Panel title="Scene Block Timing" right={<CostBadge amount="0.00" label="local" />}>
-              <div className="bg-blue-900/30 border-l-3 border-blue-600 rounded-r-lg p-3 mb-4 text-xs text-blue-300">
+              <div className="bg-blue-50 border-l-3 border-blue-400 rounded-r-lg p-3 mb-4 text-xs text-blue-800">
                 Whisper extracts word timestamps, then the block aligner snaps them to <strong>{videoModel}</strong>'s valid durations.
               </div>
 
               <div className="flex gap-3 mb-4">
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider self-center">Video Model</label>
+                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider self-center">Video Model</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {VIDEO_MODELS.map(m => (
                     <button key={m.value} onClick={() => setVideoModel(m.value)}
                       className={cn('px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all',
-                        videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-700/40 text-slate-400')}>
+                        videoModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-200 text-slate-600')}>
                       {m.label}
-                      {FLF_MODELS.includes(m.value) && <span className="ml-1 text-[8px] bg-emerald-900/30 text-emerald-400 px-1 rounded">FLF</span>}
+                      {FLF_MODELS.includes(m.value) && <span className="ml-1 text-[8px] bg-emerald-100 text-emerald-700 px-1 rounded">FLF</span>}
                     </button>
                   ))}
                 </div>
@@ -1781,11 +1781,11 @@ export default function ShortsWorkbenchPage() {
 
                   {/* Scene list */}
                   {blocks.map((b, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 border border-slate-700/40 rounded-xl mb-2">
+                    <div key={i} className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl mb-2">
                       <div className="w-7 h-7 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0">{i + 1}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-slate-200">{b.frameworkLabel || 'Scene'} <span className="text-slate-400 font-normal">· {b.frameworkBeat}</span></div>
-                        <div className="text-[11px] text-slate-400 truncate">{b.narration?.slice(0, 100)}...</div>
+                        <div className="text-xs font-semibold text-slate-700">{b.frameworkLabel || 'Scene'} <span className="text-slate-400 font-normal">· {b.frameworkBeat}</span></div>
+                        <div className="text-[11px] text-slate-500 truncate">{b.narration?.slice(0, 100)}...</div>
                       </div>
                       <div className="text-xs text-slate-400 font-semibold whitespace-nowrap">{b.clipDuration}s</div>
                       <Tag color="slate">{Math.round(b.narration?.split(/\s+/).length || 0)} words</Tag>
@@ -1800,7 +1800,7 @@ export default function ShortsWorkbenchPage() {
               <div className="flex items-center gap-3 mb-3">
                 <button onClick={() => setEnableMusic(!enableMusic)}
                   className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', enableMusic ? 'bg-[#2C666E]' : 'bg-slate-300')}>
-                  <span className={cn('inline-block h-4 w-4 transform rounded-full bg-slate-200 transition-transform', enableMusic ? 'translate-x-6' : 'translate-x-1')} />
+                  <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', enableMusic ? 'translate-x-6' : 'translate-x-1')} />
                 </button>
                 <span className="text-sm text-slate-700 font-medium">Enable background music</span>
               </div>
@@ -1809,7 +1809,7 @@ export default function ShortsWorkbenchPage() {
                 <>
                   <div className="flex items-center gap-2 mb-3">
                     <select value={musicModel} onChange={e => setMusicModel(e.target.value)}
-                      className="px-2 py-1.5 rounded-lg border border-slate-700/40 text-xs text-slate-200 bg-slate-900">
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white">
                       <option value="elevenlabs">ElevenLabs</option>
                       <option value="minimax">MiniMax</option>
                       <option value="fal_lyria2">Lyria 2</option>
@@ -1836,7 +1836,7 @@ export default function ShortsWorkbenchPage() {
                             musicApproved ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'border-slate-200 text-slate-600')}>
                           <Check className="w-3 h-3 inline mr-1" />{musicApproved ? 'Approved' : 'Approve'}
                         </button>
-                        <button onClick={generateMusic} className="px-3 py-2 rounded-lg text-xs text-slate-400 border border-slate-700/40">
+                        <button onClick={generateMusic} className="px-3 py-2 rounded-lg text-xs text-slate-500 border border-slate-200">
                           <RotateCcw className="w-3 h-3 inline mr-1" />Redo
                         </button>
                       </div>
@@ -1851,7 +1851,7 @@ export default function ShortsWorkbenchPage() {
               <div className="flex items-center gap-3 mb-3">
                 <button onClick={() => setEnableSfx(!enableSfx)}
                   className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', enableSfx ? 'bg-[#2C666E]' : 'bg-slate-300')}>
-                  <span className={cn('inline-block h-4 w-4 transform rounded-full bg-slate-200 transition-transform', enableSfx ? 'translate-x-6' : 'translate-x-1')} />
+                  <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', enableSfx ? 'translate-x-6' : 'translate-x-1')} />
                 </button>
                 <span className="text-sm text-slate-700 font-medium">Enable sound effects</span>
               </div>
@@ -1873,7 +1873,7 @@ export default function ShortsWorkbenchPage() {
                           className="flex-1 accent-purple-600" />
                       </div>
                       <div className="mt-3">
-                        <button onClick={generateSfx} className="px-3 py-2 rounded-lg text-xs text-slate-400 border border-slate-700/40">
+                        <button onClick={generateSfx} className="px-3 py-2 rounded-lg text-xs text-slate-500 border border-slate-200">
                           <RotateCcw className="w-3 h-3 inline mr-1" />Redo
                         </button>
                       </div>
@@ -1884,7 +1884,7 @@ export default function ShortsWorkbenchPage() {
             </Panel>
 
             <div className="flex justify-between">
-              <button onClick={() => goTo('script')} className="px-5 py-2 border border-slate-600/50 rounded-xl text-sm text-slate-400 hover:bg-slate-800/40">← Back</button>
+              <button onClick={() => goTo('script')} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
               <button onClick={() => completeAndGo('frames')} disabled={blocks.length === 0}
                 className="px-6 py-2.5 bg-[#2C666E] text-white rounded-xl text-sm font-semibold hover:bg-[#1f4f55] disabled:opacity-50">
                 Next: Keyframes →
@@ -1901,34 +1901,34 @@ export default function ShortsWorkbenchPage() {
             {/* Style selectors */}
             <Panel title="Visual & Motion Style">
               {avatarMode && (
-                <div className="mb-3 px-3 py-2 bg-blue-900/30 border border-blue-700/40 rounded-lg">
-                  <p className="text-[10px] font-semibold text-blue-300">
+                <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-[10px] font-semibold text-blue-700">
                     B-Roll Scenes (top 60%) — These images fill the upper portion of the split-screen. Your avatar will appear below.
                   </p>
                 </div>
               )}
               <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Visual Style</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Visual Style</label>
                   <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="200px" hideLabel />
                 </div>
                 <div className="w-1/2">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Image Model</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Image Model</label>
                   <div className="flex gap-1.5 flex-wrap mb-3">
                     {IMAGE_MODELS.map(m => (
                       <button key={m.value} onClick={() => setImageModel(m.value)}
                         className={cn('px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all',
-                          imageModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-700/40 text-slate-400')}>
+                          imageModel === m.value ? 'border-[#2C666E] bg-[#2C666E]/5 text-[#2C666E]' : 'border-slate-200 text-slate-600')}>
                         {m.label}
                       </button>
                     ))}
                   </div>
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Aspect Ratio</label>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Aspect Ratio</label>
                   <div className="flex gap-2">
                     {['9:16', '16:9', '1:1'].map(ar => (
                       <button key={ar} onClick={() => setAspectRatio(ar)}
                         className={cn('px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-all',
-                          aspectRatio === ar ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-700/40 text-slate-400')}>
+                          aspectRatio === ar ? 'border-[#2C666E] bg-[#2C666E]/10 text-[#2C666E]' : 'border-slate-200 text-slate-600')}>
                         {ar}
                       </button>
                     ))}
@@ -1950,13 +1950,13 @@ export default function ShortsWorkbenchPage() {
             )}
 
             {/* Mode indicator */}
-            <div className="bg-blue-900/30 border border-blue-700/40 rounded-xl p-3 mb-4 text-xs text-blue-300">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-xs text-blue-800">
               <strong>{mode === 'flf' ? 'FLF Mode:' : 'I2V Mode:'}</strong>{' '}
               {mode === 'flf'
                 ? 'Generate START + END frame per scene. Approve pairs, then videos fire in parallel. Each scene\'s end frame becomes the next scene\'s start.'
                 : 'Generate one frame per scene. Videos are sequential — each clip\'s last frame is extracted and becomes the next scene\'s input.'}
               {Object.keys(sceneMotionRefs).length > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-purple-900/30 text-purple-300 rounded font-semibold">
+                <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded font-semibold">
                   + {Object.keys(sceneMotionRefs).length} Motion Transfer scene{Object.keys(sceneMotionRefs).length > 1 ? 's' : ''}
                 </span>
               )}
@@ -1988,7 +1988,7 @@ export default function ShortsWorkbenchPage() {
                   </span>}
                   right={<CostBadge amount={sceneMode === 'flf' ? '0.04' : sceneMode === 'mt' ? '0.06' : '0.02'} label="per scene" />}
                 >
-                  <div className="text-[11px] text-slate-400 italic mb-3 bg-slate-800/40 p-2 rounded-lg">
+                  <div className="text-[11px] text-slate-500 italic mb-3 bg-slate-50 p-2 rounded-lg">
                     "{block.narration?.slice(0, 150)}{block.narration?.length > 150 ? '...' : ''}"
                   </div>
 
@@ -2113,7 +2113,7 @@ export default function ShortsWorkbenchPage() {
             })}
 
             <div className="flex justify-between">
-              <button onClick={() => goTo('timing')} className="px-5 py-2 border border-slate-600/50 rounded-xl text-sm text-slate-400 hover:bg-slate-800/40">← Back</button>
+              <button onClick={() => goTo('timing')} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
               <button onClick={() => completeAndGo('clips')}
                 className="px-6 py-2.5 bg-[#2C666E] text-white rounded-xl text-sm font-semibold hover:bg-[#1f4f55]">
                 Next: Video Clips →
@@ -2128,23 +2128,23 @@ export default function ShortsWorkbenchPage() {
         {step === 'clips' && (
           <>
             <Panel title="Generate Video Clips" right={<span className="inline-flex items-center gap-2">
-              <span className="text-[9px] font-bold uppercase bg-red-900/30 text-red-400 px-2 py-0.5 rounded">🔇 generate_audio: false</span>
+              <span className="text-[9px] font-bold uppercase bg-red-50 text-red-600 px-2 py-0.5 rounded">🔇 generate_audio: false</span>
               <CostBadge amount={(blocks.length * (VIDEO_MODELS.find(m => m.value === videoModel)?.costPerClip || 0.5)).toFixed(2)} />
             </span>}>
 
               {/* Multi-Shot toggle (Kling V3/O3 only) */}
               {MULTI_SHOT_MODELS.includes(videoModel) && blocks.length >= 2 && blocks.length <= 6 && (
-                <div className="flex items-center gap-3 mb-3 p-2.5 bg-purple-900/30 border border-purple-700/40 rounded-lg">
+                <div className="flex items-center gap-3 mb-3 p-2.5 bg-purple-50 border border-purple-200 rounded-lg">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={multiShotMode} onChange={(e) => setMultiShotMode(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-purple-600 text-purple-600 focus:ring-purple-500" />
-                    <span className="text-xs font-semibold text-purple-300">Multi-Shot Mode</span>
+                      className="w-3.5 h-3.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" />
+                    <span className="text-xs font-semibold text-purple-800">Multi-Shot Mode</span>
                   </label>
-                  <span className="text-[10px] text-purple-300 flex-1">
+                  <span className="text-[10px] text-purple-600 flex-1">
                     Generate all {blocks.length} scenes in a single Kling call with better cross-scene consistency (max 15s total, 6 scenes).
                   </span>
                   {blocks.reduce((sum, b) => sum + (b.clipDuration || 3), 0) > 15 && (
-                    <span className="text-[10px] font-bold text-red-400">Total &gt; 15s!</span>
+                    <span className="text-[10px] font-bold text-red-600">Total &gt; 15s!</span>
                   )}
                 </div>
               )}
@@ -2153,9 +2153,9 @@ export default function ShortsWorkbenchPage() {
               {multiShotMode && MULTI_SHOT_MODELS.includes(videoModel) ? (
                 <div className="mb-4">
                   {multiShotResult ? (
-                    <div className="p-3 bg-emerald-900/30 border border-emerald-700/40 rounded-lg">
-                      <p className="text-xs font-semibold text-emerald-300 mb-1">Multi-Shot Video Generated</p>
-                      <p className="text-[10px] text-emerald-400">{multiShotResult.total_duration}s video with {blocks.length} scenes in one continuous shot.</p>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs font-semibold text-green-800 mb-1">Multi-Shot Video Generated</p>
+                      <p className="text-[10px] text-green-600">{multiShotResult.total_duration}s video with {blocks.length} scenes in one continuous shot.</p>
                       <video src={multiShotResult.video_url} controls className="w-full max-w-md mt-2 rounded-lg" />
                     </div>
                   ) : (
@@ -2184,13 +2184,13 @@ export default function ShortsWorkbenchPage() {
                 const isWaiting = (sceneMode === 'i2v' || sceneMode === 'mt') && i > 0 && !clips[i - 1]?.url;
 
                 return (
-                  <div key={i} className="border border-slate-700/40 rounded-xl mb-2 overflow-hidden">
+                  <div key={i} className="border border-slate-200 rounded-xl mb-2 overflow-hidden">
                     <div className="flex items-center gap-3 p-3">
                       <div className="w-7 h-7 bg-[#2C666E] text-white rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
                       <div className="flex-1">
-                        <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                        <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                           {block.frameworkLabel || 'Scene'}
-                          {sceneMode === 'mt' && <span className="text-[9px] font-bold bg-purple-900/30 text-purple-300 px-1.5 py-0.5 rounded">MT</span>}
+                          {sceneMode === 'mt' && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">MT</span>}
                         </div>
                         <div className="text-[10px] text-slate-400">{block.clipDuration}s planned</div>
                       </div>
@@ -2241,8 +2241,8 @@ export default function ShortsWorkbenchPage() {
 
               {/* Avatar Generation */}
               {avatarMode && avatarSubjectId && (
-                <div className="mt-4 pt-4 border-t border-slate-700/30">
-                  <h3 className="text-xs font-bold text-slate-200 mb-3 flex items-center gap-2">
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <h3 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
                     Avatar — {avatarSubjectName}
                     <span className="text-[9px] text-slate-400 font-normal">(bottom 40% of split-screen)</span>
                   </h3>
@@ -2250,8 +2250,8 @@ export default function ShortsWorkbenchPage() {
                   {/* Portrait preview */}
                   {avatarPortraitUrl && (
                     <div className="mb-3">
-                      <p className="text-[9px] text-slate-400 mb-1">Presenter Portrait</p>
-                      <img src={avatarPortraitUrl} alt="Avatar portrait" className="h-24 rounded-lg border border-slate-700/40" />
+                      <p className="text-[9px] text-slate-500 mb-1">Presenter Portrait</p>
+                      <img src={avatarPortraitUrl} alt="Avatar portrait" className="h-24 rounded-lg border border-slate-200" />
                     </div>
                   )}
 
@@ -2259,7 +2259,7 @@ export default function ShortsWorkbenchPage() {
                   {avatarStage && avatarStage !== 'done' && (
                     <div className="flex items-center gap-2 mb-3">
                       <Loader2 className="w-4 h-4 animate-spin text-[#2C666E]" />
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-600">
                         {avatarStage === 'portrait' && 'Generating portrait...'}
                         {avatarStage === 'animating' && 'Animating avatar (this may take a few minutes)...'}
                         {avatarStage === 'lipsyncing' && 'Lip-syncing to voiceover...'}
@@ -2285,7 +2285,7 @@ export default function ShortsWorkbenchPage() {
                     )}
                     {avatarStage === 'done' && (
                       <button onClick={regenerateAvatar} disabled={avatarLoading}
-                        className="px-3 py-1.5 border border-slate-600/50 rounded-lg text-[10px] font-medium text-slate-400 hover:bg-slate-800/40 disabled:opacity-50">
+                        className="px-3 py-1.5 border border-slate-300 rounded-lg text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                         Regenerate
                       </button>
                     )}
@@ -2298,7 +2298,7 @@ export default function ShortsWorkbenchPage() {
             </Panel>
 
             <div className="flex justify-between">
-              <button onClick={() => goTo('frames')} className="px-5 py-2 border border-slate-600/50 rounded-xl text-sm text-slate-400 hover:bg-slate-800/40">← Back</button>
+              <button onClick={() => goTo('frames')} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
               <button onClick={() => completeAndGo('assemble')}
                 disabled={!Object.values(clips).some(c => c?.url)}
                 className="px-6 py-2.5 bg-[#2C666E] text-white rounded-xl text-sm font-semibold hover:bg-[#1f4f55] disabled:opacity-50">
@@ -2316,14 +2316,14 @@ export default function ShortsWorkbenchPage() {
             <Panel title="Assemble Final Video" right={<CostBadge amount="0.12" label="FFmpeg + captions" />}>
               <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
-                  <div className="bg-slate-800/40 rounded-xl p-4 text-xs space-y-2 mb-4">
+                  <div className="bg-slate-50 rounded-xl p-4 text-xs space-y-2 mb-4">
                     {blocks.map((b, i) => (
                       <div key={i} className="flex justify-between">
-                        <span className="text-slate-400"><strong>Scene {i + 1}:</strong> {b.frameworkLabel}</span>
+                        <span className="text-slate-600"><strong>Scene {i + 1}:</strong> {b.frameworkLabel}</span>
                         <span className="text-slate-400">{clips[i]?.actualDuration?.toFixed(1) || b.clipDuration}s</span>
                       </div>
                     ))}
-                    <div className="border-t border-slate-700/30 pt-2 mt-2 flex justify-between font-semibold">
+                    <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-semibold">
                       <span>Total</span>
                       <span>{Object.values(clips).reduce((s, c) => s + (c?.actualDuration || 0), 0).toFixed(1)}s video · {effectiveDuration?.toFixed(1)}s voice</span>
                     </div>
@@ -2354,12 +2354,12 @@ export default function ShortsWorkbenchPage() {
                 <div className="w-1/2">
                   {finalUrl ? (
                     <div>
-                      <video src={finalUrl} controls className="w-full rounded-xl border border-slate-700/40" style={{ maxHeight: '500px' }} />
+                      <video src={finalUrl} controls className="w-full rounded-xl border border-slate-200 shadow-sm" style={{ maxHeight: '500px' }} />
                       <div className="flex gap-2 mt-3">
-                        <a href={finalUrl} download className="flex-1 px-3 py-2 border border-slate-700/40 rounded-lg text-xs font-semibold text-center text-slate-400 hover:bg-slate-800/40">
+                        <a href={finalUrl} download className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-center text-slate-600 hover:bg-slate-50">
                           <Download className="w-3 h-3 inline mr-1" />Download
                         </a>
-                        <button onClick={assembleVideo} className="px-3 py-2 border border-slate-700/40 rounded-lg text-xs text-slate-400">
+                        <button onClick={assembleVideo} className="px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-500">
                           <RotateCcw className="w-3 h-3 inline mr-1" />Re-assemble
                         </button>
                       </div>
@@ -2373,16 +2373,16 @@ export default function ShortsWorkbenchPage() {
 
                   {/* Quality Review Gate */}
                   {reviewLoading && (
-                    <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700/40 rounded-lg flex items-center gap-2 text-sm text-blue-300">
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
                       Reviewing scenes for visual-narration alignment...
                     </div>
                   )}
 
                   {reviewError && !reviewLoading && (
-                    <div className="mt-4 p-3 bg-red-900/30 border border-red-700/40 rounded-lg text-sm text-red-300">
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                       Quality review failed: {reviewError}
-                      <button onClick={() => setReviewError(null)} className="ml-2 underline text-red-400">Dismiss</button>
+                      <button onClick={() => setReviewError(null)} className="ml-2 underline text-red-600">Dismiss</button>
                     </div>
                   )}
 
@@ -2394,7 +2394,7 @@ export default function ShortsWorkbenchPage() {
                     return (
                       <div className="mt-4">
                         {/* Summary banner */}
-                        <div className={`p-3 rounded-lg border text-sm font-medium ${allPass ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300' : 'bg-amber-900/30 border-amber-700/40 text-amber-300'}`}>
+                        <div className={`p-3 rounded-lg border text-sm font-medium ${allPass ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
                           {allPass
                             ? `All ${reviewResults.length} scenes match narration ✓`
                             : `${flagged.length} of ${reviewResults.length} scenes flagged for review`}
@@ -2402,15 +2402,15 @@ export default function ShortsWorkbenchPage() {
 
                         {/* Flagged scenes (expanded) */}
                         {flagged.map(r => (
-                          <div key={r.scene_index} className="mt-2 p-3 bg-amber-900/30 border border-amber-700/40 rounded-lg">
+                          <div key={r.scene_index} className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                             <div className="flex items-start gap-3">
                               {r.frame_url && (
-                                <img src={r.frame_url} alt={`Scene ${r.scene_index + 1}`} className="w-24 h-16 object-cover rounded border border-amber-700/40" />
+                                <img src={r.frame_url} alt={`Scene ${r.scene_index + 1}`} className="w-24 h-16 object-cover rounded border border-amber-300" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs font-semibold text-amber-300">Scene {r.scene_index + 1} &mdash; Mismatch</div>
-                                <div className="text-xs text-amber-400 mt-1">{r.reason}</div>
-                                <div className="text-[11px] text-amber-300 mt-1 italic truncate">
+                                <div className="text-xs font-semibold text-amber-800">Scene {r.scene_index + 1} &mdash; Mismatch</div>
+                                <div className="text-xs text-amber-700 mt-1">{r.reason}</div>
+                                <div className="text-[11px] text-amber-600 mt-1 italic truncate">
                                   Narration: &quot;{blocks[r.scene_index]?.narration?.slice(0, 120)}&quot;
                                 </div>
                               </div>
@@ -2436,9 +2436,9 @@ export default function ShortsWorkbenchPage() {
                         {/* Passing scenes (collapsed) */}
                         {passed.length > 0 && !allPass && (
                           <details className="mt-2">
-                            <summary className="text-xs text-emerald-400 cursor-pointer">{passed.length} scenes passed ✓</summary>
+                            <summary className="text-xs text-green-600 cursor-pointer">{passed.length} scenes passed ✓</summary>
                             {passed.map(r => (
-                              <div key={r.scene_index} className="mt-1 p-2 bg-emerald-900/30 border border-emerald-700/40 rounded text-xs text-emerald-300 flex items-center gap-2">
+                              <div key={r.scene_index} className="mt-1 p-2 bg-green-50 border border-green-100 rounded text-xs text-green-700 flex items-center gap-2">
                                 {r.frame_url && <img src={r.frame_url} alt="" className="w-12 h-8 object-cover rounded" />}
                                 <span>Scene {r.scene_index + 1}: {r.reason}</span>
                               </div>
@@ -2449,9 +2449,9 @@ export default function ShortsWorkbenchPage() {
                         {/* All-pass expandable detail */}
                         {allPass && reviewResults.length > 0 && (
                           <details className="mt-2">
-                            <summary className="text-xs text-emerald-400 cursor-pointer">View scene details</summary>
+                            <summary className="text-xs text-green-600 cursor-pointer">View scene details</summary>
                             {reviewResults.map(r => (
-                              <div key={r.scene_index} className="mt-1 p-2 bg-emerald-900/30 border border-emerald-700/40 rounded text-xs text-emerald-300 flex items-center gap-2">
+                              <div key={r.scene_index} className="mt-1 p-2 bg-green-50 border border-green-100 rounded text-xs text-green-700 flex items-center gap-2">
                                 {r.frame_url && <img src={r.frame_url} alt="" className="w-12 h-8 object-cover rounded" />}
                                 <span>Scene {r.scene_index + 1}: {r.reason} ({Math.round(r.confidence * 100)}%)</span>
                               </div>
@@ -2471,7 +2471,7 @@ export default function ShortsWorkbenchPage() {
             )}
 
             <div className="flex justify-between">
-              <button onClick={() => goTo('clips')} className="px-5 py-2 border border-slate-600/50 rounded-xl text-sm text-slate-400 hover:bg-slate-800/40">← Back</button>
+              <button onClick={() => goTo('clips')} className="px-5 py-2 border border-slate-300 rounded-xl text-sm text-slate-600 hover:bg-slate-50">← Back</button>
             </div>
           </>
         )}

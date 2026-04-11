@@ -36,8 +36,10 @@ const StorySchema = z.object({
 });
 
 // Search queries per niche for finding trending stories
-const currentYear = new Date().getFullYear();
-const NICHE_SEARCH_QUERIES = {
+// NOTE: computed per-call (not module-level) to avoid stale year after server uptime crossing year boundary
+function getNicheSearchQueries() {
+  const currentYear = new Date().getFullYear();
+  return {
   ai_tech_news: ['AI breakthrough news today', `new AI technology ${currentYear}`, 'artificial intelligence latest developments'],
   finance_money: ['stock market surprising news', 'money saving strategy viral', 'finance news unexpected'],
   motivation_self_help: ['incredible comeback story', 'against all odds success story', 'inspirational true story viral'],
@@ -49,8 +51,9 @@ const NICHE_SEARCH_QUERIES = {
   health_fitness: ['health myth debunked study', 'fitness discovery surprising', 'nutrition science new finding'],
   gaming_popculture: ['gaming easter egg discovered', 'pop culture hidden detail', 'video game secret revealed'],
   conspiracy_mystery: ['conspiracy theory evidence', 'government secret declassified', 'unexplained phenomenon recent'],
-  business_entrepreneur: ['startup story unexpected', 'business strategy unconventional success', 'entrepreneur breakthrough story'],
-};
+    business_entrepreneur: ['startup story unexpected', 'business strategy unconventional success', 'entrepreneur breakthrough story'],
+  };
+}
 
 async function searchRealStories(niche, nicheName, topic) {
   const searchApiKey = process.env.SEARCHAPI_KEY || process.env.SERP_API_KEY;
@@ -67,7 +70,7 @@ async function searchRealStories(niche, nicheName, topic) {
     const topicParts = topic.split(/\s*—\s*/).filter(Boolean);
     query = topicParts.join(' ') + ' news';
   } else {
-    const queries = NICHE_SEARCH_QUERIES[niche] || [`${nicheName} trending story`, `${nicheName} viral news`];
+    const queries = getNicheSearchQueries()[niche] || [`${nicheName} trending story`, `${nicheName} viral news`];
     query = queries[Math.floor(Math.random() * queries.length)];
   }
 
@@ -172,8 +175,9 @@ export default async function handler(req, res) {
         }`
       : '';
 
+    const today = new Date().toISOString().split('T')[0];
     const systemPrompt = hasRealArticles
-      ? `You are a viral content researcher for ${nicheTemplate.name} short-form videos.
+      ? `You are a viral content researcher for ${nicheTemplate.name} short-form videos. Today's date is ${today}.
 
 You have been given REAL trending news articles. Your job is to pick the ${count} most compelling ones and transform them into viral short-form video concepts.
 
@@ -182,7 +186,7 @@ For each story:
 - Find the most surprising or counterintuitive angle
 - The story_context field should include all key facts, names, dates from the article
 - Make the title punchy and click-worthy for 60-second vertical videos${topicFocus}${excludeBlock}${frameworkBlock}`
-      : `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos.
+      : `You are a viral content researcher finding compelling story ideas for ${nicheTemplate.name} short-form videos. Today's date is ${today}.
 
 Your job is to surface specific, real stories that would make excellent 60-second vertical videos.
 Focus on: historical events, documented cases, real people, verifiable facts, and well-known narratives.

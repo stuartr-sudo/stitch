@@ -48,14 +48,14 @@ export default async function handler(req, res) {
   if (!lastFrameUrl) {
     const { animateImageV2 } = await import('../lib/mediaGenerator.js');
     const videoUrl = await animateImageV2(
-      stepResults.video_model || 'fal_veo3',
       firstFrameUrl,
       prompt || scene.motion_prompt || scene.visual_prompt,
-      stepResults.aspect_ratio || '9:16',
-      scene.duration_seconds || 8,
+      stepResults.video_model || 'fal_veo3',
       keys,
-      supabase,
-      { generate_audio: false }
+      {
+        duration: scene.duration_seconds || 8,
+        aspectRatio: stepResults.aspect_ratio || '9:16',
+      }
     );
     // Upload to supabase
     const publicUrl = await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/scenes');

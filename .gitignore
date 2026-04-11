@@ -31,6 +31,3 @@ node_modules
 .next/
 .superpowers/
 .worktrees/
-
-# Claude Code worktrees
-.claude/
