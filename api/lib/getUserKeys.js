@@ -29,9 +29,15 @@ export async function getUserKeys(userId, userEmail) {
     throw new Error('Failed to retrieve API keys');
   }
 
-  const isOwner = process.env.OWNER_EMAIL
-    && userEmail
-    && userEmail.toLowerCase() === process.env.OWNER_EMAIL.toLowerCase();
+  const ownerEmail = process.env.OWNER_EMAIL;
+  const sharedEmails = process.env.SHARED_KEY_EMAILS
+    ? process.env.SHARED_KEY_EMAILS.split(',').map(e => e.trim().toLowerCase())
+    : [];
+
+  const isOwner = userEmail && (
+    (ownerEmail && userEmail.toLowerCase() === ownerEmail.toLowerCase()) ||
+    sharedEmails.includes(userEmail.toLowerCase())
+  );
 
   const envFallback = (dbVal, envVar) => dbVal || (isOwner ? (process.env[envVar] || null) : null);
 
