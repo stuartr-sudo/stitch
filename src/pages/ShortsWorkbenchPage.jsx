@@ -1624,14 +1624,14 @@ export default function ShortsWorkbenchPage() {
                   )}
 
                   {/* Creative Mode toggle */}
-                  <div className="flex items-center justify-between mb-2 py-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between mb-2 py-1.5 px-2.5 rounded-lg bg-slate-800/50 border border-slate-700/40">
                     <div className="flex items-center gap-2">
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={creativeMode} onChange={e => setCreativeMode(e.target.checked)}
                           className="sr-only peer" />
-                        <div className="w-8 h-4.5 bg-slate-300 peer-focus:ring-2 peer-focus:ring-[#2C666E]/30 rounded-full peer peer-checked:bg-[#2C666E] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5" />
+                        <div className="w-8 h-[18px] bg-slate-600 peer-focus:ring-2 peer-focus:ring-[#2C666E]/30 rounded-full peer peer-checked:bg-[#2C666E] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5" />
                       </label>
-                      <span className="text-[11px] font-semibold text-slate-700">Creative Mode</span>
+                      <span className="text-[11px] font-semibold text-slate-200">Creative Mode</span>
                     </div>
                     <span className="text-[9px] text-slate-400">
                       {creativeMode ? 'AI can create fictional stories freely' : 'Research required — facts only'}
