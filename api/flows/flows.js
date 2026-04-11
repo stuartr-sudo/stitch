@@ -315,6 +315,7 @@ export default async function handler(req, res) {
         .from('automation_flows')
         .select('*')
         .eq('id', flowId)
+        .eq('user_id', userId)
         .single();
       if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -329,6 +330,7 @@ export default async function handler(req, res) {
         .from('automation_flows')
         .select('*')
         .eq('id', flowId)
+        .eq('user_id', userId)
         .single();
       if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -363,6 +365,7 @@ export default async function handler(req, res) {
         .from('automation_flows')
         .select('*')
         .eq('id', flowId)
+        .eq('user_id', userId)
         .single();
       if (error || !flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -391,6 +394,7 @@ export default async function handler(req, res) {
           .from('automation_flows')
           .select('*')
           .eq('id', flowId)
+          .eq('user_id', userId)
           .single();
         if (error) return res.status(404).json({ error: 'Flow not found' });
         return res.json({ flow: data });

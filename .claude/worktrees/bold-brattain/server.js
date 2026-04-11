@@ -1,0 +1,1614 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { createClient } from '@supabase/supabase-js';
+import { pollScheduledPublications } from './api/lib/scheduledPublisher.js';
+import { pollCommandCenterPublications } from './api/lib/commandCenterPublisher.js';
+import { startLoraPoller } from './api/lib/loraPoller.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3003;
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+// Redirect sewo.io to stitchstudios.app
+app.use((req, res, next) => {
+  const host = req.hostname;
+  if (host === 'sewo.io' || host === 'www.sewo.io') {
+    return res.redirect(301, `https://stitchstudios.app${req.originalUrl}`);
+  }
+  next();
+});
+
+// Auth middleware - verify Supabase JWT and attach user to request
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return res.status(500).json({ error: 'Server auth not configured.' });
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token.' });
+    }
+
+    req.user = { id: user.id, email: user.email };
+    next();
+  } catch (err) {
+    console.error('[Auth] Token verification failed:', err.message);
+    return res.status(401).json({ error: 'Authentication failed.' });
+  }
+};
+
+// Health check (no auth required)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Contact form (no auth - public homepage form)
+app.post('/api/contact/submit', async (req, res) => {
+  const handler = await loadApiRoute('contact/submit.js');
+  if (handler) handler(req, res);
+});
+
+// Dynamic API route loading
+const loadApiRoute = async (routePath) => {
+  try {
+    const module = await import(join(__dirname, 'api', routePath));
+    return module.default;
+  } catch (error) {
+    console.error(`Failed to load API route: ${routePath}`, error);
+    return null;
+  }
+};
+
+// Auth check route
+app.get('/api/auth/check-keys', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('auth/check-keys.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Onboarding status route
+app.all('/api/onboarding/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('onboarding/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// JumpStart routes (with auth)
+app.post('/api/jumpstart/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/save-video', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/save-video.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/edit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/edit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/extend', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/extend.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/erase', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/erase.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/jumpstart/generate-multishot', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jumpstart/generate-multishot.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Trip route (with auth)
+app.post('/api/trip/restyle', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('trip/restyle.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Production Queue routes
+app.all('/api/queue*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('queue/queue.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Autopilot routes
+app.all('/api/autopilot*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('autopilot/autopilot.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Campaign creation wizard — must be before flows catch-all
+app.all('/api/flows/campaigns*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/flows/campaign-create.js')).default;
+  return handler(req, res);
+});
+
+// Automation Flows — catch-all
+app.all('/api/flows*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/flows/flows.js')).default;
+  return handler(req, res);
+});
+
+// Client Briefs
+app.all('/api/briefs*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/briefs/briefs.js')).default;
+  return handler(req, res);
+});
+
+// Command Center — AI Marketing Team
+// Chat SSE endpoint (must be before other command-center routes)
+app.post('/api/command-center/chat', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/chat.js')).default;
+  return handler(req, res);
+});
+
+// Specific routes first, then catch-all for campaigns
+app.get('/api/command-center/stats', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/stats.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/calendar', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/calendar.js')).default;
+  return handler(req, res);
+});
+
+// Threads — specific routes before catch-all
+app.post('/api/command-center/threads', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/threads', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/threads/:id/messages', authenticateToken, async (req, res) => {
+  req.params.sub = 'messages';
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+app.delete('/api/command-center/threads/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/threads.js')).default;
+  return handler(req, res);
+});
+
+// Items — action routes before generic update
+app.post('/api/command-center/items/:id/approve', authenticateToken, async (req, res) => {
+  req.params.action = 'approve';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/reject', authenticateToken, async (req, res) => {
+  req.params.action = 'reject';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/rebuild', authenticateToken, async (req, res) => {
+  req.params.action = 'rebuild';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/items/:id/publish', authenticateToken, async (req, res) => {
+  req.params.action = 'publish';
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.put('/api/command-center/items/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+app.delete('/api/command-center/items/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/items.js')).default;
+  return handler(req, res);
+});
+
+// Campaigns — CRUD
+app.get('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/command-center/campaigns', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/campaigns/:id/build', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/build.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/command-center/campaigns', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.put('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+app.delete('/api/command-center/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/command-center/campaigns.js')).default;
+  return handler(req, res);
+});
+
+// Video Analyzer route (with auth)
+app.post('/api/analyze/video', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/video.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Ad Clone Analyzer route (with auth)
+app.post('/api/analyze/clone-ad', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/clone-ad.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Gemini Deep Video Analyzer route (with auth)
+app.post('/api/analyze/video-gemini', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('analyze/video-gemini.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Animate routes (with auth)
+app.post('/api/animate/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('animate/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/animate/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('animate/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// ── Motion Transfer ──────────────────────────────────────────────────────
+app.post('/api/motion-transfer/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('motion-transfer/generate.js');
+  handler(req, res);
+});
+app.get('/api/motion-transfer/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('motion-transfer/result.js');
+  handler(req, res);
+});
+
+// Imagineer routes (with auth)
+app.post('/api/imagineer/generate', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/generate.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/generate] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+app.post('/api/imagineer/edit', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/edit.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/edit] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+app.post('/api/imagineer/describe-character', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/describe-character.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/describe-character] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+app.post('/api/imagineer/turnaround', authenticateToken, async (req, res) => {
+  // Edit endpoints run synchronously and can take 60-120s
+  req.setTimeout(180000);
+  res.setTimeout(180000);
+  try {
+    const handler = await loadApiRoute('imagineer/turnaround.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/turnaround] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+app.post('/api/imagineer/result', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/result.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/result] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+app.post('/api/imagineer/character-reel', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('imagineer/character-reel.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/imagineer/character-reel] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+// Prompt templates CRUD (with auth)
+app.all('/api/prompt/templates*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('prompt/templates.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Prompt builder (with auth)
+app.post('/api/prompt/build-cohesive', authenticateToken, async (req, res) => {
+  try {
+    const handler = await loadApiRoute('prompt/build-cohesive.js');
+    if (handler) return await handler(req, res);
+    res.status(500).json({ error: 'Handler not found' });
+  } catch (error) {
+    console.error('[Route/prompt/build-cohesive] Unhandled error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+});
+
+// Image utilities (with auth)
+app.post('/api/images/search', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('images/search.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/images/import-url', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('images/import-url.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/images/edit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('images/edit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/images/inpaint', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('images/inpaint.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Video frame extraction (with auth)
+app.post('/api/video/extract-frame', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('video/extract-frame.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Video trimming (with auth)
+app.post('/api/video/trim', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('video/trim.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Lens route (with auth)
+app.post('/api/lens/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lens/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// 3D Viewer routes (with auth)
+app.post('/api/viewer3d/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/viewer3d/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// 3D Product Animation route (with auth)
+app.post('/api/viewer3d/animate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('viewer3d/animate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Characters route (with auth)
+app.all('/api/characters*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('characters/characters.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Smoosh route (with auth)
+app.post('/api/smoosh/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('smoosh/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Try Style routes (with auth)
+app.post('/api/trystyle/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('trystyle/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/trystyle/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('trystyle/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Library routes (with auth)
+app.get('/api/library/filters', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/filters.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/library/save', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/save.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/library/update-thumbnail', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/update-thumbnail.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/library/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('library/upload.js');
+  handler(req, res);
+});
+
+// Tag management — specific paths BEFORE the catch-all /api/library/tags
+app.use('/api/library/tags/auto-tag', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-auto.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-auto]', e); return res.status(500).json({ error: e.message }); }
+});
+app.post('/api/library/tags/assign', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-assign.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-assign]', e); return res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/library/tags/unassign', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags-assign.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags-unassign]', e); return res.status(500).json({ error: e.message }); }
+});
+app.use('/api/library/tags', authenticateToken, async (req, res) => {
+  try { return (await loadApiRoute('library/tags.js'))(req, res); }
+  catch (e) { console.error('[Route/library/tags]', e); return res.status(500).json({ error: e.message }); }
+});
+
+// Brand Kit routes (with auth)
+app.post('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/brand/kit', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/kit.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// PDF brand guidelines extraction (with auth)
+app.post('/api/brand/extract-pdf', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/extract-pdf.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// URL brand extraction (with auth)
+app.post('/api/brand/extract-url', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/extract-url.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Background removal (with auth)
+app.post('/api/brand/remove-bg', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/remove-bg.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// LoRA training routes (with auth)
+app.post('/api/lora/train', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/train.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/lora/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/lora/caption', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/caption.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/lora/models', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/models.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Webhook - Blog to Ad (NO auth - uses webhook secret)
+app.post('/api/webhooks/content', async (req, res) => {
+  const handler = await loadApiRoute('webhooks/content.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Article → Video autonomous pipeline (NO auth - webhook secret + brand_username)
+app.post('/api/article/from-url', async (req, res) => {
+  const handler = await loadApiRoute('article/from-url.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Public job status poll (no auth — for Doubleclicker to poll pipeline progress)
+app.get('/api/jobs/public-status', async (req, res) => {
+  const { jobId } = req.query;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const { createClient: sbCreate } = await import('@supabase/supabase-js');
+  const sb = sbCreate(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await sb.from('jobs')
+    .select('id, status, current_step, total_steps, completed_steps, output_json, error')
+    .eq('id', jobId).single();
+  if (error || !data) return res.status(404).json({ error: 'Job not found' });
+  return res.json({ success: true, job: data });
+});
+
+// Jobs status (with auth)
+app.post('/api/jobs/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Job polling (GET, with auth — used by Shorts wizard)
+app.get('/api/jobs/poll', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/poll.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Audio routes (with auth)
+app.post('/api/audio/voiceover', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/voiceover.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/music', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/music.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/captions', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/captions.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/generate', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/generate.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/audio/result', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/result.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Storyboard routes (with auth)
+app.post('/api/storyboard/generate-scenes', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/generate-scenes.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/storyboard/describe-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/describe-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/storyboard/assemble', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/assemble.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Storyboard presets (GET, POST, DELETE all on same route)
+app.get('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.delete('/api/storyboard/presets', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('storyboard/presets.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Storyboard document system
+app.post('/api/storyboard/generate-previews', authenticateToken, (await import('./api/storyboard/generate-previews.js')).default);
+app.post('/api/storyboard/export-pdf', authenticateToken, (await import('./api/storyboard/export-pdf.js')).default);
+
+// Voiceover & Lipsync
+app.all('/api/storyboard/generate-voiceover', authenticateToken, (await import('./api/storyboard/generate-voiceover.js')).default);
+app.all('/api/storyboard/apply-lipsync', authenticateToken, (await import('./api/storyboard/apply-lipsync.js')).default);
+
+// Storyboard Tool — Script + Preview generation (must be before catch-all)
+app.post('/api/storyboard/projects/:id/generate-script', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/generate-previews', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/generate-previews';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/generate-grid', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/generate-grid';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/interpolate-grid', authenticateToken, async (req, res) => {
+  req.body.storyboardId = req.params.id;
+  req.url = req.url + '/interpolate-grid';
+  const handler = (await import('./api/storyboard/generate.js')).default;
+  return handler(req, res);
+});
+
+// Storyboard production (must be BEFORE projects catch-all)
+app.post('/api/storyboard/projects/:id/produce', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/produce.js')).default(req, res);
+});
+
+app.get('/api/storyboard/projects/:id/production-status', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/production-status.js')).default(req, res);
+});
+
+app.post('/api/storyboard/projects/:id/retry-frame', authenticateToken, async (req, res) => {
+  (await import('./api/storyboard/retry-frame.js')).default(req, res);
+});
+
+// Storyboard Tool — CRUD + frame management (catch-all)
+app.all('/api/storyboard/projects*', authenticateToken, async (req, res) => {
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+// Public storyboard review (no auth)
+app.get('/api/storyboard/review/:token', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+app.get('/api/storyboard/review/:token/comments', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}/comments`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/storyboard/review/:token/comment', async (req, res) => {
+  req.url = `/api/storyboard/review/${req.params.token}/comment`;
+  const handler = (await import('./api/storyboard/projects.js')).default;
+  return handler(req, res);
+});
+
+app.post('/api/campaigns/research', authenticateToken, (await import('./api/campaigns/research.js')).default);
+app.post('/api/campaigns/preview-script', authenticateToken, (await import('./api/campaigns/preview-script.js')).default);
+app.post('/api/campaigns/preview-image', authenticateToken, (await import('./api/campaigns/preview-image.js')).default);
+app.post('/api/campaigns/topics', authenticateToken, (await import('./api/campaigns/topics.js')).default);
+
+// ─── LinkedIn OAuth ───────────────────────────────────────────────
+app.get('/api/linkedin/oauth/auth', authenticateToken, (await import('./api/linkedin/oauth-auth.js')).default);
+app.get('/api/linkedin/oauth/callback', (await import('./api/linkedin/oauth-callback.js')).default); // No auth — redirect from LinkedIn
+
+// ─── LinkedIn ───────────────────────────────────────────────────
+app.get('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/get-config.js')).default);
+app.put('/api/linkedin/config', authenticateToken, (await import('./api/linkedin/update-config.js')).default);
+app.post('/api/linkedin/search', authenticateToken, (await import('./api/linkedin/search.js')).default);
+app.post('/api/linkedin/search-keyword', authenticateToken, (await import('./api/linkedin/search-keyword.js')).default);
+app.post('/api/linkedin/add-topic', authenticateToken, (await import('./api/linkedin/add-topic.js')).default);
+app.post('/api/linkedin/add-search-result', authenticateToken, (await import('./api/linkedin/add-search-result.js')).default);
+app.get('/api/linkedin/topics', authenticateToken, (await import('./api/linkedin/topics.js')).default);
+app.patch('/api/linkedin/topics/:id', authenticateToken, (await import('./api/linkedin/update-topic.js')).default);
+app.post('/api/linkedin/generate', authenticateToken, (await import('./api/linkedin/generate-posts.js')).default);
+app.get('/api/linkedin/posts', authenticateToken, (await import('./api/linkedin/posts.js')).default);
+app.get('/api/linkedin/posts/:id', authenticateToken, (await import('./api/linkedin/get-post.js')).default);
+app.patch('/api/linkedin/posts/:id', authenticateToken, (await import('./api/linkedin/update-post.js')).default);
+app.post('/api/linkedin/posts/:id/recompose', authenticateToken, (await import('./api/linkedin/recompose.js')).default);
+app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);
+app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./api/linkedin/publish.js')).default);
+
+// ─── TikTok OAuth ─────────────────────────────────────────────────────────
+app.get('/api/tiktok/auth', authenticateToken, (await import('./api/tiktok/auth.js')).default);
+app.get('/api/tiktok/callback', (await import('./api/tiktok/callback.js')).default); // No auth — redirect from TikTok
+
+// ─── Meta OAuth (Instagram + Facebook) ────────────────────────────────────
+app.get('/api/meta/auth', authenticateToken, (await import('./api/meta/auth.js')).default);
+app.get('/api/meta/callback', (await import('./api/meta/callback.js')).default); // No auth — redirect from Meta
+
+// ─── Paid Ads Manager ────────────────────────────────────────────────────
+// Ad Discovery / Spy Tool
+app.post('/api/ads/discover', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('ads/discover.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
+app.get('/api/ads/campaigns', authenticateToken, (await import('./api/ads/campaigns.js')).default);
+app.get('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.patch('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.delete('/api/ads/campaigns/:id', authenticateToken, (await import('./api/ads/campaign.js')).default);
+app.post('/api/ads/campaigns/:id/generate', authenticateToken, (await import('./api/ads/generate.js')).default);
+app.patch('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
+app.delete('/api/ads/variations/:id', authenticateToken, (await import('./api/ads/variation.js')).default);
+app.post('/api/ads/variations/:id/regenerate', authenticateToken, (await import('./api/ads/regenerate.js')).default);
+app.post('/api/ads/variations/:id/split-test', authenticateToken, (await import('./api/ads/split-test.js')).default);
+app.post('/api/ads/variations/:id/publish-linkedin', authenticateToken, (await import('./api/ads/publish-linkedin.js')).default);
+app.get('/api/ads/google/auth', authenticateToken, (await import('./api/ads/google-auth.js')).default);
+app.get('/api/ads/google/callback', (await import('./api/ads/google-callback.js')).default);
+app.post('/api/ads/synthesize-description', authenticateToken, (await import('./api/ads/synthesize-description.js')).default);
+app.post('/api/ads/enhance-prompt', authenticateToken, (await import('./api/ads/enhance-prompt.js')).default);
+app.post('/api/ads/upload-image', authenticateToken, (await import('./api/ads/upload-image.js')).default);
+app.get('/api/ads/campaigns/:id/export', authenticateToken, (await import('./api/ads/export.js')).default);
+
+// ─── Ad Intelligence routes ──────────────────────────────────────────────
+app.post('/api/intelligence/search', authenticateToken, async (req, res) => (await import('./api/intelligence/search.js')).default(req, res));
+app.post('/api/intelligence/analyze-ad', authenticateToken, async (req, res) => (await import('./api/intelligence/analyze-ad.js')).default(req, res));
+app.post('/api/intelligence/analyze-landing', authenticateToken, async (req, res) => (await import('./api/intelligence/analyze-landing.js')).default(req, res));
+app.post('/api/intelligence/synthesize', authenticateToken, async (req, res) => (await import('./api/intelligence/synthesize.js')).default(req, res));
+app.post('/api/intelligence/generate-campaign', authenticateToken, async (req, res) => (await import('./api/intelligence/generate-campaign.js')).default(req, res));
+app.all('/api/intelligence/library*', authenticateToken, async (req, res) => (await import('./api/intelligence/library.js')).default(req, res));
+app.all('/api/intelligence/competitors*', authenticateToken, async (req, res) => (await import('./api/intelligence/competitors.js')).default(req, res));
+
+// ─── Connected Accounts routes ────────────────────────────────────────────
+app.get('/api/accounts/connections', authenticateToken, (await import('./api/accounts/connections.js')).default);
+app.delete('/api/accounts/connections/:platform', authenticateToken, (await import('./api/accounts/connections.js')).default);
+
+// ─── Carousel routes ───────────────────────────────────────────────────────
+app.post('/api/carousel', authenticateToken, (await import('./api/carousel/create.js')).default);
+app.get('/api/carousel', authenticateToken, (await import('./api/carousel/list.js')).default);
+app.post('/api/carousel/research', authenticateToken, (await import('./api/carousel/research.js')).default);
+app.get('/api/carousel/:id', authenticateToken, (await import('./api/carousel/get.js')).default);
+app.put('/api/carousel/:id', authenticateToken, (await import('./api/carousel/update.js')).default);
+app.delete('/api/carousel/:id', authenticateToken, (await import('./api/carousel/delete.js')).default);
+app.post('/api/carousel/:id/generate-content', authenticateToken, (await import('./api/carousel/generate-content.js')).default);
+app.post('/api/carousel/:id/generate-images', authenticateToken, (await import('./api/carousel/generate-images.js')).default);
+app.post('/api/carousel/:id/generate-videos', authenticateToken, (await import('./api/carousel/generate-videos.js')).default);
+app.post('/api/carousel/:id/assemble-video', authenticateToken, (await import('./api/carousel/assemble-video.js')).default);
+app.post('/api/carousel/:id/create-slideshow', authenticateToken, (await import('./api/carousel/create-slideshow.js')).default);
+app.post('/api/carousel/:id/rerun-audio', authenticateToken, (await import('./api/carousel/rerun-audio.js')).default);
+app.put('/api/carousel/:id/slides/:slideId', authenticateToken, (await import('./api/carousel/update-slide.js')).default);
+app.post('/api/carousel/:id/slides/:slideId/regenerate', authenticateToken, (await import('./api/carousel/regenerate-slide.js')).default);
+app.post('/api/carousel/:id/reorder', authenticateToken, (await import('./api/carousel/reorder.js')).default);
+app.post('/api/carousel/:id/publish', authenticateToken, (await import('./api/carousel/publish.js')).default);
+
+// Style/voice list routes (with auth)
+app.get('/api/styles/visual', authenticateToken, (await import('./api/styles/visual.js')).default);
+app.get('/api/styles/video', authenticateToken, (await import('./api/styles/video.js')).default);
+app.get('/api/styles/frameworks', authenticateToken, async (req, res) => {
+  const { listFrameworks, getFrameworksForNiche } = await import('./api/lib/videoStyleFrameworks.js');
+  const { niche } = req.query;
+  const frameworks = niche ? getFrameworksForNiche(niche) : listFrameworks();
+  res.json({ frameworks });
+});
+app.get('/api/styles/captions', authenticateToken, async (req, res) => {
+  const { CAPTION_STYLES } = await import('./api/lib/captionBurner.js');
+  res.json({ presets: CAPTION_STYLES });
+});
+app.get('/api/voices/library', authenticateToken, (await import('./api/voices/library.js')).default);
+
+// Longform Video Workbench (chapter-based pipeline)
+app.all('/api/longform*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('longform/longform.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Agency Mode
+app.all('/api/agency*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('agency/agency.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Shorts Workbench — Ideas Agent (bulk topic generation)
+app.post('/api/workbench/generate-ideas', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/generate-ideas.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Shorts Workbench — Repurpose (multi-platform metadata + landscape conversion)
+app.post('/api/workbench/repurpose', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/repurpose.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Shorts Workbench (step-by-step pipeline)
+app.all('/api/workbench/:action', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('workbench/workbench.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Shorts repair & reassemble (with auth)
+app.post('/api/shorts/repair-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/repair-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/shorts/reassemble', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/reassemble.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/shorts/discover-topics', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/discover-topics.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Batch Queue routes
+app.post('/api/batch/create', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/create.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/batch/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/batch/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('batch/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Publish Queue routes
+app.post('/api/publish/schedule', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('publish/schedule.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/publish/queue', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('publish/queue.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/publish/retry', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('publish/retry.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/publish/cancel', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('publish/cancel.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Template routes (with auth)
+app.get('/api/templates/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/templates/analyze', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/analyze.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/templates/save', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/save.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/templates/assign', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/assign.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('templates/delete.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Brand usernames route (with auth)
+app.get('/api/brand/usernames', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/usernames.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Brand guidelines (SEWO connection — reads shared brand_guidelines + brand_image_styles)
+app.get('/api/brand/guidelines', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/guidelines.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Brand avatar routes (with auth)
+app.get('/api/brand/avatars', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/brand/avatars', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/brand/avatars/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/avatars.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Pre-built LoRA library (with auth)
+app.get('/api/lora/library', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('lora/library.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Voice preview (ElevenLabs TTS sample)
+app.post('/api/voice/preview', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('voice/preview.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// YouTube OAuth & Publishing
+app.get('/api/youtube/auth', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/auth.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/youtube/callback', async (req, res) => {
+  // No auth — redirect from Google, user_id verified from state parameter
+  const handler = await loadApiRoute('youtube/callback.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/youtube/status', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/status.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/youtube/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/upload.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/youtube/disconnect', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('youtube/disconnect.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Visual subject LoRA training (with auth)
+app.post('/api/brand/avatars/:id/train', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brand/train-avatar.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Campaigns list (with auth)
+app.get('/api/campaigns/list', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/list.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Campaign detail with full draft assets (with auth)
+app.get('/api/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/detail.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Rename campaign (with auth)
+app.patch('/api/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/update.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Publish / Schedule a draft (with auth)
+app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/publish.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Create campaign manually (with auth)
+app.post('/api/campaigns/regenerate-scene', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/regenerate-scene.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/create', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/create.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/campaigns/export', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/export.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.get('/api/campaigns/download-subtitles', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/download-subtitles.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/generate-captions', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/generate-captions.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/generate-thumbnails', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/generate-thumbnails.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/campaigns/score-consistency', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/score-consistency.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Cost dashboard (with auth)
+app.get('/api/costs/summary', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('costs/summary.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// OpenAI balance check (with auth)
+app.get('/api/openai/balance', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('openai/balance.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Provider health check (all 3 providers)
+app.get('/api/providers/health', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('providers/health.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Reviews (with auth) — specific paths before parameterized paths
+app.post('/api/reviews/upload', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/upload.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews/pending', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/pending.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/reviews.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/reviews.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.patch('/api/reviews/:id/resolve', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/resolve.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/reviews/:id/comments', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/comments.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.get('/api/reviews/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/get.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.patch('/api/reviews/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('reviews/update.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Jobs pause/resume/retry (with auth)
+app.post('/api/jobs/pause', authenticateToken, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { WorkflowEngine } = await import('./api/lib/workflowEngine.js');
+  const wf = new WorkflowEngine(jobId, sb);
+  await wf.loadState();
+  await wf.pause();
+  res.json({ success: true, message: 'Job paused' });
+});
+
+app.post('/api/jobs/resume', authenticateToken, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { WorkflowEngine } = await import('./api/lib/workflowEngine.js');
+  const wf = new WorkflowEngine(jobId, sb);
+  await wf.loadState();
+  await wf.resume();
+  res.json({ success: true, message: 'Job resumed' });
+});
+
+app.post('/api/jobs/retry', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('jobs/retry.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Bulk article processing (NO auth — webhook secret)
+app.post('/api/article/bulk', async (req, res) => {
+  const handler = await loadApiRoute('article/bulk.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Autonomous pipeline (NO auth — webhook secret)
+app.post('/api/article/autonomous', async (req, res) => {
+  const handler = await loadApiRoute('article/autonomous.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// AI Director pipeline (NO auth middleware — handler does dual auth: webhook secret OR JWT)
+app.post('/api/article/ai-director', async (req, res) => {
+  const handler = await loadApiRoute('article/ai-director.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Batch status (no auth — for external polling)
+app.get('/api/jobs/batch-status', async (req, res) => {
+  const { batchId } = req.query;
+  if (!batchId) return res.status(400).json({ error: 'Missing batchId' });
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { data, error } = await sb.from('job_batches').select('*').eq('id', batchId).single();
+  if (error || !data) return res.status(404).json({ error: 'Batch not found' });
+  return res.json({ success: true, batch: data });
+});
+
+// Autonomous config (with auth)
+app.get('/api/autonomous/config', authenticateToken, async (req, res) => {
+  const { brand_username } = req.query;
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { data } = await sb.from('autonomous_configs').select('*').eq('user_id', req.user.id).eq('brand_username', brand_username).maybeSingle();
+  res.json({ success: true, config: data || null });
+});
+
+app.post('/api/autonomous/config', authenticateToken, async (req, res) => {
+  const sb = createClient(supabaseUrl, supabaseServiceKey);
+  const { brand_username, ...settings } = req.body;
+  if (!brand_username) return res.status(400).json({ error: 'Missing brand_username' });
+  const { data, error } = await sb.from('autonomous_configs').upsert({
+    user_id: req.user.id, brand_username, ...settings,
+  }, { onConflict: 'user_id,brand_username' }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, config: data });
+});
+
+// ── Stitch Queue Poller ──────────────────────────────────────────────────────
+// Polls stitch_queue for pending items and routes them by payload type.
+const QUEUE_POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_MS || '43200000', 10); // 12 hours (twice a day)
+
+// ── brand_setup handler: auto-create brand_kit from provision data ──────────
+async function handleBrandSetup(supabase, item) {
+  const p = item.payload || {};
+  const brandUsername = item.brand_username;
+
+  // Find the user who owns this brand via user_profiles.assigned_usernames
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .contains('assigned_usernames', [brandUsername])
+    .limit(1)
+    .maybeSingle();
+
+  if (!profile?.id) {
+    throw new Error(`No user found with brand "${brandUsername}" in assigned_usernames`);
+  }
+
+  // Upsert brand_kit — idempotent, won't fail if already exists
+  const { error: upsertErr } = await supabase
+    .from('brand_kit')
+    .upsert({
+      user_id: profile.id,
+      brand_name: p.display_name || brandUsername,
+      brand_username: brandUsername,
+      colors: p.primary_color ? [p.primary_color] : [],
+      logo_url: p.logo_url || null,
+      voice_style: p.brand_voice_tone || 'professional',
+    }, { onConflict: 'brand_username' });
+
+  if (upsertErr) throw new Error(`brand_kit upsert failed: ${upsertErr.message}`);
+
+  console.log(`[queue/brand_setup] brand_kit created for "${brandUsername}" (user: ${profile.id})`);
+  return { success: true, brand_username: brandUsername };
+}
+
+// ── article handler: feed into from-url pipeline ────────────────────────────
+async function handleArticle(supabase, item) {
+  const handler = await loadApiRoute('article/from-url.js');
+  if (!handler) throw new Error('article/from-url handler not found');
+
+  const fakeReq = {
+    method: 'POST',
+    headers: { 'x-webhook-secret': process.env.WEBHOOK_SECRET || '' },
+    body: {
+      content: item.article_content,
+      brand_username: item.brand_username,
+      writing_structure: item.writing_structure,
+      article_title: item.article_title,
+      ...(item.payload || {}),
+    },
+  };
+
+  let responseData = null;
+  const fakeRes = {
+    status(code) { this._status = code; return this; },
+    json(data) { responseData = data; return this; },
+  };
+
+  await handler(fakeReq, fakeRes);
+
+  if (fakeRes._status >= 400 || !responseData?.success) {
+    throw new Error(responseData?.error || `HTTP ${fakeRes._status}`);
+  }
+
+  return { success: true, jobId: responseData.jobId, templates_matched: responseData.templates_matched };
+}
+
+// ── Main poll loop ──────────────────────────────────────────────────────────
+async function pollStitchQueue() {
+  if (!supabaseUrl || !supabaseServiceKey) return;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  try {
+    // Claim one pending item (oldest first)
+    const { data: items, error: fetchErr } = await supabase
+      .from('stitch_queue')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    if (fetchErr || !items?.length) return;
+    const item = items[0];
+
+    const { error: claimErr } = await supabase
+      .from('stitch_queue')
+      .update({ status: 'processing', picked_up_at: new Date().toISOString() })
+      .eq('id', item.id)
+      .eq('status', 'pending');
+
+    if (claimErr) return;
+
+    // Per-brand concurrency lock: skip if another item for the same brand is already processing
+    const { count: processingCount } = await supabase
+      .from('stitch_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_username', item.brand_username)
+      .eq('status', 'processing')
+      .neq('id', item.id);
+
+    if (processingCount > 0) {
+      // Release the item back to pending so it gets picked up later
+      await supabase.from('stitch_queue')
+        .update({ status: 'pending', picked_up_at: null })
+        .eq('id', item.id);
+      console.log(`[queue] Released ${item.id} — brand "${item.brand_username}" already has a processing item`);
+      return;
+    }
+
+    const payloadType = item.payload?.type || 'article';
+    console.log(`[queue] Processing ${item.id} — type: ${payloadType}, brand: ${item.brand_username}`);
+
+    try {
+      let result;
+      if (payloadType === 'brand_setup') {
+        result = await handleBrandSetup(supabase, item);
+      } else {
+        result = await handleArticle(supabase, item);
+      }
+
+      await supabase.from('stitch_queue').update({
+        status: 'completed',
+        payload: { ...item.payload, ...result },
+        completed_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      console.log(`[queue] Completed ${item.id}`);
+
+      // Update batch progress if this item belongs to a batch
+      if (item.payload?.batch_id) {
+        await supabase.rpc('increment_batch_completed_jobs', { p_batch_id: item.payload.batch_id });
+      }
+
+    } catch (handlerErr) {
+      await supabase.from('stitch_queue').update({
+        status: 'failed',
+        error: handlerErr.message,
+        completed_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      console.warn(`[queue] Failed ${item.id}: ${handlerErr.message}`);
+
+      // Update batch failure count if this item belongs to a batch
+      if (item.payload?.batch_id) {
+        await supabase.rpc('increment_batch_failed_jobs', { p_batch_id: item.payload.batch_id });
+      }
+    }
+  } catch (err) {
+    console.error('[queue] Poll error:', err.message);
+    throw err; // propagate so backoff wrapper can track consecutive failures
+  }
+}
+
+// Dynamic queue poller with exponential backoff
+let consecutiveQueueErrors = 0;
+const MIN_POLL_MS = QUEUE_POLL_INTERVAL_MS; // 12 hours
+const MAX_POLL_MS = 86400000; // 24 hours
+
+async function pollWithBackoff() {
+  try {
+    await pollStitchQueue();
+    consecutiveQueueErrors = 0;
+  } catch {
+    consecutiveQueueErrors++;
+  }
+
+  const nextDelay = consecutiveQueueErrors === 0
+    ? MIN_POLL_MS
+    : Math.min(MIN_POLL_MS * Math.pow(2, consecutiveQueueErrors), MAX_POLL_MS);
+  setTimeout(pollWithBackoff, nextDelay);
+}
+
+// Proposal media routes
+app.get('/api/proposals/:slug/media', async (req, res) => {
+  const handler = await loadApiRoute('proposals/media.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/proposals/:slug/media', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.delete('/api/proposals/:slug/media/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media-item.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.patch('/api/proposals/:slug/media/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('proposals/media-item.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+// Proposal pages — server-rendered with dynamic media from database
+// Static HTML template in public/proposal/ gets media grids injected server-side
+// Works without JS (for networks that block it), edit mode requires auth + JS
+app.get('/proposal/:slug', async (req, res) => {
+  try {
+    const handler = await loadApiRoute('proposals/render.js');
+    if (handler) return handler(req, res);
+    res.status(500).send('Handler not found');
+  } catch (err) {
+    console.error('[proposal] render error:', err.message);
+    // Fallback to static file
+    res.sendFile(join(__dirname, 'dist', 'proposal', 'hamilton-city-council.html'));
+  }
+});
+
+// Movin' Martin mockup — serve static HTML directly (no JS required)
+app.get('/proposals/movin-martin-website-mockup', (req, res) => {
+  const distPath = join(__dirname, 'dist', 'mockups', 'movin-martin', 'index.html');
+  const publicPath = join(__dirname, 'public', 'mockups', 'movin-martin', 'index.html');
+  // Try dist first (production build), fall back to public (dev)
+  res.sendFile(distPath, err => {
+    if (err) res.sendFile(publicPath);
+  });
+});
+
+// Serve Vite build output
+app.use(express.static(join(__dirname, 'dist')));
+
+// SPA fallback for client-side routing
+app.use((req, res) => {
+  res.sendFile(join(__dirname, 'dist', 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`API Server running on http://localhost:${PORT}`);
+
+  // Start queue poller
+  if (supabaseUrl && supabaseServiceKey) {
+    pollWithBackoff(); // self-scheduling with exponential backoff on errors
+    console.log(`[queue] Polling every ${QUEUE_POLL_INTERVAL_MS / 1000}s (with backoff on errors)`);
+
+    // Start scheduled post publisher (polls every 30s)
+    setInterval(pollScheduledPublications, 30000);
+    pollScheduledPublications();
+    console.log('[scheduled-publisher] Polling every 30s');
+
+    // Command Center scheduled publisher (polls every 30s)
+    setInterval(pollCommandCenterPublications, 30000);
+    pollCommandCenterPublications();
+    console.log('[cc-publisher] Polling every 30s');
+
+    // Recover interrupted Command Center campaigns
+    import('./api/lib/campaignOrchestrator.js').then(({ recoverInterruptedCampaigns }) => {
+      recoverInterruptedCampaigns();
+    }).catch(err => console.error('[command-center] Recovery check failed:', err.message));
+
+    // Start LoRA training background poller (checks every 60s)
+    startLoraPoller();
+
+    // Recover interrupted flow executions
+    const serviceSupabase = createClient(supabaseUrl, supabaseServiceKey);
+    import('./api/lib/flowExecutor.js').then(m => m.recoverInterruptedExecutions(serviceSupabase));
+
+    // Start scheduled flow runner (polls every 60s for cron-triggered flows)
+    import('./api/lib/scheduledFlowRunner.js').then(m => m.startScheduledFlowRunner(serviceSupabase));
+  }
+});

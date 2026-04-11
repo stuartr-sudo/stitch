@@ -64,8 +64,8 @@ export class FlowExecutor {
 
     // Second pass: resolve values. Multi-input ports collect as arrays.
     for (const edge of incoming) {
-      const sourcePort = edge.sourceHandle || edge.sourcePort;
-      const targetPort = edge.targetHandle || edge.targetPort;
+      const sourcePort = edge.sourceHandle || edge.sourcePort || 'output';
+      const targetPort = edge.targetHandle || edge.targetPort || 'input';
       const sourceOutput = this.stepStates[edge.source]?.output;
       if (sourceOutput && sourcePort in sourceOutput) {
         const value = sourceOutput[sourcePort];
@@ -270,8 +270,11 @@ export class FlowExecutor {
       if (this.cancelled) return false; // Flow was cancelled during backoff
 
       try {
+        // Resolve variables and node references (same as initial runNode)
+        const variableResolved = this.resolveVariables(node.data?.config || {});
+        const resolvedConfig = this.resolveNodeReferences(variableResolved);
         const output = await this._withTimeout(
-          nodeType.run(inputs, node.data?.config || {}, context),
+          nodeType.run(inputs, resolvedConfig, context),
           NODE_TIMEOUT_MS,
           `Node "${nodeType.label}" timed out on retry ${i + 1}`
         );

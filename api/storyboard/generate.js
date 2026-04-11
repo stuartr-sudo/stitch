@@ -331,8 +331,13 @@ async function handleGeneratePreviews(req, res) {
 
   console.log(`[Storyboard Previews] Generating ${frames.length} preview images...`);
 
-  // Generate all in parallel (collect as indexed for continuity lookups)
-  const results = await Promise.all(frames.map(async (frame, i) => {
+  // Generate in batches of 2 to avoid rate limits (collect as indexed for continuity lookups)
+  const CONCURRENCY = 2;
+  const results = [];
+  for (let batchStart = 0; batchStart < frames.length; batchStart += CONCURRENCY) {
+    const batch = frames.slice(batchStart, batchStart + CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(async (frame, batchIdx) => {
+      const i = batchStart + batchIdx;
     const genMode = frame.generation_mode || 'auto';
 
     // standalone mode: generate fresh with no references
@@ -382,6 +387,8 @@ async function handleGeneratePreviews(req, res) {
       return { frameNumber: frame.frame_number, error: err.message };
     }
   }));
+    results.push(...batchResults);
+  }
 
   const success = results.filter(r => r.imageUrl).length;
   const failed = results.filter(r => r.error).length;

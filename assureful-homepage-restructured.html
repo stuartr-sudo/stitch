@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Assureful — Homepage Restructured Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --purple: #534AB7;
+    --purple-dark: #4A3FA5;
+    --purple-light: #f3edff;
+    --navy: #1B1340;
+    --navy-deep: #0f172a;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --green: #22c55e;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --teal: #2dd4bf;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--gray-900);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: #fff;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .container-narrow { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- ANNOTATION SYSTEM ---- */
+  .annotation {
+    position: relative;
+    outline: 2px dashed #e879f9;
+    outline-offset: 8px;
+  }
+  .annotation::before {
+    content: attr(data-note);
+    position: absolute;
+    top: -14px;
+    right: 12px;
+    background: #e879f9;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 4px;
+    z-index: 10;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--gray-100);
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--purple);
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    list-style: none;
+  }
+  .nav-links a {
+    text-decoration: none;
+    color: var(--gray-700);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-links a:hover { color: var(--purple); }
+  .nav-more {
+    position: relative;
+    cursor: pointer;
+    color: var(--gray-500);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-more span { border-bottom: 1px dashed var(--gray-400); }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--purple);
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(83, 74, 183, 0.3);
+    transition: all 0.2s;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(83, 74, 183, 0.4);
+  }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--purple);
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid var(--purple);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    background: var(--purple-light);
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    padding: 80px 0 60px;
+    background: linear-gradient(135deg, #fff 60%, var(--purple-light) 100%);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--purple-light);
+    color: var(--purple);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 52px;
+    line-height: 1.1;
+    color: var(--navy);
+    margin-bottom: 16px;
+  }
+  .hero h1 em {
+    color: var(--purple);
+    font-style: normal;
+  }
+  .hero-sub {
+    font-size: 19px;
+    color: var(--gray-500);
+    margin-bottom: 32px;
+    max-width: 460px;
+  }
+  .hero-ctas {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-200);
+  }
+  .hero-stat {
+    text-align: left;
+  }
+  .hero-stat .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .hero-stat .num em {
+    color: var(--purple);
+    font-style: normal;
+  }
+  .hero-stat .label {
+    font-size: 13px;
+    color: var(--gray-500);
+    font-weight: 500;
+  }
+
+  /* Hero right: comparison card */
+  .comparison-card {
+    background: var(--navy);
+    border-radius: 20px;
+    padding: 40px;
+    color: #fff;
+    box-shadow: 0 25px 60px rgba(27, 19, 64, 0.25);
+  }
+  .comparison-card h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray-400);
+    margin-bottom: 24px;
+    font-weight: 600;
+  }
+  .comp-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-old {
+    font-size: 14px;
+    color: var(--gray-400);
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+  }
+  .comp-arrow {
+    color: var(--purple-light);
+    font-size: 18px;
+  }
+  .comp-new {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* ---- URGENCY BANNER (Amazon mandate) ---- */
+  .urgency {
+    background: var(--navy-deep);
+    padding: 48px 0;
+    color: #fff;
+  }
+  .urgency-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .urgency-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(251, 191, 36, 0.15);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+  .urgency h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .urgency p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+    max-width: 580px;
+    line-height: 1.5;
+  }
+  .urgency .threshold {
+    color: var(--amber);
+    font-weight: 700;
+  }
+
+  /* ---- HOW IT WORKS ---- */
+  .how-it-works {
+    padding: 80px 0;
+    background: #fff;
+  }
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--purple);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    color: var(--navy);
+    margin-bottom: 48px;
+    line-height: 1.2;
+  }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .step-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 32px;
+    position: relative;
+    transition: box-shadow 0.2s;
+  }
+  .step-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+  .step-num {
+    width: 40px;
+    height: 40px;
+    background: var(--purple);
+    color: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+  .step-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--navy);
+  }
+  .step-card p {
+    font-size: 15px;
+    color: var(--gray-500);
+    line-height: 1.6;
+  }
+
+  /* ---- TRUST BAR ---- */
+  .trust-bar {
+    padding: 48px 0;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .trust-items {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+  .trust-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--purple-light);
+    color: var(--purple);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .trust-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--gray-200);
+  }
+
+  /* ---- COMBINED: DATA + PRICING ENGINE ---- */
+  .pricing-engine {
+    padding: 80px 0;
+    background: #fff;
+  }
+  .engine-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  .engine-visual {
+    background: var(--navy);
+    border-radius: 20px;
+    padding: 40px;
+    color: #fff;
+  }
+  .engine-visual h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .data-points {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .data-point {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .data-point .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    flex-shrink: 0;
+  }
+  .engine-result {
+    background: rgba(83, 74, 183, 0.2);
+    border: 1px solid rgba(83, 74, 183, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.5;
+  }
+  .engine-text h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 34px;
+    color: var(--navy);
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  .engine-text p {
+    font-size: 16px;
+    color: var(--gray-500);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .engine-text .stat-highlight {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--purple);
+    display: block;
+    margin: 24px 0 8px;
+  }
+  .engine-text .stat-label {
+    font-size: 15px;
+    color: var(--gray-500);
+    font-weight: 500;
+  }
+
+  /* ---- TESTIMONIAL + TRUST PROOF (combined) ---- */
+  .social-proof {
+    padding: 80px 0;
+    background: var(--gray-50);
+  }
+  .proof-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  .testimonial-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    padding: 40px;
+  }
+  .stars {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .star { color: var(--amber); font-size: 20px; }
+  .testimonial-card blockquote {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--gray-700);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .author-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--purple-light);
+    color: var(--purple);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .author-name {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 15px;
+  }
+  .author-title {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+  .proof-signals {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .proof-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .proof-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .proof-icon.blue { background: #eff6ff; }
+  .proof-icon.green { background: #f0fdf4; }
+  .proof-icon.purple { background: var(--purple-light); }
+  .proof-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .proof-card p {
+    font-size: 13px;
+    color: var(--gray-500);
+    line-height: 1.4;
+  }
+  .featured-in {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px 28px;
+    text-align: center;
+  }
+  .featured-in .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gray-400);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .featured-logos {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .featured-logos span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---- FAQ ---- */
+  .faq {
+    padding: 80px 0;
+    background: #fff;
+  }
+  .faq-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .faq-item {
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 20px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .faq-item:hover {
+    border-color: var(--purple);
+    background: var(--purple-light);
+  }
+  .faq-q {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .faq-q .chevron {
+    color: var(--gray-400);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .faq-more {
+    text-align: center;
+    margin-top: 24px;
+  }
+  .faq-more a {
+    font-size: 14px;
+    color: var(--purple);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--purple);
+  }
+
+  /* ---- FINAL CTA ---- */
+  .final-cta {
+    padding: 80px 0;
+    background: var(--navy);
+    text-align: center;
+    color: #fff;
+  }
+  .final-cta h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+  .final-cta p {
+    font-size: 17px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 36px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .final-cta .cta-group {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .btn-primary-light {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    color: var(--purple);
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    transition: all 0.2s;
+  }
+  .btn-primary-light:hover { transform: translateY(-1px); }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+  .final-cta .disclaimer {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 48px 0 32px;
+    background: var(--navy-deep);
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+  }
+  footer .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  footer .logo { color: rgba(255,255,255,0.7); font-size: 20px; }
+
+  /* ---- DESIGN NOTES BANNER ---- */
+  .design-notes {
+    background: #fef3c7;
+    border-bottom: 2px solid #fbbf24;
+    padding: 20px 0;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+  .design-notes strong { color: var(--gray-900); }
+  .notes-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 32px;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  .notes-list li {
+    list-style: none;
+    padding-left: 20px;
+    position: relative;
+  }
+  .notes-list li::before {
+    content: "~";
+    position: absolute;
+    left: 4px;
+    color: var(--purple);
+    font-weight: 700;
+  }
+  .change-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 4px;
+  }
+  .change-tag.moved { background: #dbeafe; color: #1d4ed8; }
+  .change-tag.new { background: #dcfce7; color: #15803d; }
+  .change-tag.merged { background: #fae8ff; color: #a21caf; }
+  .change-tag.trimmed { background: #fee2e2; color: #b91c1c; }
+
+  @media (max-width: 768px) {
+    .hero-grid, .engine-grid, .proof-layout, .faq-grid, .steps-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 36px; }
+    .section-title { font-size: 28px; }
+    .urgency-inner { grid-template-columns: 1fr; text-align: center; }
+    .urgency-inner .btn-primary { justify-self: center; }
+    .hero-stats { flex-direction: column; gap: 16px; }
+    .trust-items { gap: 24px; }
+    .trust-divider { display: none; }
+    .notes-list { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .annotation { outline: none; }
+    .annotation::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== DESIGN NOTES (for review only) ====== -->
+<div class="design-notes">
+  <div class="container">
+    <strong>Restructured Homepage Mockup — Key Changes</strong>
+    <ul class="notes-list">
+      <li><span class="change-tag moved">Moved</span> Amazon mandate section from bottom third to position 2 (urgency banner)</li>
+      <li><span class="change-tag moved">Moved</span> How It Works up to position 3 (answers "what do I do?" immediately)</li>
+      <li><span class="change-tag merged">Merged</span> Comparison table into hero right-column (was its own section)</li>
+      <li><span class="change-tag merged">Merged</span> "400+ Data Points" + pricing engine into one consolidated section</li>
+      <li><span class="change-tag new">New</span> "See Sample Pricing" secondary CTA for mid-funnel visitors</li>
+      <li><span class="change-tag new">New</span> Trust bar (Lloyd's + SOC 2 + categories + coverage) replaces needing more testimonials</li>
+      <li><span class="change-tag trimmed">Trimmed</span> FAQ from 13 to top 6 visible, with "See all FAQs" link</li>
+      <li><span class="change-tag new">New</span> Institutional proof cards alongside the single testimonial</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ====== NAV ====== -->
+<nav>
+  <div class="container">
+    <a href="#" class="logo">Assureful</a>
+    <ul class="nav-links">
+      <li><a href="#">eCommerce Insurance</a></li>
+      <li><a href="#">Seller Defender</a></li>
+      <li><a href="#">Lost Inbound</a></li>
+      <li class="nav-more"><span>More</span></li>
+      <li><a href="#" class="btn-primary">Get a Free Quote</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ====== HERO ====== -->
+<section class="hero annotation" data-note="Comparison table merged into hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge">
+          <span>&#9679;</span> Designed for Amazon &amp; Shopify sellers
+        </div>
+        <h1>Product liability<br/>that's <em>easy</em></h1>
+        <p class="hero-sub">
+          We connect directly to your store and price coverage on your actual sales data — averaging 42% less than traditional insurers.
+        </p>
+        <div class="hero-ctas">
+          <a href="#" class="btn-primary">Get a Free Quote &rarr;</a>
+          <a href="#" class="btn-secondary">See Sample Pricing</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="num">$26<span style="font-size:18px">/mo</span></div>
+            <div class="label">Starting at</div>
+          </div>
+          <div class="hero-stat">
+            <div class="num" style="color:var(--green)">Instant</div>
+            <div class="label">Coverage starts</div>
+          </div>
+          <div class="hero-stat">
+            <div class="num">No lock-in</div>
+            <div class="label">Cancel anytime</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparison card (was separate section, now in hero) -->
+      <div class="comparison-card">
+        <h3>Why sellers switch</h3>
+        <div class="comp-row">
+          <span class="comp-old">Revenue estimates &amp; guesswork</span>
+          <span class="comp-arrow">&rarr;</span>
+          <span class="comp-new">Priced on real sales data</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-old">Locked-in annual premiums</span>
+          <span class="comp-arrow">&rarr;</span>
+          <span class="comp-new">Pay-as-you-sell monthly</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-old">Lengthy applications</span>
+          <span class="comp-arrow">&rarr;</span>
+          <span class="comp-new">2-minute quotes</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-old">Static pricing</span>
+          <span class="comp-arrow">&rarr;</span>
+          <span class="comp-new">Auto-adjusted monthly</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== URGENCY BANNER (moved from bottom third to position 2) ====== -->
+<section class="urgency annotation" data-note="Moved up from bottom third">
+  <div class="container">
+    <div class="urgency-inner">
+      <div class="urgency-icon">&#9888;</div>
+      <div>
+        <h2>Amazon Requires It. Your Business Needs It.</h2>
+        <p>Once your monthly sales exceed <span class="threshold">$10,000</span>, Amazon mandates product liability insurance. Without it, your listing can be suspended — and your revenue stops overnight.</p>
+      </div>
+      <a href="#" class="btn-primary" style="white-space:nowrap">Check If You Qualify &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS (moved up to position 3) ====== -->
+<section class="how-it-works annotation" data-note="Moved up — answers 'what do I do?'">
+  <div class="container-narrow">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Protected in three steps</h2>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Get a quote in 2 minutes</h3>
+        <p>Connect your store. Our AI prices your coverage across 33,000+ product categories instantly.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Pay monthly on actual sales</h3>
+        <p>No forecasts or guesswork. Your premiums adjust automatically each month based on what you actually sell.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Sell fully protected</h3>
+        <p>A-rated coverage starts immediately. No brokers, no waiting periods, no lock-in contracts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== TRUST BAR (new — compensates for limited testimonials) ====== -->
+<section class="trust-bar annotation" data-note="New — institutional trust replaces needing more testimonials">
+  <div class="container">
+    <div class="trust-items">
+      <div class="trust-item">
+        <div class="trust-icon">&#128737;</div>
+        <span>Lloyd's Coverholder</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <div class="trust-icon">&#128274;</div>
+        <span>SOC 2 Compliant</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <div class="trust-icon">&#9733;</div>
+        <span>A-Rated Coverage</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <div class="trust-icon">&#127758;</div>
+        <span>33,000+ Categories</span>
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-item">
+        <div class="trust-icon">&#10003;</div>
+        <span>95% of Products Covered</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== PRICING ENGINE (merged: was "400+ Data Points" + separate pricing section) ====== -->
+<section class="pricing-engine annotation" data-note="Merged two overlapping sections into one">
+  <div class="container">
+    <div class="engine-grid">
+      <div class="engine-visual">
+        <h3>&#129302; Assureful Pricing Engine</h3>
+        <div class="data-points">
+          <div class="data-point"><span class="dot"></span>Sales volume &amp; price</div>
+          <div class="data-point"><span class="dot"></span>Product categories</div>
+          <div class="data-point"><span class="dot"></span>Seasonality patterns</div>
+          <div class="data-point"><span class="dot"></span>Claims history</div>
+          <div class="data-point"><span class="dot"></span>Risk profiles</div>
+          <div class="data-point"><span class="dot"></span>Channel data</div>
+        </div>
+        <div class="engine-result">
+          Your premium auto-adjusted every month based on real-time tracking of your sales across every channel.
+        </div>
+      </div>
+      <div class="engine-text">
+        <div class="section-label">Real Data, Real Savings</div>
+        <h2>400+ data points price your coverage</h2>
+        <p>Traditional insurers ask you to guess your annual revenue. We connect to your actual store data — sales volume, product types, seasonality, category risk — and price accordingly.</p>
+        <span class="stat-highlight">42% less</span>
+        <span class="stat-label">Average savings vs. traditional insurers</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SOCIAL PROOF (testimonial + institutional signals) ====== -->
+<section class="social-proof annotation" data-note="Testimonial + trust cards work harder together">
+  <div class="container">
+    <div class="proof-layout">
+      <div class="testimonial-card">
+        <div class="stars">
+          <span class="star">&#9733;</span>
+          <span class="star">&#9733;</span>
+          <span class="star">&#9733;</span>
+          <span class="star">&#9733;</span>
+          <span class="star">&#9733;</span>
+        </div>
+        <blockquote>
+          "Assureful has been amazing! They took care of everything with Amazon and finding the right insurance for our Amazon Product was really easy. Highly recommend for all e-commerce sellers!"
+        </blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">W</div>
+          <div>
+            <div class="author-name">Waterglider International</div>
+            <div class="author-title">Amazon Seller</div>
+          </div>
+        </div>
+      </div>
+      <div class="proof-signals">
+        <div class="proof-card">
+          <div class="proof-icon blue">&#128737;</div>
+          <div>
+            <h4>Lloyd's of London Coverholder</h4>
+            <p>Backed by the world's leading insurance marketplace, active since 1686.</p>
+          </div>
+        </div>
+        <div class="proof-card">
+          <div class="proof-icon green">&#128274;</div>
+          <div>
+            <h4>SOC 2 Compliant Data Handling</h4>
+            <p>Your store data is encrypted and handled to enterprise security standards.</p>
+          </div>
+        </div>
+        <div class="proof-card">
+          <div class="proof-icon purple">&#127758;</div>
+          <div>
+            <h4>95% of Products Covered</h4>
+            <p>Including Chinese imports. Global sales coverage across all channels.</p>
+          </div>
+        </div>
+        <div class="featured-in">
+          <div class="label">Featured In</div>
+          <div class="featured-logos">
+            <span>PR Newswire</span>
+            <span>Coverager</span>
+            <span>Pulse 2.0</span>
+            <span>Beinsure</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FAQ (trimmed from 13 to 6 visible) ====== -->
+<section class="faq annotation" data-note="Trimmed to top 6, 'see all' link for rest">
+  <div class="container-narrow">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-grid">
+      <div class="faq-item">
+        <div class="faq-q">Is product liability insurance mandatory for Amazon sellers? <span class="chevron">+</span></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How does pay-as-you-sell work? <span class="chevron">+</span></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Are imported products covered? <span class="chevron">+</span></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How fast does coverage start? <span class="chevron">+</span></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I cancel anytime? <span class="chevron">+</span></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What does product liability insurance cover? <span class="chevron">+</span></div>
+      </div>
+    </div>
+    <div class="faq-more"><a href="#">See all 13 FAQs &rarr;</a></div>
+  </div>
+</section>
+
+<!-- ====== FINAL CTA ====== -->
+<section class="final-cta annotation" data-note="Dual CTA — quote + low-commitment option">
+  <div class="container">
+    <h2>See how much you'll save<br/>in 60 seconds</h2>
+    <p>Product liability insurance that adjusts to your sales — averaging 42% less than traditional insurers.</p>
+    <div class="cta-group">
+      <a href="#" class="btn-primary-light">Get a Free Quote &rarr;</a>
+      <a href="#" class="btn-ghost">See Sample Pricing</a>
+    </div>
+    <div class="disclaimer">No obligation. No credit card. Cancel with 30 days' notice.</div>
+  </div>
+</section>
+
+<!-- ====== FOOTER (abbreviated for mockup) ====== -->
+<footer>
+  <div class="container">
+    <span class="logo">Assureful</span>
+    <span>&copy; 2026 Assureful &middot; Lloyd's Coverholder &middot; +1-855-524-6683 &middot; support@assureful.com</span>
+  </div>
+</footer>
+
+</body>
+</html>

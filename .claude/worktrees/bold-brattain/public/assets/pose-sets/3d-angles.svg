@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+  <rect width="200" height="150" fill="#0f2027"/>
+  <rect x="20" y="15" width="72" height="50" rx="4" fill="#1a3a4a" stroke="#2C666E" stroke-width="1.5"/>
+  <text x="56" y="44" font-family="sans-serif" font-size="9" fill="#7dd3c0" text-anchor="middle">Front</text>
+  <rect x="108" y="15" width="72" height="50" rx="4" fill="#1a3a4a" stroke="#2C666E" stroke-width="1.5"/>
+  <text x="144" y="44" font-family="sans-serif" font-size="9" fill="#7dd3c0" text-anchor="middle">Right</text>
+  <rect x="20" y="78" width="72" height="50" rx="4" fill="#1a3a4a" stroke="#2C666E" stroke-width="1.5"/>
+  <text x="56" y="107" font-family="sans-serif" font-size="9" fill="#7dd3c0" text-anchor="middle">Back</text>
+  <rect x="108" y="78" width="72" height="50" rx="4" fill="#1a3a4a" stroke="#2C666E" stroke-width="1.5"/>
+  <text x="144" y="107" font-family="sans-serif" font-size="9" fill="#7dd3c0" text-anchor="middle">Left</text>
+</svg>

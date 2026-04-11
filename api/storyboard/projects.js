@@ -718,7 +718,7 @@ async function handlePublicReview(req, res, supabase, token) {
 
   const { data: storyboard, error: sbErr } = await supabase
     .from('storyboards')
-    .select('id, name, description, logline, status, aspect_ratio, desired_length, overall_mood, narrative_style, brand_data, created_at, share_enabled')
+    .select('id, name, description, logline, status, aspect_ratio, desired_length, overall_mood, narrative_style, brand_data, created_at, share_enabled, review_status')
     .eq('share_token', token)
     .eq('share_enabled', true)
     .single();
@@ -886,10 +886,12 @@ async function restoreVersion(req, res, supabase, userId, storyboardId, versionI
 
   // Update storyboard fields (excluding id, user_id, created_at)
   const { id: _id, user_id: _uid, created_at: _ca, ...sbUpdate } = sbSnap;
-  await supabase.from('storyboards').update(sbUpdate).eq('id', storyboardId);
+  const { error: updateErr } = await supabase.from('storyboards').update(sbUpdate).eq('id', storyboardId);
+  if (updateErr) return res.status(500).json({ error: 'Failed to restore storyboard: ' + updateErr.message });
 
   // Delete existing frames and re-insert from snapshot
-  await supabase.from('storyboard_frames').delete().eq('storyboard_id', storyboardId);
+  const { error: delErr } = await supabase.from('storyboard_frames').delete().eq('storyboard_id', storyboardId);
+  if (delErr) return res.status(500).json({ error: 'Failed to clear frames: ' + delErr.message });
 
   if (frameSnap?.length) {
     const framesToInsert = frameSnap.map(({ id: _fid, created_at: _fca, updated_at: _fua, ...rest }) => ({

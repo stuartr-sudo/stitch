@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebSearch",
+      "WebFetch(*)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_eval",
+      "mcp__Claude_Preview__preview_click",
+      "mcp__Claude_Preview__preview_fill",
+      "mcp__Claude_Preview__preview_inspect",
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__firecrawl-mcp__firecrawl_browser_create",
+      "mcp__firecrawl-mcp__firecrawl_browser_execute",
+      "mcp__firecrawl-mcp__firecrawl_browser_delete",
+      "mcp__firecrawl-mcp__firecrawl_browser_list",
+      "mcp__firecrawl-mcp__firecrawl_scrape",
+      "mcp__firecrawl-mcp__firecrawl_search",
+      "mcp__014fea85-eea7-40c6-9601-cbd447092376__execute_sql",
+      "mcp__014fea85-eea7-40c6-9601-cbd447092376__list_tables",
+      "mcp__014fea85-eea7-40c6-9601-cbd447092376__apply_migration",
+      "mcp__scheduled-tasks__list_scheduled_tasks",
+      "mcp__Control_Chrome__get_current_tab",
+      "mcp__8ad664ef-b301-4505-9c82-3d4b24279d35__apply_migration"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "fp=$(node -p \"try{JSON.parse(process.env.CLAUDE_TOOL_INPUT).file_path}catch(e){''}\" 2>/dev/null); if [[ \"$fp\" == */src/* || \"$fp\" == */api/* || \"$fp\" == src/* || \"$fp\" == api/* ]]; then cd /Users/stuarta/stitch && npm run build 2>&1; fi",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}

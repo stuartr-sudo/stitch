@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["server.js"],
+      "port": 3003,
+      "autoPort": false
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["node_modules/.bin/vite", "--port", "4390"],
+      "port": 4390
+    }
+  ]
+}
