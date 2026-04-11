@@ -21,6 +21,8 @@ export default function FlowBuilderPage() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [execution, setExecution] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const pollRef = useRef(null);
@@ -126,6 +128,17 @@ export default function FlowBuilderPage() {
     });
     setSaving(false);
   }, [flow, nodes, edges, flowVariables]);
+
+  const saveFlowName = async (newName) => {
+    setEditingName(false);
+    if (!flow?.id || !newName.trim() || newName.trim() === flow.name) return;
+    await apiFetch(`/api/flows/${flow.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim() })
+    });
+    setFlow(prev => ({ ...prev, name: newName.trim() }));
+  };
 
   // Auto-save on any change (debounced 1.5s) — includes variables
   useEffect(() => {
@@ -300,7 +313,27 @@ export default function FlowBuilderPage() {
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700/50 bg-[#0f0f18]">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/flows')} className="text-slate-400 hover:text-slate-200 text-sm">&larr; Flows</button>
-          <span className="text-sm font-semibold text-slate-100">{flow?.name || 'New Flow'}</span>
+          {editingName ? (
+            <input
+              autoFocus
+              value={nameValue}
+              onChange={e => setNameValue(e.target.value)}
+              onBlur={() => saveFlowName(nameValue)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveFlowName(nameValue);
+                if (e.key === 'Escape') setEditingName(false);
+              }}
+              className="text-sm font-semibold text-slate-100 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 outline-none w-48"
+            />
+          ) : (
+            <span
+              className="text-sm font-semibold text-slate-100 cursor-pointer hover:opacity-80"
+              onClick={() => { setNameValue(flow?.name || ''); setEditingName(true); }}
+              title="Click to rename"
+            >
+              {flow?.name || 'New Flow'}
+            </span>
+          )}
           {saving && <span className="text-[11px] text-slate-500">Saving...</span>}
           {!saving && flow?.id && <span className="text-[11px] text-emerald-400 bg-emerald-900/30 border border-emerald-800/40 px-2 py-0.5 rounded">Saved</span>}
         </div>

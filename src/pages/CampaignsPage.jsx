@@ -675,6 +675,8 @@ export default function CampaignsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAutonomousConfig, setShowAutonomousConfig] = useState(false);
+  const [editingCampaignName, setEditingCampaignName] = useState(false);
+  const [campaignNameValue, setCampaignNameValue] = useState('');
 
   const loadCampaigns = useCallback(async (quiet = false) => {
     if (!quiet) setIsLoading(true);
@@ -725,6 +727,27 @@ export default function CampaignsPage() {
     }
   };
 
+  const saveCampaignName = async (newName) => {
+    setEditingCampaignName(false);
+    if (!selectedCampaign?.id || !newName.trim() || newName.trim() === selectedCampaign.name) return;
+    try {
+      const res = await apiFetch(`/api/campaigns/${selectedCampaign.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedCampaign(prev => ({ ...prev, name: newName.trim() }));
+        setCampaigns(prev => prev.map(c => c.id === selectedCampaign.id ? { ...c, name: newName.trim() } : c));
+      } else {
+        toast.error(data.error || 'Failed to rename campaign');
+      }
+    } catch {
+      toast.error('Failed to rename campaign');
+    }
+  };
+
   const filtered = campaigns.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.writing_structure?.toLowerCase().includes(search.toLowerCase())
@@ -746,7 +769,27 @@ export default function CampaignsPage() {
                   <ArrowLeft className="w-5 h-5 text-slate-600" />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-slate-900 truncate">{selectedCampaign.name}</h1>
+                  {editingCampaignName ? (
+                    <input
+                      autoFocus
+                      value={campaignNameValue}
+                      onChange={e => setCampaignNameValue(e.target.value)}
+                      onBlur={() => saveCampaignName(campaignNameValue)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveCampaignName(campaignNameValue);
+                        if (e.key === 'Escape') setEditingCampaignName(false);
+                      }}
+                      className="text-xl font-bold text-slate-900 border-b-2 border-[#2C666E] outline-none bg-transparent w-full"
+                    />
+                  ) : (
+                    <h1
+                      className="text-xl font-bold text-slate-900 truncate cursor-pointer hover:opacity-80"
+                      onClick={() => { setCampaignNameValue(selectedCampaign.name); setEditingCampaignName(true); }}
+                      title="Click to rename"
+                    >
+                      {selectedCampaign.name}
+                    </h1>
+                  )}
                   <div className="flex items-center gap-3 text-sm text-slate-500">
                     <StatusBadge status={selectedCampaign.status} />
                     <span>{drafts.length} draft{drafts.length !== 1 ? 's' : ''}</span>

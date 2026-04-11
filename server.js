@@ -1147,6 +1147,13 @@ app.get('/api/campaigns/:id', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Rename campaign (with auth)
+app.patch('/api/campaigns/:id', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('campaigns/update.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Publish / Schedule a draft (with auth)
 app.post('/api/campaigns/publish', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('campaigns/publish.js');
