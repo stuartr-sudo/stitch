@@ -753,8 +753,9 @@ export default function StoryboardWorkspace() {
   const [interpolatingGrid, setInterpolatingGrid] = useState(false);
   const [gridImageUrl, setGridImageUrl] = useState(null);
 
-  // Debounced save
+  // Debounced save — cleanup on unmount to prevent stale save calls
   const saveTimerRef = useRef(null);
+  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }, []);
 
   // Drag & drop state
   const [dragFrameId, setDragFrameId] = useState(null);
