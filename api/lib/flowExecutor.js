@@ -412,6 +412,7 @@ export async function resumeExecution(executionId, supabase, apiKeys, userId, us
     .eq('id', executionId)
     .single();
   if (execErr || !prevExec) throw new Error('Previous execution not found');
+  if (prevExec.user_id !== userId) throw new Error('Unauthorized');
   if (!['failed', 'cancelled'].includes(prevExec.status)) throw new Error('Can only resume failed or cancelled executions');
 
   // Load the flow

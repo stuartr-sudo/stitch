@@ -183,6 +183,10 @@ export default async function handler(req, res) {
       }
 
       if (action === 'pause' && method === 'POST') {
+        // Verify ownership
+        const { data: pauseExec } = await supabase.from('automation_executions').select('user_id').eq('id', execId).single();
+        if (!pauseExec) return res.status(404).json({ error: 'Execution not found' });
+        if (pauseExec.user_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
         const executor = getActiveExecutor(execId);
         if (executor) executor.pause();
         await supabase.from('automation_executions').update({ status: 'paused' }).eq('id', execId);
@@ -197,6 +201,7 @@ export default async function handler(req, res) {
           .eq('id', execId)
           .single();
         if (!exec) return res.status(404).json({ error: 'Execution not found' });
+        if (exec.user_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
         const keys = await getUserKeys(userId, req.user?.email);
         // Re-create executor with existing step_states, then resume
         const executor = new (await import('../lib/flowExecutor.js')).FlowExecutor(
@@ -229,6 +234,11 @@ export default async function handler(req, res) {
           .eq('id', execId)
           .single();
         if (!exec) return res.status(404).json({ error: 'Execution not found' });
+        if (exec.user_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
+        // Only allow retrying failed nodes
+        if (exec.step_states?.[nodeId]?.status && exec.step_states[nodeId].status !== 'failed') {
+          return res.status(400).json({ error: 'Node is not in failed state' });
+        }
         // Clear the failed node's state so it becomes "ready" again
         const stepStates = { ...(exec.step_states || {}) };
         delete stepStates[nodeId];
@@ -247,6 +257,10 @@ export default async function handler(req, res) {
       }
 
       if (action === 'cancel' && method === 'POST') {
+        // Verify ownership
+        const { data: cancelExec } = await supabase.from('automation_executions').select('user_id').eq('id', execId).single();
+        if (!cancelExec) return res.status(404).json({ error: 'Execution not found' });
+        if (cancelExec.user_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
         const executor = getActiveExecutor(execId);
         if (executor) executor.cancel();
         await supabase

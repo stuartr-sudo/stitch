@@ -62,13 +62,13 @@ export default function FlowCard({ flow, onRun, onDelete, selected, onSelect }) 
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCancelDelete}
-                className="px-2 py-0.5 text-[11px] text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors"
+                className="px-2 py-0.5 text-[11px] text-slate-300 bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="px-2 py-0.5 text-[11px] text-white bg-red-500 border border-red-500 rounded hover:bg-red-600 transition-colors"
+                className="px-2 py-0.5 text-[11px] text-white bg-red-600 border border-red-500 rounded hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
@@ -78,10 +78,10 @@ export default function FlowCard({ flow, onRun, onDelete, selected, onSelect }) 
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
               {isScheduled && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100">Scheduled</span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-blue-900/30 text-blue-400 rounded border border-blue-700/40">Scheduled</span>
               )}
               {runCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100">{runCount} runs</span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-emerald-900/30 text-emerald-400 rounded border border-emerald-700/40">{runCount} runs</span>
               )}
               {lastRun && (
                 <span className="text-[10px] text-slate-400">Last: {new Date(lastRun).toLocaleDateString()}</span>
@@ -90,7 +90,7 @@ export default function FlowCard({ flow, onRun, onDelete, selected, onSelect }) 
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDeleteClick}
-                className="px-2 py-1 text-[11px] bg-red-50 border border-red-200 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                className="px-2 py-1 text-[11px] bg-red-900/20 border border-red-700/30 text-red-400 rounded-md hover:bg-red-900/40 transition-colors"
                 title="Delete flow"
               >
                 Delete

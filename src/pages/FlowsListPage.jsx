@@ -49,9 +49,9 @@ export default function FlowsListPage() {
     if (data?.flow) navigate(`/flows/${data.flow.id}`);
   };
 
-  const handleRunFlow = async (flowId) => {
-    const data = await apiFetch(`/api/flows/${flowId}/execute`, { method: 'POST' }).then(r => r.json());
-    if (data?.execution) navigate(`/flows/${flowId}/run/${data.execution.id}`);
+  const handleRunFlow = (flowId) => {
+    // Navigate to builder page which handles input form + preflight before execution
+    navigate(`/flows/${flowId}`);
   };
 
   const handleDeleteFlow = async (flowId) => {
@@ -144,18 +144,18 @@ export default function FlowsListPage() {
             <span className="text-sm text-slate-600">{selected.size} selected</span>
 
             {bulkConfirming ? (
-              <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-                <span className="text-xs text-red-700">Delete {selected.size} flow{selected.size > 1 ? 's' : ''}? This cannot be undone.</span>
+              <div className="flex items-center gap-2 ml-auto bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-1.5">
+                <span className="text-xs text-red-300">Delete {selected.size} flow{selected.size > 1 ? 's' : ''}? This cannot be undone.</span>
                 <button
                   onClick={() => setBulkConfirming(false)}
-                  className="px-2.5 py-0.5 text-xs text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors"
+                  className="px-2.5 py-0.5 text-xs text-slate-300 bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBulkDelete}
                   disabled={bulkDeleting}
-                  className="px-2.5 py-0.5 text-xs text-white bg-red-500 border border-red-500 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                  className="px-2.5 py-0.5 text-xs text-white bg-red-600 border border-red-500 rounded hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   {bulkDeleting ? 'Deleting...' : 'Confirm Delete'}
                 </button>
@@ -164,7 +164,7 @@ export default function FlowsListPage() {
               <>
                 <button
                   onClick={() => setBulkConfirming(true)}
-                  className="ml-auto px-3 py-1 text-xs bg-red-50 border border-red-200 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                  className="ml-auto px-3 py-1 text-xs bg-red-900/20 border border-red-700/30 text-red-400 rounded-md hover:bg-red-900/40 transition-colors"
                 >
                   Delete Selected
                 </button>
