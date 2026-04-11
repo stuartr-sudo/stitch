@@ -14,8 +14,17 @@
  * Saves module selections as defaults.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
 export default async function handler(req, res) {
-  const supabase = req.supabase;
+  const supabase = getSupabase();
   const userId = req.user.id;
   const userEmail = req.user.email;
   const path = req.path.replace('/api/flows/campaigns', '');
@@ -37,32 +46,42 @@ export default async function handler(req, res) {
   // ─── GET /defaults/:username — get saved defaults ───
   if (req.method === 'GET' && path.startsWith('/defaults/')) {
     const username = path.split('/defaults/')[1];
-    const { data } = await supabase
-      .from('campaign_brand_defaults')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('brand_username', username)
-      .maybeSingle();
-    return res.json({ defaults: data || null });
+    try {
+      const { data } = await supabase
+        .from('campaign_brand_defaults')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('brand_username', username)
+        .maybeSingle();
+      return res.json({ defaults: data || null });
+    } catch (err) {
+      console.error('[campaign-create] Error fetching defaults:', err.message);
+      return res.json({ defaults: null });
+    }
   }
 
   // ─── PUT /defaults/:username — save defaults ───
   if (req.method === 'PUT' && path.startsWith('/defaults/')) {
     const username = path.split('/defaults/')[1];
     const { selected_modules, selected_fields } = req.body;
-    const { data, error } = await supabase
-      .from('campaign_brand_defaults')
-      .upsert({
-        user_id: userId,
-        brand_username: username,
-        selected_modules: selected_modules || [],
-        selected_fields: selected_fields || {},
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,brand_username' })
-      .select()
-      .single();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ defaults: data });
+    try {
+      const { data, error } = await supabase
+        .from('campaign_brand_defaults')
+        .upsert({
+          user_id: userId,
+          brand_username: username,
+          selected_modules: selected_modules || [],
+          selected_fields: selected_fields || {},
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,brand_username' })
+        .select()
+        .single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ defaults: data });
+    } catch (err) {
+      console.error('[campaign-create] Error saving defaults:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
   }
 
   // ─── POST / — create campaign flow ───
