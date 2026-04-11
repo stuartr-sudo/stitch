@@ -129,7 +129,7 @@ export default async function handler(req, res) {
         .from('automation_flows')
         .insert({
           user_id: userId,
-          name: `${template.name} (copy)`,
+          name: template.name,
           description: template.description,
           graph_json: template.graph_json,
           is_template: false

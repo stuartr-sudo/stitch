@@ -74,6 +74,7 @@ async function searchNicheArticles(niche) {
         engine: 'google_news',
         q,
         num: '10',
+        tbs: 'qdr:w',
       });
       const resp = await fetch(`https://www.searchapi.io/api/v1/search?${params}`);
       if (!resp.ok) {

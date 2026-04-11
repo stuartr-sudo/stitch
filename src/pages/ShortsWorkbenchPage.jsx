@@ -49,38 +49,38 @@ const NICHE_VISUAL_MOODS = {
 
 // Niche-specific voice style instructions (from SHORTS_TEMPLATES voice_pacing)
 const NICHE_VOICE_STYLES = {
-  ai_tech_news: 'Speak with fast-paced, punchy news-anchor energy. Hit each fact hard. Keep momentum high with short sharp sentences and quick transitions between ideas.',
-  finance_money: 'Speak with confident authority at a brisk pace. Be direct and clear. Punch the numbers. Keep it moving like a sharp financial briefing.',
-  motivation_self_help: 'Speak with rising intensity and conviction. Build emotional momentum. Vary between powerful declarations and brief meaningful pauses. Sound genuinely passionate.',
-  scary_horror: 'Speak with building tension and suspense. Start hushed, then shift suddenly louder at reveals. Vary pace dramatically — slow creeping dread, then rapid bursts.',
-  history_did_you_know: 'Speak with animated storyteller energy at a lively pace. Sound genuinely fascinated. Hit reveals with dramatic emphasis. Keep it moving between facts.',
-  true_crime: 'Speak with gripping documentary intensity. Let key facts land with weight. Keep a driving forward momentum. Sound focused and compelling.',
-  science_nature: 'Speak with infectious curiosity and excitement at a quick pace. Sound amazed by the facts. Build energy toward each mind-blowing reveal.',
-  relationships_dating: 'Speak warmly and directly like a perceptive friend. Quick conversational pace. Sound genuine and insightful. Keep it real and engaging.',
-  health_fitness: 'Speak with energetic, direct coaching energy. Be punchy and confident. Cut through the noise with fast, clear statements.',
-  gaming_popculture: 'Speak with excited, rapid-fire fan energy. Sound genuinely hyped. Quick pace with enthusiastic emphasis on key moments.',
-  conspiracy_mystery: 'Speak with intense investigative energy. Drive forward through each revelation. Sound focused and intrigued. Build momentum toward each twist.',
-  business_entrepreneur: 'Speak with sharp, high-energy founder energy. Fast pace, no filler. Be direct and punchy. Sound like someone who gets results.',
-  food_cooking: 'Speak with warm enthusiasm at a lively pace. Sound genuinely excited about flavors and techniques. Be vivid and engaging.',
-  travel_adventure: 'Speak with vivid, excited energy about each destination. Quick pace with wonder in your voice. Make every place sound irresistible.',
-  psychology_mindblown: 'Speak with fascinated intensity. Build each insight with growing excitement. Sound genuinely amazed. Quick pace between revelations.',
-  space_cosmos: 'Speak with awestruck wonder at a driving pace. Sound genuinely amazed by cosmic scale. Build from curiosity to mind-blowing reveals.',
-  animals_wildlife: 'Speak with animated fascination at a lively pace. Sound genuinely amazed by each creature. Keep the energy up with vivid descriptions.',
-  sports_athletes: 'Speak with electric sports commentary energy. Fast pace building toward the climax. Sound excited and fully invested in the action.',
-  education_learning: 'Speak with infectious enthusiasm at a quick pace. Sound like you just discovered something incredible and can barely contain your excitement.',
-  paranormal_ufo: 'Speak with serious investigative intensity. Drive through evidence with building intrigue. Sound focused and compelling. Keep momentum high.',
+  ai_tech_news: 'Speak with clear, professional authority. Maintain a steady, engaging pace. Emphasize key insights naturally. Sound knowledgeable and trustworthy, sharing important developments with measured confidence.',
+  finance_money: 'Speak with calm, assured confidence. Use a measured pace that allows numbers and concepts to land clearly. Sound like a financial advisor offering valuable perspective on practical matters.',
+  motivation_self_help: 'Speak warmly and conversationally. Vary your pace slightly to emphasize key insights. Sound genuine and relatable, like a trusted mentor sharing helpful perspective.',
+  scary_horror: 'Speak in a measured, deliberate tone with natural emphasis. Let moments of tension build through pacing and tone shifts. Sound thoughtful and composed, drawing listeners into the narrative.',
+  history_did_you_know: 'Speak with genuine interest and engagement. Maintain a conversational pace with natural emphasis on interesting details. Sound like a knowledgeable friend sharing fascinating stories.',
+  true_crime: 'Speak with calm, professional authority. Use clear pacing and measured emphasis. Sound objective and informative, presenting facts with appropriate gravity.',
+  science_nature: 'Speak with genuine enthusiasm about the subject matter. Maintain clear pacing with natural emphasis on interesting findings. Sound like you find the topic genuinely compelling.',
+  relationships_dating: 'Speak warmly and conversationally, like a thoughtful friend. Use natural pacing with gentle emphasis on key points. Sound understanding and relatable.',
+  health_fitness: 'Speak with clear, confident authority. Maintain a steady, accessible pace. Sound knowledgeable and supportive, offering practical guidance with genuine interest.',
+  gaming_popculture: 'Speak with natural enthusiasm and genuine interest. Use conversational pacing with natural emphasis on noteworthy moments. Sound like someone who cares about the subject.',
+  conspiracy_mystery: 'Speak with measured, deliberate confidence. Use steady pacing with thoughtful emphasis. Sound curious and focused, exploring ideas with calm investigation.',
+  business_entrepreneur: 'Speak with clear, confident authority. Maintain steady pacing with natural emphasis on key points. Sound experienced and knowledgeable, like a seasoned advisor sharing valuable insights.',
+  food_cooking: 'Speak with warm enthusiasm and genuine appreciation. Use conversational pacing with natural emphasis on appealing details. Sound like you enjoy sharing culinary insights.',
+  travel_adventure: 'Speak with genuine excitement and appreciation. Maintain engaging pacing with natural emphasis on compelling details. Sound like someone who loves exploring and wants to share that wonder.',
+  psychology_mindblown: 'Speak with thoughtful engagement and genuine interest. Use conversational pacing with emphasis on interesting insights. Sound like you find human behavior genuinely fascinating.',
+  space_cosmos: 'Speak with genuine wonder and clear authority. Maintain steady pacing that allows big ideas to land. Sound knowledgeable and awestruck, sharing cosmic perspective with authentic interest.',
+  animals_wildlife: 'Speak with genuine appreciation and interest. Use conversational pacing with natural emphasis on fascinating animal details. Sound like you care about nature and wildlife.',
+  sports_athletes: 'Speak with authentic enthusiasm and clear authority. Maintain engaging pacing with natural emphasis on compelling moments. Sound genuinely interested in the sport and athletes.',
+  education_learning: 'Speak with warmth and genuine enthusiasm. Maintain conversational pacing that makes ideas accessible. Sound like an engaging educator who finds the subject truly interesting.',
+  paranormal_ufo: 'Speak with measured, thoughtful curiosity. Use steady pacing with calm emphasis on intriguing details. Sound genuinely interested in mysteries while remaining composed and analytical.',
 };
 
 // Universal voice style quick-picks (niche-independent)
 const VOICE_STYLE_PRESETS = [
-  { label: 'Documentary', value: 'Speak with authoritative documentary narrator confidence. Drive forward with momentum. Emphasize reveals dramatically. Keep a compelling pace.' },
-  { label: 'Storyteller', value: 'Speak with captivating storyteller energy. Vary your pace — quick during action, slower at emotional peaks. Build tension and release. Sound fully invested.' },
-  { label: 'News Anchor', value: 'Speak with fast-paced breaking news energy. Short punchy sentences, urgent tone. Hit each point hard and move on. Keep the audience locked in.' },
-  { label: 'Whispering', value: 'Speak in a hushed, intimate whisper like sharing a dangerous secret. Slow and deliberate, then suddenly shift pace at shocking moments.' },
-  { label: 'High Energy', value: 'Speak with electric, rapid-fire energy. Sound excited and fully committed. Keep the adrenaline pumping with quick sentences and enthusiastic peaks.' },
-  { label: 'Teacher', value: 'Speak with infectious enthusiasm like a teacher sharing a breakthrough. Build excitement from simple to mind-blowing. Keep a quick, engaging pace.' },
-  { label: 'Campfire', value: 'Speak like a compelling fireside storyteller. Build intensity gradually, vary between hushed moments and powerful declarations. Draw listeners in deep.' },
-  { label: 'Podcast Host', value: 'Speak with casual, direct podcast energy. Quick conversational pace, no filler. Sound real and relatable like talking to a friend.' },
+  { label: 'Documentary', value: 'Speak with clear, authoritative confidence. Maintain steady pacing with natural emphasis. Sound knowledgeable and trustworthy, presenting information with measured clarity.' },
+  { label: 'Storyteller', value: 'Speak conversationally with natural variation. Use pacing shifts to emphasize key moments. Sound genuinely engaged with the narrative.' },
+  { label: 'News Anchor', value: 'Speak with clear, professional authority. Maintain a steady, confident pace. Sound knowledgeable and composed, delivering information with appropriate emphasis.' },
+  { label: 'Whispering', value: 'Speak softly and intimately. Use gentle pacing with occasional emphasis. Sound thoughtful and drawn in.' },
+  { label: 'High Energy', value: 'Speak with genuine enthusiasm and commitment. Maintain an engaging pace with natural emphasis. Sound genuinely invested in the subject matter.' },
+  { label: 'Teacher', value: 'Speak with warmth and engagement. Build ideas from simple to complex with natural pacing. Sound like someone who finds the subject genuinely interesting.' },
+  { label: 'Campfire', value: 'Speak conversationally like sharing a story. Vary your pacing naturally. Sound genuine and present, inviting the listener in.' },
+  { label: 'Podcast Host', value: 'Speak conversationally and directly, like talking to a friend. Use natural pacing and emphasis. Sound genuine, relatable, and engaged.' },
 ];
 
 const NICHES = [
@@ -418,12 +418,14 @@ export default function ShortsWorkbenchPage() {
   const [topicL1, setTopicL1] = useState('');
   const [topicL2, setTopicL2] = useState('');
   const [topicL3, setTopicL3] = useState('');
+  const [showTopicFunnel, setShowTopicFunnel] = useState(false);
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchedStories, setResearchedStories] = useState([]);
   const [selectedStoryIdx, setSelectedStoryIdx] = useState(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [generatedIdeas, setGeneratedIdeas] = useState([]);
   const [ideasLoading, setIdeasLoading] = useState(false);
+  const [creativeMode, setCreativeMode] = useState(false); // When OFF, research is required before script generation
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [geminiVoice, setGeminiVoice] = useState('Perseus');
@@ -432,6 +434,8 @@ export default function ShortsWorkbenchPage() {
   const [voiceLoading, setVoiceLoading] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState(1.15);
   const [voiceApproved, setVoiceApproved] = useState(false);
+  const [previewVoiceLoading, setPreviewVoiceLoading] = useState(null); // voice ID being previewed, or null
+  const [previewAudio, setPreviewAudio] = useState(null); // ref to currently playing preview audio
 
   // ── Avatar Mode ─────────────────────────────────────────────────
   const [avatarMode, setAvatarMode] = useState(false);
@@ -513,7 +517,7 @@ export default function ShortsWorkbenchPage() {
   const lastSaveRef = useRef(null);
 
   const getWorkbenchState = () => ({
-    step, niche, topic, storyContext, framework: framework?.id || null, generatedIdeas,
+    step, niche, topic, storyContext, creativeMode, framework: framework?.id || null, generatedIdeas,
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic, musicModel,
@@ -555,7 +559,7 @@ export default function ShortsWorkbenchPage() {
       const s = data.draft?.storyboard_json;
       if (!s) return;
       setDraftId(id);
-      setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || ''); setGeneratedIdeas(s.generatedIdeas || []);
+      setNiche(s.niche || ''); setTopic(s.topic || ''); setStoryContext(s.storyContext || ''); setCreativeMode(s.creativeMode || false); setGeneratedIdeas(s.generatedIdeas || []);
       setDuration(s.duration || 60); setScript(s.script || '');
       setGeminiVoice(s.geminiVoice || 'Perseus'); setStyleInstructions(s.styleInstructions || '');
       setVoiceSpeed(s.voiceSpeed || 1.1); setVoiceoverUrl(s.voiceoverUrl || null);
@@ -625,6 +629,7 @@ export default function ShortsWorkbenchPage() {
   const handleNicheChange = (key) => {
     setNiche(key);
     setTopicL1(''); setTopicL2(''); setTopicL3('');
+    setShowTopicFunnel(false);
     setTopic('');
     setResearchedStories([]); setSelectedStoryIdx(null);
     setStoryContext('');
@@ -687,11 +692,16 @@ export default function ShortsWorkbenchPage() {
 
   const generateScript = async () => {
     if (!niche || !topic.trim()) { toast.error('Pick a niche and enter a topic'); return; }
+    // Enforce research when not in Creative Mode
+    if (!creativeMode && !storyContext && researchedStories.length === 0) {
+      toast.warning('Research required — use "Find Trending Topics" or click Research first. Enable Creative Mode to skip research.');
+      return;
+    }
     setScriptLoading(true);
     try {
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, videoLengthPreset: duration, framework: framework?.id }),
+        body: JSON.stringify({ niche, topic: topic.trim(), story_context: storyContext, creative_mode: creativeMode, videoLengthPreset: duration, framework: framework?.id }),
       });
       const data = await parseApiResponse(res);
       const scriptData = data.script || data;
@@ -706,6 +716,38 @@ export default function ShortsWorkbenchPage() {
       toast.success(`Script generated — ${fullScript.split(/\s+/).length} words`);
     } catch (err) { toast.error(err.message || 'Script generation failed'); }
     finally { setScriptLoading(false); }
+  };
+
+  const playVoicePreview = async (voiceId) => {
+    if (previewVoiceLoading === voiceId) {
+      // Stop current preview
+      if (previewAudio) previewAudio.pause();
+      setPreviewVoiceLoading(null);
+      return;
+    }
+    // Pause any currently playing preview
+    if (previewAudio) previewAudio.pause();
+    setPreviewVoiceLoading(voiceId);
+    try {
+      const res = await apiFetch('/api/voice/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_id: voiceId, text: 'Here is a preview of my voice. Pretty cool, right?' }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Voice preview failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      setPreviewAudio(audio);
+      audio.onended = () => setPreviewVoiceLoading(null);
+      audio.play();
+    } catch (err) {
+      toast.error(err.message || 'Voice preview failed');
+      setPreviewVoiceLoading(null);
+    }
   };
 
   const generateVoiceover = async () => {
@@ -1145,8 +1187,8 @@ export default function ShortsWorkbenchPage() {
         {step === 'script' && (
           <>
             <Panel title="Niche & Topic" right={<CostBadge amount="0.03" label="script + voice" />}>
-              <div className="grid grid-cols-2 gap-5">
-                <div>
+              <div className="flex gap-5">
+                <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Niche</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {NICHES.map(n => (
@@ -1250,7 +1292,7 @@ export default function ShortsWorkbenchPage() {
                   </div>
                 </div>
 
-                <div>
+                <div className="w-1/2">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Topic</label>
                     <button onClick={handleResearch} disabled={researchLoading || !niche || !topic.trim()}
@@ -1296,12 +1338,12 @@ export default function ShortsWorkbenchPage() {
                     </div>
                   )}
 
-                  {/* Generated ideas list */}
+                  {/* Generated ideas list — capped height to prevent layout blowout */}
                   {generatedIdeas.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      <div className="flex items-center justify-between">
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-1.5">
                         <label className="text-[10px] font-medium text-[#2C666E] uppercase tracking-wide">
-                          AI-Generated Ideas
+                          AI-Generated Ideas ({generatedIdeas.length})
                         </label>
                         <button
                           onClick={() => setGeneratedIdeas([])}
@@ -1310,6 +1352,7 @@ export default function ShortsWorkbenchPage() {
                           <X className="w-3 h-3" /> Clear
                         </button>
                       </div>
+                      <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
                       {generatedIdeas.map((idea, i) => (
                         <button key={i} onClick={() => {
                           setTopic(idea.topic);
@@ -1325,16 +1368,20 @@ export default function ShortsWorkbenchPage() {
                           </div>
                         </button>
                       ))}
+                      </div>
                     </div>
                   )}
 
                   {/* Manual topic funnel — secondary path */}
                   {niche && TOPIC_SUGGESTIONS[niche] && (
-                    <details className="mb-3">
-                      <summary className="text-[10px] text-slate-400 uppercase font-medium cursor-pointer hover:text-slate-600 select-none">
-                        Or choose a topic manually
-                      </summary>
-                      <div className="mt-2">
+                    <div className="mb-3 border border-slate-200 rounded-lg p-3 bg-slate-50">
+                      <button
+                        onClick={() => setShowTopicFunnel(!showTopicFunnel)}
+                        className="w-full text-left text-[10px] text-slate-400 uppercase font-medium hover:text-slate-600 select-none"
+                      >
+                        {showTopicFunnel ? '▼ Or choose a topic manually' : '▶ Or choose a topic manually'}
+                      </button>
+                      {showTopicFunnel && <div className="mt-2">
                         {(() => {
                     const nicheData = TOPIC_SUGGESTIONS[niche];
                     const l1Items = nicheData.topics || [];
@@ -1398,8 +1445,8 @@ export default function ShortsWorkbenchPage() {
                       </div>
                     );
                   })()}
-                      </div>
-                    </details>
+                      </div>}
+                    </div>
                   )}
 
                   {/* Research results */}
@@ -1455,6 +1502,21 @@ export default function ShortsWorkbenchPage() {
                     </div>
                   )}
 
+                  {/* Creative Mode toggle */}
+                  <div className="flex items-center justify-between mb-2 py-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={creativeMode} onChange={e => setCreativeMode(e.target.checked)}
+                          className="sr-only peer" />
+                        <div className="w-8 h-4.5 bg-slate-300 peer-focus:ring-2 peer-focus:ring-[#2C666E]/30 rounded-full peer peer-checked:bg-[#2C666E] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5" />
+                      </label>
+                      <span className="text-[11px] font-semibold text-slate-700">Creative Mode</span>
+                    </div>
+                    <span className="text-[9px] text-slate-400">
+                      {creativeMode ? 'AI can create fictional stories freely' : 'Research required — facts only'}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Script</label>
                     <button onClick={generateScript} disabled={scriptLoading || !niche || !topic.trim()}
@@ -1471,17 +1533,26 @@ export default function ShortsWorkbenchPage() {
             </Panel>
 
             <Panel title="Voice & Voiceover" right={<CostBadge amount="0.01" />}>
-              <div className="grid grid-cols-2 gap-5">
-                <div>
+              <div className="flex gap-5">
+                <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Voice</label>
                   <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
                     {sortedVoices.slice(0, 12).map(v => (
-                      <button key={v.id} onClick={() => setGeminiVoice(v.id)}
-                        className={cn('p-2 rounded-lg border text-left transition-all',
-                          geminiVoice === v.id ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
-                        <div className="text-[11px] font-semibold text-slate-700">{v.label}</div>
-                        <div className="text-[9px] text-slate-400">{v.description}</div>
-                      </button>
+                      <div key={v.id} className={cn('p-2 rounded-lg border text-left transition-all group relative',
+                        geminiVoice === v.id ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:border-slate-300')}>
+                        <button onClick={() => setGeminiVoice(v.id)} className="w-full text-left">
+                          <div className="text-[11px] font-semibold text-slate-700">{v.label}</div>
+                          <div className="text-[9px] text-slate-400">{v.description}</div>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); playVoicePreview(v.id); }}
+                          className="absolute top-1 right-1 p-1 rounded bg-slate-200 hover:bg-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {previewVoiceLoading === v.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-slate-700" />
+                          ) : (
+                            <Play className="w-3 h-3 text-slate-700 ml-0.5" />
+                          )}
+                        </button>
+                      </div>
                     ))}
                   </div>
 
@@ -1499,7 +1570,7 @@ export default function ShortsWorkbenchPage() {
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[11px] h-14 resize-none text-slate-600" placeholder="Custom voice style instructions..." />
                 </div>
 
-                <div>
+                <div className="w-1/2">
                   <button onClick={generateVoiceover} disabled={voiceLoading || !script.trim()}
                     className="w-full px-4 py-3 bg-[#2C666E] text-white rounded-xl text-sm font-semibold hover:bg-[#1f4f55] disabled:opacity-50 mb-3">
                     {voiceLoading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <Volume2 className="w-4 h-4 inline mr-2" />}
@@ -1715,12 +1786,12 @@ export default function ShortsWorkbenchPage() {
                   </p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-5">
-                <div>
+              <div className="flex gap-5">
+                <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Visual Style</label>
                   <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="200px" hideLabel />
                 </div>
-                <div>
+                <div className="w-1/2">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Image Model</label>
                   <div className="flex gap-1.5 flex-wrap mb-3">
                     {IMAGE_MODELS.map(m => (
@@ -2122,8 +2193,8 @@ export default function ShortsWorkbenchPage() {
         {step === 'assemble' && (
           <>
             <Panel title="Assemble Final Video" right={<CostBadge amount="0.12" label="FFmpeg + captions" />}>
-              <div className="grid grid-cols-2 gap-5">
-                <div>
+              <div className="flex gap-5">
+                <div className="w-1/2 shrink-0">
                   <div className="bg-slate-50 rounded-xl p-4 text-xs space-y-2 mb-4">
                     {blocks.map((b, i) => (
                       <div key={i} className="flex justify-between">
@@ -2159,7 +2230,7 @@ export default function ShortsWorkbenchPage() {
                   </button>
                 </div>
 
-                <div>
+                <div className="w-1/2">
                   {finalUrl ? (
                     <div>
                       <video src={finalUrl} controls className="w-full rounded-xl border border-slate-200 shadow-sm" style={{ maxHeight: '500px' }} />

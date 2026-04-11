@@ -77,6 +77,7 @@ async function searchRealStories(niche, nicheName, topic) {
     url.searchParams.set('engine', 'google_news');
     url.searchParams.set('q', query);
     url.searchParams.set('num', '10');
+    url.searchParams.set('tbs', 'qdr:w');
 
     console.log(`[shorts/research] SearchAPI query: "${query}"`);
 

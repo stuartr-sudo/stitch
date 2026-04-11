@@ -22,7 +22,7 @@ import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, topic, brand_username, story_context, visual_directions, videoLengthPreset, framework: frameworkId } = req.body;
+  const { niche, topic, brand_username, story_context, creative_mode, visual_directions, videoLengthPreset, framework: frameworkId } = req.body;
 
   if (!niche) {
     return res.status(400).json({ error: 'Missing niche' });
@@ -60,6 +60,7 @@ export default async function handler(req, res) {
       keys: { openaiKey },
       brandUsername: brand_username,
       storyContext: story_context || undefined,
+      creativeMode: creative_mode || false,
       visualDirections: visual_directions || undefined,
       targetDurationSeconds: videoLengthPreset || undefined,
       framework,

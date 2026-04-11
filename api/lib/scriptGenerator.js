@@ -15,10 +15,10 @@ import { generateNarrative } from './narrativeGenerator.js';
  * Backward-compat wrapper — calls narrativeGenerator and maps output to old format.
  * Used by: api/campaigns/preview-script.js
  */
-export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, visualDirections, targetDurationSeconds, framework, lockedDurations = null, frameChain = true }) {
+export async function generateScript({ niche, topic, nicheTemplate, keys, brandUsername, storyContext, creativeMode, visualDirections, targetDurationSeconds, framework, lockedDurations = null, frameChain = true }) {
   const narrative = await generateNarrative({
     niche, topic, nicheTemplate, framework,
-    targetDurationSeconds, storyContext,
+    targetDurationSeconds, storyContext, creativeMode,
     keys, brandUsername,
   });
 

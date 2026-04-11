@@ -143,7 +143,7 @@ const HOOK_EXAMPLES = {
 
 // ── PASS 1: Hook Generation ─────────────────────────────────────────────────
 
-async function generateHook({ niche, topic, nicheTemplate, framework, storyContext, keys }) {
+async function generateHook({ niche, topic, nicheTemplate, framework, storyContext, creativeMode, keys }) {
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
   const hookPattern = framework?.narrative?.hookPattern || 'story-open';
@@ -168,7 +168,12 @@ ${examples.good.map(h => `  ✓ "${h}"`).join('\n')}
 BAD HOOKS (never write anything like these — notice the vagueness):
 ${examples.bad.map(h => `  ✗ "${h}"`).join('\n')}
 
-The hook must set up a PAYOFF PROMISE — something the viewer will learn or discover by watching to the end.`;
+The hook must set up a PAYOFF PROMISE — something the viewer will learn or discover by watching to the end.${!creativeMode ? `
+
+FACTUAL MODE (Creative Mode is OFF):
+- Do NOT invent specific people, names, companies, dollar amounts, dates, or events that aren't provided in the context.
+- Only use facts that appear in the provided story context. If no context is provided, write a hook about the general topic without fabricating specific anecdotes.
+- You may use general statistics about the industry/topic but do NOT cite specific numbers you aren't sure about.` : ''}`;
 
   const userPrompt = topic
     ? `Write a hook for a ${nicheTemplate?.name || niche} video about: ${topic}${storyContext ? `\n\nContext: ${storyContext}` : ''}`
@@ -204,7 +209,7 @@ The hook must set up a PAYOFF PROMISE — something the viewer will learn or dis
 
 async function generateFullNarrative({
   hook, niche, topic, nicheTemplate, framework,
-  targetDurationSeconds, storyContext, keys,
+  targetDurationSeconds, storyContext, creativeMode, keys,
 }) {
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
@@ -290,6 +295,13 @@ BANNED (instant rejection):
 - Addressing the viewer with "guys" or "folks"
 
 ${overlayBlock}
+${!creativeMode ? `
+FACTUAL MODE (Creative Mode is OFF — this is critical):
+- Do NOT invent specific people, names, companies, dollar amounts, dates, lawsuits, or events that are not explicitly provided in the story context below.
+- If story context is provided, base your script ONLY on the facts in that context. You may rephrase and dramatize the delivery, but every specific claim must come from the context.
+- If no story context is provided, write about the topic in general terms — use "a seller", "one business owner", "a recent case" instead of fabricating "Emily from Austin" or "$50,000 lawsuit."
+- You MAY use well-known, verifiable general statistics about an industry (e.g., "e-commerce returns $800 billion annually") but do NOT cite specific numbers you invented.
+- This is for real business clients. Fabricated stories damage credibility. When in doubt, be general rather than specific.` : ''}
 
 ${nicheTemplate?.script_system_prompt || ''}`;
 
@@ -383,7 +395,7 @@ RULES:
  */
 export async function generateNarrative({
   niche, topic, hookLine, nicheTemplate, framework,
-  targetDurationSeconds, storyContext, keys, brandUsername,
+  targetDurationSeconds, storyContext, creativeMode, keys, brandUsername,
 }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required');
   if (!nicheTemplate) throw new Error(`No template found for niche "${niche}"`);
@@ -402,7 +414,7 @@ export async function generateNarrative({
     console.log(`[narrativeGenerator] Pass 1: Using provided hook`);
   } else {
     console.log(`[narrativeGenerator] Pass 1: Generating hook...`);
-    const hookResult = await generateHook({ niche, topic, nicheTemplate, framework, storyContext, keys });
+    const hookResult = await generateHook({ niche, topic, nicheTemplate, framework, storyContext, creativeMode, keys });
     hook = hookResult;
     if (hookResult.usage) {
       totalInputTokens += hookResult.usage.prompt_tokens;
@@ -414,7 +426,7 @@ export async function generateNarrative({
   console.log(`[narrativeGenerator] Pass 2: Generating narrative (${totalWords} words, ${effectiveDuration}s)...`);
   const { narrative, usage: narrativeUsage } = await generateFullNarrative({
     hook, niche, topic, nicheTemplate, framework,
-    targetDurationSeconds: effectiveDuration, storyContext, keys,
+    targetDurationSeconds: effectiveDuration, storyContext, creativeMode, keys,
   });
   if (narrativeUsage) {
     totalInputTokens += narrativeUsage.prompt_tokens;
