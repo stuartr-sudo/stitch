@@ -291,7 +291,7 @@ function ImageForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables 
 
       {/* Visual Style */}
       <Panel title="Visual Style" description="Select one or more styles to guide generation">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }}
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })}
           maxHeight="20rem" columns="grid-cols-4" multiple />
       </Panel>
 
@@ -490,7 +490,7 @@ function VideoForm({ config, u, nodeType, wired, upstreamOutputs, flowVariables 
       )}
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-4" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })} maxHeight="16rem" columns="grid-cols-4" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -763,7 +763,7 @@ function ShortsCreateForm({ config, u, wired, upstreamOutputs, flowVariables }) 
 
       {/* Visual Style */}
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       {/* Captions */}
@@ -852,7 +852,7 @@ function StoryboardCreateForm({ config, u, wired, upstreamOutputs, flowVariables
       </div>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -900,7 +900,7 @@ function CarouselCreateForm({ config, u, upstreamOutputs, flowVariables }) {
       </Panel>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -948,7 +948,7 @@ function AdsGenerateForm({ config, u, upstreamOutputs, flowVariables }) {
       </Panel>
 
       <Panel title="Visual Style">
-        <StyleGrid value={config.style_preset || []} onChange={v => { u('style_preset', v); u('style_preset_text', resolveStylePresetText(v)); }} maxHeight="16rem" columns="grid-cols-5" multiple />
+        <StyleGrid value={config.style_preset || []} onChange={v => u({ style_preset: v, style_preset_text: resolveStylePresetText(v) })} maxHeight="16rem" columns="grid-cols-5" multiple />
       </Panel>
 
       <Panel title="Brand Guide">
@@ -1744,8 +1744,9 @@ export default function NodeConfigModal({
 
   useEffect(() => { setConfig(initialConfig || {}); }, [initialConfig, node?.id]);
 
-  const u = (key, value) => {
-    const next = { ...config, [key]: value };
+  const u = (keyOrUpdates, value) => {
+    const updates = typeof keyOrUpdates === 'object' ? keyOrUpdates : { [keyOrUpdates]: value };
+    const next = { ...config, ...updates };
     setConfig(next);
     onConfigChange(next);
   };
