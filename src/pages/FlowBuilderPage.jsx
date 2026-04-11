@@ -343,22 +343,61 @@ export default function FlowBuilderPage() {
           )}
           {isExecuting ? (
             <>
-              {execution?.status === 'failed' && (
-                <button onClick={handleResume} className="px-3 py-1.5 text-xs bg-emerald-900/30 border border-emerald-700/40 text-emerald-400 rounded-md hover:bg-emerald-900/50">↻ Resume</button>
+              {/* Status badge */}
+              {execution?.status && (
+                <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium ${
+                  ['running', 'queued', 'dry_run'].includes(execution.status)
+                    ? 'bg-blue-900/40 text-blue-300 border border-blue-700/40'
+                    : execution.status === 'completed'
+                    ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/40'
+                    : execution.status === 'failed'
+                    ? 'bg-red-900/40 text-red-300 border border-red-700/40'
+                    : execution.status === 'paused'
+                    ? 'bg-amber-900/40 text-amber-300 border border-amber-700/40'
+                    : 'bg-slate-800 text-slate-400 border border-slate-600/40'
+                }`}>
+                  {['running', 'queued', 'dry_run'].includes(execution.status) && (
+                    <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-pulse mr-1.5 align-middle" />
+                  )}
+                  {execution.status === 'dry_run' ? 'Dry Run' : execution.status.charAt(0).toUpperCase() + execution.status.slice(1)}
+                </span>
               )}
-              {['running', 'queued'].includes(execution?.status) && (
+              {!execution && (
+                <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-600/40">
+                  <span className="inline-block w-2 h-2 rounded-full bg-slate-500 animate-pulse mr-1.5 align-middle" />
+                  Starting...
+                </span>
+              )}
+
+              {/* Running/dry-run controls */}
+              {['running', 'queued', 'dry_run'].includes(execution?.status) && (
                 <>
                   <button onClick={handlePause} className="px-3 py-1.5 text-xs bg-amber-900/30 border border-amber-700/40 text-amber-400 rounded-md hover:bg-amber-900/50">Pause</button>
                   <button onClick={handleCancel} className="px-3 py-1.5 text-xs bg-red-900/30 border border-red-700/40 text-red-400 rounded-md hover:bg-red-900/50">Cancel</button>
                 </>
               )}
+
+              {/* Failed controls */}
+              {execution?.status === 'failed' && (
+                <button onClick={handleResume} className="px-3 py-1.5 text-xs bg-emerald-900/30 border border-emerald-700/40 text-emerald-400 rounded-md hover:bg-emerald-900/50">↻ Resume</button>
+              )}
+
+              {/* Paused controls */}
               {execution?.status === 'paused' && (
                 <button onClick={handleResume} className="px-3 py-1.5 text-xs bg-blue-900/30 border border-blue-700/40 text-blue-400 rounded-md hover:bg-blue-900/50">▶ Continue</button>
+              )}
+
+              {/* Terminal state — back to editor + run again */}
+              {['completed', 'failed', 'cancelled'].includes(execution?.status) && (
+                <>
+                  <button onClick={() => navigate(`/flows/${flow.id}`)} className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">&larr; Editor</button>
+                  <button onClick={() => { navigate(`/flows/${flow.id}`); setTimeout(handleRunClick, 100); }} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Again</button>
+                </>
               )}
             </>
           ) : (
             <>
-              <button onClick={handleDryRun} className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">🔍 Dry Run</button>
+              <button onClick={handleDryRun} className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">Dry Run</button>
               <button className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-600/40 text-slate-300 rounded-md hover:bg-slate-700">Schedule</button>
               <button onClick={handleRunClick} className="px-4 py-1.5 text-xs bg-[#2C666E] text-white font-semibold rounded-md hover:bg-[#07393C]">&#9654; Run Flow</button>
             </>
@@ -382,7 +421,7 @@ export default function FlowBuilderPage() {
             onDrop={handleDrop}
             stepStates={execution?.step_states}
           />
-          {isExecuting && <ExecutionLog execution={execution} />}
+          {isExecuting && <ExecutionLog execution={execution} nodes={nodes} />}
         </div>
       </div>
 

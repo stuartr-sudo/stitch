@@ -56,22 +56,26 @@ export class FlowExecutor {
     const incoming = this.getIncomingEdges(node.id);
 
     // First pass: count edges per target port
+    // React Flow uses sourceHandle/targetHandle (not sourcePort/targetPort)
     for (const edge of incoming) {
-      portCounts[edge.targetPort] = (portCounts[edge.targetPort] || 0) + 1;
+      const targetPort = edge.targetHandle || edge.targetPort;
+      portCounts[targetPort] = (portCounts[targetPort] || 0) + 1;
     }
 
     // Second pass: resolve values. Multi-input ports collect as arrays.
     for (const edge of incoming) {
+      const sourcePort = edge.sourceHandle || edge.sourcePort;
+      const targetPort = edge.targetHandle || edge.targetPort;
       const sourceOutput = this.stepStates[edge.source]?.output;
-      if (sourceOutput && edge.sourcePort in sourceOutput) {
-        const value = sourceOutput[edge.sourcePort];
-        if (portCounts[edge.targetPort] > 1) {
+      if (sourceOutput && sourcePort in sourceOutput) {
+        const value = sourceOutput[sourcePort];
+        if (portCounts[targetPort] > 1) {
           // Multi-input: collect all values into an array
-          if (!inputs[edge.targetPort]) inputs[edge.targetPort] = [];
-          inputs[edge.targetPort].push(value);
+          if (!inputs[targetPort]) inputs[targetPort] = [];
+          inputs[targetPort].push(value);
         } else {
           // Single input: pass value directly
-          inputs[edge.targetPort] = value;
+          inputs[targetPort] = value;
         }
       }
     }
@@ -154,8 +158,11 @@ export class FlowExecutor {
    * Timeout prevents a hung API call from stalling the entire flow.
    */
   async runNode(node) {
-    const nodeType = getNodeType(node.type);
-    if (!nodeType) throw new Error(`Unknown node type: ${node.type}`);
+    // node.type is the React Flow render type ('stitch', 'iterator', etc.)
+    // The actual node type ID lives in node.data.nodeType.id
+    const nodeTypeId = node.data?.nodeType?.id || node.type;
+    const nodeType = getNodeType(nodeTypeId);
+    if (!nodeType) throw new Error(`Unknown node type: ${nodeTypeId}`);
 
     this.stepStates[node.id] = { status: 'running', started_at: new Date().toISOString() };
     this.running.add(node.id);
@@ -171,9 +178,10 @@ export class FlowExecutor {
       logCost: (params) => logCost({ ...params, username: this.userEmail }),
     };
 
-    const errorHandling = node.config?.errorHandling || 'stop';
+    const config = node.data?.config || {};
+    const errorHandling = config.errorHandling || 'stop';
     // Resolve {{variable}} patterns then {{@node.output}} references in config values
-    const variableResolved = this.resolveVariables(node.config || {});
+    const variableResolved = this.resolveVariables(config);
     const resolvedConfig = this.resolveNodeReferences(variableResolved);
 
     // ── DRY RUN: skip actual execution, return mock output ──
@@ -263,7 +271,7 @@ export class FlowExecutor {
 
       try {
         const output = await this._withTimeout(
-          nodeType.run(inputs, node.config || {}, context),
+          nodeType.run(inputs, node.data?.config || {}, context),
           NODE_TIMEOUT_MS,
           `Node "${nodeType.label}" timed out on retry ${i + 1}`
         );
