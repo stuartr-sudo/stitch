@@ -110,7 +110,7 @@ export default function CampaignCreatorPage() {
   useEffect(() => {
     setLoadingBrands(true);
     apiFetch('/api/brand/kit').then(r => r.json()).then(data => {
-      const kits = Array.isArray(data) ? data : data?.brand_kit ? (Array.isArray(data.brand_kit) ? data.brand_kit : [data.brand_kit]) : [];
+      const kits = data?.brands || [];
       setBrands(kits);
       setLoadingBrands(false);
     }).catch(() => setLoadingBrands(false));
