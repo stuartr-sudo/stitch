@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Check, ChevronDown, ChevronUp,
-  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen, Search, RefreshCw, Lightbulb, Users,
+  Eye, Wand2, Music, Volume2, Download, ImageIcon, Film, Scissors, AlertTriangle, Link, X, FolderOpen, Search, RefreshCw, Lightbulb, Users, Trash2,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { IMAGE_MODELS, VIDEO_MODELS } from '@/lib/modelPresets';
@@ -142,18 +142,29 @@ function getVisualStylePrompt(key) {
 // ── Subcomponents ───────────────────────────────────────────────────────────
 
 function StepRail({ current, completed, onSelect }) {
+  const [shake, setShake] = useState(null);
+  const handleClick = (s) => {
+    const isDone = completed.includes(s.key);
+    const isCurrent = current === s.key;
+    if (isDone || isCurrent) { onSelect(s.key); return; }
+    // Shake the button to indicate it's locked
+    setShake(s.key);
+    setTimeout(() => setShake(null), 600);
+  };
   return (
     <div className="flex gap-1 bg-white rounded-xl p-3 border border-slate-200 mb-6 overflow-x-auto">
       {STEPS.map((s) => {
         const isCurrent = current === s.key;
         const isDone = completed.includes(s.key);
         return (
-          <button key={s.key} onClick={() => (isDone || isCurrent) && onSelect(s.key)}
+          <button key={s.key} onClick={() => handleClick(s)}
+            title={!isDone && !isCurrent ? 'Complete the current step first' : ''}
             className={cn(
               'flex-1 min-w-[100px] rounded-lg px-3 py-2 text-center transition-all border-2',
               isCurrent && 'bg-[#2C666E] text-white border-[#2C666E]',
               isDone && !isCurrent && 'bg-emerald-50 text-emerald-700 border-emerald-500 cursor-pointer',
               !isCurrent && !isDone && 'bg-slate-50 text-slate-400 border-transparent cursor-default',
+              shake === s.key && 'animate-[shake_0.5s_ease-in-out]',
             )}>
             <div className="text-[10px] font-bold uppercase tracking-wider">Step {s.num}</div>
             <div className="text-xs font-semibold mt-0.5">{s.label}</div>
@@ -496,7 +507,7 @@ export default function ShortsWorkbenchPage() {
 
   // ── Step 4: Clips ───────────────────────────────────────────────
   const [clips, setClips] = useState({}); // { sceneIdx: { url, actualDuration, status } }
-  const [clipLoading, setClipLoading] = useState(null);
+  const [clipLoading, setClipLoading] = useState(new Set());
   const [multiShotMode, setMultiShotMode] = useState(false);
   const [multiShotLoading, setMultiShotLoading] = useState(false);
   const [multiShotResult, setMultiShotResult] = useState(null); // { video_url, total_duration }
@@ -514,10 +525,13 @@ export default function ShortsWorkbenchPage() {
   const [draftList, setDraftList] = useState([]);
   const [showDrafts, setShowDrafts] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedDrafts, setSelectedDrafts] = useState(new Set());
+  const [deletingDrafts, setDeletingDrafts] = useState(false);
   const lastSaveRef = useRef(null);
 
   const getWorkbenchState = () => ({
-    step, niche, topic, storyContext, creativeMode, framework: framework?.id || null, generatedIdeas,
+    step, completed, niche, topic, storyContext, creativeMode, framework: framework?.id || null, generatedIdeas,
     duration, script, geminiVoice, styleInstructions, voiceSpeed,
     voiceoverUrl, voiceApproved,
     blocks, ttsDuration, rawTtsDuration, musicUrl, musicApproved, musicVolume, enableMusic, musicModel,
@@ -582,6 +596,12 @@ export default function ShortsWorkbenchPage() {
       setAvatarVideoUrl(s.avatarVideoUrl || null);
       setAvatarLipsyncUrl(s.avatarLipsyncUrl || null);
       setAvatarStage(s.avatarLipsyncUrl ? 'done' : null);
+      if (s.completed) setCompleted(s.completed);
+      // Restore framework from saved ID
+      if (s.framework) {
+        const fw = FRAMEWORK_CARDS.find(f => f.id === s.framework);
+        if (fw) setFramework(fw);
+      } else { setFramework(null); }
       if (s.step) setStep(s.step);
       setShowDrafts(false);
     } catch (err) { toast.error(`Load failed: ${err.message}`); }
@@ -596,6 +616,63 @@ export default function ShortsWorkbenchPage() {
       const data = await res.json();
       if (data.drafts) setDraftList(data.drafts);
     } catch {}
+  };
+
+  const deleteDraft = async (id) => {
+    if (!window.confirm('Delete this draft? This cannot be undone.')) return;
+    try {
+      const res = await apiFetch('/api/workbench/delete-draft', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: id }),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return; }
+      // Reload draft list
+      loadDraftList();
+      if (draftId === id) setDraftId(null);
+      toast.success('Draft deleted');
+    } catch (err) { toast.error(`Delete failed: ${err.message}`); }
+  };
+
+  const deleteSelectedDrafts = async () => {
+    if (selectedDrafts.size === 0) { toast.error('No drafts selected'); return; }
+    const count = selectedDrafts.size;
+    if (!window.confirm(`Delete ${count} draft${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setDeletingDrafts(true);
+    try {
+      const res = await apiFetch('/api/workbench/delete-drafts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_ids: Array.from(selectedDrafts) }),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); setDeletingDrafts(false); return; }
+      // Reload draft list and reset
+      setSelectedDrafts(new Set());
+      setBulkSelectMode(false);
+      loadDraftList();
+      // If deleted current draft, reset
+      if (selectedDrafts.has(draftId)) setDraftId(null);
+      toast.success(`${count} draft${count > 1 ? 's' : ''} deleted`);
+    } catch (err) { toast.error(`Delete failed: ${err.message}`); }
+    finally { setDeletingDrafts(false); }
+  };
+
+  const toggleSelectDraft = (id) => {
+    const newSelected = new Set(selectedDrafts);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedDrafts(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDrafts.size === draftList.length) {
+      setSelectedDrafts(new Set());
+    } else {
+      setSelectedDrafts(new Set(draftList.map(d => d.id)));
+    }
   };
 
   // Fetch user's Visual Subjects when avatar mode is toggled on
@@ -875,7 +952,7 @@ export default function ShortsWorkbenchPage() {
     if (!sceneFrames?.start) { toast.error(`Scene ${sceneIdx + 1}: no start frame`); return; }
     if (sceneMode === 'flf' && !sceneFrames?.end) { toast.error(`Scene ${sceneIdx + 1}: no end frame`); return; }
 
-    setClipLoading(sceneIdx);
+    setClipLoading(prev => new Set([...prev, sceneIdx]));
     setClips(prev => ({ ...prev, [sceneIdx]: { ...prev[sceneIdx], status: 'generating' } }));
 
     try {
@@ -931,7 +1008,7 @@ export default function ShortsWorkbenchPage() {
       setClips(prev => ({ ...prev, [sceneIdx]: { status: 'failed', error: err.message } }));
       toast.error(`Scene ${sceneIdx + 1} clip failed: ${err.message}`);
     }
-    finally { setClipLoading(null); }
+    finally { setClipLoading(prev => { const next = new Set(prev); next.delete(sceneIdx); return next; }); }
   };
 
   // ── Multi-Shot generation (all scenes in one API call) ─────────
@@ -975,7 +1052,7 @@ export default function ShortsWorkbenchPage() {
 
       // Store the multi-shot video as the assembled clip for all scenes
       blocks.forEach((_, i) => {
-        setClips(prev => ({ ...prev, [i]: { url: data.video_url, actualDuration: data.total_duration / blocks.length, status: 'multishot' } }));
+        setClips(prev => ({ ...prev, [i]: { url: data.video_url, actualDuration: data.total_duration / blocks.length, status: 'done' } }));
       });
     } catch (err) {
       toast.error(`Multi-shot failed: ${err.message}`);
@@ -1049,6 +1126,11 @@ export default function ShortsWorkbenchPage() {
   const assembleVideo = async () => {
     const validClips = blocks.map((_, i) => clips[i]).filter(c => c?.url);
     if (validClips.length === 0) { toast.error('No video clips to assemble'); return; }
+    const missingCount = blocks.length - validClips.length;
+    if (missingCount > 0) {
+      const missing = blocks.map((_, i) => !clips[i]?.url ? i + 1 : null).filter(Boolean);
+      toast.warning(`Missing clips for scene${missing.length > 1 ? 's' : ''} ${missing.join(', ')} — assembling with ${validClips.length}/${blocks.length} scenes`);
+    }
     setAssembleLoading(true);
     setReviewResults(null);
     setReviewError(null);
@@ -1152,25 +1234,64 @@ export default function ShortsWorkbenchPage() {
       {showDrafts && (
         <div className="bg-white border-b shadow-md">
           <div className="max-w-5xl mx-auto px-6 py-4">
-            <h3 className="text-sm font-bold text-slate-700 mb-3">Saved Drafts</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-700">Saved Drafts</h3>
+                {draftList.length > 0 && (
+                  <button onClick={() => { setBulkSelectMode(!bulkSelectMode); setSelectedDrafts(new Set()); }}
+                    className="text-xs text-[#2C666E] font-semibold px-2 py-1 rounded hover:bg-[#2C666E]/10">
+                    {bulkSelectMode ? 'Cancel' : 'Select'}
+                  </button>
+                )}
+              </div>
+              {bulkSelectMode && selectedDrafts.size > 0 && (
+                <button onClick={deleteSelectedDrafts} disabled={deletingDrafts}
+                  className="text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {deletingDrafts ? 'Deleting...' : `Delete (${selectedDrafts.size})`}
+                </button>
+              )}
+            </div>
             {draftList.length === 0 ? (
               <p className="text-xs text-slate-400">No saved drafts yet.</p>
             ) : (
               <div className="grid gap-2">
+                {bulkSelectMode && (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-slate-50">
+                    <input type="checkbox" checked={selectedDrafts.size === draftList.length && draftList.length > 0}
+                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#2C666E]" />
+                    <span className="text-xs font-medium text-slate-600">
+                      {selectedDrafts.size === draftList.length && draftList.length > 0 ? 'Deselect All' : 'Select All'}
+                    </span>
+                  </div>
+                )}
                 {draftList.map(d => (
-                  <button key={d.id} onClick={() => loadDraft(d.id)}
-                    className={cn('text-left px-4 py-3 rounded-lg border transition-all hover:bg-slate-50',
-                      d.id === draftId ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200')}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-800">{d.topic}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(d.updated_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {d.niche && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{d.niche}</span>}
-                      <span className="text-[10px] text-slate-400">Step {d.step || '?'}</span>
-                      {d.has_video && <span className="text-[10px] text-emerald-600 font-bold">Video ready</span>}
-                    </div>
-                  </button>
+                  <div key={d.id} className={cn('flex items-center gap-3 px-4 py-3 rounded-lg border transition-all',
+                    bulkSelectMode ? 'bg-slate-50' : d.id === draftId ? 'border-[#2C666E] bg-[#2C666E]/5' : 'border-slate-200 hover:bg-slate-50')}>
+                    {bulkSelectMode && (
+                      <input type="checkbox" checked={selectedDrafts.has(d.id)} onChange={() => toggleSelectDraft(d.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-[#2C666E]" />
+                    )}
+                    <button onClick={() => !bulkSelectMode && loadDraft(d.id)} disabled={bulkSelectMode}
+                      className="flex-1 text-left disabled:cursor-default">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-800">{d.topic}</span>
+                        <span className="text-[10px] text-slate-400">{new Date(d.updated_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {d.niche && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{d.niche}</span>}
+                        <span className="text-[10px] text-slate-400">Step {d.step || '?'}</span>
+                        {d.has_video && <span className="text-[10px] text-emerald-600 font-bold">Video ready</span>}
+                      </div>
+                    </button>
+                    {!bulkSelectMode && (
+                      <button onClick={() => deleteDraft(d.id)}
+                        className="text-slate-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
+                        title="Delete draft">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -1187,7 +1308,7 @@ export default function ShortsWorkbenchPage() {
         {step === 'script' && (
           <>
             <Panel title="Niche & Topic" right={<CostBadge amount="0.03" label="script + voice" />}>
-              <div className="flex gap-5">
+              <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Niche</label>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -1533,7 +1654,7 @@ export default function ShortsWorkbenchPage() {
             </Panel>
 
             <Panel title="Voice & Voiceover" right={<CostBadge amount="0.01" />}>
-              <div className="flex gap-5">
+              <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Voice</label>
                   <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
@@ -1786,7 +1907,7 @@ export default function ShortsWorkbenchPage() {
                   </p>
                 </div>
               )}
-              <div className="flex gap-5">
+              <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
                   <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Visual Style</label>
                   <StyleGrid value={visualStyle} onChange={setVisualStyle} maxHeight="200px" hideLabel />
@@ -2091,9 +2212,9 @@ export default function ShortsWorkbenchPage() {
                       )}
                       {clip.status === 'generating' && <Tag color="amber"><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Generating...</Tag>}
                       {clip.status === 'failed' && <Tag color="red">Failed</Tag>}
-                      {!clip.status && isWaiting && <Tag>Waiting for Scene {i}</Tag>}
+                      {!clip.status && isWaiting && <Tag>Waiting for Scene {i} clip</Tag>}
                       {!clip.status && !isWaiting && canGenerate && (
-                        <button onClick={() => generateClip(i)} disabled={clipLoading !== null}
+                        <button onClick={() => generateClip(i)} disabled={clipLoading.size > 0}
                           className="px-3 py-1.5 bg-[#2C666E] text-white rounded-lg text-[10px] font-semibold disabled:opacity-50">
                           Generate
                         </button>
@@ -2193,7 +2314,7 @@ export default function ShortsWorkbenchPage() {
         {step === 'assemble' && (
           <>
             <Panel title="Assemble Final Video" right={<CostBadge amount="0.12" label="FFmpeg + captions" />}>
-              <div className="flex gap-5">
+              <div className="flex gap-5 items-start">
                 <div className="w-1/2 shrink-0">
                   <div className="bg-slate-50 rounded-xl p-4 text-xs space-y-2 mb-4">
                     {blocks.map((b, i) => (
@@ -2304,10 +2425,10 @@ export default function ShortsWorkbenchPage() {
                                 ));
                                 toast.warning('Scene repaired. Click Re-assemble to update the final video.');
                               }}
-                              disabled={clipLoading !== null}
+                              disabled={clipLoading.size > 0}
                               className="mt-2 px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded hover:bg-amber-700 transition-colors disabled:opacity-50"
                             >
-                              {clipLoading === r.scene_index ? 'Repairing...' : `Repair Scene ${r.scene_index + 1}`}
+                              {clipLoading.has(r.scene_index) ? 'Repairing...' : `Repair Scene ${r.scene_index + 1}`}
                             </button>
                           </div>
                         ))}

@@ -744,6 +744,84 @@ Rules:
         return res.json({ drafts: items });
       }
 
+      // ─── Delete Draft ────────────────────────────────────────────
+      case 'delete-draft': {
+        const draftId = req.method === 'GET'
+          ? new URL(req.url, 'http://localhost').searchParams.get('id')
+          : req.body?.draft_id;
+        if (!draftId) return res.status(400).json({ error: 'draft_id required' });
+
+        // Get the draft to find its campaign_id
+        const { data: draft, error: fetchErr } = await supabase.from('ad_drafts')
+          .select('campaign_id')
+          .eq('id', draftId)
+          .eq('user_id', req.user.id)
+          .single();
+        if (fetchErr || !draft) return res.status(404).json({ error: 'Draft not found' });
+
+        // Delete the draft
+        const { error: deleteErr } = await supabase.from('ad_drafts')
+          .delete()
+          .eq('id', draftId)
+          .eq('user_id', req.user.id);
+        if (deleteErr) throw new Error(`Delete failed: ${deleteErr.message}`);
+
+        // If campaign has no other drafts, delete the campaign too
+        if (draft.campaign_id) {
+          const { count } = await supabase.from('ad_drafts')
+            .select('id', { count: 'exact' })
+            .eq('campaign_id', draft.campaign_id);
+          if (count === 0) {
+            await supabase.from('campaigns')
+              .delete()
+              .eq('id', draft.campaign_id)
+              .eq('user_id', req.user.id);
+          }
+        }
+
+        return res.json({ success: true });
+      }
+
+      // ─── Delete Multiple Drafts ──────────────────────────────────
+      case 'delete-drafts': {
+        const { draft_ids } = req.body;
+        if (!draft_ids || !Array.isArray(draft_ids) || draft_ids.length === 0) {
+          return res.status(400).json({ error: 'draft_ids array required' });
+        }
+
+        // Get all drafts to find their campaign_ids
+        const { data: drafts, error: fetchErr } = await supabase.from('ad_drafts')
+          .select('id, campaign_id')
+          .in('id', draft_ids)
+          .eq('user_id', req.user.id);
+        if (fetchErr || !drafts || drafts.length === 0) {
+          return res.status(404).json({ error: 'No drafts found' });
+        }
+
+        // Delete all drafts
+        const { error: deleteErr } = await supabase.from('ad_drafts')
+          .delete()
+          .in('id', draft_ids)
+          .eq('user_id', req.user.id);
+        if (deleteErr) throw new Error(`Bulk delete failed: ${deleteErr.message}`);
+
+        // Check each campaign and delete if it has no remaining drafts
+        const campaignIds = [...new Set(drafts.map(d => d.campaign_id).filter(Boolean))];
+        for (const campaignId of campaignIds) {
+          const { count } = await supabase.from('ad_drafts')
+            .select('id', { count: 'exact' })
+            .eq('campaign_id', campaignId);
+          if (count === 0) {
+            await supabase.from('campaigns')
+              .delete()
+              .eq('id', campaignId)
+              .eq('user_id', req.user.id);
+          }
+        }
+
+        return res.json({ success: true, deleted_count: draft_ids.length });
+      }
+
       default:
         return res.status(404).json({ error: `Unknown action: ${action}` });
     }
