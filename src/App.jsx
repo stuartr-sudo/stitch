@@ -20,7 +20,6 @@ import TemplatesPage from './pages/TemplatesPage';
 import CostDashboardPage from './pages/CostDashboardPage';
 import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
-import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
 import ShortsBuilderPage from './pages/ShortsBuilderPage';
 import BatchQueuePage from './pages/BatchQueuePage';
 import QueuePage from './pages/QueuePage';
@@ -222,17 +221,13 @@ function App() {
             path="/shorts/workbench"
             element={
               <ProtectedRoute>
-                <ShortsWorkbenchPage />
+                <ShortsBuilderPage />
               </ProtectedRoute>
             }
           />
           <Route
             path="/shorts/builder"
-            element={
-              <ProtectedRoute>
-                <ShortsBuilderPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/shorts/workbench" replace />}
           />
           <Route
             path="/shorts/batch"

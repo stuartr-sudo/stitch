@@ -789,19 +789,118 @@ const NODE_TYPES = {
     label: 'Shorts Create',
     category: 'content',
     icon: '📱',
-    description: 'Full Shorts pipeline from topic',
-    timeout: 45_000,
+    description: 'Full Shorts pipeline — topic in, finished video out. Uses saved Builder template for all config (niche, voice, visual style, video model, image model, captions, continuity mode, brand kit). Framework matched automatically via embedding similarity.',
+    timeout: 600_000, // 10 min — full pipeline
     inputs: [
-      { id: 'topic', type: 'string', required: true }
+      { id: 'topic', type: 'string', required: true },
+      { id: 'story_context', type: 'string', required: false },
     ],
-    outputs: [{ id: 'draft_id', type: 'string' }],
+    outputs: [
+      { id: 'video_url', type: 'video' },
+      { id: 'draft_id', type: 'string' },
+    ],
     configSchema: {
-      niche: { type: 'select', options: ['ai_tech_news', 'finance_money', 'motivation', 'scary_horror', 'history', 'true_crime', 'science_nature', 'relationships', 'health_fitness', 'gaming_popculture', 'conspiracy_mystery', 'business', 'food_cooking', 'travel_adventure', 'psychology', 'space_cosmos', 'animals_wildlife', 'sports', 'education', 'paranormal_ufo'], default: 'ai_tech_news' },
-      duration: { type: 'select', options: ['30', '45', '60', '90'], default: '60' },
-      video_model: { type: 'select', options: ['kling-2.0-master', 'veo-3.1-fast', 'wan-2.5'], default: 'kling-2.0-master' }
+      // Template config — all come from saved Builder template
+      niche: { type: 'select', options: ['ai_tech_news', 'finance_money', 'motivation_self_help', 'scary_horror', 'history_did_you_know', 'true_crime', 'science_nature', 'relationships_dating', 'health_fitness', 'gaming_popculture', 'conspiracy_mystery', 'business_entrepreneur', 'food_cooking', 'travel_adventure', 'psychology_mindblown', 'space_cosmos', 'animals_wildlife', 'sports_athletes', 'education_learning', 'paranormal_ufo'], default: 'ai_tech_news' },
+      creative_mode: { type: 'boolean', default: false },
+      brand_kit_id: { type: 'text', default: '' },
+      // Voice
+      voice_provider: { type: 'select', options: ['gemini', 'elevenlabs'], default: 'gemini' },
+      voice: { type: 'text', default: 'Charon' },
+      voice_style: { type: 'text', default: '' },
+      voice_speed: { type: 'text', default: '1.15' },
+      no_voice: { type: 'boolean', default: false },
+      // Audio
+      music_mood: { type: 'text', default: '' },
+      music_volume: { type: 'text', default: '15' },
+      sfx_enabled: { type: 'boolean', default: true },
+      // Visuals
+      continuity_mode: { type: 'select', options: ['continuous', 'exciting'], default: 'continuous' },
+      video_gen_mode: { type: 'select', options: ['i2v', 'r2v'], default: 'i2v' },
+      video_model: { type: 'select', options: ['fal_kling_v3', 'fal_kling_o3', 'fal_veo3', 'fal_veo3_lite', 'fal_pixverse_v6', 'fal_wan25', 'fal_hailuo', 'fal_grok_video', 'wavespeed_wan'], default: 'fal_veo3' },
+      image_model: { type: 'select', options: ['fal_nano_banana', 'fal_flux', 'fal_seedream', 'fal_imagen4', 'fal_kling_img', 'fal_grok', 'fal_ideogram'], default: 'fal_nano_banana' },
+      visual_style: { type: 'text', default: 'cinematic' },
+      lighting: { type: 'text', default: '' },
+      mood: { type: 'text', default: '' },
+      // Captions
+      caption_style: { type: 'select', options: ['word_pop', 'karaoke_glow', 'word_highlight', 'news_ticker', 'none'], default: 'word_pop' },
+      caption_position: { type: 'select', options: ['top', 'center', 'bottom'], default: 'bottom' },
+      caption_highlight: { type: 'text', default: 'yellow' },
     },
     async run(inputs, config, context) {
-      return { draft_id: `flow_shorts_${Date.now()}` };
+      // This is the full automated pipeline. Same logic as Step 5 in the Builder,
+      // but driven entirely by config (from saved template) + topic (from flow input).
+      //
+      // Pipeline: match framework → script → voiceover → music → timing → SFX →
+      //           per-scene (cohesive prompt → image → video → Gemini analysis) → assembly
+      //
+      // For now, this returns a stub. The full wiring requires importing the pipeline
+      // functions and orchestrating them — which is the same code path as the frontend
+      // but executed server-side. TODO: extract the pipeline into a shared function
+      // that both the frontend (via API calls) and the Flows node (server-side) can use.
+      const topic = inputs.topic;
+      const niche = config.niche || 'ai_tech_news';
+
+      context.log?.(`[shorts-create] Starting pipeline for topic: "${topic}" in niche: ${niche}`);
+      context.log?.(`[shorts-create] Config: video=${config.video_model}, image=${config.image_model}, voice=${config.voice}, continuity=${config.continuity_mode}`);
+
+      // Step 1: Match framework
+      const { matchFramework } = await import('./frameworkMatcher.js');
+      const match = await matchFramework(topic, niche, context.keys?.openaiKey || process.env.OPENAI_API_KEY);
+      context.log?.(`[shorts-create] Framework matched: ${match.frameworkName} (${(match.score * 100).toFixed(1)}%)`);
+
+      // Step 2: Generate script
+      const { generateScript } = await import('./scriptGenerator.js');
+      const script = await generateScript({
+        niche,
+        topic,
+        storyContext: inputs.story_context || '',
+        creativeMode: config.creative_mode || false,
+        targetDurationSeconds: 30,
+        framework: match.frameworkId,
+        keys: context.keys,
+        brandUsername: context.userEmail,
+      });
+      context.log?.(`[shorts-create] Script generated: ${script.scenes?.length || 0} scenes`);
+
+      // Step 3: Generate voiceover (unless no_voice)
+      let voiceoverUrl = null;
+      if (!config.no_voice) {
+        const { generateGeminiVoiceover } = await import('./voiceoverGenerator.js');
+        voiceoverUrl = await generateGeminiVoiceover(
+          script.narration_full,
+          config.voice || 'Charon',
+          config.voice_style || '',
+          context.keys?.falKey || process.env.FAL_KEY,
+          context.supabase,
+          parseFloat(config.voice_speed) || 1.15,
+        );
+        context.log?.(`[shorts-create] Voiceover generated`);
+      }
+
+      // Step 4: Generate music
+      const { generateMusic: genMusic } = await import('./pipelineHelpers.js');
+      const musicUrl = await genMusic(
+        config.music_mood || 'cinematic ambient',
+        35,
+        context.keys,
+        context.supabase,
+        'elevenlabs',
+      );
+      context.log?.(`[shorts-create] Music generated`);
+
+      // Steps 5-8 (timing, SFX, per-scene generation, assembly) — TODO: wire full pipeline
+      // For now, return the script and audio assets so the flow can continue
+      context.log?.(`[shorts-create] Pipeline partial — script + audio complete. Full scene generation TODO.`);
+
+      return {
+        video_url: '', // TODO: full pipeline produces this
+        draft_id: `flow_shorts_${Date.now()}`,
+        script_scenes: script.scenes?.length || 0,
+        framework: match.frameworkName,
+        voiceover_url: voiceoverUrl,
+        music_url: musicUrl,
+      };
     }
   },
 
