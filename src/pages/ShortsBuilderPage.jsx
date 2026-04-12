@@ -921,14 +921,25 @@ export default function ShortsBuilderPage() {
             </div>
 
             {/* ── Framework Selection ── */}
-            {selectedNiche && (
+            {selectedNiche && (() => {
+              const nicheSpecific = availableFrameworks.filter(f => f.niches !== null);
+              const universal = availableFrameworks.filter(f => f.niches === null);
+              const nicheName = NICHES.find(n => n.id === selectedNiche)?.name || '';
+              return (
               <>
                 <div style={styles.sectionTitle}>Choose a Framework</div>
                 <div style={styles.sectionSubtitle}>
-                  This defines the structure, pacing, scene beats, and duration of your Short.
+                  This defines the storytelling structure, pacing, and visual approach for your Short.
                 </div>
-                <div style={styles.frameworkList}>
-                  {availableFrameworks.map(f => (
+
+                {/* Niche-specific frameworks first */}
+                {nicheSpecific.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', marginTop: '4px' }}>
+                      {nicheName} Frameworks
+                    </div>
+                    <div style={styles.frameworkList}>
+                      {nicheSpecific.map(f => (
                     <div
                       key={f.id}
                       style={styles.frameworkCard(selectedFramework === f.id)}
@@ -961,9 +972,56 @@ export default function ShortsBuilderPage() {
                       )}
                     </div>
                   ))}
-                </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Universal frameworks */}
+                {universal.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', marginTop: '20px' }}>
+                      Universal Frameworks
+                    </div>
+                    <div style={styles.frameworkList}>
+                      {universal.map(f => (
+                        <div
+                          key={f.id}
+                          style={styles.frameworkCard(selectedFramework === f.id)}
+                          onClick={() => {
+                            setSelectedFramework(f.id);
+                            setScriptGenerated(false);
+                            setScript(null);
+                          }}
+                        >
+                          <div style={styles.frameworkName}>{f.name}</div>
+                          <div style={styles.frameworkDesc}>{f.description}</div>
+                          <div style={styles.frameworkMeta}>
+                            <span>{f.duration}</span>
+                            <span>{f.sceneCount}</span>
+                            <span style={styles.badge(f.category === 'avatar' ? '#EDE9FE' : null)}>
+                              {f.category}
+                            </span>
+                          </div>
+                          {selectedFramework === f.id && f.scenes && (
+                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '6px' }}>Scene Beats:</div>
+                              {f.scenes.map((s, i) => (
+                                <div key={i} style={styles.sceneBeat}>
+                                  <div style={styles.sceneBeatDot('#111827')} />
+                                  <span style={{ fontWeight: 500, color: '#374151' }}>{s.label}</span>
+                                  <span style={{ fontSize: '10px', color: '#9CA3AF', marginLeft: '4px' }}>— {s.camera}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
-            )}
+              );
+            })()}
 
             {/* ── Topic Selection ── */}
             {selectedFramework && (
