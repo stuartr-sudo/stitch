@@ -219,7 +219,8 @@ async function generateFullNarrative({
     : null;
 
   const effectiveDuration = targetDurationSeconds || (framework?.supportedDurations[0]) || 60;
-  const wordsPerSecond = framework?.pacing?.wordsPerSecond || 2.7;
+  // 3.0 wps for Shorts — slightly faster than conversational (2.7) to fill 60s properly
+  const wordsPerSecond = framework?.pacing?.wordsPerSecond || 3.0;
   const totalWords = Math.round(effectiveDuration * wordsPerSecond);
 
   let sceneGuide;
@@ -291,7 +292,7 @@ SCENE STRUCTURE (${frameworkScenes?.length || 5} scenes, ${effectiveDuration}s t
 ${sceneGuide}
 
 WORD COUNT (violating this makes the video unwatchable):
-- Total: ${totalWords - 8} to ${totalWords + 8} words.
+- Total: ${totalWords - 5} to ${totalWords + 10} words. AIM HIGH — more words is better than fewer.
 - Count words in each scene carefully. The word_count field must be accurate.
 - narration_full = all narration_segments joined with spaces. They must be identical.
 - Scene 1 MUST start with the locked hook sentence verbatim.
@@ -423,7 +424,7 @@ export async function generateNarrative({
   if (!nicheTemplate) throw new Error(`No template found for niche "${niche}"`);
 
   const effectiveDuration = targetDurationSeconds || (framework?.supportedDurations[0]) || 60;
-  const wordsPerSecond = framework?.pacing?.wordsPerSecond || 2.7;
+  const wordsPerSecond = framework?.pacing?.wordsPerSecond || 3.0;
   const totalWords = Math.round(effectiveDuration * wordsPerSecond);
 
   let totalInputTokens = 0;
