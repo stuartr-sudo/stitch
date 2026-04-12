@@ -21,6 +21,7 @@ import CostDashboardPage from './pages/CostDashboardPage';
 import ShortsWizardPage from './pages/ShortsWizardPage';
 import ShortsDraftPage from './pages/ShortsDraftPage';
 import ShortsWorkbenchPage from './pages/ShortsWorkbenchPage';
+import ShortsBuilderPage from './pages/ShortsBuilderPage';
 import BatchQueuePage from './pages/BatchQueuePage';
 import QueuePage from './pages/QueuePage';
 import LongformWorkbenchPage from './pages/LongformWorkbenchPage';
@@ -222,6 +223,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ShortsWorkbenchPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shorts/builder"
+            element={
+              <ProtectedRoute>
+                <ShortsBuilderPage />
               </ProtectedRoute>
             }
           />
