@@ -1105,7 +1105,7 @@ export default function ShortsBuilderPage() {
     setResearchLoading(true);
     setDiscoverResults(null);
     try {
-      const res = await apiFetch('/api/shorts/research', {
+      const res = await apiFetch('/api/campaigns/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ niche: selectedNiche, topic: customTopic || selectedHooks.join(' + '), count: 5 }),
