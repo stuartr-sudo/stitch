@@ -952,20 +952,41 @@ export default function ShortsBuilderPage() {
                       <div style={styles.frameworkName}>{f.name}</div>
                       <div style={styles.frameworkDesc}>{f.description}</div>
                       <div style={styles.frameworkMeta}>
-                        <span>{f.duration}</span>
-                        <span>{f.sceneCount}</span>
                         <span style={styles.badge(f.category === 'avatar' ? '#EDE9FE' : null)}>
                           {f.category}
                         </span>
                       </div>
                       {selectedFramework === f.id && (
-                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '6px' }}>Scene Beats:</div>
-                          {f.scenes.map((s, i) => (
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {f.narrativeArc && (
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Narrative Arc</div>
+                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.narrativeArc}</div>
+                            </div>
+                          )}
+                          {f.hookStrategy && (
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Hook Strategy</div>
+                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.hookStrategy}</div>
+                            </div>
+                          )}
+                          {f.voiceDirection && (
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Voice Direction</div>
+                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.voiceDirection}</div>
+                            </div>
+                          )}
+                          {f.emotionalProgression && (
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Emotional Arc</div>
+                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.emotionalProgression}</div>
+                            </div>
+                          )}
+                          {/* Legacy scene beats fallback */}
+                          {f.scenes && !f.narrativeArc && f.scenes.map((s, i) => (
                             <div key={i} style={styles.sceneBeat}>
                               <div style={styles.sceneBeatDot('#111827')} />
                               <span style={{ fontWeight: 500, color: '#374151' }}>{s.label}</span>
-                              <span style={{ fontSize: '10px', color: '#9CA3AF', marginLeft: '4px' }}>— {s.camera}</span>
                             </div>
                           ))}
                         </div>
@@ -1002,16 +1023,32 @@ export default function ShortsBuilderPage() {
                               {f.category}
                             </span>
                           </div>
-                          {selectedFramework === f.id && f.scenes && (
-                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '6px' }}>Scene Beats:</div>
-                              {f.scenes.map((s, i) => (
-                                <div key={i} style={styles.sceneBeat}>
-                                  <div style={styles.sceneBeatDot('#111827')} />
-                                  <span style={{ fontWeight: 500, color: '#374151' }}>{s.label}</span>
-                                  <span style={{ fontSize: '10px', color: '#9CA3AF', marginLeft: '4px' }}>— {s.camera}</span>
+                          {selectedFramework === f.id && (
+                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {f.narrativeArc && (
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Narrative Arc</div>
+                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.narrativeArc}</div>
                                 </div>
-                              ))}
+                              )}
+                              {f.hookStrategy && (
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Hook Strategy</div>
+                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.hookStrategy}</div>
+                                </div>
+                              )}
+                              {f.voiceDirection && (
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Voice Direction</div>
+                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.voiceDirection}</div>
+                                </div>
+                              )}
+                              {f.emotionalProgression && (
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Emotional Arc</div>
+                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.emotionalProgression}</div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
