@@ -2,11 +2,12 @@
  * ShortsBuilderPage — Clean rebuild of the Shorts creation tool.
  * Step-by-step wizard that produces Shorts and saves as Flows templates.
  *
- * WIREFRAME MODE: All data is static/dummy. No API connections yet.
+ * WIRED — API connections active
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '@/lib/api';
 import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 import { BUILDER_FRAMEWORKS } from '@/lib/builderFrameworks';
 
@@ -649,8 +650,17 @@ export default function ShortsBuilderPage() {
   const [generationProgress, setGenerationProgress] = useState(null);
   const [generationComplete, setGenerationComplete] = useState(false);
 
-  // Dummy script for wireframe
+  // Script
   const [script, setScript] = useState(null);
+
+  // API-wired state
+  const [brandKits, setBrandKits] = useState([]);
+  const [draftId, setDraftId] = useState(null);
+  const [voiceoverUrl, setVoiceoverUrl] = useState(null);
+  const [musicUrl, setMusicUrl] = useState(null);
+  const [sfxUrl, setSfxUrl] = useState(null);
+  const [timingBlocks, setTimingBlocks] = useState([]);
+  const [selectedImageModel, setSelectedImageModel] = useState('fal_nano_banana');
 
   // Filter frameworks by selected niche
   const availableFrameworks = useMemo(() => {
@@ -666,65 +676,56 @@ export default function ShortsBuilderPage() {
     return TOPIC_SUGGESTIONS[selectedNiche] || DEFAULT_TOPICS;
   }, [selectedNiche]);
 
-  // Dummy research results per niche (wireframe only)
-  const DUMMY_RESEARCH = {
-    ai_tech_news: [
-      { title: 'GPT-5 Benchmark Results Leaked — Surpasses Human Expert Performance', summary: 'Internal benchmark data from OpenAI shows GPT-5 scoring above 95th percentile human experts across law, medicine, and engineering exams.', angle: 'The gap between AI and human experts just closed', why_viral: 'Directly impacts every knowledge worker — triggers fear and fascination', story_context: 'OpenAI internal benchmarks leaked April 2026 showing GPT-5 surpassing 95th percentile human performance on bar exam, medical boards, and engineering certification tests.' },
-      { title: 'Google DeepMind\'s Robot Learns to Cook by Watching YouTube', summary: 'A new multimodal robotics system can replicate recipes after watching cooking videos, handling ingredients with human-like dexterity.', angle: 'Robots are learning skills the same way we do', why_viral: 'Visual demonstration of AI capability people can relate to — cooking is universal', story_context: 'Google DeepMind published paper April 2026 demonstrating RT-3 robot learning full cooking recipes from YouTube videos with 87% success rate on novel dishes.' },
-      { title: 'China Bans AI-Generated News Anchors After Deepfake Scandal', summary: 'Chinese state media issues emergency ban after AI news anchor was used to broadcast fabricated government policy announcement.', angle: 'When AI news anchors go rogue — and governments panic', why_viral: 'Geopolitical implications + deepfake fear + regulation debate', story_context: 'Chinese State Council issued emergency directive banning AI news anchors after Xinhua AI anchor broadcast fabricated policy about property tax reform, causing market panic.' },
-      { title: 'Meta\'s New AI Can Generate Full 3D Worlds From Text Descriptions', summary: 'Meta AI releases WorldGen — a system that creates explorable 3D environments from natural language, targeting VR content creation.', angle: 'Type a description, walk through a world — this changes everything', why_viral: 'Visual spectacle + gaming/VR crossover audience + creator economy angle', story_context: 'Meta AI released WorldGen April 2026, generating explorable 3D environments from text prompts in under 60 seconds, with physics simulation and lighting.' },
-      { title: 'AI Discovers New Antibiotic That Kills Drug-Resistant Superbugs', summary: 'MIT researchers use AI to identify a novel compound effective against MRSA and other antibiotic-resistant bacteria.', angle: 'AI just solved a problem that\'s killed millions', why_viral: 'Life-or-death stakes + clear positive AI narrative + scientific breakthrough', story_context: 'MIT published in Nature April 2026: AI system screened 12 million compounds, identified halicin-2 effective against MRSA, VRE, and carbapenem-resistant Enterobacteriaceae in mouse trials.' },
-    ],
-    finance_money: [
-      { title: 'The $50/Month Investment Strategy That Outperformed Hedge Funds', summary: 'A simple dollar-cost averaging approach into broad market ETFs has beaten 92% of hedge funds over the last 20 years.', angle: 'Wall Street doesn\'t want you to know this is enough', why_viral: 'Accessible to everyone + contrarian to "you need money to make money" narrative', story_context: 'S&P Dow Jones SPIVA report 2026 confirms: 92% of US large-cap hedge funds underperformed the S&P 500 over 20 years. $50/month DCA since 2006 = $28,400 invested, now worth $67,200.' },
-      { title: 'Hidden Bank Fee Exposed — Americans Losing $300/Year Without Knowing', summary: 'Consumer Financial Protection Bureau investigation reveals systematic hidden maintenance fees across major US banks.', angle: 'Check your bank statement right now — you\'re probably being charged', why_viral: 'Personal financial impact + outrage fuel + actionable (people will check)', story_context: 'CFPB April 2026 investigation found Chase, BofA, Wells Fargo charging average $24.99/month "account maintenance" fees to 42 million accounts, often waivable but not disclosed.' },
-    ],
-    scary_horror: [
-      { title: 'The Hotel Room That Nobody Can Stay In Past 3AM', summary: 'Room 428 at a historic European hotel has been sealed shut after every guest for 30 years reported identical experiences at 3AM.', angle: '30 years of identical reports — and they sealed it forever', why_viral: 'Mystery + specific detail (room number, time) creates authenticity', story_context: 'Grand Hotel Norrland, Sweden, sealed Room 428 in 2024 after consistent guest reports since 1994: all describe waking at 3:07AM to sound of dripping, room temperature drops, and figure standing in corner.' },
-      { title: 'Search Team Finds Camera With 200 Photos From Missing Hikers', summary: 'A camera recovered from a trail in Panama contains 200+ photos taken in complete darkness over 3 nights by hikers who vanished in 2014.', angle: 'Why did they take 200 photos in total darkness?', why_viral: 'Real mystery + visual evidence exists + unsolved case', story_context: 'Kris Kremers and Lisanne Froon disappeared in Panama 2014. Camera found with 90 normal photos, then 200+ flash photos in pitch darkness over 3 nights. Only bone fragments ever recovered.' },
-    ],
-  };
+  // Load brand kits on mount
+  useEffect(() => {
+    apiFetch('/api/brand/kit').then(r => r.json()).then(data => {
+      if (data.brands) setBrandKits(data.brands);
+    }).catch(() => {});
+  }, []);
 
-  // Dummy discover results (ranked AI-scored suggestions)
-  const DUMMY_DISCOVER = {
-    ai_tech_news: [
-      { title: 'AI Agents Are Now Hiring Other AI Agents', trending: 92, competition: 'Low', source: 'Google Trends + Reddit', description: 'Autonomous AI agents are beginning to delegate tasks to other specialized AI agents, creating emergent hierarchies without human input.' },
-      { title: 'The 3-Minute AI Video That Fooled Hollywood', trending: 88, competition: 'Medium', source: 'YouTube Trends + X/Twitter', description: 'A fully AI-generated short film was submitted to a festival under a fake director name and made it to the final round before being discovered.' },
-      { title: 'Why AI Companies Are Buying Nuclear Power Plants', trending: 85, competition: 'Low', source: 'Google News + SearchAPI', description: 'Microsoft, Google, and Amazon are all acquiring or contracting nuclear power facilities to meet the enormous energy demands of AI data centers.' },
-      { title: 'The Country That Banned AI Homework — And What Happened Next', trending: 79, competition: 'Very Low', source: 'Reddit + Google Scholar', description: 'Denmark banned AI-assisted homework in all public schools for one semester. Student performance data is now in — and the results are surprising.' },
-      { title: 'AI Can Now Detect Lies Better Than Any Human', trending: 76, competition: 'Medium', source: 'PubMed + Google Trends', description: 'New multimodal AI system analyzes micro-expressions, voice patterns, and language simultaneously — outperforming FBI-trained interrogators in controlled tests.' },
-    ],
-    finance_money: [
-      { title: 'The ETF That\'s Quietly Beating the S&P by 40%', trending: 91, competition: 'Low', source: 'Google Trends + Reddit/investing', description: 'A relatively unknown equal-weight ETF has outperformed the S&P 500 by 40% over 3 years with less volatility, but most retail investors have never heard of it.' },
-      { title: 'Why Gen Z Is Rejecting Traditional Banking', trending: 84, competition: 'Medium', source: 'X/Twitter + Google Trends', description: '38% of 18-25 year olds now use fintech-only banking with no traditional bank account. The implications for the banking industry are massive.' },
-      { title: 'The $1 Coffee Rule That Built a $2M Portfolio', trending: 78, competition: 'Very Low', source: 'TikTok Trends + Reddit', description: 'A simple micro-investing strategy tied to daily coffee purchases has gone viral — and the math actually checks out over a 20-year horizon.' },
-    ],
-    scary_horror: [
-      { title: 'The Abandoned Mall Where Security Cameras Still Record', trending: 89, competition: 'Low', source: 'Reddit/nosleep + YouTube', description: 'A shuttered mall in Ohio still has functioning security cameras. Urban explorers discovered recent footage showing movement in stores that have been locked for 8 years.' },
-      { title: 'The Sound That Makes Everyone Leave a Room', trending: 82, competition: 'Low', source: 'Google Trends + Reddit/science', description: 'Researchers accidentally discovered a specific infrasound frequency that triggers intense feelings of dread in 94% of test subjects, causing them to leave the room within minutes.' },
-    ],
-  };
+  // Auto-default music mood when entering step 2
+  useEffect(() => {
+    if (currentStep === 2 && selectedNiche && !musicMood) {
+      setMusicMood(NICHE_MUSIC_MOODS[selectedNiche] || '');
+    }
+  }, [currentStep, selectedNiche]);
 
-  const handleResearchTopics = () => {
-    // WIREFRAME: Show dummy research results (real news stories)
+  const handleResearchTopics = async () => {
     setResearchLoading(true);
-    setDiscoverResults(null); // Clear other results
-    setTimeout(() => {
-      const results = DUMMY_RESEARCH[selectedNiche] || DUMMY_RESEARCH.ai_tech_news;
-      setResearchResults(results);
+    setDiscoverResults(null);
+    try {
+      const res = await apiFetch('/api/shorts/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche: selectedNiche, topic: customTopic || selectedHooks.join(' + '), count: 5 }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResearchResults(data.stories || []);
+    } catch (err) {
+      console.error('Research failed:', err);
+    } finally {
       setResearchLoading(false);
-    }, 1500);
+    }
   };
 
-  const handleDiscoverTopics = () => {
-    // WIREFRAME: Show dummy discover results (AI-ranked suggestions)
+  const handleDiscoverTopics = async () => {
     setDiscoverLoading(true);
-    setResearchResults(null); // Clear other results
-    setTimeout(() => {
-      const results = DUMMY_DISCOVER[selectedNiche] || DUMMY_DISCOVER.ai_tech_news;
-      setDiscoverResults(results);
+    setResearchResults(null);
+    try {
+      const res = await apiFetch('/api/shorts/discover-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche: selectedNiche, count: 8 }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setDiscoverResults(data.topics || []);
+    } catch (err) {
+      console.error('Discover failed:', err);
+    } finally {
       setDiscoverLoading(false);
-    }, 1200);
+    }
   };
 
   const handleSelectResearchTopic = (topic) => {
@@ -765,31 +766,53 @@ export default function ShortsBuilderPage() {
 
   const canGenerate = selectedNiche && selectedFramework && (selectedHooks.length > 0 || customTopic.trim() || selectedResearchTopic);
 
-  const handleGenerateScript = () => {
+  const handleGenerateScript = async () => {
     if (!canGenerate) return;
-    // WIREFRAME: Show dummy script
+    setScriptGenerated(false);
+    setScript(null);
     const fw = BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework);
     const niche = NICHES.find(n => n.id === selectedNiche);
     const topicStr = selectedResearchTopic ? selectedResearchTopic.title : (customTopic.trim() || selectedHooks.join(' + '));
-    const storyContext = selectedResearchTopic ? selectedResearchTopic.story_context : null;
+    const storyContext = selectedResearchTopic?.story_context || '';
 
-    setScript({
-      niche: niche.name,
-      framework: fw.name,
-      topic: topicStr,
-      creative: creativeMode,
-      storyContext,
-      scenes: fw.scenes.map((scene, i) => ({
-        label: scene.label,
-        camera: scene.camera,
-        narration: storyContext
-          ? `[Scene ${i + 1}: ${scene.label}] — Based on real story: "${topicStr}". Context: ${storyContext}. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`
-          : `[Scene ${i + 1}: ${scene.label}] — Narration for "${topicStr}" will be generated here. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`,
-        visualDescription: `[Visual: ${scene.label} — ${scene.camera}. Style and mood will be composed by the Cohesive Prompt Builder from your visual settings.]`,
+    try {
+      const res = await apiFetch('/api/campaigns/preview-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche: selectedNiche,
+          topic: topicStr,
+          story_context: storyContext,
+          creative_mode: creativeMode,
+          videoLengthPreset: 30,
+          framework: fw?.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const scriptData = data.script || data;
+      const scenes = (scriptData.scenes || []).map((s, i) => ({
+        label: fw?.scenes?.[i]?.label || `Scene ${i + 1}`,
+        camera: fw?.scenes?.[i]?.camera || '',
+        narration: s.narration_segment || s.narration || '',
+        visualDescription: s.visual_prompt || s.visualDescription || `[Visual for scene ${i + 1}]`,
         duration: `${5 + Math.round(Math.random())}s`,
-      })),
-    });
-    setScriptGenerated(true);
+      }));
+
+      setScript({
+        niche: niche.name,
+        framework: fw.name,
+        topic: topicStr,
+        creative: creativeMode,
+        storyContext,
+        narration_full: scriptData.narration_full || scenes.map(s => s.narration).join(' '),
+        scenes,
+      });
+      setScriptGenerated(true);
+    } catch (err) {
+      console.error('Script generation failed:', err);
+    }
   };
 
   return (
@@ -809,6 +832,7 @@ export default function ShortsBuilderPage() {
               color: '#374151',
               cursor: 'pointer',
             }}
+            onClick={() => { /* TODO: show draft list modal */ }}
           >
             Load Draft
           </button>
@@ -823,10 +847,33 @@ export default function ShortsBuilderPage() {
               color: '#111827',
               cursor: 'pointer',
             }}
+            onClick={async () => {
+              try {
+                const res = await apiFetch('/api/workbench/save-draft', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    draft_id: draftId,
+                    state: {
+                      selectedNiche, selectedFramework, customTopic, selectedHooks,
+                      creativeMode, selectedBrandKit, script, voiceProvider, selectedVoice,
+                      voiceStyle, customVoiceStyle, voiceSpeed, noVoice, musicMood, musicVolume,
+                      sfxEnabled, continuityMode, videoGenMode, selectedVideoModel,
+                      selectedVisualStyle, selectedLighting, selectedMood, visualIntensity,
+                      captionStyle, captionPosition, captionHighlight, noCaptions,
+                    },
+                  }),
+                });
+                const data = await res.json();
+                if (data.draft_id) setDraftId(data.draft_id);
+              } catch (err) {
+                console.error('Save draft failed:', err);
+              }
+            }}
           >
             Save Draft
           </button>
-          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>WIREFRAME</span>
+          {draftId && <span style={{ fontSize: '11px', color: '#059669' }}>Saved</span>}
         </div>
       </div>
 
@@ -1201,9 +1248,9 @@ export default function ShortsBuilderPage() {
                   onChange={e => setSelectedBrandKit(e.target.value || null)}
                 >
                   <option value="">No Brand Kit — generate without brand constraints</option>
-                  <option value="bk_sewo">SEWO — Tech brand, blue/white, modern clean</option>
-                  <option value="bk_assureful">Assureful — Insurance, green/navy, professional</option>
-                  <option value="bk_client">Client Brand — Custom brand kit</option>
+                  {brandKits.map(bk => (
+                    <option key={bk.id} value={bk.id}>{bk.brand_name} — {bk.taglines?.[0] || bk.style_preset || ''}</option>
+                  ))}
                 </select>
               </>
             )}
@@ -1480,13 +1527,30 @@ export default function ShortsBuilderPage() {
                 {/* ── Generate Voiceover Button ── */}
                 <button
                   style={styles.generateBtn(selectedVoice && (voiceStyle || customVoiceStyle))}
-                  onClick={() => {
+                  onClick={async () => {
                     if (!selectedVoice) return;
                     setVoiceoverLoading(true);
-                    setTimeout(() => {
-                      setVoiceoverLoading(false);
+                    try {
+                      const fullNarration = script?.narration_full || script?.scenes?.map(s => s.narration).join(' ') || '';
+                      const res = await apiFetch('/api/workbench/voiceover', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          text: fullNarration,
+                          voice: selectedVoice,
+                          style_instructions: customVoiceStyle || '',
+                          speed: parseFloat(voiceSpeed),
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.error) throw new Error(data.error);
+                      setVoiceoverUrl(data.audio_url);
                       setVoiceoverGenerated(true);
-                    }, 2000);
+                    } catch (err) {
+                      console.error('Voiceover failed:', err);
+                    } finally {
+                      setVoiceoverLoading(false);
+                    }
                   }}
                   disabled={!selectedVoice || voiceoverLoading}
                 >
@@ -1516,19 +1580,7 @@ export default function ShortsBuilderPage() {
                         Voice: {selectedVoice} | Style: {voiceStyle || 'Custom'} | Speed: {voiceSpeed}x | Provider: {voiceProvider === 'gemini' ? 'Gemini TTS' : 'ElevenLabs'}
                       </div>
                     </div>
-                    <div style={{
-                      marginLeft: 'auto',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      color: '#374151',
-                    }}>
-                      ▶ Play Preview
-                    </div>
+                    {voiceoverUrl && <audio controls src={voiceoverUrl} style={{ marginLeft: 'auto', height: '32px' }} />}
                   </div>
                 )}
 
@@ -1612,12 +1664,30 @@ export default function ShortsBuilderPage() {
                   {/* Generate Music Button */}
                   <button
                     style={styles.generateBtn(musicMood)}
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!musicMood) return;
                       setMusicLoading(true);
-                      setTimeout(() => {
-                        setMusicLoading(false);
+                      try {
+                        const fw = BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework);
+                        const res = await apiFetch('/api/workbench/music', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            framework_id: fw?.id,
+                            niche: selectedNiche,
+                            duration: 35,
+                            music_model: 'elevenlabs',
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.error) throw new Error(data.error);
+                        setMusicUrl(data.audio_url);
                         setMusicGenerated(true);
-                      }, 1500);
+                      } catch (err) {
+                        console.error('Music generation failed:', err);
+                      } finally {
+                        setMusicLoading(false);
+                      }
                     }}
                     disabled={!musicMood || musicLoading}
                   >
@@ -1642,19 +1712,7 @@ export default function ShortsBuilderPage() {
                           Mood: {musicMood} | Volume: {musicVolume}%
                         </div>
                       </div>
-                      <div style={{
-                        marginLeft: 'auto',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D1D5DB',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        color: '#374151',
-                      }}>
-                        ▶ Play Preview
-                      </div>
+                      {musicUrl && <audio controls src={musicUrl} style={{ marginLeft: 'auto', height: '32px' }} />}
                     </div>
                   )}
 
@@ -1669,12 +1727,40 @@ export default function ShortsBuilderPage() {
 
                       <button
                         style={styles.generateBtn(true)}
-                        onClick={() => {
+                        onClick={async () => {
                           setTimingLoading(true);
-                          setTimeout(() => {
-                            setTimingLoading(false);
+                          try {
+                            const res = await apiFetch('/api/workbench/timing', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                audio_url: voiceoverUrl,
+                                video_model: selectedVideoModel || 'fal_veo3',
+                                framework_id: selectedFramework,
+                                video_length_preset: 30,
+                                voice_speed: parseFloat(voiceSpeed),
+                              }),
+                            });
+                            const data = await res.json();
+                            if (data.error) throw new Error(data.error);
+                            setTimingBlocks(data.blocks || []);
                             setTimingGenerated(true);
-                          }, 1800);
+                            // Update script scenes with actual durations from blocks
+                            if (data.blocks && script) {
+                              setScript(prev => ({
+                                ...prev,
+                                scenes: prev.scenes.map((s, i) => ({
+                                  ...s,
+                                  duration: data.blocks[i] ? `${Math.round(data.blocks[i].clipDuration)}s` : s.duration,
+                                  narration: data.blocks[i]?.narration || s.narration,
+                                })),
+                              }));
+                            }
+                          } catch (err) {
+                            console.error('Timing failed:', err);
+                          } finally {
+                            setTimingLoading(false);
+                          }
                         }}
                         disabled={timingLoading}
                       >
@@ -1818,16 +1904,30 @@ export default function ShortsBuilderPage() {
 
                           <button
                             style={{ ...styles.generateBtn(true), marginTop: '12px' }}
-                            onClick={() => {
+                            onClick={async () => {
                               setSfxLoading(true);
-                              setTimeout(() => {
-                                setSfxLoading(false);
+                              try {
+                                const res = await apiFetch('/api/workbench/sfx', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    niche: selectedNiche,
+                                    duration: 35,
+                                  }),
+                                });
+                                const data = await res.json();
+                                if (data.error) throw new Error(data.error);
+                                setSfxUrl(data.sfx_url || null);
                                 setSfxGenerated(true);
-                              }, 1500);
+                              } catch (err) {
+                                console.error('SFX generation failed:', err);
+                              } finally {
+                                setSfxLoading(false);
+                              }
                             }}
                             disabled={sfxLoading}
                           >
-                            {sfxLoading ? 'Generating SFX...' : `Generate ${(script?.scenes?.length || 7) - 1} Sound Effects`}
+                            {sfxLoading ? 'Generating SFX...' : `Generate ${(timingBlocks.length || script?.scenes?.length || 7) - 1} Sound Effects`}
                           </button>
 
                           {sfxGenerated && (
@@ -2005,6 +2105,45 @@ export default function ShortsBuilderPage() {
                 </div>
               ))}
             </div>
+
+            {/* ── Image Model ── */}
+            {selectedVideoModel && (
+              <>
+                <div style={styles.sectionTitle}>Image Model</div>
+                <div style={styles.sectionSubtitle}>
+                  Generates the starting keyframe image for each scene. LoRA-capable models show LoRA picker when available.
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[
+                    { id: 'fal_nano_banana', name: 'Nano Banana 2', lora: false },
+                    { id: 'fal_flux', name: 'FLUX 2 (LoRA)', lora: true },
+                    { id: 'fal_klein_4b', name: 'FLUX.2 Klein 4B', lora: true },
+                    { id: 'fal_seedream', name: 'SeedDream v4.5', lora: false },
+                    { id: 'fal_imagen4', name: 'Imagen 4', lora: false },
+                    { id: 'fal_kling_img', name: 'Kling Image v3', lora: false },
+                    { id: 'fal_grok', name: 'Grok Imagine', lora: false },
+                    { id: 'fal_ideogram', name: 'Ideogram v2', lora: false },
+                    { id: 'fal_wan22_t2i', name: 'Wan 2.2 T2I (LoRA)', lora: true },
+                  ].map(m => (
+                    <div
+                      key={m.id}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: selectedImageModel === m.id ? '2px solid #111827' : '1px solid #E5E7EB',
+                        backgroundColor: selectedImageModel === m.id ? '#F9FAFB' : '#FFFFFF',
+                        cursor: 'pointer',
+                        minWidth: '130px',
+                      }}
+                      onClick={() => setSelectedImageModel(m.id)}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{m.name}</div>
+                      {m.lora && <div style={{ fontSize: '10px', color: '#7C3AED', fontWeight: 500 }}>LoRA support</div>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* ── R2V Reference Images ── */}
             {videoGenMode === 'r2v' && selectedVideoModel && (
@@ -2236,6 +2375,7 @@ export default function ShortsBuilderPage() {
                     <div>Mode: <strong>{videoGenMode === 'r2v' ? 'Reference-to-Video' : 'Image-to-Video'}</strong></div>
                     <div>Continuity: <strong>{(continuityMode || 'continuous') === 'continuous' ? 'Continuous (frame chaining)' : 'Exciting (fresh images per scene)'}</strong></div>
                     <div>Model: <strong>{selectedVideoModel || 'Not selected'}</strong></div>
+                    <div>Image Model: <strong>{selectedImageModel || '—'}</strong></div>
                     <div>Style: <strong>{selectedVisualStyle || 'Not selected'}</strong> | Lighting: <strong>{selectedLighting || 'Not set'}</strong> | Mood: <strong>{selectedMood || 'Not set'}</strong></div>
                     <div>Prompt method: <strong>Cohesive Prompt Builder (LLM-assembled, not concatenated)</strong></div>
                     {videoGenMode === 'r2v' && <div>References: <strong>@elements passed to every scene</strong></div>}
