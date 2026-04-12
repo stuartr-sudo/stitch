@@ -53,6 +53,11 @@ export default async function handler(req, res) {
     cameraDirection,
     videoStylePrompt,
     colorGrade,
+    // Shorts-specific fields
+    previousSceneAnalysis,
+    nicheMood,
+    sceneIndex,
+    totalScenes,
     // Model-aware prompt optimization
     targetModel,
     // Prompt template support
@@ -115,6 +120,11 @@ export default async function handler(req, res) {
     if (brandStyleGuide.colors?.length > 0) bsg.push(`Brand Colors: ${JSON.stringify(brandStyleGuide.colors)}`);
     if (bsg.length > 0) sections.push(`BRAND STYLE GUIDE:\n${bsg.join('\n')}`);
   }
+
+  // Shorts-specific context
+  if (previousSceneAnalysis) sections.push(`PREVIOUS SCENE ANALYSIS (from Gemini video understanding):\n${previousSceneAnalysis}`);
+  if (nicheMood) sections.push(`NICHE VISUAL MOOD: ${nicheMood}`);
+  if (sceneIndex != null && totalScenes) sections.push(`SCENE POSITION: Scene ${sceneIndex + 1} of ${totalScenes}`);
 
   if (targetModel) sections.push(`TARGET VIDEO MODEL: ${targetModel}`);
 
@@ -256,6 +266,29 @@ Rules:
 - Keep the prompt under 200 words — concise but vivid
 - Do NOT include any "AVOID:" or negative prompt section — video models handle negatives separately
 - Focus entirely on what the scene SHOULD look like and how it should MOVE${getModelGuidance(targetModel)}`;
+  }
+
+  if (tool === 'shorts') {
+    return `You are an expert AI image prompt engineer specializing in short-form video scene imagery. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for generating a STARTING IMAGE for a 5-6 second video scene.
+
+Rules:
+- Output ONLY the prompt text — no preamble, no explanation, no quotes
+- Weave all elements together naturally into flowing descriptive text
+- This image will be animated into a 5-6 second video clip — describe a SINGLE MOMENT, not a sequence
+- Be extremely specific with visual details: colors, materials, lighting temperature, composition, depth of field
+- Camera direction is provided — integrate it naturally (lens, angle, movement starting point, lighting setup)
+- If a PREVIOUS SCENE ANALYSIS is provided, this is critical context:
+  - Maintain character consistency (same clothing, features, positioning context)
+  - Maintain setting continuity (same location unless the script says otherwise)
+  - Maintain lighting continuity (similar color temperature and direction)
+  - ADVANCE the narrative — don't repeat what was in the previous scene, show the NEXT moment
+  - Use specific details from the analysis (character positions, props, environment state)
+- If a brand style guide is provided, align visual elements with brand colors, preferred elements, and composition style
+- If a visual style preset is provided, apply that aesthetic to every visual detail
+- Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, etc.) — describe visual characteristics instead
+- Keep the prompt under 200 words — concise but vivid
+- Do NOT include any "AVOID:" or negative prompt section
+- The image should feel like a single frame from a professionally shot short-form video${getModelGuidance(targetModel)}`;
   }
 
   if (tool === 'storyboard') {
