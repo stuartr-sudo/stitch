@@ -277,60 +277,225 @@ const FRAMEWORKS = [
 const TOPIC_SUGGESTIONS = {
   ai_tech_news: [
     { label: 'AI Breakthroughs', sub: [
-      { label: 'Reasoning & Intelligence', hooks: ['beyond human level', 'caught cheating', 'real-world testing', 'surprise benchmark', 'OpenAI leak'] },
-      { label: 'Creative AI', hooks: ['fooling experts', 'original compositions', 'replacing artists', 'viral generation', 'AI vs human blind test'] },
-      { label: 'Robotics', hooks: ['learning emotions', 'warehouse takeover', 'humanoid progress', 'Boston Dynamics update', 'home robots coming'] },
+      { label: 'Reasoning & Intelligence', hooks: ['beyond human level', 'caught cheating', 'real-world testing', 'surprise benchmark', 'leaked results'] },
+      { label: 'Creative AI', hooks: ['fooling experts', 'original compositions', 'replacing artists', 'viral generation', 'AI vs human test'] },
+      { label: 'Robotics', hooks: ['learning emotions', 'warehouse takeover', 'humanoid progress', 'home robots coming', 'factory replaced'] },
       { label: 'Medical AI', hooks: ['outperforming doctors', 'drug discovery', 'predicting illness', 'cancer detection', 'surgery AI'] },
     ]},
-    { label: 'AI & Jobs', sub: [
-      { label: 'White-collar disruption', hooks: ['lawyers affected', 'coding obsolete', 'finance automation', 'consultants replaced', 'AI managers'] },
-      { label: 'Creative industries', hooks: ['Hollywood impact', 'music generation', 'photography dying', 'voice actors gone', 'AI directors'] },
-      { label: 'New careers', hooks: ['prompt engineering', 'AI training', 'human oversight', 'AI auditor', 'data curator'] },
-    ]},
-    { label: 'AI Ethics & Safety', sub: [
-      { label: 'Deepfakes', hooks: ['caught on camera', 'political impact', 'impossible to detect', 'identity theft', 'celebrity chaos'] },
-      { label: 'Surveillance', hooks: ['facial recognition', 'predictive policing', 'mass tracking', 'social scoring', 'privacy dead'] },
-      { label: 'Existential Risk', hooks: ['researchers warning', 'alignment problem', 'containment failure', 'rogue AI scenario', 'kill switch debate'] },
+    { label: 'AI & Society', sub: [
+      { label: 'Jobs disruption', hooks: ['lawyers affected', 'coding obsolete', 'finance automation', 'consultants replaced', 'new careers'] },
+      { label: 'Ethics & deepfakes', hooks: ['caught on camera', 'political impact', 'impossible to detect', 'identity theft', 'regulation coming'] },
+      { label: 'Existential risk', hooks: ['researchers warning', 'alignment problem', 'containment failure', 'rogue AI scenario', 'kill switch'] },
     ]},
     { label: 'Tech Giants', sub: [
       { label: 'OpenAI', hooks: ['internal drama', 'secret projects', 'power struggle', 'GPT-5 rumors', 'Altman moves'] },
-      { label: 'Google', hooks: ['falling behind', 'search dying', 'Gemini controversy', 'DeepMind breakthrough', 'antitrust'] },
-      { label: 'Apple & Meta', hooks: ['secret labs', 'pivot strategy', 'hardware play', 'Vision Pro', 'Zuckerberg AI bet'] },
+      { label: 'Google & Meta', hooks: ['falling behind', 'search dying', 'Gemini controversy', 'secret labs', 'pivot strategy'] },
     ]},
   ],
   finance_money: [
     { label: 'Wealth Building', sub: [
-      { label: 'Investing', hooks: ['beating the market', 'hidden strategies', 'common mistakes', 'Warren Buffett method', 'index fund truth'] },
+      { label: 'Investing', hooks: ['beating the market', 'hidden strategies', 'common mistakes', 'index fund truth', 'compound effect'] },
       { label: 'Real Estate', hooks: ['house hacking', 'rent vs buy', 'passive income', 'market crash coming', 'first property'] },
+      { label: 'Side hustles', hooks: ['no-code SaaS', 'digital products', 'vending machines', 'newsletter model', 'flipping'] },
     ]},
     { label: 'Money Myths', sub: [
       { label: 'Debt myths', hooks: ['good vs bad', 'credit score trap', 'minimum payment scam', 'student loan truth', 'mortgage hack'] },
       { label: 'Wealth myths', hooks: ['self-made myth', 'luck factor', 'rich mindset', 'generational wealth', 'millionaire habits'] },
     ]},
+    { label: 'Tax & Banking', sub: [
+      { label: 'Tax strategies', hooks: ['legal avoidance', 'LLC benefits', 'missed deductions', 'crypto taxes', 'audit triggers'] },
+      { label: 'Hidden fees', hooks: ['bank profits', 'fractional reserve', 'inflation erosion', 'subscription traps', 'fine print'] },
+    ]},
+  ],
+  motivation_self_help: [
+    { label: 'Mindset', sub: [
+      { label: 'Mental models', hooks: ['reframe everything', 'stoic wisdom', 'cognitive bias', 'decision framework', 'growth mindset'] },
+      { label: 'Habits', hooks: ['atomic habits', 'keystone habit', '21-day myth', 'habit stacking', 'breaking bad habits'] },
+    ]},
+    { label: 'Success Stories', sub: [
+      { label: 'Against all odds', hooks: ['rock bottom', 'impossible comeback', 'rejected 100 times', 'started at 50', 'overnight success myth'] },
+      { label: 'Daily routines', hooks: ['4AM club', 'CEO morning', 'cold plunge effect', 'journaling power', 'digital detox'] },
+    ]},
+    { label: 'Personal Growth', sub: [
+      { label: 'Confidence', hooks: ['fake it research', 'body language hack', 'imposter syndrome', 'public speaking fear', 'first impression'] },
+      { label: 'Productivity', hooks: ['deep work', 'time blocking', 'Parkinson\'s law', 'Pomodoro evolved', 'saying no'] },
+    ]},
   ],
   scary_horror: [
     { label: 'Haunted Places', sub: [
       { label: 'Abandoned buildings', hooks: ['documented evidence', 'still active', 'sealed forever', 'police called', 'caught on camera'] },
-      { label: 'Cursed locations', hooks: ['pattern of deaths', 'locals avoid', 'caught on camera', 'government warning', 'still happening'] },
+      { label: 'Cursed locations', hooks: ['pattern of deaths', 'locals avoid', 'government warning', 'still happening', 'no explanation'] },
     ]},
     { label: 'Unexplained Events', sub: [
-      { label: 'Mass disappearances', hooks: ['without trace', 'overnight vanishing', 'official cover-up', '400 people gone', 'no bodies found'] },
-      { label: 'Time anomalies', hooks: ['documented cases', 'witness accounts', 'scientific study', 'missing time', 'aged overnight'] },
+      { label: 'Disappearances', hooks: ['without trace', 'overnight vanishing', 'official cover-up', 'no bodies found', 'search abandoned'] },
+      { label: 'Time anomalies', hooks: ['documented cases', 'witness accounts', 'missing time', 'aged overnight', 'scientific study'] },
+    ]},
+    { label: 'True Scary Stories', sub: [
+      { label: 'Real encounters', hooks: ['security footage', 'multiple witnesses', 'police report filed', 'still unsolved', 'happened last week'] },
+      { label: 'Creepy places', hooks: ['don\'t visit alone', 'banned from entering', 'locals won\'t talk', 'sounds at night', 'never explained'] },
+    ]},
+  ],
+  history_did_you_know: [
+    { label: 'Hidden History', sub: [
+      { label: 'Forgotten events', hooks: ['erased from textbooks', 'covered up', 'nobody talks about', 'changed everything', 'rewritten'] },
+      { label: 'Lost civilizations', hooks: ['vanished overnight', 'technology ahead of time', 'still unexplained', 'recently discovered', 'underwater ruins'] },
+    ]},
+    { label: 'Historical Figures', sub: [
+      { label: 'Unsung heroes', hooks: ['never got credit', 'died unknown', 'saved thousands', 'ahead of their time', 'erased from history'] },
+      { label: 'Controversial figures', hooks: ['dark secret', 'hidden past', 'double life', 'real story', 'myth vs reality'] },
+    ]},
+  ],
+  true_crime: [
+    { label: 'Unsolved Cases', sub: [
+      { label: 'Cold cases', hooks: ['new evidence', 'reopened', 'DNA breakthrough', 'witness came forward', 'still missing'] },
+      { label: 'Serial cases', hooks: ['pattern found', 'connected crimes', 'still at large', 'wrong person convicted', 'overlooked clue'] },
+    ]},
+    { label: 'Investigations', sub: [
+      { label: 'Forensic breakthroughs', hooks: ['one fingerprint', 'DNA match', 'digital trail', 'phone records', 'surveillance footage'] },
+      { label: 'Wrongful convictions', hooks: ['innocent imprisoned', 'real killer found', 'confession recanted', 'evidence fabricated', 'years lost'] },
+    ]},
+  ],
+  science_nature: [
+    { label: 'Discoveries', sub: [
+      { label: 'Recent breakthroughs', hooks: ['changes everything', 'thought impossible', 'accidental discovery', 'published this week', 'Nobel worthy'] },
+      { label: 'Deep ocean', hooks: ['never seen before', 'deeper than Everest', 'alien-like life', 'pressure mystery', 'bioluminescence'] },
+    ]},
+    { label: 'Nature', sub: [
+      { label: 'Extreme weather', hooks: ['record breaking', 'climate shift', 'unprecedented', 'scientists alarmed', 'pattern emerging'] },
+      { label: 'Evolution', hooks: ['happening now', 'rapid adaptation', 'unexpected mutation', 'survival strategy', 'arms race'] },
+    ]},
+  ],
+  relationships_dating: [
+    { label: 'Psychology', sub: [
+      { label: 'Attachment styles', hooks: ['anxious vs avoidant', 'why you attract wrong', 'secure attachment', 'healing patterns', 'test yourself'] },
+      { label: 'Red flags', hooks: ['subtle signs', 'narcissist tactics', 'love bombing', 'gaslighting signals', 'trust your gut'] },
+    ]},
+    { label: 'Modern Dating', sub: [
+      { label: 'App culture', hooks: ['algorithm secrets', 'profile mistakes', 'swipe fatigue', 'paradox of choice', 'what works'] },
+      { label: 'Communication', hooks: ['text decoding', 'mixed signals', 'vulnerability power', 'conflict resolution', 'emotional intelligence'] },
+    ]},
+  ],
+  health_fitness: [
+    { label: 'Nutrition', sub: [
+      { label: 'Diet myths', hooks: ['calories myth', 'fasting truth', 'sugar conspiracy', 'supplement scams', 'gut health'] },
+      { label: 'Science-backed', hooks: ['proven methods', 'new research says', 'doctors recommend', 'longevity diet', 'performance food'] },
+    ]},
+    { label: 'Exercise', sub: [
+      { label: 'Training myths', hooks: ['cardio debate', 'overtraining signs', 'muscle confusion myth', 'stretching truth', 'rest days'] },
+      { label: 'Transformations', hooks: ['30-day results', 'before and after', 'body recomposition', 'beginner gains', 'plateau breaking'] },
+    ]},
+  ],
+  gaming_popculture: [
+    { label: 'Gaming', sub: [
+      { label: 'Hidden secrets', hooks: ['easter eggs found', 'developer room', 'cut content leaked', 'secret ending', 'glitch discovery'] },
+      { label: 'Game lore', hooks: ['deeper meaning', 'timeline explained', 'theory confirmed', 'hidden story', 'character backstory'] },
+    ]},
+    { label: 'Pop Culture', sub: [
+      { label: 'Movie/TV', hooks: ['detail you missed', 'fan theory proven', 'behind the scenes', 'deleted scene', 'actor secret'] },
+      { label: 'Internet culture', hooks: ['meme origin', 'trend explained', 'drama breakdown', 'cancelled why', 'viral moment'] },
+    ]},
+  ],
+  conspiracy_mystery: [
+    { label: 'Government', sub: [
+      { label: 'Declassified', hooks: ['just released', 'redacted sections', 'whistleblower', 'official denial', 'document proves'] },
+      { label: 'Cover-ups', hooks: ['evidence destroyed', 'witnesses silenced', 'timeline doesn\'t match', 'money trail', 'who benefits'] },
+    ]},
+    { label: 'Mysteries', sub: [
+      { label: 'Unsolved', hooks: ['no explanation', 'defies physics', 'experts baffled', 'pattern discovered', 'new theory'] },
+      { label: 'Ancient mysteries', hooks: ['impossible construction', 'lost technology', 'star alignment', 'underwater structures', 'encoded message'] },
+    ]},
+  ],
+  business_entrepreneur: [
+    { label: 'Startup Stories', sub: [
+      { label: 'Origin stories', hooks: ['garage startup', 'rejected by investors', 'pivot saved company', 'accidental billion', 'copycat won'] },
+      { label: 'Failures', hooks: ['burned through millions', 'fatal mistake', 'wrong market', 'co-founder split', 'too early'] },
+    ]},
+    { label: 'Strategy', sub: [
+      { label: 'Revenue models', hooks: ['hidden revenue stream', 'unit economics', 'pricing psychology', 'freemium trap', 'subscription math'] },
+      { label: 'Growth tactics', hooks: ['viral loop', 'zero to one', 'first 100 customers', 'distribution hack', 'retention secret'] },
+    ]},
+  ],
+  food_cooking: [
+    { label: 'Techniques', sub: [
+      { label: 'Kitchen science', hooks: ['why it works', 'chemical reaction', 'temperature secret', 'texture hack', 'flavor compound'] },
+      { label: 'Chef secrets', hooks: ['restaurant trick', 'pro technique', 'one ingredient changes everything', 'common mistake', 'tool upgrade'] },
+    ]},
+    { label: 'Food Stories', sub: [
+      { label: 'Origin stories', hooks: ['accidental invention', 'cultural fusion', 'war-time creation', 'street food history', 'banned ingredient'] },
+      { label: 'Food science', hooks: ['why it tastes good', 'addictive ingredient', 'texture psychology', 'umami secret', 'fermentation magic'] },
+    ]},
+  ],
+  travel_adventure: [
+    { label: 'Destinations', sub: [
+      { label: 'Hidden gems', hooks: ['locals only', 'skip the tourist trap', 'no crowds', 'off the map', 'secret beach'] },
+      { label: 'Disappearing places', hooks: ['climate threatened', 'overtourism damage', 'last chance', 'before it\'s gone', 'rising seas'] },
+    ]},
+    { label: 'Travel Tips', sub: [
+      { label: 'Budget hacks', hooks: ['exact costs', 'flight trick', 'accommodation hack', 'free experiences', 'money saved'] },
+      { label: 'Cultural insights', hooks: ['don\'t do this', 'local custom', 'misunderstood culture', 'real experience', 'what tourists miss'] },
+    ]},
+  ],
+  psychology_mindblown: [
+    { label: 'Cognitive Science', sub: [
+      { label: 'Biases', hooks: ['you do this daily', 'brain tricked', 'decision hijacked', 'invisible influence', 'can\'t unsee'] },
+      { label: 'Experiments', hooks: ['disturbing results', 'ethical controversy', 'replicated recently', 'subjects didn\'t know', 'changed the field'] },
+    ]},
+    { label: 'Human Behavior', sub: [
+      { label: 'Dark patterns', hooks: ['designed to manipulate', 'apps exploit this', 'advertising trick', 'social media hook', 'breaking free'] },
+      { label: 'Body language', hooks: ['tells everything', 'liars do this', 'power signal', 'attraction sign', 'micro-expression'] },
+    ]},
+  ],
+  space_cosmos: [
+    { label: 'Deep Space', sub: [
+      { label: 'Cosmic objects', hooks: ['would destroy Earth', 'bigger than solar system', 'defies physics', 'just discovered', 'heading toward us'] },
+      { label: 'Scale & distance', hooks: ['mind-breaking number', 'impossible to comprehend', 'light years explained', 'visible universe edge', 'pale blue dot'] },
+    ]},
+    { label: 'Space Exploration', sub: [
+      { label: 'Missions', hooks: ['still out there', 'lost contact', 'unexpected discovery', 'photos released', 'what they found'] },
+      { label: 'Future', hooks: ['Mars colony timeline', 'warp drive theory', 'alien signal', 'space mining', 'generation ships'] },
+    ]},
+  ],
+  animals_wildlife: [
+    { label: 'Animal Abilities', sub: [
+      { label: 'Superpowers', hooks: ['impossible ability', 'defies biology', 'scientists baffled', 'evolved solution', 'superhuman sense'] },
+      { label: 'Intelligence', hooks: ['tool use documented', 'problem solving', 'emotional capacity', 'communication decoded', 'self-awareness test'] },
+    ]},
+    { label: 'Nature Stories', sub: [
+      { label: 'Survival', hooks: ['against all odds', 'near extinction', 'comeback story', 'adaptation in action', 'last of its kind'] },
+      { label: 'Symbiosis', hooks: ['unlikely partners', 'mutual dependence', 'cross-species bond', 'ecosystem role', 'removal catastrophe'] },
+    ]},
+  ],
+  sports_athletes: [
+    { label: 'Athletes', sub: [
+      { label: 'Defining moments', hooks: ['career-defining play', 'clutch performance', 'under pressure', 'comeback story', 'record broken'] },
+      { label: 'Behind the scenes', hooks: ['training secret', 'diet revealed', 'mental game', 'injury comeback', 'what nobody sees'] },
+    ]},
+    { label: 'Competition', sub: [
+      { label: 'Rivalries', hooks: ['greatest rivalry', 'personal feud', 'head to head stats', 'mutual respect', 'final showdown'] },
+      { label: 'Records & stats', hooks: ['impossible stat', 'never broken', 'closest ever', 'most dominant', 'statistical anomaly'] },
+    ]},
+  ],
+  education_learning: [
+    { label: 'Misconceptions', sub: [
+      { label: 'Things school got wrong', hooks: ['textbook lied', 'oversimplified', 'recently disproven', 'real story', 'updated science'] },
+      { label: 'Common mistakes', hooks: ['everyone believes this', 'sounds right but wrong', 'expert disagrees', 'data shows otherwise', 'myth busted'] },
+    ]},
+    { label: 'Learning', sub: [
+      { label: 'Explained simply', hooks: ['in 60 seconds', 'finally makes sense', 'one analogy', 'visual explanation', 'ELI5'] },
+      { label: 'Hidden connections', hooks: ['two things connected', 'same principle', 'pattern revealed', 'never noticed', 'mind blown'] },
+    ]},
+  ],
+  paranormal_ufo: [
+    { label: 'UFO Sightings', sub: [
+      { label: 'Mass sightings', hooks: ['hundreds witnessed', 'multiple cameras', 'military confirmed', 'no explanation', 'happened again'] },
+      { label: 'Government files', hooks: ['just declassified', 'redacted sections', 'whistleblower testimony', 'Pentagon admits', 'footage released'] },
+    ]},
+    { label: 'Paranormal', sub: [
+      { label: 'Evidence', hooks: ['caught on camera', 'scientific instrument', 'repeated at same location', 'multiple witnesses', 'thermal imaging'] },
+      { label: 'Encounters', hooks: ['credible witness', 'military pilot', 'scientist report', 'documented case', 'physical evidence'] },
     ]},
   ],
 };
-
-// Placeholder for niches without detailed suggestions yet
-const DEFAULT_TOPICS = [
-  { label: 'Trending Now', sub: [
-    { label: 'Latest developments', hooks: ['breaking news', 'just announced', 'nobody saw this coming', 'confirmed today', 'leaked footage'] },
-    { label: 'Viral stories', hooks: ['went viral', 'millions watched', 'internet reacts', 'you won\'t believe', 'caught on camera'] },
-  ]},
-  { label: 'Evergreen', sub: [
-    { label: 'Beginner guides', hooks: ['complete breakdown', 'explained simply', 'what they don\'t tell you', 'step by step', 'ultimate guide'] },
-    { label: 'Deep dives', hooks: ['the full story', 'hidden truth', 'investigation reveals', 'years later', 'inside look'] },
-  ]},
-];
 
 // ─── Wizard Step indicators ───────────────────────────────────────────────────
 const STEPS = [
@@ -938,148 +1103,10 @@ export default function ShortsBuilderPage() {
               ))}
             </div>
 
-            {/* ── Framework Selection ── */}
-            {selectedNiche && (() => {
-              const nicheSpecific = availableFrameworks.filter(f => f.niches !== null);
-              const universal = availableFrameworks.filter(f => f.niches === null);
-              const nicheName = NICHES.find(n => n.id === selectedNiche)?.name || '';
-              return (
-              <>
-                <div style={styles.sectionTitle}>Choose a Framework</div>
-                <div style={styles.sectionSubtitle}>
-                  This defines the storytelling structure, pacing, and visual approach for your Short.
-                </div>
-
-                {/* Niche-specific frameworks first */}
-                {nicheSpecific.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', marginTop: '4px' }}>
-                      {nicheName} Frameworks
-                    </div>
-                    <div style={styles.frameworkList}>
-                      {nicheSpecific.map(f => (
-                    <div
-                      key={f.id}
-                      style={styles.frameworkCard(selectedFramework === f.id)}
-                      onClick={() => {
-                        setSelectedFramework(f.id);
-                        setScriptGenerated(false);
-                        setScript(null);
-                      }}
-                    >
-                      <div style={styles.frameworkName}>{f.name}</div>
-                      <div style={styles.frameworkDesc}>{f.description}</div>
-                      <div style={styles.frameworkMeta}>
-                        <span style={styles.badge(f.category === 'avatar' ? '#EDE9FE' : null)}>
-                          {f.category}
-                        </span>
-                      </div>
-                      {selectedFramework === f.id && (
-                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {f.narrativeArc && (
-                            <div>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Narrative Arc</div>
-                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.narrativeArc}</div>
-                            </div>
-                          )}
-                          {f.hookStrategy && (
-                            <div>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Hook Strategy</div>
-                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.hookStrategy}</div>
-                            </div>
-                          )}
-                          {f.voiceDirection && (
-                            <div>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Voice Direction</div>
-                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.voiceDirection}</div>
-                            </div>
-                          )}
-                          {f.emotionalProgression && (
-                            <div>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Emotional Arc</div>
-                              <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.emotionalProgression}</div>
-                            </div>
-                          )}
-                          {/* Legacy scene beats fallback */}
-                          {f.scenes && !f.narrativeArc && f.scenes.map((s, i) => (
-                            <div key={i} style={styles.sceneBeat}>
-                              <div style={styles.sceneBeatDot('#111827')} />
-                              <span style={{ fontWeight: 500, color: '#374151' }}>{s.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Universal frameworks */}
-                {universal.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', marginTop: '20px' }}>
-                      Universal Frameworks
-                    </div>
-                    <div style={styles.frameworkList}>
-                      {universal.map(f => (
-                        <div
-                          key={f.id}
-                          style={styles.frameworkCard(selectedFramework === f.id)}
-                          onClick={() => {
-                            setSelectedFramework(f.id);
-                            setScriptGenerated(false);
-                            setScript(null);
-                          }}
-                        >
-                          <div style={styles.frameworkName}>{f.name}</div>
-                          <div style={styles.frameworkDesc}>{f.description}</div>
-                          <div style={styles.frameworkMeta}>
-                            <span>{f.duration}</span>
-                            <span>{f.sceneCount}</span>
-                            <span style={styles.badge(f.category === 'avatar' ? '#EDE9FE' : null)}>
-                              {f.category}
-                            </span>
-                          </div>
-                          {selectedFramework === f.id && (
-                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                              {f.narrativeArc && (
-                                <div>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Narrative Arc</div>
-                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.narrativeArc}</div>
-                                </div>
-                              )}
-                              {f.hookStrategy && (
-                                <div>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Hook Strategy</div>
-                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.hookStrategy}</div>
-                                </div>
-                              )}
-                              {f.voiceDirection && (
-                                <div>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Voice Direction</div>
-                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.voiceDirection}</div>
-                                </div>
-                              )}
-                              {f.emotionalProgression && (
-                                <div>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>Emotional Arc</div>
-                                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>{f.emotionalProgression}</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-              );
-            })()}
+            {/* Framework is auto-matched via embeddings when script is generated — no manual picker */}
 
             {/* ── Topic Selection ── */}
-            {selectedFramework && (
+            {selectedNiche && (
               <>
                 <div style={styles.sectionTitle}>Choose a Topic</div>
                 <div style={styles.sectionSubtitle}>
@@ -1315,7 +1342,7 @@ export default function ShortsBuilderPage() {
             )}
 
             {/* ── Creative Mode Toggle ── */}
-            {selectedFramework && (
+            {selectedNiche && (
               <>
                 <div style={styles.sectionTitle}>Creative Mode</div>
                 <div style={styles.toggleRow}>
@@ -1338,7 +1365,7 @@ export default function ShortsBuilderPage() {
             )}
 
             {/* ── Brand Kit (Optional) ── */}
-            {selectedFramework && (
+            {selectedNiche && (
               <>
                 <div style={styles.sectionTitle}>Brand Kit (Optional)</div>
                 <div style={styles.sectionSubtitle}>
@@ -1371,7 +1398,7 @@ export default function ShortsBuilderPage() {
             )}
 
             {/* ── Generate Script Button ── */}
-            {selectedFramework && (
+            {selectedNiche && (
               <button
                 style={styles.generateBtn(canGenerate)}
                 onClick={handleGenerateScript}
