@@ -978,6 +978,12 @@ app.post('/api/shorts/discover-topics', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+app.post('/api/shorts/match-framework', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('shorts/match-framework.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // Batch Queue routes
 app.post('/api/batch/create', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('batch/create.js');

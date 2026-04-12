@@ -766,18 +766,35 @@ export default function ShortsBuilderPage() {
     paranormal_ufo: 'Eerie ambient, X-Files undertones, otherworldly, unsettling calm',
   };
 
-  const canGenerate = selectedNiche && selectedFramework && (selectedHooks.length > 0 || customTopic.trim() || selectedResearchTopic);
+  const canGenerate = selectedNiche && (selectedHooks.length > 0 || customTopic.trim() || selectedResearchTopic);
 
   const handleGenerateScript = async () => {
     if (!canGenerate) return;
     setScriptGenerated(false);
     setScript(null);
-    const fw = BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework);
     const niche = NICHES.find(n => n.id === selectedNiche);
     const topicStr = selectedResearchTopic ? selectedResearchTopic.title : (customTopic.trim() || selectedHooks.join(' + '));
-    const storyContext = selectedResearchTopic?.story_context || '';
+    const storyContext = selectedResearchTopic?.story_context || selectedResearchTopic?.description || '';
+    const fullTopicText = storyContext ? `${topicStr}. ${storyContext}` : topicStr;
 
     try {
+      // Step 1: Match framework via embedding cosine similarity (unless manually selected)
+      let fw = selectedFramework ? BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework) : null;
+      if (!fw) {
+        const matchRes = await apiFetch('/api/shorts/match-framework', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: fullTopicText, niche: selectedNiche }),
+        });
+        const matchData = await matchRes.json();
+        if (matchData.frameworkId) {
+          fw = BUILDER_FRAMEWORKS.find(f => f.id === matchData.frameworkId);
+          setSelectedFramework(matchData.frameworkId);
+          console.log(`[framework-match] "${topicStr}" → ${matchData.frameworkName} (${(matchData.score * 100).toFixed(1)}%)`);
+        }
+      }
+
+      // Step 2: Generate script
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -795,8 +812,8 @@ export default function ShortsBuilderPage() {
 
       const scriptData = data.script || data;
       const scenes = (scriptData.scenes || []).map((s, i) => ({
-        label: fw?.scenes?.[i]?.label || `Scene ${i + 1}`,
-        camera: fw?.scenes?.[i]?.camera || '',
+        label: s.scene_label || `Scene ${i + 1}`,
+        camera: '',
         narration: s.narration_segment || s.narration || '',
         visualDescription: s.visual_prompt || s.visualDescription || `[Visual for scene ${i + 1}]`,
         duration: `${5 + Math.round(Math.random())}s`,
@@ -804,7 +821,8 @@ export default function ShortsBuilderPage() {
 
       setScript({
         niche: niche.name,
-        framework: fw.name,
+        framework: fw?.name || 'Auto-matched',
+        frameworkId: fw?.id,
         topic: topicStr,
         creative: creativeMode,
         storyContext,

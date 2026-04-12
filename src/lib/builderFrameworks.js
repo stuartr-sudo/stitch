@@ -182,21 +182,6 @@ export const BUILDER_FRAMEWORKS = [
   voiceDirection: 'Conversational authority. The narrator sounds like someone who talks about this subject daily and loves it. Not scripted-sounding, not overly formal. Natural emphasis, occasional asides, the micro-expressions of genuine engagement. Match delivery to content: matter-of-fact for evidence, warmer for opinion, urgent for important claims. The voice should make the viewer feel they found their favorite expert.',
 },
 
-{
-  id: 'avatar_split_screen',
-  name: 'Avatar Split Screen',
-  category: 'avatar',
-  niches: null,
-  description: 'Persistent avatar presence alongside synchronized visuals, combining authority with constant proof.',
-  narrativeArc: 'The avatar occupies one third of the frame throughout — a constant anchor while the visual content flows in the remaining two thirds. This creates a dual-channel experience: the avatar provides commentary, reaction, and personality while the visual panel provides evidence, illustration, and spectacle. The avatar should react visibly to what\'s shown — nodding at good points, furrowing at problems. The narrative follows whatever structure the content demands, but the avatar provides continuity that pure B-roll cannot.',
-  pacingStrategy: 'The visual panel drives pacing while the avatar provides stability. The content side can cut rapidly — facts, images, data, examples — while the avatar remains a calm constant. This allows faster information density than pure talking head because the viewer has two channels to process. Let the visual side do the work of illustration while the voice does the work of explanation. Neither should duplicate the other.',
-  cameraPhilosophy: 'The avatar side is locked: consistent framing, lighting, and composition. Think picture-in-picture but designed, not accidental. The content side is free: different angles, scales, styles, and treatments for each point. The visual tension between the static avatar and the dynamic content creates its own energy. The split should feel intentional and balanced — never like a webcam recording over slides.',
-  emotionalProgression: 'The avatar is the viewer\'s emotional proxy. As content becomes more surprising, the avatar\'s reactions guide the viewer\'s response. This creates stronger engagement than voiceover alone because facial reactions are processed faster than words. The progression follows the content, but the avatar amplifies every beat.',
-  hookStrategy: 'Open full-frame on the avatar for the hook — no split yet. Establish the face, the personality, the promise. Then transition into split-screen as the evidence begins. This mirrors how a conversation works: you look at someone when they start talking, then look at what they\'re showing you.',
-  payoffStrategy: 'End full-frame on the avatar again. The split collapses back to the face for the final takeaway. This bookend structure creates closure and reinforces the personal connection. The last frame should be the avatar looking directly at camera with the expression that matches the content\'s emotional conclusion.',
-  visualNotes: 'Avatar consistency across all segments is mandatory — use trained LoRA for character generation. Avatar side: clean background, consistent soft key light, medium-close framing at chest level. Content side: can vary wildly per segment. The split ratio should favor content (roughly 1/3 avatar, 2/3 content). Add a subtle divider line or light gradient between zones. Both sides must feel designed together, not composited as an afterthought.',
-  voiceDirection: 'More reactive than the standard narrator. The voice should respond to what\'s being shown — "look at this," "notice how," "and here\'s where it gets interesting." The delivery acknowledges the dual-channel format: shorter phrases, more pauses for the visual to register, occasional moments of letting the content side speak for itself. The voice of a commentator, not a lecturer.',
-},
 
 {
   id: 'comparison',
