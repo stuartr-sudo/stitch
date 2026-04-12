@@ -8,6 +8,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { STYLE_CATEGORIES } from '@/lib/stylePresets';
+import { BUILDER_FRAMEWORKS } from '@/lib/builderFrameworks';
 
 // ─── Static data: 20 Niches ───────────────────────────────────────────────────
 const NICHES = [
@@ -654,7 +655,7 @@ export default function ShortsBuilderPage() {
   // Filter frameworks by selected niche
   const availableFrameworks = useMemo(() => {
     if (!selectedNiche) return [];
-    return FRAMEWORKS.filter(f =>
+    return BUILDER_FRAMEWORKS.filter(f =>
       f.niches === null || f.niches.includes(selectedNiche)
     );
   }, [selectedNiche]);
@@ -767,7 +768,7 @@ export default function ShortsBuilderPage() {
   const handleGenerateScript = () => {
     if (!canGenerate) return;
     // WIREFRAME: Show dummy script
-    const fw = FRAMEWORKS.find(f => f.id === selectedFramework);
+    const fw = BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework);
     const niche = NICHES.find(n => n.id === selectedNiche);
     const topicStr = selectedResearchTopic ? selectedResearchTopic.title : (customTopic.trim() || selectedHooks.join(' + '));
     const storyContext = selectedResearchTopic ? selectedResearchTopic.story_context : null;
@@ -2463,7 +2464,7 @@ export default function ShortsBuilderPage() {
               <div>
                 <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Script</div>
                 <div style={{ color: '#111827' }}>Niche: <strong>{NICHES.find(n => n.id === selectedNiche)?.name || '—'}</strong></div>
-                <div style={{ color: '#111827' }}>Framework: <strong>{FRAMEWORKS.find(f => f.id === selectedFramework)?.name || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Framework: <strong>{BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework)?.name || '—'}</strong></div>
                 <div style={{ color: '#111827' }}>Topic: <strong>{script?.topic || customTopic || '—'}</strong></div>
                 <div style={{ color: '#111827' }}>Creative Mode: <strong>{creativeMode ? 'On' : 'Off'}</strong></div>
                 <div style={{ color: '#111827' }}>Brand Kit: <strong>{selectedBrandKit || 'None'}</strong></div>
