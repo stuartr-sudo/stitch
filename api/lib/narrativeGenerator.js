@@ -143,7 +143,7 @@ const HOOK_EXAMPLES = {
 
 // ── PASS 1: Hook Generation ─────────────────────────────────────────────────
 
-async function generateHook({ niche, topic, nicheTemplate, framework, storyContext, creativeMode, keys }) {
+async function generateHook({ niche, topic, nicheTemplate, framework, frameworkGuidance, storyContext, creativeMode, keys }) {
   const openai = new OpenAI({ apiKey: keys.openaiKey });
 
   const hookPattern = framework?.narrative?.hookPattern || 'story-open';
@@ -160,6 +160,7 @@ THE HOOK RULES:
 - Must NOT be a question unless the hook pattern specifically calls for it.
 
 HOOK PATTERN: ${hookPattern}
+${frameworkGuidance?.hookStrategy ? `\nFRAMEWORK HOOK STRATEGY (follow this approach):\n${frameworkGuidance.hookStrategy}` : ''}
 ${framework?.narrative?.hookExamples?.length ? `\nFRAMEWORK HOOK INSPIRATION (don't copy, use the structure):\n${framework.narrative.hookExamples.map(h => `  - "${h}"`).join('\n')}` : ''}
 
 GOOD HOOKS (study these — notice the specificity):
@@ -208,7 +209,7 @@ FACTUAL MODE (Creative Mode is OFF):
 // ── PASS 2: Full Narrative ──────────────────────────────────────────────────
 
 async function generateFullNarrative({
-  hook, niche, topic, nicheTemplate, framework,
+  hook, niche, topic, nicheTemplate, framework, frameworkGuidance,
   targetDurationSeconds, storyContext, creativeMode, keys,
 }) {
   const openai = new OpenAI({ apiKey: keys.openaiKey });
@@ -238,7 +239,28 @@ async function generateFullNarrative({
     ).join('\n');
   }
 
-  const narrativeBlock = framework?.narrative ? `
+  // Use new deep framework guidance if available, fall back to old framework.narrative
+  const narrativeBlock = frameworkGuidance ? `
+STORYTELLING FRAMEWORK: ${frameworkGuidance.name}
+
+NARRATIVE ARC (follow this structure):
+${frameworkGuidance.narrativeArc}
+
+HOOK STRATEGY (how to open — your hook should align with this approach):
+${frameworkGuidance.hookStrategy}
+
+PAYOFF STRATEGY (how to close — your ending MUST follow this):
+${frameworkGuidance.payoffStrategy}
+
+PACING STRATEGY:
+${frameworkGuidance.pacingStrategy}
+
+EMOTIONAL PROGRESSION (the viewer should feel this journey):
+${frameworkGuidance.emotionalProgression}
+
+VOICE DIRECTION (write the script so it can be delivered this way):
+${frameworkGuidance.voiceDirection}
+` : framework?.narrative ? `
 NARRATIVE FRAMEWORK: ${framework.name}
 Arc: ${framework.narrative.narrativeArc}
 Tone: ${framework.narrative.toneDescriptor}
@@ -394,7 +416,7 @@ RULES:
  * API-compatible with the original generateNarrative().
  */
 export async function generateNarrative({
-  niche, topic, hookLine, nicheTemplate, framework,
+  niche, topic, hookLine, nicheTemplate, framework, frameworkGuidance,
   targetDurationSeconds, storyContext, creativeMode, keys, brandUsername,
 }) {
   if (!keys.openaiKey) throw new Error('OpenAI API key required');
@@ -414,7 +436,7 @@ export async function generateNarrative({
     console.log(`[narrativeGenerator] Pass 1: Using provided hook`);
   } else {
     console.log(`[narrativeGenerator] Pass 1: Generating hook...`);
-    const hookResult = await generateHook({ niche, topic, nicheTemplate, framework, storyContext, creativeMode, keys });
+    const hookResult = await generateHook({ niche, topic, nicheTemplate, framework, frameworkGuidance, storyContext, creativeMode, keys });
     hook = hookResult;
     if (hookResult.usage) {
       totalInputTokens += hookResult.usage.prompt_tokens;
@@ -425,7 +447,7 @@ export async function generateNarrative({
   // ── PASS 2: Full narrative ────────────────────────────────────────
   console.log(`[narrativeGenerator] Pass 2: Generating narrative (${totalWords} words, ${effectiveDuration}s)...`);
   const { narrative, usage: narrativeUsage } = await generateFullNarrative({
-    hook, niche, topic, nicheTemplate, framework,
+    hook, niche, topic, nicheTemplate, framework, frameworkGuidance,
     targetDurationSeconds: effectiveDuration, storyContext, creativeMode, keys,
   });
   if (narrativeUsage) {

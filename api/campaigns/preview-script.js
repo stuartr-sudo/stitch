@@ -22,7 +22,7 @@ import { resolveUserIdFromBrand } from '../lib/resolveUserIdFromBrand.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { niche, topic, brand_username, story_context, creative_mode, visual_directions, videoLengthPreset, framework: frameworkId } = req.body;
+  const { niche, topic, brand_username, story_context, creative_mode, visual_directions, videoLengthPreset, framework: frameworkId, framework_guidance } = req.body;
 
   if (!niche) {
     return res.status(400).json({ error: 'Missing niche' });
@@ -62,8 +62,11 @@ export default async function handler(req, res) {
       storyContext: story_context || undefined,
       creativeMode: creative_mode || false,
       visualDirections: visual_directions || undefined,
-      targetDurationSeconds: videoLengthPreset || undefined,
+      targetDurationSeconds: videoLengthPreset || 60,
       framework,
+      // New: pass the full framework narrative guidance from the Builder's builderFrameworks.js
+      // This contains narrativeArc, hookStrategy, voiceDirection, etc. that the old framework system lacks
+      frameworkGuidance: framework_guidance || undefined,
     });
 
     return res.json({ script, niche });

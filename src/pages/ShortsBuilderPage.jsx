@@ -1203,7 +1203,7 @@ export default function ShortsBuilderPage() {
         }
       }
 
-      // Step 2: Generate script
+      // Step 2: Generate script — pass full framework narrative guidance, not just ID
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1212,8 +1212,19 @@ export default function ShortsBuilderPage() {
           topic: topicStr,
           story_context: storyContext,
           creative_mode: creativeMode,
-          videoLengthPreset: 30,
+          videoLengthPreset: 60,
           framework: fw?.id,
+          // Pass the full new framework guidance so the script generator uses it
+          framework_guidance: fw ? {
+            name: fw.name,
+            narrativeArc: fw.narrativeArc,
+            hookStrategy: fw.hookStrategy,
+            payoffStrategy: fw.payoffStrategy,
+            pacingStrategy: fw.pacingStrategy,
+            emotionalProgression: fw.emotionalProgression,
+            voiceDirection: fw.voiceDirection,
+            cameraPhilosophy: fw.cameraPhilosophy,
+          } : undefined,
         }),
       });
       const data = await res.json();
