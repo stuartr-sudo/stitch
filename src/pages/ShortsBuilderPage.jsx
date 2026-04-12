@@ -291,6 +291,15 @@ const TOPIC_SUGGESTIONS = {
       { label: 'OpenAI', hooks: ['internal drama', 'secret projects', 'power struggle', 'GPT-5 rumors', 'Altman moves'] },
       { label: 'Google & Meta', hooks: ['falling behind', 'search dying', 'Gemini controversy', 'secret labs', 'pivot strategy'] },
     ]},
+    { label: 'Consumer Tech', sub: [
+      { label: 'Gadgets & devices', hooks: ['killed the industry', 'hidden feature found', 'planned obsolescence', 'teardown reveals', 'nobody expected this'] },
+      { label: 'Apps & platforms', hooks: ['algorithm exposed', 'secret settings', 'privacy nightmare', 'already tracking you', 'banned worldwide'] },
+    ]},
+    { label: 'AI Tools & Products', sub: [
+      { label: 'Productivity AI', hooks: ['replaces entire workflow', 'free tool nobody knows', 'tested 50 tools', 'before and after', 'saved 10 hours weekly'] },
+      { label: 'Open source AI', hooks: ['beats closed models', 'runs on laptop', 'community breakthrough', 'no API needed', 'local and private'] },
+      { label: 'AI coding', hooks: ['wrote entire app', 'debugging itself', 'junior devs worried', 'vibe coding era', 'autonomy milestone'] },
+    ]},
   ],
   finance_money: [
     { label: 'Wealth Building', sub: [
@@ -306,6 +315,15 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Tax strategies', hooks: ['legal avoidance', 'LLC benefits', 'missed deductions', 'crypto taxes', 'audit triggers'] },
       { label: 'Hidden fees', hooks: ['bank profits', 'fractional reserve', 'inflation erosion', 'subscription traps', 'fine print'] },
     ]},
+    { label: 'Economy & Markets', sub: [
+      { label: 'Market signals', hooks: ['crash indicator', 'bubble forming', 'smart money moving', 'insider selling', 'historical pattern'] },
+      { label: 'Global economy', hooks: ['currency collapse', 'trade war impact', 'recession signs', 'supply chain broken', 'who benefits'] },
+    ]},
+    { label: 'Crypto & Digital Assets', sub: [
+      { label: 'Crypto trends', hooks: ['next big narrative', 'whale activity', 'regulation incoming', 'protocol exploit', 'yield strategy'] },
+      { label: 'DeFi & Web3', hooks: ['passive income', 'rug pull warning', 'institutional adoption', 'bridge hack', 'tokenization shift'] },
+      { label: 'Bitcoin cycles', hooks: ['halving effect', 'historical repeating', 'accumulation phase', 'on-chain signal', 'macro correlation'] },
+    ]},
   ],
   motivation_self_help: [
     { label: 'Mindset', sub: [
@@ -319,6 +337,15 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Personal Growth', sub: [
       { label: 'Confidence', hooks: ['fake it research', 'body language hack', 'imposter syndrome', 'public speaking fear', 'first impression'] },
       { label: 'Productivity', hooks: ['deep work', 'time blocking', 'Parkinson\'s law', 'Pomodoro evolved', 'saying no'] },
+    ]},
+    { label: 'Philosophy & Wisdom', sub: [
+      { label: 'Ancient philosophy', hooks: ['stoic principle', 'Marcus Aurelius said', 'samurai code', 'Zen koan', 'Taoist lesson'] },
+      { label: 'Modern thinkers', hooks: ['Goggins mentality', 'Huberman protocol', 'Naval Ravikant truth', 'contrarian wisdom', 'unpopular opinion'] },
+    ]},
+    { label: 'Emotional Mastery', sub: [
+      { label: 'Managing emotions', hooks: ['anger control hack', 'anxiety technique', 'overthinking cure', 'emotional regulation', 'stress response'] },
+      { label: 'Resilience', hooks: ['post-traumatic growth', 'anti-fragile mindset', 'failure fuel', 'bouncing back faster', 'mental toughness'] },
+      { label: 'Relationships & boundaries', hooks: ['people pleaser trap', 'toxic patterns', 'healthy detachment', 'saying no guilt-free', 'energy vampires'] },
     ]},
   ],
   scary_horror: [
@@ -334,6 +361,15 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Real encounters', hooks: ['security footage', 'multiple witnesses', 'police report filed', 'still unsolved', 'happened last week'] },
       { label: 'Creepy places', hooks: ['don\'t visit alone', 'banned from entering', 'locals won\'t talk', 'sounds at night', 'never explained'] },
     ]},
+    { label: 'Folklore & Legends', sub: [
+      { label: 'Urban legends', hooks: ['based on truth', 'origin story', 'local version', 'still reported', 'nobody goes there'] },
+      { label: 'Mythology creatures', hooks: ['sightings continue', 'cultural origins', 'worldwide pattern', 'physical evidence', 'native warnings'] },
+    ]},
+    { label: 'Psychological Horror', sub: [
+      { label: 'Sleep & dreams', hooks: ['sleep paralysis demon', 'recurring nightmare', 'lucid gone wrong', 'shared dream', 'premonition cases'] },
+      { label: 'Mind experiments', hooks: ['isolation effects', 'sensory deprivation', 'perception warped', 'reality questioned', 'subjects broke down'] },
+      { label: 'Doppelgangers', hooks: ['seen by family', 'photographed twice', 'historical cases', 'impossible encounter', 'crisis apparition'] },
+    ]},
   ],
   history_did_you_know: [
     { label: 'Hidden History', sub: [
@@ -343,6 +379,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Historical Figures', sub: [
       { label: 'Unsung heroes', hooks: ['never got credit', 'died unknown', 'saved thousands', 'ahead of their time', 'erased from history'] },
       { label: 'Controversial figures', hooks: ['dark secret', 'hidden past', 'double life', 'real story', 'myth vs reality'] },
+    ]},
+    { label: 'Wars & Conflicts', sub: [
+      { label: 'Turning points', hooks: ['one decision changed everything', 'nearly lost', 'secret weapon', 'intelligence failure', 'accidental victory'] },
+      { label: 'Untold stories', hooks: ['classified until now', 'soldiers testimony', 'civilian experience', 'forgotten front', 'what really happened'] },
+    ]},
+    { label: 'Ancient World', sub: [
+      { label: 'Empires', hooks: ['why they fell', 'peak power moment', 'forgotten empire', 'trade network', 'cultural legacy'] },
+      { label: 'Daily life', hooks: ['what they ate', 'how they lived', 'surprising modern', 'hygiene reality', 'social structure'] },
+      { label: 'Inventions', hooks: ['ahead of their time', 'reinvented centuries later', 'lost technology', 'accidental discovery', 'changed civilization'] },
+    ]},
+    { label: 'Historical Mysteries', sub: [
+      { label: 'Disappearances', hooks: ['vanished colony', 'missing ship', 'lost expedition', 'empty settlement', 'no trace found'] },
+      { label: 'Codes & secrets', hooks: ['still undeciphered', 'hidden message found', 'manuscript mystery', 'coded letter', 'spy network revealed'] },
     ]},
   ],
   true_crime: [
@@ -354,6 +403,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Forensic breakthroughs', hooks: ['one fingerprint', 'DNA match', 'digital trail', 'phone records', 'surveillance footage'] },
       { label: 'Wrongful convictions', hooks: ['innocent imprisoned', 'real killer found', 'confession recanted', 'evidence fabricated', 'years lost'] },
     ]},
+    { label: 'Notorious Criminals', sub: [
+      { label: 'Psychology of crime', hooks: ['what drove them', 'warning signs missed', 'childhood clues', 'escalation pattern', 'expert analysis'] },
+      { label: 'Heists & scams', hooks: ['nearly perfect plan', 'inside job', 'millions stolen', 'how they got caught', 'still missing'] },
+    ]},
+    { label: 'Missing Persons', sub: [
+      { label: 'Active cases', hooks: ['last seen here', 'someone knows something', 'new lead found', 'family plea', 'timeline reconstructed'] },
+      { label: 'Found alive', hooks: ['years later', 'different identity', 'escaped captor', 'memory returned', 'recognized on street'] },
+    ]},
+    { label: 'Crime & Technology', sub: [
+      { label: 'Digital forensics', hooks: ['deleted data recovered', 'GPS tracked them', 'social media exposed', 'dark web operation', 'encrypted messages cracked'] },
+      { label: 'Modern crime', hooks: ['AI-generated fraud', 'cryptocurrency laundering', 'deepfake evidence', 'cyber kidnapping', 'romance scam ring'] },
+      { label: 'Cold case tech', hooks: ['genealogy database match', 'facial reconstruction', 'satellite imagery', 'pollen analysis', 'spectral imaging'] },
+    ]},
   ],
   science_nature: [
     { label: 'Discoveries', sub: [
@@ -363,6 +425,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Nature', sub: [
       { label: 'Extreme weather', hooks: ['record breaking', 'climate shift', 'unprecedented', 'scientists alarmed', 'pattern emerging'] },
       { label: 'Evolution', hooks: ['happening now', 'rapid adaptation', 'unexpected mutation', 'survival strategy', 'arms race'] },
+    ]},
+    { label: 'Human Body', sub: [
+      { label: 'Brain science', hooks: ['rewires itself', 'consciousness mystery', 'memory manipulation', 'dream function', 'neural breakthrough'] },
+      { label: 'Genetic frontiers', hooks: ['gene editing live', 'inherited traits myth', 'DNA surprise', 'epigenetics proof', 'designer babies debate'] },
+    ]},
+    { label: 'Physics & Chemistry', sub: [
+      { label: 'Quantum world', hooks: ['defies logic', 'spooky action', 'observer effect real', 'teleportation progress', 'parallel universes'] },
+      { label: 'Materials science', hooks: ['stronger than steel', 'self-healing material', 'room temperature superconductor', 'impossible substance', 'graphene application'] },
+      { label: 'Energy breakthroughs', hooks: ['fusion milestone', 'battery revolution', 'solar record', 'nuclear renaissance', 'energy storage solved'] },
+    ]},
+    { label: 'Earth Science', sub: [
+      { label: 'Geology', hooks: ['supervolcano update', 'tectonic shift', 'core mystery', 'magnetic flip', 'earthquake prediction'] },
+      { label: 'Climate systems', hooks: ['tipping point reached', 'ocean current change', 'ice core reveal', 'carbon capture', 'geoengineering debate'] },
     ]},
   ],
   relationships_dating: [
@@ -374,6 +449,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'App culture', hooks: ['algorithm secrets', 'profile mistakes', 'swipe fatigue', 'paradox of choice', 'what works'] },
       { label: 'Communication', hooks: ['text decoding', 'mixed signals', 'vulnerability power', 'conflict resolution', 'emotional intelligence'] },
     ]},
+    { label: 'Long-Term Relationships', sub: [
+      { label: 'Marriage science', hooks: ['Gottman research', 'divorce predictor', 'repair attempt', 'emotional bid', 'contempt warning'] },
+      { label: 'Keeping connection', hooks: ['date night science', 'love language update', 'intimacy after kids', 'growing apart signs', 'rekindling spark'] },
+    ]},
+    { label: 'Breakups & Healing', sub: [
+      { label: 'Moving on', hooks: ['no-contact rule', 'rebound science', 'grief timeline', 'identity reclaiming', 'when to let go'] },
+      { label: 'Self-worth', hooks: ['codependency escape', 'boundaries saved me', 'alone vs lonely', 'healing timeline', 'choosing yourself'] },
+      { label: 'Toxic dynamics', hooks: ['trauma bonding explained', 'intermittent reinforcement', 'hoovering tactics', 'flying monkeys', 'grey rock method'] },
+    ]},
+    { label: 'Social Dynamics', sub: [
+      { label: 'Friendship', hooks: ['outgrowing people', 'friend audit', 'making friends as adult', 'quality over quantity', 'energy matching'] },
+      { label: 'Family relationships', hooks: ['setting boundaries', 'generational patterns', 'enmeshment escape', 'inner child work', 'reparenting yourself'] },
+    ]},
   ],
   health_fitness: [
     { label: 'Nutrition', sub: [
@@ -383,6 +471,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Exercise', sub: [
       { label: 'Training myths', hooks: ['cardio debate', 'overtraining signs', 'muscle confusion myth', 'stretching truth', 'rest days'] },
       { label: 'Transformations', hooks: ['30-day results', 'before and after', 'body recomposition', 'beginner gains', 'plateau breaking'] },
+    ]},
+    { label: 'Mental Health', sub: [
+      { label: 'Anxiety & stress', hooks: ['vagus nerve hack', 'cortisol control', 'nervous system reset', 'panic attack stop', 'breath technique'] },
+      { label: 'Sleep optimization', hooks: ['melatonin myth', 'sleep architecture', 'blue light truth', 'nap science', 'circadian reset'] },
+    ]},
+    { label: 'Longevity', sub: [
+      { label: 'Anti-aging science', hooks: ['biological age test', 'telomere research', 'fasting mimicking', 'zone 2 cardio', 'NAD+ truth'] },
+      { label: 'Biohacking', hooks: ['cold exposure data', 'sauna protocol', 'glucose monitoring', 'supplement stack', 'blood work decoded'] },
+      { label: 'Centenarian secrets', hooks: ['blue zone habits', 'Okinawa diet', 'Sardinia lifestyle', 'common denominator', 'what they avoid'] },
+    ]},
+    { label: 'Sports Medicine', sub: [
+      { label: 'Injury prevention', hooks: ['mobility routine', 'prehab beats rehab', 'joint protection', 'posture correction', 'desk worker fix'] },
+      { label: 'Recovery science', hooks: ['inflammation debate', 'ice bath evidence', 'compression therapy', 'active recovery', 'sleep for gains'] },
     ]},
   ],
   gaming_popculture: [
@@ -394,6 +495,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Movie/TV', hooks: ['detail you missed', 'fan theory proven', 'behind the scenes', 'deleted scene', 'actor secret'] },
       { label: 'Internet culture', hooks: ['meme origin', 'trend explained', 'drama breakdown', 'cancelled why', 'viral moment'] },
     ]},
+    { label: 'Game Design', sub: [
+      { label: 'Development stories', hooks: ['almost cancelled', 'crunch horror story', 'last-minute change', 'original concept', 'prototype leaked'] },
+      { label: 'Game mechanics', hooks: ['genius design choice', 'psychological trick', 'difficulty balance', 'RNG manipulation', 'reward loop'] },
+    ]},
+    { label: 'Anime & Manga', sub: [
+      { label: 'Deep dives', hooks: ['symbolism decoded', 'creator intended', 'foreshadowing genius', 'real-world inspiration', 'cultural context'] },
+      { label: 'Industry secrets', hooks: ['animator pay truth', 'production crisis', 'studio rivalry', 'censorship differences', 'localization changes'] },
+      { label: 'Versus debates', hooks: ['power scaling proof', 'canon confirmed', 'creator settled it', 'strongest character', 'fandom was wrong'] },
+    ]},
+    { label: 'Nostalgia & Retro', sub: [
+      { label: 'Gaming history', hooks: ['console war truth', 'failed hardware', 'forgotten classic', 'ahead of its time', 'killed by timing'] },
+      { label: 'Pop culture flashback', hooks: ['lost media found', 'childhood show secret', 'you forgot this existed', 'darker than remembered', 'hidden adult joke'] },
+    ]},
   ],
   conspiracy_mystery: [
     { label: 'Government', sub: [
@@ -403,6 +517,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Mysteries', sub: [
       { label: 'Unsolved', hooks: ['no explanation', 'defies physics', 'experts baffled', 'pattern discovered', 'new theory'] },
       { label: 'Ancient mysteries', hooks: ['impossible construction', 'lost technology', 'star alignment', 'underwater structures', 'encoded message'] },
+    ]},
+    { label: 'Secret Societies', sub: [
+      { label: 'Historical orders', hooks: ['still operating', 'member list leaked', 'initiation ritual', 'hidden symbols', 'power network'] },
+      { label: 'Modern elites', hooks: ['annual meeting', 'attendee list', 'agenda leaked', 'media blackout', 'policy connection'] },
+    ]},
+    { label: 'Corporate Conspiracies', sub: [
+      { label: 'Big pharma', hooks: ['suppressed cure', 'trial data hidden', 'pricing scandal', 'lobbying exposed', 'whistleblower testimony'] },
+      { label: 'Tech surveillance', hooks: ['listening confirmed', 'data collection scale', 'backdoor access', 'metadata reveals', 'opt-out impossible'] },
+      { label: 'Food industry', hooks: ['addictive by design', 'labeling loophole', 'funded study bias', 'ingredient banned elsewhere', 'lobbying power'] },
+    ]},
+    { label: 'Strange Phenomena', sub: [
+      { label: 'Mandela effect', hooks: ['mass misremembering', 'evidence both ways', 'timeline theory', 'new example found', 'reality glitch'] },
+      { label: 'Simulation theory', hooks: ['physicist argues', 'mathematical proof', 'glitch compiled', 'probability calculation', 'evidence mounting'] },
     ]},
   ],
   business_entrepreneur: [
@@ -414,6 +541,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Revenue models', hooks: ['hidden revenue stream', 'unit economics', 'pricing psychology', 'freemium trap', 'subscription math'] },
       { label: 'Growth tactics', hooks: ['viral loop', 'zero to one', 'first 100 customers', 'distribution hack', 'retention secret'] },
     ]},
+    { label: 'Leadership', sub: [
+      { label: 'Management styles', hooks: ['servant leadership', 'radical candor', 'micromanagement cost', 'remote team secrets', 'hiring framework'] },
+      { label: 'CEO lessons', hooks: ['fired then returned', 'culture over strategy', 'one decision changed everything', 'delegation failure', 'founder mode'] },
+    ]},
+    { label: 'Industry Disruption', sub: [
+      { label: 'Business models', hooks: ['killed the incumbent', 'zero to billion', 'marketplace flywheel', 'platform economics', 'bundling strategy'] },
+      { label: 'Future trends', hooks: ['AI replacing agencies', 'creator economy shift', 'solo operator rising', 'automation arbitrage', 'next trillion dollar'] },
+      { label: 'Case studies', hooks: ['what went wrong', 'perfect execution', 'timing was everything', 'underdog won', 'regulatory advantage'] },
+    ]},
+    { label: 'Personal Branding', sub: [
+      { label: 'Content strategy', hooks: ['LinkedIn algorithm', 'newsletter monetization', 'audience building', 'thought leadership', 'repurpose system'] },
+      { label: 'Monetization', hooks: ['audience to revenue', 'community model', 'digital product launch', 'consulting premium', 'course creation'] },
+    ]},
   ],
   food_cooking: [
     { label: 'Techniques', sub: [
@@ -423,6 +563,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Food Stories', sub: [
       { label: 'Origin stories', hooks: ['accidental invention', 'cultural fusion', 'war-time creation', 'street food history', 'banned ingredient'] },
       { label: 'Food science', hooks: ['why it tastes good', 'addictive ingredient', 'texture psychology', 'umami secret', 'fermentation magic'] },
+    ]},
+    { label: 'World Cuisine', sub: [
+      { label: 'Regional deep dives', hooks: ['authentic vs adapted', 'grandmother recipe', 'street food guide', 'local secret ingredient', 'regional rivalry'] },
+      { label: 'Fusion & trends', hooks: ['unexpected combo works', 'viral food trend', 'chef experiment', 'TikTok recipe test', 'food truck innovation'] },
+    ]},
+    { label: 'Kitchen Hacks', sub: [
+      { label: 'Time savers', hooks: ['one-pan method', 'meal prep system', 'freezer hack', 'batch cooking', '15-minute dinner'] },
+      { label: 'Equipment', hooks: ['tool you need', 'cheap vs expensive', 'game-changing gadget', 'cast iron care', 'knife skills basics'] },
+      { label: 'Ingredient swaps', hooks: ['healthier substitute', 'budget replacement', 'allergy-friendly', 'pantry staple magic', 'season extension'] },
+    ]},
+    { label: 'Food Industry', sub: [
+      { label: 'Restaurant secrets', hooks: ['markup exposed', 'menu psychology', 'kitchen reality', 'chef confession', 'Michelin politics'] },
+      { label: 'Food safety', hooks: ['what they hide', 'recall patterns', 'processing truth', 'label decoding', 'inspection failures'] },
     ]},
   ],
   travel_adventure: [
@@ -434,6 +587,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Budget hacks', hooks: ['exact costs', 'flight trick', 'accommodation hack', 'free experiences', 'money saved'] },
       { label: 'Cultural insights', hooks: ['don\'t do this', 'local custom', 'misunderstood culture', 'real experience', 'what tourists miss'] },
     ]},
+    { label: 'Extreme Travel', sub: [
+      { label: 'Adventure sports', hooks: ['adrenaline rush', 'near-death experience', 'hardest trek', 'survival challenge', 'bucket list extreme'] },
+      { label: 'Forbidden places', hooks: ['illegal to visit', 'restricted zone', 'abandoned city', 'military exclusion', 'permit impossible'] },
+    ]},
+    { label: 'Travel Stories', sub: [
+      { label: 'Gone wrong', hooks: ['stranded abroad', 'scam exposed', 'border nightmare', 'lost everything', 'emergency evacuation'] },
+      { label: 'Life-changing trips', hooks: ['quit my job after', 'perspective shift', 'unexpected connection', 'moved there permanently', 'changed everything'] },
+      { label: 'Solo travel', hooks: ['safety truth', 'loneliness myth', 'confidence builder', 'female solo tips', 'first trip guide'] },
+    ]},
+    { label: 'Geography & Nature', sub: [
+      { label: 'Natural wonders', hooks: ['formed over millions', 'only place on Earth', 'geological mystery', 'seasonal phenomenon', 'scale is unreal'] },
+      { label: 'Climate destinations', hooks: ['visit before gone', 'best time to go', 'weather window', 'off-season advantage', 'seasonal migration'] },
+    ]},
   ],
   psychology_mindblown: [
     { label: 'Cognitive Science', sub: [
@@ -443,6 +609,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Human Behavior', sub: [
       { label: 'Dark patterns', hooks: ['designed to manipulate', 'apps exploit this', 'advertising trick', 'social media hook', 'breaking free'] },
       { label: 'Body language', hooks: ['tells everything', 'liars do this', 'power signal', 'attraction sign', 'micro-expression'] },
+    ]},
+    { label: 'Social Psychology', sub: [
+      { label: 'Group dynamics', hooks: ['mob mentality trigger', 'bystander effect real', 'conformity pressure', 'authority obedience', 'groupthink disaster'] },
+      { label: 'Persuasion tactics', hooks: ['Cialdini principle', 'anchoring effect', 'scarcity illusion', 'reciprocity trap', 'commitment escalation'] },
+    ]},
+    { label: 'Neuroscience', sub: [
+      { label: 'Brain hacks', hooks: ['dopamine system gamed', 'neuroplasticity proof', 'memory palace works', 'attention hijacked', 'flow state trigger'] },
+      { label: 'Consciousness', hooks: ['hard problem unsolved', 'free will debate', 'split brain experiment', 'perception constructed', 'reality is filtered'] },
+      { label: 'Addiction science', hooks: ['reward pathway hijacked', 'phone addiction real', 'sugar vs cocaine study', 'habit loop biology', 'recovery neuroscience'] },
+    ]},
+    { label: 'Personality & Identity', sub: [
+      { label: 'Personality science', hooks: ['big five explained', 'MBTI debunked', 'dark triad signs', 'trait vs state', 'personality change proof'] },
+      { label: 'Self-deception', hooks: ['Dunning-Kruger reality', 'confirmation bias daily', 'motivated reasoning', 'hindsight illusion', 'narrative fallacy'] },
     ]},
   ],
   space_cosmos: [
@@ -454,6 +633,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Missions', hooks: ['still out there', 'lost contact', 'unexpected discovery', 'photos released', 'what they found'] },
       { label: 'Future', hooks: ['Mars colony timeline', 'warp drive theory', 'alien signal', 'space mining', 'generation ships'] },
     ]},
+    { label: 'Alien Life', sub: [
+      { label: 'Biosignatures', hooks: ['detected on moon', 'atmospheric anomaly', 'Fermi paradox update', 'habitable zone found', 'ocean world candidate'] },
+      { label: 'SETI & signals', hooks: ['unexplained signal', 'Wow signal update', 'technosignature search', 'laser communication', 'radio telescope find'] },
+    ]},
+    { label: 'Solar System', sub: [
+      { label: 'Planets & moons', hooks: ['hidden ocean confirmed', 'atmosphere surprise', 'ring system mystery', 'volcanic moon active', 'subsurface lake'] },
+      { label: 'Asteroids & comets', hooks: ['near miss alert', 'deflection test', 'composition surprise', 'mining target', 'origin clue'] },
+      { label: 'The Sun', hooks: ['solar storm warning', 'cycle prediction', 'coronal mystery', 'magnetic field flip', 'energy output change'] },
+    ]},
+    { label: 'Astrophysics', sub: [
+      { label: 'Black holes', hooks: ['information paradox', 'closest one found', 'merger detected', 'inside a black hole', 'Hawking radiation proof'] },
+      { label: 'Dark matter & energy', hooks: ['73% unknown', 'detection attempt', 'alternative theory', 'mapping the invisible', 'expansion accelerating'] },
+    ]},
   ],
   animals_wildlife: [
     { label: 'Animal Abilities', sub: [
@@ -463,6 +655,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Nature Stories', sub: [
       { label: 'Survival', hooks: ['against all odds', 'near extinction', 'comeback story', 'adaptation in action', 'last of its kind'] },
       { label: 'Symbiosis', hooks: ['unlikely partners', 'mutual dependence', 'cross-species bond', 'ecosystem role', 'removal catastrophe'] },
+    ]},
+    { label: 'Ocean Life', sub: [
+      { label: 'Deep sea creatures', hooks: ['just discovered', 'alien-like appearance', 'extreme adaptation', 'bioluminescent display', 'crushing depth survivor'] },
+      { label: 'Marine behavior', hooks: ['migration mystery', 'pod communication', 'hunting strategy', 'coral intelligence', 'whale culture'] },
+    ]},
+    { label: 'Animal vs Human', sub: [
+      { label: 'Senses & abilities', hooks: ['sees what we can\'t', 'predicts earthquakes', 'navigates magnetically', 'infrared vision', 'echolocation precision'] },
+      { label: 'Record holders', hooks: ['fastest on Earth', 'longest migration', 'deepest diver', 'strongest pound-for-pound', 'oldest living'] },
+      { label: 'Domestication', hooks: ['wolves to dogs', 'cat chose us', 'still wild inside', 'selective breeding cost', 'feral reversal'] },
+    ]},
+    { label: 'Conservation', sub: [
+      { label: 'Species at risk', hooks: ['functionally extinct', 'poaching crisis', 'habitat shrinking', 'population collapse', 'last one alive'] },
+      { label: 'Success stories', hooks: ['pulled from brink', 'rewilding works', 'population recovered', 'breeding program success', 'ecosystem restored'] },
     ]},
   ],
   sports_athletes: [
@@ -474,6 +679,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Rivalries', hooks: ['greatest rivalry', 'personal feud', 'head to head stats', 'mutual respect', 'final showdown'] },
       { label: 'Records & stats', hooks: ['impossible stat', 'never broken', 'closest ever', 'most dominant', 'statistical anomaly'] },
     ]},
+    { label: 'Sports Science', sub: [
+      { label: 'Performance', hooks: ['legal edge', 'altitude training', 'nutrition protocol', 'recovery tech', 'mental visualization'] },
+      { label: 'Physics of sport', hooks: ['perfect angle', 'spin explained', 'drag reduction', 'biomechanics secret', 'equipment evolution'] },
+    ]},
+    { label: 'Sports Business', sub: [
+      { label: 'Money in sports', hooks: ['contract breakdown', 'endorsement empire', 'team valuation', 'salary cap hack', 'draft economics'] },
+      { label: 'Controversy', hooks: ['doping scandal', 'referee scandal', 'corruption exposed', 'match fixing', 'cover-up revealed'] },
+      { label: 'Franchise stories', hooks: ['dynasty built', 'worst trade ever', 'rebuilding success', 'relocation drama', 'expansion impact'] },
+    ]},
+    { label: 'Underdog Stories', sub: [
+      { label: 'Cinderella runs', hooks: ['nobody gave them a chance', 'impossible bracket', 'amateur beats pro', 'smallest team won', 'dream season'] },
+      { label: 'Olympic moments', hooks: ['gold medal upset', 'national pride', 'political boycott', 'record shattered', 'emotional podium'] },
+    ]},
   ],
   education_learning: [
     { label: 'Misconceptions', sub: [
@@ -484,6 +702,19 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Explained simply', hooks: ['in 60 seconds', 'finally makes sense', 'one analogy', 'visual explanation', 'ELI5'] },
       { label: 'Hidden connections', hooks: ['two things connected', 'same principle', 'pattern revealed', 'never noticed', 'mind blown'] },
     ]},
+    { label: 'Language & Words', sub: [
+      { label: 'Etymology', hooks: ['word origin surprises', 'borrowed from where', 'meaning changed completely', 'dead language trace', 'slang became official'] },
+      { label: 'Communication', hooks: ['persuasion technique', 'rhetoric trick', 'argument fallacy', 'framing effect', 'word choice matters'] },
+    ]},
+    { label: 'Math & Logic', sub: [
+      { label: 'Math in real life', hooks: ['probability intuition wrong', 'statistics lie how', 'geometry in nature', 'algorithm decides', 'pattern everywhere'] },
+      { label: 'Paradoxes & puzzles', hooks: ['sounds impossible', 'logic breaks down', 'counterintuitive proof', 'unsolved problem', 'elegant solution'] },
+      { label: 'Critical thinking', hooks: ['logical fallacy spotted', 'correlation trap', 'survivorship bias', 'sample size matters', 'base rate neglect'] },
+    ]},
+    { label: 'Systems & Society', sub: [
+      { label: 'How things work', hooks: ['everyday thing explained', 'infrastructure hidden', 'supply chain exposed', 'system design genius', 'engineering marvel'] },
+      { label: 'Education systems', hooks: ['country comparison', 'outdated curriculum', 'alternative method', 'Finland model', 'self-taught proof'] },
+    ]},
   ],
   paranormal_ufo: [
     { label: 'UFO Sightings', sub: [
@@ -493,6 +724,19 @@ const TOPIC_SUGGESTIONS = {
     { label: 'Paranormal', sub: [
       { label: 'Evidence', hooks: ['caught on camera', 'scientific instrument', 'repeated at same location', 'multiple witnesses', 'thermal imaging'] },
       { label: 'Encounters', hooks: ['credible witness', 'military pilot', 'scientist report', 'documented case', 'physical evidence'] },
+    ]},
+    { label: 'Abductions & Contact', sub: [
+      { label: 'Abduction accounts', hooks: ['hypnosis regression', 'matching descriptions', 'physical marks', 'missing time', 'repeat experiencer'] },
+      { label: 'Close encounters', hooks: ['landing trace found', 'radiation detected', 'animal reaction', 'electromagnetic effects', 'ground marking'] },
+    ]},
+    { label: 'Cryptids & Creatures', sub: [
+      { label: 'Sighting reports', hooks: ['new footage analyzed', 'trail camera capture', 'sonar reading', 'footprint cast', 'DNA sample tested'] },
+      { label: 'Regional legends', hooks: ['indigenous knowledge', 'centuries of sightings', 'geographic pattern', 'habitat theory', 'seasonal appearance'] },
+      { label: 'Scientific investigation', hooks: ['zoologist involved', 'expedition mounted', 'environmental DNA', 'species possibility', 'fossil connection'] },
+    ]},
+    { label: 'Dimensional & Metaphysical', sub: [
+      { label: 'Interdimensional theory', hooks: ['portal evidence', 'dimensional bleed', 'physics allows it', 'repeating location', 'witness pattern'] },
+      { label: 'Psychic phenomena', hooks: ['remote viewing program', 'precognition study', 'telepathy experiment', 'CIA document', 'university research'] },
     ]},
   ],
 };
