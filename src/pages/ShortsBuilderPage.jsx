@@ -1300,7 +1300,7 @@ export default function ShortsBuilderPage() {
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
-                          onClick={() => handleSelectResearchTopic({ title: topic.title, summary: topic.description, story_context: topic.description })}
+                          onClick={() => handleSelectResearchTopic({ title: topic.title, summary: topic.summary || topic.description || '', story_context: topic.story_context || topic.summary || topic.description || '' })}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', flex: 1 }}>
@@ -1311,27 +1311,34 @@ export default function ShortsBuilderPage() {
                               borderRadius: '10px',
                               fontSize: '12px',
                               fontWeight: 700,
-                              backgroundColor: topic.trending >= 85 ? '#DCFCE7' : topic.trending >= 75 ? '#FEF3C7' : '#F3F4F6',
-                              color: topic.trending >= 85 ? '#166534' : topic.trending >= 75 ? '#92400E' : '#6B7280',
+                              backgroundColor: topic.trending_score === 'high' ? '#DCFCE7' : topic.trending_score === 'medium' ? '#FEF3C7' : '#F3F4F6',
+                              color: topic.trending_score === 'high' ? '#166534' : topic.trending_score === 'medium' ? '#92400E' : '#6B7280',
                               marginLeft: '12px',
                               whiteSpace: 'nowrap',
                             }}>
-                              {topic.trending}% trending
+                              {topic.trending_score || 'trending'}
                             </div>
                           </div>
                           <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px' }}>
-                            {topic.description}
+                            {topic.summary || topic.description || ''}
                           </div>
+                          {topic.angle && (
+                            <div style={{ fontSize: '12px', color: '#059669', marginBottom: '6px', fontWeight: 500 }}>
+                              Angle: {topic.angle}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', gap: '16px', fontSize: '11px' }}>
                             <span style={{
                               fontWeight: 500,
-                              color: topic.competition === 'Very Low' ? '#059669' : topic.competition === 'Low' ? '#10B981' : '#D97706',
+                              color: topic.competition_score === 'low' ? '#059669' : topic.competition_score === 'medium' ? '#D97706' : '#DC2626',
                             }}>
-                              Competition: {topic.competition}
+                              Competition: {topic.competition_score || topic.competition || '—'}
                             </span>
-                            <span style={{ color: '#9CA3AF' }}>
-                              Source: {topic.source}
-                            </span>
+                            {topic.why_viral && (
+                              <span style={{ color: '#7C3AED', fontWeight: 500 }}>
+                                {topic.why_viral}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
