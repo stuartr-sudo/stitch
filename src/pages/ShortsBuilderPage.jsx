@@ -649,6 +649,8 @@ export default function ShortsBuilderPage() {
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(null);
   const [generationComplete, setGenerationComplete] = useState(false);
+  const [generatedClips, setGeneratedClips] = useState([]);
+  const [finalVideoUrl, setFinalVideoUrl] = useState(null);
 
   // Script
   const [script, setScript] = useState(null);
@@ -2669,29 +2671,198 @@ export default function ShortsBuilderPage() {
                   marginTop: '24px',
                   transition: 'all 0.15s ease',
                 }}
-                onClick={() => {
+                onClick={async () => {
                   if (generating) return;
                   setGenerating(true);
                   setGenerationProgress({ step: 'Starting pipeline...', pct: 0 });
-                  // Simulate generation progress
-                  const steps = [
-                    { step: 'Generating starting images...', pct: 10 },
-                    { step: 'Scene 1: Generating video clip...', pct: 20 },
-                    { step: 'Scene 2: Extracting last frame + generating video...', pct: 35 },
-                    { step: 'Scene 3: Generating video clip...', pct: 50 },
-                    { step: 'Scene 4: Generating video clip...', pct: 65 },
-                    { step: 'Scene 5: Generating video clip...', pct: 75 },
-                    { step: 'Burning captions...', pct: 85 },
-                    { step: 'Assembling final video with FFmpeg...', pct: 92 },
-                    { step: 'Uploading to library...', pct: 98 },
-                  ];
-                  steps.forEach((s, i) => {
-                    setTimeout(() => setGenerationProgress(s), (i + 1) * 1500);
-                  });
-                  setTimeout(() => {
-                    setGenerating(false);
+                  setGeneratedClips([]);
+                  setFinalVideoUrl(null);
+
+                  const scenes = script?.scenes || [];
+                  const totalScenes = scenes.length;
+                  const clips = [];
+                  let previousSceneAnalysis = null;
+                  let lastFrameUrl = null;
+
+                  // Get the selected visual style promptText
+                  let stylePromptText = '';
+                  for (const cat of STYLE_CATEGORIES) {
+                    const found = cat.styles.find(s => s.value === selectedVisualStyle);
+                    if (found) { stylePromptText = found.promptText; break; }
+                  }
+
+                  // Get brand kit data if selected
+                  let brandStyleGuide = null;
+                  if (selectedBrandKit) {
+                    const bk = brandKits.find(b => b.id === selectedBrandKit);
+                    if (bk) {
+                      brandStyleGuide = {
+                        brand_name: bk.brand_name, visual_style_notes: bk.visual_style_notes,
+                        mood_atmosphere: bk.mood_atmosphere, lighting_prefs: bk.lighting_prefs,
+                        composition_style: bk.composition_style, ai_prompt_rules: bk.ai_prompt_rules,
+                        preferred_elements: bk.preferred_elements, prohibited_elements: bk.prohibited_elements,
+                        colors: bk.colors,
+                      };
+                    }
+                  }
+
+                  try {
+                    for (let i = 0; i < totalScenes; i++) {
+                      const scene = scenes[i];
+                      const pctBase = Math.round((i / totalScenes) * 85);
+
+                      // ── Step 1: Build cohesive prompt ──
+                      setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Building prompt...`, pct: pctBase });
+                      const promptRes = await apiFetch('/api/prompt/build-cohesive', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          tool: 'shorts',
+                          description: scene.visualDescription || scene.narration,
+                          style: stylePromptText,
+                          cameraDirection: scene.camera,
+                          mood: selectedMood,
+                          lighting: selectedLighting,
+                          brandStyleGuide,
+                          targetModel: selectedVideoModel,
+                          previousSceneAnalysis: i > 0 ? previousSceneAnalysis : undefined,
+                          nicheMood: NICHE_MUSIC_MOODS[selectedNiche],
+                          sceneIndex: i,
+                          totalScenes,
+                        }),
+                      });
+                      const promptData = await promptRes.json();
+                      if (promptData.error) throw new Error(`Prompt build failed: ${promptData.error}`);
+                      const cohesivePrompt = promptData.prompt;
+
+                      // ── Step 2: Generate or chain starting image ──
+                      let startImageUrl;
+                      if (i === 0 || continuityMode === 'exciting') {
+                        // Generate fresh starting image
+                        setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Generating image...`, pct: pctBase + 3 });
+                        const frameRes = await apiFetch('/api/workbench/generate-frame', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            prompt: cohesivePrompt,
+                            narration: scene.narration,
+                            image_model: selectedImageModel || 'fal_nano_banana',
+                            aspect_ratio: '9:16',
+                            scene_index: i,
+                            frame_type: 'start',
+                            niche: selectedNiche,
+                            visual_style_prompt: stylePromptText,
+                          }),
+                        });
+                        const frameData = await frameRes.json();
+                        if (frameData.error) throw new Error(`Image gen failed scene ${i + 1}: ${frameData.error}`);
+                        startImageUrl = frameData.image_url;
+                      } else {
+                        // Continuous mode: use last frame from previous scene
+                        startImageUrl = lastFrameUrl;
+                      }
+
+                      // ── Step 3: Generate video clip ──
+                      setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Generating video...`, pct: pctBase + 8 });
+                      const clipDuration = parseInt(scene.duration) || 6;
+                      const clipBody = {
+                        mode: videoGenMode === 'r2v' ? 'r2v' : 'i2v',
+                        video_model: selectedVideoModel || 'fal_veo3',
+                        start_frame_url: startImageUrl,
+                        motion_prompt: cohesivePrompt,
+                        duration: clipDuration,
+                        aspect_ratio: '9:16',
+                        scene_index: i,
+                        video_style: stylePromptText,
+                      };
+                      // R2V: pass element references
+                      // (TODO: wire reference image upload state)
+
+                      const clipRes = await apiFetch('/api/workbench/generate-clip', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(clipBody),
+                      });
+                      const clipData = await clipRes.json();
+                      if (clipData.error) throw new Error(`Video gen failed scene ${i + 1}: ${clipData.error}`);
+
+                      clips.push({
+                        url: clipData.video_url,
+                        duration: clipData.actual_duration || clipDuration,
+                      });
+                      setGeneratedClips([...clips]);
+
+                      // ── Step 4: Extract last frame + analyze for next scene ──
+                      if (i < totalScenes - 1) {
+                        setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Analyzing for continuity...`, pct: pctBase + 14 });
+
+                        // Use last_frame_url from clip response if available, otherwise extract
+                        lastFrameUrl = clipData.last_frame_url || null;
+
+                        // Analyze the video with Gemini for scene continuity
+                        try {
+                          const analysisRes = await apiFetch('/api/analyze/scene-continuity', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              video_url: clipData.video_url,
+                              scene_label: scene.label,
+                              next_scene_label: scenes[i + 1]?.label || 'Next scene',
+                              narration: scene.narration,
+                            }),
+                          });
+                          const analysisData = await analysisRes.json();
+                          previousSceneAnalysis = analysisData.analysis || '';
+                        } catch (analysisErr) {
+                          console.warn('Scene analysis failed (non-fatal):', analysisErr);
+                          previousSceneAnalysis = `Previous scene "${scene.label}": ${scene.narration}`;
+                        }
+                      }
+                    }
+
+                    // ── Assembly ──
+                    setGenerationProgress({ step: 'Assembling final video...', pct: 88 });
+                    const assembleRes = await apiFetch('/api/workbench/assemble', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        clips,
+                        voiceover_url: voiceoverUrl,
+                        music_url: musicUrl || null,
+                        music_volume: musicVolume / 100,
+                        sfx_url: sfxUrl || null,
+                        sfx_volume: 0.3,
+                        tts_duration: timingBlocks.reduce((sum, b) => sum + (b.clipDuration || 0), 0) || null,
+                        voice_speed: parseFloat(voiceSpeed),
+                        caption_config: noCaptions ? null : {
+                          font_name: captionStyle === 'news_ticker' ? 'Oswald' : captionStyle === 'karaoke_glow' ? 'Poppins' : 'Montserrat',
+                          font_size: captionStyle === 'news_ticker' ? 90 : captionStyle === 'karaoke_glow' ? 120 : 110,
+                          font_weight: 'bold',
+                          font_color: 'white',
+                          highlight_color: captionHighlight,
+                          stroke_width: captionStyle === 'news_ticker' ? 2 : 4,
+                          stroke_color: 'black',
+                          background_color: captionStyle === 'news_ticker' ? 'black' : 'none',
+                          background_opacity: captionStyle === 'news_ticker' ? 0.6 : 0,
+                          position: captionPosition,
+                          y_offset: captionPosition === 'top' ? 50 : 75,
+                          words_per_subtitle: captionStyle === 'news_ticker' ? 6 : captionStyle === 'word_highlight' ? 3 : 1,
+                          enable_animation: captionStyle !== 'news_ticker',
+                        },
+                      }),
+                    });
+                    const assembleData = await assembleRes.json();
+                    if (assembleData.error) throw new Error(`Assembly failed: ${assembleData.error}`);
+
+                    setFinalVideoUrl(assembleData.video_url);
+                    setGenerationProgress({ step: 'Complete!', pct: 100 });
                     setGenerationComplete(true);
-                  }, steps.length * 1500 + 500);
+                  } catch (err) {
+                    console.error('Generation pipeline failed:', err);
+                    setGenerationProgress({ step: `Error: ${err.message}`, pct: 0 });
+                  } finally {
+                    setGenerating(false);
+                  }
                 }}
                 disabled={generating}
               >
@@ -2740,21 +2911,13 @@ export default function ShortsBuilderPage() {
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                  <button
-                    style={{
-                      flex: 1,
-                      padding: '14px',
-                      borderRadius: '8px',
-                      border: '1px solid #111827',
-                      backgroundColor: '#FFFFFF',
-                      color: '#111827',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ▶ Preview Video
-                  </button>
+                  {finalVideoUrl && (
+                    <video
+                      controls
+                      src={finalVideoUrl}
+                      style={{ width: '100%', maxHeight: '400px', borderRadius: '8px', marginBottom: '12px', backgroundColor: '#000' }}
+                    />
+                  )}
                   <button
                     style={{
                       flex: 1,
@@ -2766,6 +2929,16 @@ export default function ShortsBuilderPage() {
                       fontSize: '14px',
                       fontWeight: 600,
                       cursor: 'pointer',
+                    }}
+                    onClick={async () => {
+                      if (!finalVideoUrl) return;
+                      try {
+                        await apiFetch('/api/library/save', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ url: finalVideoUrl, type: 'video', tags: ['shorts', selectedNiche] }),
+                        });
+                      } catch (err) { console.error('Save to library failed:', err); }
                     }}
                   >
                     Save to Library
