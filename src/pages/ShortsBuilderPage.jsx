@@ -270,10 +270,10 @@ const DEFAULT_TOPICS = [
 // ─── Wizard Step indicators ───────────────────────────────────────────────────
 const STEPS = [
   { num: 1, label: 'Script' },
-  { num: 2, label: 'Voice' },
+  { num: 2, label: 'Voice & Audio' },
   { num: 3, label: 'Visuals' },
-  { num: 4, label: 'Video' },
-  { num: 5, label: 'Assemble' },
+  { num: 4, label: 'Captions' },
+  { num: 5, label: 'Generate' },
 ];
 
 // ─── Styles (inline, no Tailwind dependency for core layout) ──────────────────
@@ -561,6 +561,9 @@ export default function ShortsBuilderPage() {
   const [timingGenerated, setTimingGenerated] = useState(false);
   const [timingLoading, setTimingLoading] = useState(false);
 
+  // Step 1 extra
+  const [selectedBrandKit, setSelectedBrandKit] = useState(null);
+
   // Step 3 state
   const [continuityMode, setContinuityMode] = useState('continuous');
   const [videoGenMode, setVideoGenMode] = useState('i2v');
@@ -569,6 +572,18 @@ export default function ShortsBuilderPage() {
   const [selectedLighting, setSelectedLighting] = useState(null);
   const [selectedMood, setSelectedMood] = useState(null);
   const [visualIntensity, setVisualIntensity] = useState(6);
+
+  // Step 4 state
+  const [captionStyle, setCaptionStyle] = useState('word_pop');
+  const [captionPosition, setCaptionPosition] = useState('bottom');
+  const [captionColor, setCaptionColor] = useState('white');
+  const [captionHighlight, setCaptionHighlight] = useState('yellow');
+  const [noCaptions, setNoCaptions] = useState(false);
+
+  // Step 5 state
+  const [generating, setGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(null);
+  const [generationComplete, setGenerationComplete] = useState(false);
 
   // Dummy script for wireframe
   const [script, setScript] = useState(null);
@@ -1059,6 +1074,54 @@ export default function ShortsBuilderPage() {
                       Uses vivid, cinematic visual descriptions and narrative techniques — but keeps all facts accurate. No fabrication or hallucination.
                     </div>
                   </div>
+                </div>
+              </>
+            )}
+
+            {/* ── Brand Kit (Optional) ── */}
+            {selectedFramework && (
+              <>
+                <div style={styles.sectionTitle}>Brand Kit (Optional)</div>
+                <div style={styles.sectionSubtitle}>
+                  Apply brand guidelines to all generation — images, video, voice tone, and captions.
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: selectedBrandKit === null ? '2px solid #111827' : '1px solid #E5E7EB',
+                      backgroundColor: selectedBrandKit === null ? '#F9FAFB' : '#FFFFFF',
+                      cursor: 'pointer',
+                      flex: '0 0 auto',
+                    }}
+                    onClick={() => setSelectedBrandKit(null)}
+                  >
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>No Brand Kit</div>
+                    <div style={{ fontSize: '11px', color: '#6B7280' }}>Generate without brand constraints</div>
+                  </div>
+                  {/* Dummy brand kits for wireframe */}
+                  {[
+                    { id: 'bk_1', name: 'SEWO', desc: 'Tech brand, blue/white, modern clean' },
+                    { id: 'bk_2', name: 'Assureful', desc: 'Insurance, green/navy, professional' },
+                    { id: 'bk_3', name: 'Client Brand', desc: 'Custom brand kit' },
+                  ].map(bk => (
+                    <div
+                      key={bk.id}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: selectedBrandKit === bk.id ? '2px solid #111827' : '1px solid #E5E7EB',
+                        backgroundColor: selectedBrandKit === bk.id ? '#F9FAFB' : '#FFFFFF',
+                        cursor: 'pointer',
+                        flex: 1,
+                      }}
+                      onClick={() => setSelectedBrandKit(bk.id)}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{bk.name}</div>
+                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{bk.desc}</div>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -2079,18 +2142,391 @@ export default function ShortsBuilderPage() {
           </>
         )}
         {currentStep === 4 && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#9CA3AF' }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🎬</div>
-            <div style={{ fontSize: '16px', fontWeight: 500 }}>Step 4: Video</div>
-            <div style={{ fontSize: '13px', marginTop: '4px' }}>Awaiting your spec</div>
-          </div>
+          <>
+            {/* ── No Captions Toggle ── */}
+            <div style={styles.toggleRow}>
+              <button
+                style={styles.toggle(noCaptions)}
+                onClick={() => setNoCaptions(!noCaptions)}
+              >
+                <div style={styles.toggleDot(noCaptions)} />
+              </button>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: '#111827' }}>No Captions</div>
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                  Skip captions/subtitles entirely.
+                </div>
+              </div>
+            </div>
+
+            {!noCaptions && (
+              <>
+                {/* ── Caption Style ── */}
+                <div style={styles.sectionTitle}>Caption Style</div>
+                <div style={styles.sectionSubtitle}>
+                  How captions appear on screen. Uses FAL auto-subtitle engine.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { id: 'word_pop', name: 'Word Pop', desc: 'Bold single words, yellow highlight, Montserrat', font: 'Montserrat', highlight: 'yellow', words: 1 },
+                    { id: 'karaoke_glow', name: 'Karaoke Glow', desc: 'Glowing single words, green highlight, Poppins', font: 'Poppins', highlight: 'green', words: 1 },
+                    { id: 'word_highlight', name: 'Subtle Highlight', desc: '3-word groups, purple highlight, clean', font: 'Montserrat', highlight: 'purple', words: 3 },
+                    { id: 'news_ticker', name: 'News Ticker', desc: '6-word lines, red highlight, dark background bar', font: 'Oswald', highlight: 'red', words: 6 },
+                  ].map(style => (
+                    <div
+                      key={style.id}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '8px',
+                        border: captionStyle === style.id ? '2px solid #111827' : '1px solid #E5E7EB',
+                        backgroundColor: captionStyle === style.id ? '#F9FAFB' : '#FFFFFF',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                      }}
+                      onClick={() => {
+                        setCaptionStyle(style.id);
+                        setCaptionHighlight(style.highlight);
+                      }}
+                    >
+                      {/* Mini preview */}
+                      <div style={{
+                        width: '120px',
+                        height: '60px',
+                        borderRadius: '6px',
+                        backgroundColor: '#111827',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        paddingBottom: '8px',
+                        flexShrink: 0,
+                      }}>
+                        <span style={{
+                          fontFamily: style.font,
+                          fontSize: style.words > 3 ? '9px' : '12px',
+                          fontWeight: 700,
+                          color: '#FFFFFF',
+                          padding: style.id === 'news_ticker' ? '2px 6px' : '0',
+                          backgroundColor: style.id === 'news_ticker' ? 'rgba(0,0,0,0.6)' : 'transparent',
+                          borderRadius: '2px',
+                        }}>
+                          <span style={{ color: style.highlight }}>
+                            {style.words === 1 ? 'WORD' : style.words === 3 ? 'three word group' : 'full sentence of caption text'}
+                          </span>
+                        </span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{style.name}</div>
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>{style.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Caption Position ── */}
+                <div style={styles.sectionTitle}>Position</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['top', 'center', 'bottom'].map(pos => (
+                    <span
+                      key={pos}
+                      style={styles.hookChip(captionPosition === pos)}
+                      onClick={() => setCaptionPosition(pos)}
+                    >
+                      {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                    </span>
+                  ))}
+                </div>
+
+                {/* ── Caption Colors ── */}
+                <div style={styles.sectionTitle}>Highlight Color</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[
+                    { name: 'Yellow', color: '#EAB308' },
+                    { name: 'Green', color: '#22C55E' },
+                    { name: 'Purple', color: '#A855F7' },
+                    { name: 'Red', color: '#EF4444' },
+                    { name: 'Blue', color: '#3B82F6' },
+                    { name: 'White', color: '#FFFFFF' },
+                    { name: 'Orange', color: '#F97316' },
+                  ].map(c => (
+                    <div
+                      key={c.name}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        backgroundColor: c.color,
+                        border: captionHighlight === c.name.toLowerCase() ? '3px solid #111827' : '2px solid #E5E7EB',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setCaptionHighlight(c.name.toLowerCase())}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+
+                {/* ── Caption Preview ── */}
+                <div style={{
+                  marginTop: '16px',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  backgroundColor: '#111827',
+                  textAlign: 'center',
+                  position: 'relative',
+                  height: '160px',
+                  display: 'flex',
+                  alignItems: captionPosition === 'top' ? 'flex-start' : captionPosition === 'center' ? 'center' : 'flex-end',
+                  justifyContent: 'center',
+                  paddingTop: captionPosition === 'top' ? '20px' : '0',
+                  paddingBottom: captionPosition === 'bottom' ? '20px' : '0',
+                }}>
+                  <div style={{
+                    fontWeight: 700,
+                    fontSize: '18px',
+                    color: '#FFFFFF',
+                    padding: captionStyle === 'news_ticker' ? '4px 12px' : '0',
+                    backgroundColor: captionStyle === 'news_ticker' ? 'rgba(0,0,0,0.6)' : 'transparent',
+                    borderRadius: '4px',
+                    textShadow: captionStyle !== 'news_ticker' ? '2px 2px 4px rgba(0,0,0,0.8)' : 'none',
+                  }}>
+                    This is how your <span style={{ color: captionHighlight }}>{captionStyle === 'word_pop' ? 'CAPTIONS' : 'captions will'}</span> look
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Continue to Step 5 */}
+            <button
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#111827',
+                color: '#FFFFFF',
+                fontSize: '15px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: '24px',
+              }}
+              onClick={() => { setCurrentStep(5); window.scrollTo(0, 0); }}
+            >
+              Continue to Step 5: Generate
+            </button>
+          </>
         )}
+
         {currentStep === 5 && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#9CA3AF' }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏁</div>
-            <div style={{ fontSize: '16px', fontWeight: 500 }}>Step 5: Assemble</div>
-            <div style={{ fontSize: '13px', marginTop: '4px' }}>Awaiting your spec</div>
-          </div>
+          <>
+            {/* ── Configuration Summary ── */}
+            <div style={styles.sectionTitle}>Configuration Summary</div>
+            <div style={styles.sectionSubtitle}>Review everything before generating.</div>
+
+            <div style={{
+              padding: '20px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#FFFFFF',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              fontSize: '13px',
+            }}>
+              <div>
+                <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Script</div>
+                <div style={{ color: '#111827' }}>Niche: <strong>{NICHES.find(n => n.id === selectedNiche)?.name || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Framework: <strong>{FRAMEWORKS.find(f => f.id === selectedFramework)?.name || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Topic: <strong>{script?.topic || customTopic || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Creative Mode: <strong>{creativeMode ? 'On' : 'Off'}</strong></div>
+                <div style={{ color: '#111827' }}>Brand Kit: <strong>{selectedBrandKit || 'None'}</strong></div>
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Voice & Audio</div>
+                <div style={{ color: '#111827' }}>Voice: <strong>{noVoice ? 'No voiceover' : `${selectedVoice || '—'} (${voiceProvider})`}</strong></div>
+                <div style={{ color: '#111827' }}>Style: <strong>{voiceStyle || 'Custom'}</strong></div>
+                <div style={{ color: '#111827' }}>Speed: <strong>{voiceSpeed}x</strong></div>
+                <div style={{ color: '#111827' }}>Music: <strong>{musicMood || '—'}</strong> at {musicVolume}%</div>
+                <div style={{ color: '#111827' }}>SFX: <strong>{sfxEnabled ? 'On (auto-niche)' : 'Off'}</strong></div>
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Visuals</div>
+                <div style={{ color: '#111827' }}>Continuity: <strong>{continuityMode === 'exciting' ? 'Exciting' : 'Continuous'}</strong></div>
+                <div style={{ color: '#111827' }}>Mode: <strong>{videoGenMode === 'r2v' ? 'R2V (Character)' : 'I2V'}</strong></div>
+                <div style={{ color: '#111827' }}>Model: <strong>{selectedVideoModel || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Style: <strong>{selectedVisualStyle || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Lighting: <strong>{selectedLighting || '—'}</strong> | Mood: <strong>{selectedMood || '—'}</strong></div>
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Captions</div>
+                <div style={{ color: '#111827' }}>Style: <strong>{noCaptions ? 'No captions' : captionStyle}</strong></div>
+                <div style={{ color: '#111827' }}>Position: <strong>{captionPosition}</strong></div>
+                <div style={{ color: '#111827' }}>Highlight: <strong>{captionHighlight}</strong></div>
+              </div>
+            </div>
+
+            {/* ── Scenes Overview ── */}
+            <div style={styles.sectionTitle}>Scenes ({script?.scenes?.length || 7})</div>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {(script?.scenes || Array.from({ length: 7 }, (_, i) => ({ label: `Scene ${i + 1}` }))).map((scene, i) => (
+                <div key={i} style={{
+                  minWidth: '100px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #E5E7EB',
+                  backgroundColor: '#FFFFFF',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}>
+                  <div style={{ fontSize: '20px', marginBottom: '4px' }}>🎬</div>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#111827' }}>{scene.label}</div>
+                  <div style={{ fontSize: '10px', color: '#9CA3AF' }}>5-6s</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Generate Button ── */}
+            {!generationComplete && (
+              <button
+                style={{
+                  width: '100%',
+                  padding: '18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: generating ? '#6B7280' : '#111827',
+                  color: '#FFFFFF',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  cursor: generating ? 'default' : 'pointer',
+                  marginTop: '24px',
+                  transition: 'all 0.15s ease',
+                }}
+                onClick={() => {
+                  if (generating) return;
+                  setGenerating(true);
+                  setGenerationProgress({ step: 'Starting pipeline...', pct: 0 });
+                  // Simulate generation progress
+                  const steps = [
+                    { step: 'Generating starting images...', pct: 10 },
+                    { step: 'Scene 1: Generating video clip...', pct: 20 },
+                    { step: 'Scene 2: Extracting last frame + generating video...', pct: 35 },
+                    { step: 'Scene 3: Generating video clip...', pct: 50 },
+                    { step: 'Scene 4: Generating video clip...', pct: 65 },
+                    { step: 'Scene 5: Generating video clip...', pct: 75 },
+                    { step: 'Burning captions...', pct: 85 },
+                    { step: 'Assembling final video with FFmpeg...', pct: 92 },
+                    { step: 'Uploading to library...', pct: 98 },
+                  ];
+                  steps.forEach((s, i) => {
+                    setTimeout(() => setGenerationProgress(s), (i + 1) * 1500);
+                  });
+                  setTimeout(() => {
+                    setGenerating(false);
+                    setGenerationComplete(true);
+                  }, steps.length * 1500 + 500);
+                }}
+                disabled={generating}
+              >
+                {generating ? 'Generating...' : 'Generate Short'}
+              </button>
+            )}
+
+            {/* ── Progress ── */}
+            {generating && generationProgress && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280' }}>{generationProgress.step}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{generationProgress.pct}%</span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '3px', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${generationProgress.pct}%`,
+                    backgroundColor: '#111827',
+                    borderRadius: '3px',
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* ── Completion ── */}
+            {generationComplete && (
+              <>
+                <div style={{
+                  padding: '24px',
+                  borderRadius: '8px',
+                  border: '1px solid #DCFCE7',
+                  backgroundColor: '#F0FDF4',
+                  marginTop: '24px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '8px' }}>✅</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#166534', marginBottom: '4px' }}>
+                    Short Generated Successfully
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#15803D' }}>
+                    {script?.scenes?.length || 7} scenes | {selectedVideoModel} | {selectedVisualStyle} | {captionStyle}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                  <button
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      borderRadius: '8px',
+                      border: '1px solid #111827',
+                      backgroundColor: '#FFFFFF',
+                      color: '#111827',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ▶ Preview Video
+                  </button>
+                  <button
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: '#111827',
+                      color: '#FFFFFF',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Save to Library
+                  </button>
+                </div>
+
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    border: '2px solid #7C3AED',
+                    backgroundColor: '#F5F3FF',
+                    color: '#7C3AED',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: '8px',
+                  }}
+                >
+                  Save Configuration as Flow Template
+                </button>
+
+                <div style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>
+                  Saving as a Flow template lets you re-run this exact configuration with different topics automatically.
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
