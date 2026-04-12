@@ -7,6 +7,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { STYLE_CATEGORIES } from '@/lib/stylePresets';
 
 // ─── Static data: 20 Niches ───────────────────────────────────────────────────
 const NICHES = [
@@ -33,178 +34,240 @@ const NICHES = [
 ];
 
 // ─── Static data: Frameworks ──────────────────────────────────────────────────
-// These are REAL structural frameworks — each defines scene beats, duration, pacing.
+// Each defines scene beats with baked-in camera directions per scene.
 // Avatar Mode is a framework, not an add-on.
+// niches: null = universal (shown for all niches), array = niche-specific only.
 const FRAMEWORKS = [
-  // Universal frameworks
-  {
-    id: 'personal_journey', name: 'Personal Journey', category: 'story',
-    niches: null, // null = universal, available to all niches
+  // ── Universal ──
+  { id: 'personal_journey', name: 'Personal Journey', category: 'story', niches: null,
     description: 'First-person narrative arc — transformative experience with emotional beats.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['Setup', 'Inciting Moment', 'Struggle', 'Turning Point', 'Resolution'],
+    duration: '30-35s', sceneCount: '5-6 scenes',
+    scenes: [
+      { label: 'Setup', camera: 'Medium close-up, eye level, slow push in' },
+      { label: 'Inciting Moment', camera: 'Close-up, slight low angle, steady' },
+      { label: 'Struggle', camera: 'Handheld drift, medium shot, desaturated' },
+      { label: 'Turning Point', camera: 'Wide to close-up rack focus' },
+      { label: 'Resolution', camera: 'Slow dolly out, warm grade, soft focus' },
+    ],
   },
-  {
-    id: 'origin_story', name: 'Origin Story', category: 'story',
-    niches: null,
+  { id: 'origin_story', name: 'Origin Story', category: 'story', niches: null,
     description: 'Humble beginnings and rise of a brand, person, or idea.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['Humble Beginning', 'The Spark', 'First Attempt', 'Breakthrough', 'Where They Are Now'],
+    duration: '30-35s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Humble Beginning', camera: 'Wide establishing, muted tones' },
+      { label: 'The Spark', camera: 'Close-up detail shot, sharp focus' },
+      { label: 'First Attempt', camera: 'Medium shot, handheld energy' },
+      { label: 'Breakthrough', camera: 'Dynamic low angle, push in' },
+      { label: 'Where They Are Now', camera: 'Wide cinematic, warm grade' },
+    ],
   },
-  {
-    id: 'mini_documentary', name: 'Mini Documentary', category: 'story',
-    niches: null,
+  { id: 'mini_documentary', name: 'Mini Documentary', category: 'story', niches: null,
     description: 'Authoritative deep-dive with cold open hook and measured pacing.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['Cold Open', 'Context', 'Deep Dive', 'Key Insight', 'Resolution'],
+    duration: '30-35s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Cold Open', camera: 'Tight close-up, dramatic lighting' },
+      { label: 'Context', camera: 'Medium shot, documentary framing' },
+      { label: 'Deep Dive', camera: 'Slow pan across details' },
+      { label: 'Key Insight', camera: 'Close-up, direct to camera' },
+      { label: 'Resolution', camera: 'Wide pull-back, reflective' },
+    ],
   },
-  {
-    id: 'explainer', name: 'Explainer', category: 'educational',
-    niches: null,
+  { id: 'explainer', name: 'Explainer', category: 'educational', niches: null,
     description: 'Clear teacher-like walkthrough of a mechanism or process.',
-    duration: '30-60s', sceneCount: '4-5 scenes',
-    scenes: ['Hook Question', 'Simple Explanation', 'Visual Example', 'Takeaway'],
+    duration: '25-30s', sceneCount: '4-5 scenes',
+    scenes: [
+      { label: 'Hook Question', camera: 'Close-up, curious angle' },
+      { label: 'Simple Explanation', camera: 'Medium shot, clean background' },
+      { label: 'Visual Example', camera: 'Top-down or diagram view' },
+      { label: 'Takeaway', camera: 'Direct to camera, steady' },
+    ],
   },
-  {
-    id: 'myth_busting', name: 'Myth Busting', category: 'educational',
-    niches: null,
+  { id: 'myth_busting', name: 'Myth Busting', category: 'educational', niches: null,
     description: 'Debunk popular misconceptions with confident energy.',
-    duration: '30-60s', sceneCount: '4-6 scenes',
-    scenes: ['The Myth', 'Why People Believe It', 'The Truth', 'Proof', 'Mind Blown'],
+    duration: '25-30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'The Myth', camera: 'Medium shot, warm lighting, trustworthy framing' },
+      { label: 'Why People Believe It', camera: 'Close-up details, soft focus' },
+      { label: 'The Truth', camera: 'Direct to camera, sharp, higher contrast' },
+      { label: 'Proof', camera: 'Close-up evidence shots, clinical' },
+      { label: 'Mind Blown', camera: 'Wide dramatic reveal, bold angle' },
+    ],
   },
-  {
-    id: 'top_countdown', name: 'Top X Countdown', category: 'listicle',
-    niches: null,
+  { id: 'top_countdown', name: 'Top X Countdown', category: 'listicle', niches: null,
     description: 'Ranked list building anticipation toward #1.',
-    duration: '60-90s', sceneCount: '5-8 scenes',
-    scenes: ['Tease #1', 'Entry X', 'Entry X-1', '...', 'The #1 Reveal'],
+    duration: '30-35s', sceneCount: '6 scenes',
+    scenes: [
+      { label: 'Tease #1', camera: 'Quick cuts, mystery angle' },
+      { label: 'Entry 5', camera: 'Medium shot, steady' },
+      { label: 'Entry 4', camera: 'Slightly tighter framing' },
+      { label: 'Entry 3', camera: 'Close-up, building tension' },
+      { label: 'Entry 2', camera: 'Dynamic angle, energy building' },
+      { label: '#1 Reveal', camera: 'Epic wide or dramatic close-up' },
+    ],
   },
-  {
-    id: 'before_after', name: 'Before & After', category: 'story',
-    niches: null,
+  { id: 'before_after', name: 'Before & After', category: 'story', niches: null,
     description: 'Transformation story — the journey from A to B.',
-    duration: '30-60s', sceneCount: '4-5 scenes',
-    scenes: ['The Before', 'The Catalyst', 'The Process', 'The After'],
+    duration: '25-30s', sceneCount: '4 scenes',
+    scenes: [
+      { label: 'The Before', camera: 'Flat lighting, desaturated, steady' },
+      { label: 'The Catalyst', camera: 'Close-up moment, sharp focus' },
+      { label: 'The Process', camera: 'Time-lapse style, medium shots' },
+      { label: 'The After', camera: 'Bright, warm, wide triumphant shot' },
+    ],
   },
-  {
-    id: 'hot_take', name: 'Hot Take', category: 'opinion',
-    niches: null,
+  { id: 'hot_take', name: 'Hot Take', category: 'opinion', niches: null,
     description: 'Bold opinion delivered with confidence — drives comments and shares.',
-    duration: '30-60s', sceneCount: '4-5 scenes',
-    scenes: ['The Statement', 'Why I Believe This', 'The Evidence', 'The Challenge'],
+    duration: '25-30s', sceneCount: '4 scenes',
+    scenes: [
+      { label: 'The Statement', camera: 'Tight close-up, direct eye contact' },
+      { label: 'Why I Believe This', camera: 'Medium shot, confident posture' },
+      { label: 'The Evidence', camera: 'Cut-away evidence shots' },
+      { label: 'The Challenge', camera: 'Return to close-up, lean in' },
+    ],
   },
-  {
-    id: 'comparison', name: 'Comparison / Versus', category: 'educational',
-    niches: null,
-    description: 'Side-by-side comparison of two things — clear winner at the end.',
-    duration: '30-60s', sceneCount: '4-6 scenes',
-    scenes: ['Introduce Both', 'Criteria 1', 'Criteria 2', 'Criteria 3', 'Verdict'],
-  },
-  {
-    id: 'did_you_know', name: 'Did You Know?', category: 'educational',
-    niches: null,
+  { id: 'did_you_know', name: 'Did You Know?', category: 'educational', niches: null,
     description: 'Curiosity-driven explanation that subverts common assumptions.',
-    duration: '30-60s', sceneCount: '3-5 scenes',
-    scenes: ['The Question', 'The Surprising Answer', 'Why It Matters'],
+    duration: '20-25s', sceneCount: '3 scenes',
+    scenes: [
+      { label: 'The Question', camera: 'Close-up, intrigued expression' },
+      { label: 'The Surprising Answer', camera: 'Wide reveal or visual proof' },
+      { label: 'Why It Matters', camera: 'Medium shot, direct delivery' },
+    ],
   },
-  {
-    id: 'avatar_narrator', name: 'Avatar Narrator', category: 'avatar',
-    niches: null,
-    description: 'AI avatar presents to camera — talking head with B-roll cutaways. Personal, direct delivery.',
-    duration: '30-90s', sceneCount: '4-7 scenes',
-    scenes: ['Avatar Hook', 'Main Point', 'Supporting Detail', 'B-Roll Moment', 'Avatar Close'],
+  { id: 'avatar_narrator', name: 'Avatar Narrator', category: 'avatar', niches: null,
+    description: 'AI avatar presents to camera — talking head with B-roll cutaways.',
+    duration: '30-35s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Avatar Hook', camera: 'Medium close-up, eye level, avatar centered' },
+      { label: 'Main Point', camera: 'Same framing, slight push in' },
+      { label: 'B-Roll Cutaway', camera: 'Full-screen visual, cinematic' },
+      { label: 'Supporting Detail', camera: 'Return to avatar, medium shot' },
+      { label: 'Avatar Close', camera: 'Close-up, direct CTA delivery' },
+    ],
   },
-  {
-    id: 'avatar_split_screen', name: 'Avatar Split Screen', category: 'avatar',
-    niches: null,
-    description: 'Avatar on one side, visuals on the other — presentation style delivery.',
-    duration: '30-90s', sceneCount: '4-7 scenes',
-    scenes: ['Avatar Intro', 'Visual + Commentary', 'Key Point', 'Visual + Commentary', 'Avatar CTA'],
+  { id: 'avatar_split_screen', name: 'Avatar Split Screen', category: 'avatar', niches: null,
+    description: 'Avatar on one side, visuals on the other — presentation style.',
+    duration: '30-35s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Avatar Intro', camera: 'Split: avatar left, title card right' },
+      { label: 'Visual + Commentary', camera: 'Split: avatar left, visual right' },
+      { label: 'Key Point', camera: 'Full-screen visual emphasis' },
+      { label: 'Visual + Commentary', camera: 'Split: avatar left, data right' },
+      { label: 'Avatar CTA', camera: 'Full avatar, close-up, direct' },
+    ],
   },
-  // Niche-specific frameworks
-  {
-    id: 'breaking_tech_news', name: 'Breaking Tech News', category: 'news',
-    niches: ['ai_tech_news'],
+  // ── Niche-specific ──
+  { id: 'breaking_tech_news', name: 'Breaking Tech News', category: 'news', niches: ['ai_tech_news'],
     description: 'Fast-paced tech announcement with urgency and authority.',
-    duration: '30-60s', sceneCount: '5-6 scenes',
-    scenes: ['Breaking Hook', 'What Happened', 'Why It Matters', 'Impact', 'What\'s Next'],
+    duration: '25-30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Breaking Hook', camera: 'Tight close-up, urgent framing' },
+      { label: 'What Happened', camera: 'Medium shot, news-style' },
+      { label: 'Why It Matters', camera: 'Close-up, direct to camera' },
+      { label: 'Impact', camera: 'Wide contextual shot' },
+      { label: 'What\'s Next', camera: 'Medium, forward-looking energy' },
+    ],
   },
-  {
-    id: 'ai_tool_review', name: 'AI Tool Review', category: 'review',
-    niches: ['ai_tech_news'],
+  { id: 'ai_tool_review', name: 'AI Tool Review', category: 'review', niches: ['ai_tech_news'],
     description: 'Quick hands-on look at a new AI tool — what it does, demo, verdict.',
-    duration: '60s', sceneCount: '5 scenes',
-    scenes: ['Hook', 'What It Does', 'Demo', 'Pros & Cons', 'Verdict'],
+    duration: '30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Hook', camera: 'Screen recording or product shot' },
+      { label: 'What It Does', camera: 'Medium explanatory shot' },
+      { label: 'Demo', camera: 'Screen capture, top-down' },
+      { label: 'Pros & Cons', camera: 'Split comparison framing' },
+      { label: 'Verdict', camera: 'Close-up, direct delivery' },
+    ],
   },
-  {
-    id: 'tech_demo_walkthrough', name: 'Tech Demo Walkthrough', category: 'educational',
-    niches: ['ai_tech_news'],
-    description: 'Step-by-step demo of a technology with visual anchors.',
-    duration: '60s', sceneCount: '5 scenes',
-    scenes: ['What We\'re Building', 'Step 1', 'Step 2', 'Result', 'Takeaway'],
-  },
-  {
-    id: 'wealth_blueprint', name: 'Wealth Blueprint', category: 'strategy',
-    niches: ['finance_money'],
+  { id: 'wealth_blueprint', name: 'Wealth Blueprint', category: 'strategy', niches: ['finance_money'],
     description: 'Step-by-step money strategy — actionable and specific.',
-    duration: '60s', sceneCount: '5-6 scenes',
-    scenes: ['Hook Stat', 'The Strategy', 'Step 1', 'Step 2', 'Step 3', 'Result'],
+    duration: '30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Hook Stat', camera: 'Bold number graphic, tight frame' },
+      { label: 'The Strategy', camera: 'Medium shot, confident delivery' },
+      { label: 'Step 1', camera: 'Close-up detail shot' },
+      { label: 'Step 2', camera: 'Medium, visual demonstration' },
+      { label: 'Result', camera: 'Wide triumphant, warm grade' },
+    ],
   },
-  {
-    id: 'money_mistakes', name: 'Money Mistakes', category: 'cautionary',
-    niches: ['finance_money'],
-    description: 'Common financial mistakes — each one more painful than the last.',
-    duration: '60s', sceneCount: '5-6 scenes',
-    scenes: ['Hook', 'Mistake 1', 'Mistake 2', 'Mistake 3', 'The Worst One', 'Fix'],
+  { id: 'money_mistakes', name: 'Money Mistakes', category: 'cautionary', niches: ['finance_money'],
+    description: 'Common financial mistakes — each more painful than the last.',
+    duration: '30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'Hook', camera: 'Close-up, concerned expression' },
+      { label: 'Mistake 1', camera: 'Medium shot, visual evidence' },
+      { label: 'Mistake 2', camera: 'Tighter framing, building tension' },
+      { label: 'The Worst One', camera: 'Dramatic close-up, pause' },
+      { label: 'Fix', camera: 'Wide, hopeful, action-oriented' },
+    ],
   },
-  {
-    id: 'campfire_story', name: 'Campfire Story', category: 'story',
-    niches: ['scary_horror'],
+  { id: 'campfire_story', name: 'Campfire Story', category: 'story', niches: ['scary_horror'],
     description: 'Classic horror tale — slow tension build and terrifying climax.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['Setting the Scene', 'First Sign', 'Growing Dread', 'The Discovery', 'The Horror', 'Aftermath'],
+    duration: '30-35s', sceneCount: '6 scenes',
+    scenes: [
+      { label: 'Setting the Scene', camera: 'Wide establishing, dark, foggy' },
+      { label: 'First Sign', camera: 'Medium, subtle movement in frame' },
+      { label: 'Growing Dread', camera: 'Slow push in, shadows deepening' },
+      { label: 'The Discovery', camera: 'Close-up reveal, sharp focus' },
+      { label: 'The Horror', camera: 'Fast cut, chaotic angles' },
+      { label: 'Aftermath', camera: 'Wide pull-back, eerie stillness' },
+    ],
   },
-  {
-    id: 'creepy_countdown', name: 'Creepy Countdown', category: 'listicle',
-    niches: ['scary_horror'],
-    description: 'Ranked creepy things — each entry more disturbing than the last.',
-    duration: '60s', sceneCount: '5-6 scenes',
-    scenes: ['Tease', '#5', '#4', '#3', '#2', 'The #1 Most Disturbing'],
+  { id: 'cold_case', name: 'Cold Case', category: 'investigation', niches: ['true_crime'],
+    description: 'Unsolved case gets new attention — fresh evidence.',
+    duration: '30-35s', sceneCount: '6 scenes',
+    scenes: [
+      { label: 'The Crime', camera: 'Noir lighting, evidence board' },
+      { label: 'The Victim', camera: 'Soft portrait, humanizing' },
+      { label: 'What We Know', camera: 'Document close-ups, clinical' },
+      { label: 'The Theories', camera: 'Split screen, contrasting angles' },
+      { label: 'New Evidence', camera: 'Dramatic reveal, sharp focus' },
+      { label: 'Open Question', camera: 'Wide, lingering, unresolved' },
+    ],
   },
-  {
-    id: 'cold_case', name: 'Cold Case', category: 'investigation',
-    niches: ['true_crime'],
-    description: 'Unsolved case gets new attention — fresh eyes, new evidence.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['The Crime', 'The Victim', 'What We Know', 'The Theories', 'New Evidence', 'Open Question'],
+  { id: 'rise_and_grind', name: 'Rise & Grind', category: 'motivation', niches: ['motivation_self_help'],
+    description: 'Early-morning discipline — the grind behind the glory.',
+    duration: '30s', sceneCount: '5 scenes',
+    scenes: [
+      { label: '4AM Alarm', camera: 'Close-up alarm clock, dark room' },
+      { label: 'The Routine', camera: 'Time-lapse morning sequence' },
+      { label: 'The Work', camera: 'Medium action shots, focused' },
+      { label: 'The Payoff', camera: 'Wide achievement shot, golden light' },
+      { label: 'Your Move', camera: 'Direct to camera, challenging' },
+    ],
   },
-  {
-    id: 'rise_and_grind', name: 'Rise & Grind', category: 'motivation',
-    niches: ['motivation_self_help'],
-    description: 'Early-morning discipline narrative — the grind behind the glory.',
-    duration: '60s', sceneCount: '5-6 scenes',
-    scenes: ['4AM Alarm', 'The Routine', 'The Work', 'The Struggle', 'The Payoff', 'Your Move'],
+  { id: 'mindset_shift', name: 'Mindset Shift', category: 'motivation', niches: ['motivation_self_help'],
+    description: 'A single powerful reframe that changes perspective.',
+    duration: '25-30s', sceneCount: '4 scenes',
+    scenes: [
+      { label: 'The Problem', camera: 'Medium shot, frustrated energy' },
+      { label: 'The Old Way', camera: 'Flat, conventional framing' },
+      { label: 'The Reframe', camera: 'Dynamic angle shift, new perspective' },
+      { label: 'The New Truth', camera: 'Close-up, confident, bright' },
+    ],
   },
-  {
-    id: 'mindset_shift', name: 'Mindset Shift', category: 'motivation',
-    niches: ['motivation_self_help'],
-    description: 'A single powerful reframe that changes how you see a challenge.',
-    duration: '30-60s', sceneCount: '4-5 scenes',
-    scenes: ['The Problem', 'The Old Way', 'The Reframe', 'The New Truth', 'Challenge'],
-  },
-  {
-    id: 'cosmic_voyage', name: 'Cosmic Voyage', category: 'story',
-    niches: ['space_cosmos'],
+  { id: 'cosmic_voyage', name: 'Cosmic Voyage', category: 'story', niches: ['space_cosmos'],
     description: 'Epic journey through space — familiar to unfathomably distant.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['Earth', 'Moon', 'Mars', 'Jupiter', 'Edge of Solar System', 'Deep Space'],
+    duration: '30-35s', sceneCount: '6 scenes',
+    scenes: [
+      { label: 'Earth', camera: 'Orbital wide shot, blue marble' },
+      { label: 'Moon', camera: 'Fly-by, crater details' },
+      { label: 'Mars', camera: 'Aerial landscape, red dust' },
+      { label: 'Jupiter', camera: 'Massive scale, storm detail' },
+      { label: 'Edge of Solar System', camera: 'Pale blue dot perspective' },
+      { label: 'Deep Space', camera: 'Infinite void, galaxy clusters' },
+    ],
   },
-  {
-    id: 'lost_civilization', name: 'Lost Civilization', category: 'story',
-    niches: ['history_did_you_know'],
+  { id: 'lost_civilization', name: 'Lost Civilization', category: 'story', niches: ['history_did_you_know'],
     description: 'A vanished civilization and the mysteries they left behind.',
-    duration: '60-90s', sceneCount: '5-7 scenes',
-    scenes: ['The Discovery', 'Who They Were', 'Their Achievements', 'What Happened', 'The Mystery Remains'],
+    duration: '30-35s', sceneCount: '5 scenes',
+    scenes: [
+      { label: 'The Discovery', camera: 'Wide ruins reveal, aerial sweep' },
+      { label: 'Who They Were', camera: 'Close-up artifacts, warm light' },
+      { label: 'Their Achievements', camera: 'Grand architectural shots' },
+      { label: 'What Happened', camera: 'Dramatic, storm/destruction' },
+      { label: 'The Mystery Remains', camera: 'Wide, mist, lingering' },
+    ],
   },
 ];
 
@@ -715,12 +778,14 @@ export default function ShortsBuilderPage() {
       topic: topicStr,
       creative: creativeMode,
       storyContext,
-      scenes: fw.scenes.map((label, i) => ({
-        label,
+      scenes: fw.scenes.map((scene, i) => ({
+        label: scene.label,
+        camera: scene.camera,
         narration: storyContext
-          ? `[Scene ${i + 1}: ${label}] — Based on real story: "${topicStr}". Context: ${storyContext}. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`
-          : `[Scene ${i + 1}: ${label}] — Narration for "${topicStr}" will be generated here. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`,
-        duration: `${8 + Math.floor(Math.random() * 6)}s`,
+          ? `[Scene ${i + 1}: ${scene.label}] — Based on real story: "${topicStr}". Context: ${storyContext}. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`
+          : `[Scene ${i + 1}: ${scene.label}] — Narration for "${topicStr}" will be generated here. ${creativeMode ? 'Creative visual storytelling with factual accuracy.' : 'Standard factual delivery.'}`,
+        visualDescription: `[Visual: ${scene.label} — ${scene.camera}. Style and mood will be composed by the Cohesive Prompt Builder from your visual settings.]`,
+        duration: `${5 + Math.round(Math.random())}s`,
       })),
     });
     setScriptGenerated(true);
@@ -731,7 +796,37 @@ export default function ShortsBuilderPage() {
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Shorts Builder</h1>
-        <span style={{ fontSize: '13px', color: '#9CA3AF' }}>WIREFRAME — No API connections</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: '#374151',
+              cursor: 'pointer',
+            }}
+          >
+            Load Draft
+          </button>
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #111827',
+              backgroundColor: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: '#111827',
+              cursor: 'pointer',
+            }}
+          >
+            Save Draft
+          </button>
+          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>WIREFRAME</span>
+        </div>
       </div>
 
       {/* Step Bar */}
@@ -808,7 +903,8 @@ export default function ShortsBuilderPage() {
                           {f.scenes.map((s, i) => (
                             <div key={i} style={styles.sceneBeat}>
                               <div style={styles.sceneBeatDot('#111827')} />
-                              <span>{s}</span>
+                              <span style={{ fontWeight: 500, color: '#374151' }}>{s.label}</span>
+                              <span style={{ fontSize: '10px', color: '#9CA3AF', marginLeft: '4px' }}>— {s.camera}</span>
                             </div>
                           ))}
                         </div>
@@ -1085,44 +1181,29 @@ export default function ShortsBuilderPage() {
                 <div style={styles.sectionSubtitle}>
                   Apply brand guidelines to all generation — images, video, voice tone, and captions.
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <div
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: selectedBrandKit === null ? '2px solid #111827' : '1px solid #E5E7EB',
-                      backgroundColor: selectedBrandKit === null ? '#F9FAFB' : '#FFFFFF',
-                      cursor: 'pointer',
-                      flex: '0 0 auto',
-                    }}
-                    onClick={() => setSelectedBrandKit(null)}
-                  >
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>No Brand Kit</div>
-                    <div style={{ fontSize: '11px', color: '#6B7280' }}>Generate without brand constraints</div>
-                  </div>
-                  {/* Dummy brand kits for wireframe */}
-                  {[
-                    { id: 'bk_1', name: 'SEWO', desc: 'Tech brand, blue/white, modern clean' },
-                    { id: 'bk_2', name: 'Assureful', desc: 'Insurance, green/navy, professional' },
-                    { id: 'bk_3', name: 'Client Brand', desc: 'Custom brand kit' },
-                  ].map(bk => (
-                    <div
-                      key={bk.id}
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        border: selectedBrandKit === bk.id ? '2px solid #111827' : '1px solid #E5E7EB',
-                        backgroundColor: selectedBrandKit === bk.id ? '#F9FAFB' : '#FFFFFF',
-                        cursor: 'pointer',
-                        flex: 1,
-                      }}
-                      onClick={() => setSelectedBrandKit(bk.id)}
-                    >
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{bk.name}</div>
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{bk.desc}</div>
-                    </div>
-                  ))}
-                </div>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E7EB',
+                    fontSize: '14px',
+                    color: '#111827',
+                    backgroundColor: '#FFFFFF',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%236B7280\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 16px center',
+                  }}
+                  value={selectedBrandKit || ''}
+                  onChange={e => setSelectedBrandKit(e.target.value || null)}
+                >
+                  <option value="">No Brand Kit — generate without brand constraints</option>
+                  <option value="bk_sewo">SEWO — Tech brand, blue/white, modern clean</option>
+                  <option value="bk_assureful">Assureful — Insurance, green/navy, professional</option>
+                  <option value="bk_client">Client Brand — Custom brand kit</option>
+                </select>
               </>
             )}
 
@@ -1147,11 +1228,19 @@ export default function ShortsBuilderPage() {
                 </div>
                 <div style={styles.scriptPreview}>
                   {script.scenes.map((scene, i) => (
-                    <div key={i} style={{ marginBottom: '16px' }}>
-                      <div style={{ fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
-                        Scene {i + 1}: {scene.label} ({scene.duration})
+                    <div key={i} style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: i < script.scenes.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, color: '#111827' }}>
+                          Scene {i + 1}: {scene.label} ({scene.duration})
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                          {scene.camera}
+                        </span>
                       </div>
-                      <div>{scene.narration}</div>
+                      <div style={{ marginBottom: '6px' }}>{scene.narration}</div>
+                      <div style={{ fontSize: '12px', color: '#7C3AED', fontStyle: 'italic' }}>
+                        {scene.visualDescription}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1936,7 +2025,27 @@ export default function ShortsBuilderPage() {
                   <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>Up to 7 reference images. Front, side, 3/4 angles recommended.</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  {['Front View', 'Side View', '3/4 View'].map((placeholder, i) => (
+                  <button style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #E5E7EB',
+                    backgroundColor: '#FFFFFF', fontSize: '13px', fontWeight: 500, color: '#374151', cursor: 'pointer',
+                  }}>
+                    Upload Files
+                  </button>
+                  <button style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #E5E7EB',
+                    backgroundColor: '#FFFFFF', fontSize: '13px', fontWeight: 500, color: '#374151', cursor: 'pointer',
+                  }}>
+                    Import from URL
+                  </button>
+                  <button style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #E5E7EB',
+                    backgroundColor: '#FFFFFF', fontSize: '13px', fontWeight: 500, color: '#374151', cursor: 'pointer',
+                  }}>
+                    Add from Library
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  {['Front View', 'Side View', '3/4 View', 'Back View'].map((placeholder, i) => (
                     <div key={i} style={{
                       width: '100px',
                       height: '100px',
@@ -1962,33 +2071,51 @@ export default function ShortsBuilderPage() {
               <>
                 <div style={styles.sectionTitle}>Visual Style</div>
                 <div style={styles.sectionSubtitle}>
-                  Applied to all scene image generation. 123 presets available — showing popular ones.
+                  Applied to all scene image generation. {STYLE_CATEGORIES.reduce((n, c) => n + c.styles.length, 0)} presets available.
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {[
-                    'Cinematic', 'Photorealistic', 'Hyperrealistic', 'Documentary',
-                    'Anime', 'Digital Art', 'Oil Painting', '3D Render',
-                    'Dark Moody', 'Neon Cyberpunk', 'Watercolor', 'Comic Book',
-                    'Film Noir', 'Vintage Film', 'Studio Portrait', 'Street Photography',
-                  ].map(style => (
-                    <span
-                      key={style}
-                      style={styles.hookChip(selectedVisualStyle === style)}
-                      onClick={() => setSelectedVisualStyle(style)}
-                    >
-                      {style}
-                    </span>
-                  ))}
-                  <span
-                    style={{
-                      ...styles.hookChip(false),
-                      borderStyle: 'dashed',
-                      color: '#9CA3AF',
-                    }}
-                  >
-                    + Browse all 123 styles...
-                  </span>
-                </div>
+                {STYLE_CATEGORIES.map((cat, ci) => (
+                  <div key={ci} style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      {cat.label}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '6px' }}>
+                      {cat.styles.map(style => (
+                        <div
+                          key={style.value}
+                          style={{
+                            borderRadius: '8px',
+                            border: selectedVisualStyle === style.value ? '3px solid #111827' : '2px solid transparent',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            backgroundColor: '#F3F4F6',
+                            transition: 'border-color 0.15s ease',
+                          }}
+                          onClick={() => setSelectedVisualStyle(style.value)}
+                          title={style.promptText?.substring(0, 80)}
+                        >
+                          <img
+                            src={style.thumb}
+                            alt={style.label}
+                            style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }}
+                            loading="lazy"
+                          />
+                          <div style={{
+                            padding: '4px 6px',
+                            fontSize: '10px',
+                            fontWeight: selectedVisualStyle === style.value ? 700 : 500,
+                            color: selectedVisualStyle === style.value ? '#111827' : '#6B7280',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}>
+                            {style.label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
 
                 {/* ── Mood / Lighting / Intensity ── */}
                 <div style={styles.sectionTitle}>Mood & Atmosphere</div>
