@@ -2958,6 +2958,52 @@ export default function ShortsBuilderPage() {
                     cursor: 'pointer',
                     marginTop: '8px',
                   }}
+                  onClick={async () => {
+                    const template = {
+                      type: 'shorts_builder_template',
+                      niche: selectedNiche,
+                      framework: selectedFramework,
+                      creativeMode,
+                      brandKit: selectedBrandKit,
+                      voiceProvider,
+                      voice: selectedVoice,
+                      voiceStyle,
+                      customVoiceStyle,
+                      voiceSpeed,
+                      noVoice,
+                      musicMood,
+                      musicVolume,
+                      sfxEnabled,
+                      continuityMode,
+                      videoGenMode,
+                      videoModel: selectedVideoModel,
+                      imageModel: selectedImageModel,
+                      visualStyle: selectedVisualStyle,
+                      lighting: selectedLighting,
+                      mood: selectedMood,
+                      visualIntensity,
+                      captionStyle: noCaptions ? null : captionStyle,
+                      captionPosition,
+                      captionHighlight,
+                      noCaptions,
+                    };
+                    try {
+                      const res = await apiFetch('/api/workbench/save-draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          draft_id: null,
+                          state: { ...template, is_flow_template: true, template_name: `${NICHES.find(n => n.id === selectedNiche)?.name || ''} — ${BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework)?.name || ''} Template` },
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.draft_id) {
+                        setDraftId(data.draft_id);
+                      }
+                    } catch (err) {
+                      console.error('Save template failed:', err);
+                    }
+                  }}
                 >
                   Save Configuration as Flow Template
                 </button>
