@@ -8,7 +8,7 @@ import { pollScheduledPublications } from './api/lib/scheduledPublisher.js';
 import { pollCommandCenterPublications } from './api/lib/commandCenterPublisher.js';
 import { startLoraPoller } from './api/lib/loraPoller.js';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
