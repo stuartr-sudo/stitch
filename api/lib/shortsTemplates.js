@@ -27,6 +27,9 @@ export const SHORTS_NICHE_TYPES = {
   SPORTS_ATHLETES: 'sports_athletes',
   EDUCATION: 'education_learning',
   PARANORMAL_UFO: 'paranormal_ufo',
+  DIY_CRAFTS: 'diy_crafts',
+  PARENTING: 'parenting',
+  CRYPTO: 'crypto',
 };
 
 export const SHORTS_SCENE_ROLES = {

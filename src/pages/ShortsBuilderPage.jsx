@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api';
 import { STYLE_CATEGORIES } from '@/lib/stylePresets';
-import { BUILDER_FRAMEWORKS } from '@/lib/builderFrameworks';
+// BUILDER_FRAMEWORKS removed — production engine handles structure via Fichtean Curve + niche blueprints
 
 // ─── Static data: 20 Niches ───────────────────────────────────────────────────
 const NICHES = [
@@ -33,6 +33,9 @@ const NICHES = [
   { id: 'sports_athletes', name: 'Sports & Athletes', icon: '⚽', color: '#E11D48' },
   { id: 'education_learning', name: 'Education', icon: '📚', color: '#2563EB' },
   { id: 'paranormal_ufo', name: 'Paranormal & UFO', icon: '👽', color: '#4C1D95' },
+  { id: 'diy_crafts', name: 'DIY & Crafts', icon: '🔨', color: '#D97706' },
+  { id: 'parenting', name: 'Parenting', icon: '👶', color: '#F472B6' },
+  { id: 'crypto', name: 'Crypto', icon: '₿', color: '#F97316' },
 ];
 
 // ─── Static data: Frameworks ──────────────────────────────────────────────────
@@ -739,6 +742,57 @@ const TOPIC_SUGGESTIONS = {
       { label: 'Psychic phenomena', hooks: ['remote viewing program', 'precognition study', 'telepathy experiment', 'CIA document', 'university research'] },
     ]},
   ],
+
+  // ── DIY & Crafts ──
+  diy_crafts: [
+    { label: 'Home Hacks', sub: [
+      { label: 'Budget renovations', hooks: ['$5 hack', '$500 look', 'landlord approved', 'no tools needed', 'one-day transform'] },
+      { label: 'Furniture flips', hooks: ['dumpster find', 'thrift store gold', 'paint trick', 'hardware swap', 'before and after'] },
+      { label: 'Organization', hooks: ['dollar store bins', 'space saver', 'hidden storage', 'garage reveal', 'pantry makeover'] },
+    ]},
+    { label: 'Creative Projects', sub: [
+      { label: 'Resin & epoxy', hooks: ['river table', 'jewelry making', 'clear cast', 'glow in dark', 'first attempt'] },
+      { label: 'Woodworking', hooks: ['beginner project', 'power tool guide', 'joint technique', 'finishing secret', 'scrap wood'] },
+    ]},
+    { label: 'Tool Tips', sub: [
+      { label: 'Power tools', hooks: ['drill guide', 'saw technique', 'sander trick', 'router basics', 'safety first'] },
+      { label: 'Adhesives & finishes', hooks: ['hot glue wrong', 'epoxy vs super glue', 'stain technique', 'spray paint pro', 'seal everything'] },
+    ]},
+  ],
+
+  // ── Parenting ──
+  parenting: [
+    { label: 'Baby & Toddler', sub: [
+      { label: 'Sleep training', hooks: ['one weird trick', 'schedule that worked', 'night weaning', 'regression survival', 'contact nap escape'] },
+      { label: 'Feeding', hooks: ['baby led weaning', 'picky eater hack', 'meal prep toddler', 'allergy introduction', 'high chair cleanup'] },
+      { label: 'Development', hooks: ['milestone myth', 'screen time truth', 'language explosion', 'motor skills game', 'sensory play'] },
+    ]},
+    { label: 'School Age', sub: [
+      { label: 'Homework battles', hooks: ['one sentence fix', 'motivation secret', 'attention span', 'learning style', 'reward system'] },
+      { label: 'Social skills', hooks: ['friendship struggles', 'bully response', 'confidence builder', 'empathy teaching', 'boundary setting'] },
+    ]},
+    { label: 'Parent Self-Care', sub: [
+      { label: 'Mental health', hooks: ['burnout signs', 'mom rage truth', 'therapy normalized', 'alone time guilt', 'comparison trap'] },
+      { label: 'Relationship', hooks: ['date night hack', 'communication fix', 'co-parenting win', 'division of labor', 'intimacy after kids'] },
+    ]},
+  ],
+
+  // ── Crypto ──
+  crypto: [
+    { label: 'Market Analysis', sub: [
+      { label: 'On-chain signals', hooks: ['whale alert', 'exchange outflow', 'accumulation pattern', 'dormant wallet', 'network activity'] },
+      { label: 'Technical analysis', hooks: ['pattern forming', 'support break', 'volume divergence', 'RSI signal', 'moving average cross'] },
+      { label: 'Macro trends', hooks: ['halving effect', 'institutional flow', 'regulation impact', 'ETF movement', 'correlation break'] },
+    ]},
+    { label: 'Alt Season', sub: [
+      { label: 'Layer 1 picks', hooks: ['Ethereum killer', 'Solana update', 'new L1 launch', 'TVL explosion', 'developer activity'] },
+      { label: 'DeFi & tokens', hooks: ['yield farming', 'airdrop strategy', 'governance vote', 'protocol revenue', 'token unlock'] },
+    ]},
+    { label: 'Education', sub: [
+      { label: 'Beginner guides', hooks: ['first crypto buy', 'wallet setup', 'seed phrase truth', 'exchange comparison', 'tax basics'] },
+      { label: 'Security', hooks: ['scam warning', 'rug pull signs', 'cold storage', 'phishing attack', 'smart contract risk'] },
+    ]},
+  ],
 };
 
 // ─── Wizard Step indicators ───────────────────────────────────────────────────
@@ -1001,13 +1055,21 @@ export default function ShortsBuilderPage() {
 
   // Step 1 state
   const [selectedNiche, setSelectedNiche] = useState(null);
-  const [selectedFramework, setSelectedFramework] = useState(null);
+  // selectedFramework removed — production engine uses Fichtean Curve + niche blueprints
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [selectedAngle, setSelectedAngle] = useState(null);
   const [selectedHooks, setSelectedHooks] = useState([]);
   const [customTopic, setCustomTopic] = useState('');
   const [creativeMode, setCreativeMode] = useState(false);
+  // Brand Mode
+  const [brandMode, setBrandMode] = useState(false);
+  const [brandProfiles, setBrandProfiles] = useState([]);
+  const [selectedBrandProfile, setSelectedBrandProfile] = useState(null);
+  const [selectedContentAngle, setSelectedContentAngle] = useState(null);
+  const [brandTopics, setBrandTopics] = useState([]);
+  const [brandTopicsLoading, setBrandTopicsLoading] = useState(false);
   const [scriptGenerated, setScriptGenerated] = useState(false);
+  const [scriptLoading, setScriptLoading] = useState(false);
   const [researchResults, setResearchResults] = useState(null);
   const [researchLoading, setResearchLoading] = useState(false);
   const [discoverResults, setDiscoverResults] = useState(null);
@@ -1017,6 +1079,8 @@ export default function ShortsBuilderPage() {
   // Step 2 state
   const [voiceProvider, setVoiceProvider] = useState('gemini'); // 'gemini' | 'elevenlabs'
   const [selectedVoice, setSelectedVoice] = useState(null);
+  const [previewingVoice, setPreviewingVoice] = useState(null);
+  const [previewAudioRef] = useState({ current: null });
   const [voiceStyle, setVoiceStyle] = useState(null);
   const [customVoiceStyle, setCustomVoiceStyle] = useState('');
   const [noVoice, setNoVoice] = useState(false);
@@ -1067,19 +1131,15 @@ export default function ShortsBuilderPage() {
   // API-wired state
   const [brandKits, setBrandKits] = useState([]);
   const [draftId, setDraftId] = useState(null);
+  const [showDraftList, setShowDraftList] = useState(false);
+  const [draftList, setDraftList] = useState([]);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState(null);
   const [voiceoverUrl, setVoiceoverUrl] = useState(null);
   const [musicUrl, setMusicUrl] = useState(null);
   const [sfxUrl, setSfxUrl] = useState(null);
   const [timingBlocks, setTimingBlocks] = useState([]);
   const [selectedImageModel, setSelectedImageModel] = useState('fal_nano_banana');
-
-  // Filter frameworks by selected niche
-  const availableFrameworks = useMemo(() => {
-    if (!selectedNiche) return [];
-    return BUILDER_FRAMEWORKS.filter(f =>
-      f.niches === null || f.niches.includes(selectedNiche)
-    );
-  }, [selectedNiche]);
 
   // Get topics for selected niche
   const topics = useMemo(() => {
@@ -1087,10 +1147,13 @@ export default function ShortsBuilderPage() {
     return TOPIC_SUGGESTIONS[selectedNiche] || DEFAULT_TOPICS;
   }, [selectedNiche]);
 
-  // Load brand kits on mount
+  // Load brand kits + brand profiles on mount
   useEffect(() => {
     apiFetch('/api/brand/kit').then(r => r.json()).then(data => {
       if (data.brands) setBrandKits(data.brands);
+    }).catch(() => {});
+    apiFetch('/api/brands/profiles').then(r => r.json()).then(data => {
+      if (data.profiles) setBrandProfiles(data.profiles);
     }).catch(() => {});
   }, []);
 
@@ -1100,6 +1163,119 @@ export default function ShortsBuilderPage() {
       setMusicMood(NICHE_MUSIC_MOODS[selectedNiche] || '');
     }
   }, [currentStep, selectedNiche]);
+
+  // ── Save Draft ──────────────────────────────────────────────────────────────
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    try {
+      const fullState = {
+        // Config
+        selectedNiche, customTopic, selectedHooks, creativeMode, selectedBrandKit,
+        voiceProvider, selectedVoice, voiceStyle, customVoiceStyle, voiceSpeed, noVoice,
+        musicMood, musicVolume, sfxEnabled,
+        continuityMode, videoGenMode, selectedVideoModel, selectedImageModel,
+        selectedVisualStyle, selectedLighting, selectedMood, visualIntensity,
+        captionStyle, captionPosition, captionHighlight, noCaptions,
+        currentStep,
+        // Generated assets — these are what cost money and MUST be preserved
+        script, voiceoverUrl, musicUrl, sfxUrl, timingBlocks,
+        generatedClips, finalVideoUrl: finalVideoUrl || null,
+        // Topic & research context
+        topic: script?.topic || customTopic || selectedHooks?.join(' + ') || 'Untitled',
+      };
+      const res = await apiFetch('/api/workbench/save-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: draftId, state: fullState }),
+      });
+      const data = await res.json();
+      if (data.draft_id) {
+        setDraftId(data.draft_id);
+        setLastAutoSave(new Date().toLocaleTimeString());
+      }
+    } catch (err) {
+      console.error('Save draft failed:', err);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  // ── Load Draft ──────────────────────────────────────────────────────────────
+  const handleLoadDraft = async (loadDraftId) => {
+    try {
+      const res = await apiFetch('/api/workbench/load-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: loadDraftId }),
+      });
+      const data = await res.json();
+      if (!data.draft) return;
+
+      const s = data.draft.storyboard_json;
+      setDraftId(loadDraftId);
+      setShowDraftList(false);
+
+      // Restore config
+      if (s.selectedNiche) setSelectedNiche(s.selectedNiche);
+      if (s.customTopic) setCustomTopic(s.customTopic);
+      if (s.selectedHooks) setSelectedHooks(s.selectedHooks);
+      if (s.creativeMode !== undefined) setCreativeMode(s.creativeMode);
+      if (s.selectedBrandKit) setSelectedBrandKit(s.selectedBrandKit);
+      if (s.voiceProvider) setVoiceProvider(s.voiceProvider);
+      if (s.selectedVoice) setSelectedVoice(s.selectedVoice);
+      if (s.voiceStyle) setVoiceStyle(s.voiceStyle);
+      if (s.customVoiceStyle) setCustomVoiceStyle(s.customVoiceStyle);
+      if (s.voiceSpeed) setVoiceSpeed(s.voiceSpeed);
+      if (s.noVoice !== undefined) setNoVoice(s.noVoice);
+      if (s.musicMood) setMusicMood(s.musicMood);
+      if (s.musicVolume !== undefined) setMusicVolume(s.musicVolume);
+      if (s.sfxEnabled !== undefined) setSfxEnabled(s.sfxEnabled);
+      if (s.continuityMode) setContinuityMode(s.continuityMode);
+      if (s.videoGenMode) setVideoGenMode(s.videoGenMode);
+      if (s.selectedVideoModel) setSelectedVideoModel(s.selectedVideoModel);
+      if (s.selectedImageModel) setSelectedImageModel(s.selectedImageModel);
+      if (s.selectedVisualStyle) setSelectedVisualStyle(s.selectedVisualStyle);
+      if (s.selectedLighting) setSelectedLighting(s.selectedLighting);
+      if (s.selectedMood) setSelectedMood(s.selectedMood);
+      if (s.visualIntensity !== undefined) setVisualIntensity(s.visualIntensity);
+      if (s.captionStyle) setCaptionStyle(s.captionStyle);
+      if (s.captionPosition) setCaptionPosition(s.captionPosition);
+      if (s.captionHighlight) setCaptionHighlight(s.captionHighlight);
+      if (s.noCaptions !== undefined) setNoCaptions(s.noCaptions);
+
+      // Restore generated assets
+      if (s.script) { setScript(s.script); setScriptGenerated(true); }
+      if (s.voiceoverUrl || data.draft.voiceover_url) {
+        setVoiceoverUrl(s.voiceoverUrl || data.draft.voiceover_url);
+        setVoiceoverGenerated(true);
+      }
+      if (s.musicUrl || data.draft.music_url) {
+        setMusicUrl(s.musicUrl || data.draft.music_url);
+        setMusicGenerated(true);
+      }
+      if (s.sfxUrl) { setSfxUrl(s.sfxUrl); setSfxGenerated(true); }
+      if (s.timingBlocks) { setTimingBlocks(s.timingBlocks); setTimingGenerated(true); }
+      if (s.generatedClips) setGeneratedClips(s.generatedClips);
+      if (s.finalVideoUrl || data.draft.final_video_url) {
+        setFinalVideoUrl(s.finalVideoUrl || data.draft.final_video_url);
+        setGenerationComplete(true);
+      }
+
+      // Jump to the step they were on
+      if (s.currentStep) setCurrentStep(s.currentStep);
+    } catch (err) {
+      console.error('Load draft failed:', err);
+    }
+  };
+
+  // ── Auto-save every 60s when there's meaningful state ─────────────────────
+  useEffect(() => {
+    if (!script && !voiceoverUrl) return; // Nothing worth saving yet
+    const interval = setInterval(() => {
+      handleSaveDraft();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [script, voiceoverUrl, musicUrl, generatedClips, draftId]);
 
   const handleResearchTopics = async () => {
     setResearchLoading(true);
@@ -1173,85 +1349,92 @@ export default function ShortsBuilderPage() {
     sports_athletes: 'High energy, adrenaline-pumping, stadium anthem feel',
     education_learning: 'Curious and engaging, friendly tempo, clean and bright',
     paranormal_ufo: 'Eerie ambient, X-Files undertones, otherworldly, unsettling calm',
+    diy_crafts: 'Upbeat indie, acoustic guitar, light electronic beats, craft-montage energy',
+    parenting: 'Gentle acoustic, soft piano, warm lo-fi, emotional but never saccharine',
+    crypto: 'Dark electronic, pulsing bass, cyberpunk undertones, tension-building synths',
   };
 
-  const canGenerate = selectedNiche && (selectedHooks.length > 0 || customTopic.trim() || selectedResearchTopic);
+  const canGenerate = brandMode
+    ? (selectedBrandProfile && customTopic.trim())
+    : (selectedNiche && (selectedHooks.length > 0 || customTopic.trim() || selectedResearchTopic));
 
   const handleGenerateScript = async () => {
     if (!canGenerate) return;
+    setScriptLoading(true);
     setScriptGenerated(false);
     setScript(null);
     const niche = NICHES.find(n => n.id === selectedNiche);
     const topicStr = selectedResearchTopic ? selectedResearchTopic.title : (customTopic.trim() || selectedHooks.join(' + '));
-    const storyContext = selectedResearchTopic?.story_context || selectedResearchTopic?.description || '';
-    const fullTopicText = storyContext ? `${topicStr}. ${storyContext}` : topicStr;
+    const storyContext = selectedResearchTopic?.story_context || selectedResearchTopic?.description || window.__brandTopicContext || '';
 
     try {
-      // Step 1: Match framework via embedding cosine similarity (unless manually selected)
-      let fw = selectedFramework ? BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework) : null;
-      if (!fw) {
-        const matchRes = await apiFetch('/api/shorts/match-framework', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic: fullTopicText, niche: selectedNiche }),
-        });
-        const matchData = await matchRes.json();
-        if (matchData.frameworkId) {
-          fw = BUILDER_FRAMEWORKS.find(f => f.id === matchData.frameworkId);
-          setSelectedFramework(matchData.frameworkId);
-          console.log(`[framework-match] "${topicStr}" → ${matchData.frameworkName} (${(matchData.score * 100).toFixed(1)}%)`);
+      // Production engine generates complete production package (Fichtean Curve beats + visuals + SFX)
+      const requestBody = {
+        niche: selectedNiche,
+        topic: topicStr,
+        story_context: storyContext,
+        creative_mode: creativeMode,
+      };
+      // Brand mode: pass brand profile and content angle
+      if (brandMode && selectedBrandProfile) {
+        requestBody.brand_profile_id = selectedBrandProfile.id;
+        if (selectedContentAngle) {
+          requestBody.content_angle_id = selectedContentAngle.id;
         }
       }
-
-      // Step 2: Generate script — pass full framework narrative guidance, not just ID
       const res = await apiFetch('/api/campaigns/preview-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          niche: selectedNiche,
-          topic: topicStr,
-          story_context: storyContext,
-          creative_mode: creativeMode,
-          videoLengthPreset: 60,
-          framework: fw?.id,
-          // Pass the full new framework guidance so the script generator uses it
-          framework_guidance: fw ? {
-            name: fw.name,
-            narrativeArc: fw.narrativeArc,
-            hookStrategy: fw.hookStrategy,
-            payoffStrategy: fw.payoffStrategy,
-            pacingStrategy: fw.pacingStrategy,
-            emotionalProgression: fw.emotionalProgression,
-            voiceDirection: fw.voiceDirection,
-            cameraPhilosophy: fw.cameraPhilosophy,
-          } : undefined,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
+      // The production_package has the full beat structure with visuals, SFX, music
+      const pkg = data.production_package;
       const scriptData = data.script || data;
-      const scenes = (scriptData.scenes || []).map((s, i) => ({
-        label: s.scene_label || `Scene ${i + 1}`,
-        camera: '',
-        narration: s.narration_segment || s.narration || '',
-        visualDescription: s.visual_prompt || s.visualDescription || `[Visual for scene ${i + 1}]`,
-        duration: `${5 + Math.round(Math.random())}s`,
-      }));
 
-      setScript({
-        niche: niche.name,
-        framework: fw?.name || 'Auto-matched',
-        frameworkId: fw?.id,
-        topic: topicStr,
-        creative: creativeMode,
-        storyContext,
-        narration_full: scriptData.narration_full || scenes.map(s => s.narration).join(' '),
-        scenes,
-      });
+      if (pkg) {
+        // New production engine format — beats with visual prompts
+        setScript({
+          niche: niche.name,
+          topic: topicStr,
+          creative: creativeMode,
+          storyContext,
+          title: pkg.title,
+          description: pkg.description,
+          hashtags: pkg.hashtags,
+          narration_full: pkg.narration_full,
+          total_word_count: pkg.total_word_count,
+          visual_style: pkg.visual_style,
+          music: pkg.music,
+          loop_note: pkg.loop_note,
+          beats: pkg.beats,
+          _production_package: pkg,
+        });
+      } else {
+        // Fallback to legacy format
+        const scenes = (scriptData.scenes || []).map((s, i) => ({
+          label: s.scene_label || `Scene ${i + 1}`,
+          narration: s.narration_segment || '',
+          visualDescription: s.visual_prompt || '',
+          duration: `${s.duration_seconds || 5}s`,
+        }));
+        setScript({
+          niche: niche.name,
+          topic: topicStr,
+          creative: creativeMode,
+          storyContext,
+          narration_full: scriptData.narration_full || scenes.map(s => s.narration).join(' '),
+          scenes,
+          beats: null,
+        });
+      }
       setScriptGenerated(true);
     } catch (err) {
       console.error('Script generation failed:', err);
+    } finally {
+      setScriptLoading(false);
     }
   };
 
@@ -1272,50 +1455,86 @@ export default function ShortsBuilderPage() {
               color: '#374151',
               cursor: 'pointer',
             }}
-            onClick={() => { /* TODO: show draft list modal */ }}
+            onClick={async () => {
+              setShowDraftList(!showDraftList);
+              if (!showDraftList) {
+                try {
+                  const res = await apiFetch('/api/workbench/list-drafts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                  });
+                  const data = await res.json();
+                  setDraftList(data.items || []);
+                } catch (err) { console.error('List drafts failed:', err); }
+              }
+            }}
           >
-            Load Draft
+            {showDraftList ? 'Close' : 'Load Draft'}
           </button>
           <button
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
               border: '1px solid #111827',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: savingDraft ? '#F3F4F6' : '#FFFFFF',
               fontSize: '13px',
               fontWeight: 500,
               color: '#111827',
-              cursor: 'pointer',
+              cursor: savingDraft ? 'not-allowed' : 'pointer',
             }}
-            onClick={async () => {
-              try {
-                const res = await apiFetch('/api/workbench/save-draft', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    draft_id: draftId,
-                    state: {
-                      selectedNiche, selectedFramework, customTopic, selectedHooks,
-                      creativeMode, selectedBrandKit, script, voiceProvider, selectedVoice,
-                      voiceStyle, customVoiceStyle, voiceSpeed, noVoice, musicMood, musicVolume,
-                      sfxEnabled, continuityMode, videoGenMode, selectedVideoModel,
-                      selectedVisualStyle, selectedLighting, selectedMood, visualIntensity,
-                      captionStyle, captionPosition, captionHighlight, noCaptions,
-                    },
-                  }),
-                });
-                const data = await res.json();
-                if (data.draft_id) setDraftId(data.draft_id);
-              } catch (err) {
-                console.error('Save draft failed:', err);
-              }
-            }}
+            onClick={() => handleSaveDraft()}
+            disabled={savingDraft}
           >
-            Save Draft
+            {savingDraft ? 'Saving...' : 'Save Draft'}
           </button>
-          {draftId && <span style={{ fontSize: '11px', color: '#059669' }}>Saved</span>}
+          {draftId && <span style={{ fontSize: '11px', color: '#059669' }}>Saved{lastAutoSave ? ` ${lastAutoSave}` : ''}</span>}
         </div>
       </div>
+
+      {/* Draft List Dropdown */}
+      {showDraftList && (
+        <div style={{
+          maxWidth: '900px', margin: '0 auto', padding: '0 24px',
+        }}>
+          <div style={{
+            border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#FFFFFF',
+            padding: '16px', marginBottom: '16px', maxHeight: '300px', overflowY: 'auto',
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '12px' }}>
+              Recent Drafts
+            </div>
+            {draftList.length === 0 && (
+              <div style={{ fontSize: '13px', color: '#9CA3AF', padding: '12px 0' }}>No drafts saved yet.</div>
+            )}
+            {draftList.map(d => (
+              <div
+                key={d.id}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 12px', borderRadius: '6px', cursor: 'pointer',
+                  border: draftId === d.id ? '2px solid #111827' : '1px solid #F3F4F6',
+                  backgroundColor: draftId === d.id ? '#F9FAFB' : '#FFFFFF',
+                  marginBottom: '6px',
+                }}
+                onClick={() => handleLoadDraft(d.id)}
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                    {d.topic || 'Untitled'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                    {d.niche ? NICHES.find(n => n.id === d.niche)?.name : ''} {d.has_video ? '· Video ready' : d.status === 'in_progress' ? '· In progress' : ''}
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                  {new Date(d.updated_at).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Step Bar */}
       <div style={styles.stepBar}>
@@ -1334,9 +1553,244 @@ export default function ShortsBuilderPage() {
       <div style={styles.content}>
         {currentStep === 1 && (
           <>
-            {/* ── Niche Selection ── */}
-            <div style={styles.sectionTitle}>Choose a Niche</div>
-            <div style={styles.sectionSubtitle}>This determines your frameworks, topics, voice style, and visual mood.</div>
+            {/* ── Brand Mode Toggle — TOP of Step 1 ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '14px 16px', borderRadius: '8px',
+              backgroundColor: brandMode ? '#EDE9FE' : '#F9FAFB',
+              border: brandMode ? '1px solid #C4B5FD' : '1px solid #E5E7EB',
+              marginBottom: '20px',
+            }}>
+              <button
+                style={styles.toggle(brandMode)}
+                onClick={() => {
+                  const next = !brandMode;
+                  setBrandMode(next);
+                  if (!next) {
+                    setSelectedBrandProfile(null);
+                    setSelectedContentAngle(null);
+                    setBrandTopics([]);
+                  } else {
+                    // Clear niche selection — brand profile will set it
+                    setSelectedNiche(null);
+                    setScript(null);
+                    setScriptGenerated(false);
+                  }
+                }}
+              >
+                <div style={styles.toggleDot(brandMode)} />
+              </button>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: brandMode ? '#5B21B6' : '#111827' }}>
+                  Brand Mode {brandMode ? 'ON' : 'OFF'}
+                </div>
+                <div style={{ fontSize: '12px', color: brandMode ? '#7C3AED' : '#6B7280', marginTop: '2px' }}>
+                  {brandMode
+                    ? 'Select a brand profile below. The brand is never mentioned — expertise demonstrated through insight quality.'
+                    : 'Generate content for a channel. Toggle on to create brand editorial content instead.'}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Brand Mode: Profile + Angle + Topics ── */}
+            {brandMode && (
+              <div style={{ marginBottom: '20px' }}>
+                {/* Brand Profile Selector */}
+                <div style={styles.sectionTitle}>Select Brand Profile</div>
+                <div style={styles.sectionSubtitle}>The brand's niche, audience, and content strategy are defined in the profile.</div>
+
+                {brandProfiles.length === 0 ? (
+                  <div style={{ padding: '20px', borderRadius: '8px', backgroundColor: '#FAFAFA', border: '1px dashed #D1D5DB', textAlign: 'center' }}>
+                    <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>No brand profiles yet</div>
+                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>Create one in the Brand Profiles section to get started.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                    {brandProfiles.map(bp => (
+                      <div
+                        key={bp.id}
+                        style={{
+                          padding: '14px', borderRadius: '8px', cursor: 'pointer',
+                          border: selectedBrandProfile?.id === bp.id ? '2px solid #5B21B6' : '1px solid #E5E7EB',
+                          backgroundColor: selectedBrandProfile?.id === bp.id ? '#F5F3FF' : '#FFFFFF',
+                        }}
+                        onClick={async () => {
+                          try {
+                            const res = await apiFetch(`/api/brands/profiles/${bp.id}`);
+                            const data = await res.json();
+                            if (data.profile) {
+                              const profile = data.profile;
+                              setSelectedBrandProfile(profile);
+                              setSelectedContentAngle(null);
+                              setBrandTopics([]);
+                              // Set niche from the brand profile
+                              if (profile.primary_niche) {
+                                setSelectedNiche(profile.primary_niche);
+                              }
+                            }
+                          } catch (_) {
+                            setSelectedBrandProfile(bp);
+                            if (bp.primary_niche) setSelectedNiche(bp.primary_niche);
+                          }
+                          setTimeout(() => {
+                            const el = document.getElementById('brand-angle-section');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }}
+                      >
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{bp.brand_name}</div>
+                        <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>{bp.brand_domain}</div>
+                        <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px' }}>
+                          Niche: {NICHES.find(n => n.id === bp.primary_niche)?.name || bp.primary_niche}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Content Angle Selector */}
+                {selectedBrandProfile && (selectedBrandProfile.content_angles || []).length > 0 && (
+                  <div id="brand-angle-section" style={{ marginTop: '20px' }}>
+                    <div style={styles.sectionTitle}>Content Angle</div>
+                    <div style={styles.sectionSubtitle}>Each angle is an emotional lens for storytelling. Auto-rotate balances them by weight.</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <div
+                        style={{
+                          padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
+                          border: !selectedContentAngle ? '2px solid #5B21B6' : '1px solid #D1D5DB',
+                          backgroundColor: !selectedContentAngle ? '#5B21B6' : '#FFFFFF',
+                          color: !selectedContentAngle ? '#FFFFFF' : '#374151',
+                        }}
+                        onClick={() => setSelectedContentAngle(null)}
+                      >
+                        Auto-rotate
+                      </div>
+                      {(selectedBrandProfile.content_angles || []).map(angle => {
+                        const driverIcons = { fear: '😨', identity: '🪞', curiosity: '🔍', injustice: '⚖️', wonder: '✨' };
+                        const selected = selectedContentAngle?.id === angle.id;
+                        return (
+                          <div
+                            key={angle.id}
+                            style={{
+                              padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
+                              border: selected ? '2px solid #5B21B6' : '1px solid #D1D5DB',
+                              backgroundColor: selected ? '#5B21B6' : '#FFFFFF',
+                              color: selected ? '#FFFFFF' : '#374151',
+                            }}
+                            onClick={() => setSelectedContentAngle(angle)}
+                          >
+                            {driverIcons[angle.emotional_driver] || '📌'} {angle.name} <span style={{ opacity: 0.7 }}>({angle.weight}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedContentAngle && (
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', padding: '8px 12px', borderRadius: '6px', backgroundColor: '#F5F3FF' }}>
+                        <strong>{selectedContentAngle.name}:</strong> {selectedContentAngle.description || selectedContentAngle.lens}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Generate Brand Topics */}
+                {selectedBrandProfile && (
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={styles.sectionTitle}>Topic Ideas</div>
+                    <div style={styles.sectionSubtitle}>AI-generated topics based on the brand's domain, audience pain points, and current industry news.</div>
+                    <button
+                      style={{
+                        padding: '10px 20px', borderRadius: '8px', border: 'none',
+                        backgroundColor: '#5B21B6', color: '#FFFFFF', fontSize: '13px',
+                        fontWeight: 600, cursor: brandTopicsLoading ? 'not-allowed' : 'pointer',
+                        opacity: brandTopicsLoading ? 0.7 : 1,
+                      }}
+                      disabled={brandTopicsLoading}
+                      onClick={async () => {
+                        setBrandTopicsLoading(true);
+                        try {
+                          const res = await apiFetch('/api/brands/generate-topics', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              brand_profile_id: selectedBrandProfile.id,
+                              content_angle_id: selectedContentAngle?.id || null,
+                              count: 8,
+                              include_news: true,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.topics) setBrandTopics(data.topics);
+                          if (data.angle && !selectedContentAngle) {
+                            // Show which angle was auto-selected
+                            console.log(`Auto-rotated to angle: ${data.angle.name} (${data.angle.emotional_driver})`);
+                          }
+                        } catch (err) {
+                          console.error('Topic generation failed:', err);
+                        } finally {
+                          setBrandTopicsLoading(false);
+                        }
+                      }}
+                    >
+                      {brandTopicsLoading ? 'Generating topics...' : 'Generate Topic Ideas'}
+                    </button>
+
+                    {brandTopics.length > 0 && (
+                      <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {brandTopics.map((topic, i) => {
+                          const isSelected = customTopic === topic.title;
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                padding: '14px', borderRadius: '8px', cursor: 'pointer',
+                                border: isSelected ? '2px solid #5B21B6' : '1px solid #E5E7EB',
+                                backgroundColor: isSelected ? '#F5F3FF' : '#FFFFFF',
+                              }}
+                              onClick={() => {
+                                setCustomTopic(topic.title);
+                                window.__brandTopicContext = topic.story_context;
+                                setTimeout(() => {
+                                  const el = document.getElementById('generate-script-section');
+                                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 100);
+                              }}
+                            >
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
+                                {topic.title}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px' }}>
+                                {topic.hook_concept}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>
+                                <strong>Payoff:</strong> {topic.payoff}
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <span style={{
+                                  fontSize: '10px', padding: '2px 8px', borderRadius: '10px',
+                                  backgroundColor: topic.is_evergreen ? '#DCFCE7' : '#FEF3C7',
+                                  color: topic.is_evergreen ? '#166534' : '#92400E', fontWeight: 500,
+                                }}>
+                                  {topic.is_evergreen ? 'Evergreen' : 'Topical'}
+                                </span>
+                                <span style={{ fontSize: '10px', color: '#A78BFA', fontWeight: 500 }}>
+                                  {topic.emotional_driver}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Niche Selection (hidden in Brand Mode — brand profile sets the niche) ── */}
+            {!brandMode && (
+              <>
+                <div style={styles.sectionTitle}>Choose a Niche</div>
+                <div style={styles.sectionSubtitle}>This determines your topics, voice style, visual mood, and production direction.</div>
             <div style={styles.nicheGrid}>
               {NICHES.map(n => (
                 <div
@@ -1344,12 +1798,16 @@ export default function ShortsBuilderPage() {
                   style={styles.nicheCard(selectedNiche === n.id)}
                   onClick={() => {
                     setSelectedNiche(n.id);
-                    setSelectedFramework(null);
                     setExpandedCategory(null);
                     setSelectedAngle(null);
                     setSelectedHooks([]);
                     setScriptGenerated(false);
                     setScript(null);
+                    // Auto-scroll to topic section after niche selection
+                    setTimeout(() => {
+                      const topicSection = document.getElementById('topic-section');
+                      if (topicSection) topicSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
                   }}
                 >
                   <div style={styles.nicheIcon}>{n.icon}</div>
@@ -1357,13 +1815,13 @@ export default function ShortsBuilderPage() {
                 </div>
               ))}
             </div>
+              </>
+            )}
 
-            {/* Framework is auto-matched via embeddings when script is generated — no manual picker */}
-
-            {/* ── Topic Selection ── */}
-            {selectedNiche && (
+            {/* ── Topic Selection (shown in both modes — brand topics in brand mode, niche topics in channel mode) ── */}
+            {selectedNiche && !brandMode && (
               <>
-                <div style={styles.sectionTitle}>Choose a Topic</div>
+                <div id="topic-section" style={styles.sectionTitle}>Choose a Topic</div>
                 <div style={styles.sectionSubtitle}>
                   Select a category, then an angle, then one or more hooks. Or type your own.
                 </div>
@@ -1603,6 +2061,199 @@ export default function ShortsBuilderPage() {
               </>
             )}
 
+            {/* ── Brand Mode section moved to top of Step 1 — before niche selection ── */}
+            {false && selectedNiche && (
+              <>
+                <div style={styles.sectionTitle}>Brand Mode (OLD LOCATION — REMOVED)</div>
+                <div style={styles.toggleRow}>
+                  <button
+                    style={styles.toggle(brandMode)}
+                    onClick={() => {
+                      setBrandMode(!brandMode);
+                      if (brandMode) {
+                        setSelectedBrandProfile(null);
+                        setSelectedContentAngle(null);
+                        setBrandTopics([]);
+                      }
+                    }}
+                  >
+                    <div style={styles.toggleDot(brandMode)} />
+                  </button>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#111827' }}>
+                      Brand Content
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      Generate editorial content for a brand. The brand is never mentioned — expertise is demonstrated through the quality of the insight.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brand Mode — Profile + Angle selection */}
+                {brandMode && (
+                  <div style={{ padding: '16px', borderRadius: '8px', border: '1px solid #E5E7EB', backgroundColor: '#FAFAFA', marginTop: '12px' }}>
+                    {/* Brand Profile Selector */}
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Select Brand Profile</div>
+                    {brandProfiles.length === 0 ? (
+                      <div style={{ fontSize: '12px', color: '#9CA3AF', padding: '12px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #E5E7EB' }}>
+                        No brand profiles yet. Create one in Settings → Brand Profiles.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {brandProfiles.map(bp => (
+                          <div
+                            key={bp.id}
+                            style={{
+                              padding: '10px 14px', borderRadius: '6px', cursor: 'pointer',
+                              border: selectedBrandProfile?.id === bp.id ? '2px solid #111827' : '1px solid #E5E7EB',
+                              backgroundColor: selectedBrandProfile?.id === bp.id ? '#FFFFFF' : '#FAFAFA',
+                            }}
+                            onClick={async () => {
+                              // Load full profile
+                              try {
+                                const res = await apiFetch(`/api/brands/profiles/${bp.id}`);
+                                const data = await res.json();
+                                if (data.profile) {
+                                  setSelectedBrandProfile(data.profile);
+                                  setSelectedContentAngle(null);
+                                  setBrandTopics([]);
+                                }
+                              } catch (_) { setSelectedBrandProfile(bp); }
+                            }}
+                          >
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{bp.brand_name}</div>
+                            <div style={{ fontSize: '11px', color: '#6B7280' }}>{bp.brand_domain}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Content Angle Selector */}
+                    {selectedBrandProfile && (selectedBrandProfile.content_angles || []).length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Content Angle</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <div
+                            style={{
+                              padding: '6px 12px', borderRadius: '16px', cursor: 'pointer', fontSize: '12px', fontWeight: 500,
+                              border: !selectedContentAngle ? '2px solid #111827' : '1px solid #D1D5DB',
+                              backgroundColor: !selectedContentAngle ? '#111827' : '#FFFFFF',
+                              color: !selectedContentAngle ? '#FFFFFF' : '#374151',
+                            }}
+                            onClick={() => setSelectedContentAngle(null)}
+                          >
+                            Auto-rotate
+                          </div>
+                          {(selectedBrandProfile.content_angles || []).map(angle => {
+                            const driverIcons = { fear: '😨', identity: '🪞', curiosity: '🔍', injustice: '⚖️', wonder: '✨' };
+                            return (
+                              <div
+                                key={angle.id}
+                                style={{
+                                  padding: '6px 12px', borderRadius: '16px', cursor: 'pointer', fontSize: '12px', fontWeight: 500,
+                                  border: selectedContentAngle?.id === angle.id ? '2px solid #111827' : '1px solid #D1D5DB',
+                                  backgroundColor: selectedContentAngle?.id === angle.id ? '#111827' : '#FFFFFF',
+                                  color: selectedContentAngle?.id === angle.id ? '#FFFFFF' : '#374151',
+                                }}
+                                onClick={() => setSelectedContentAngle(angle)}
+                              >
+                                {driverIcons[angle.emotional_driver] || '📌'} {angle.name} ({angle.weight}%)
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {selectedContentAngle && (
+                          <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px', fontStyle: 'italic' }}>
+                            {selectedContentAngle.description || selectedContentAngle.lens}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Generate Brand Topics */}
+                    {selectedBrandProfile && (
+                      <div style={{ marginTop: '16px' }}>
+                        <button
+                          style={{
+                            padding: '8px 16px', borderRadius: '6px', border: 'none',
+                            backgroundColor: '#111827', color: '#FFFFFF', fontSize: '12px',
+                            fontWeight: 600, cursor: brandTopicsLoading ? 'not-allowed' : 'pointer',
+                            opacity: brandTopicsLoading ? 0.7 : 1,
+                          }}
+                          disabled={brandTopicsLoading}
+                          onClick={async () => {
+                            setBrandTopicsLoading(true);
+                            try {
+                              const res = await apiFetch('/api/brands/generate-topics', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  brand_profile_id: selectedBrandProfile.id,
+                                  content_angle_id: selectedContentAngle?.id || null,
+                                  count: 8,
+                                  include_news: true,
+                                }),
+                              });
+                              const data = await res.json();
+                              if (data.topics) setBrandTopics(data.topics);
+                            } catch (err) {
+                              console.error('Topic generation failed:', err);
+                            } finally {
+                              setBrandTopicsLoading(false);
+                            }
+                          }}
+                        >
+                          {brandTopicsLoading ? 'Generating topics...' : 'Generate Topic Ideas'}
+                        </button>
+
+                        {/* Brand Topic List */}
+                        {brandTopics.length > 0 && (
+                          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {brandTopics.map((topic, i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  padding: '12px 14px', borderRadius: '6px', cursor: 'pointer',
+                                  border: customTopic === topic.title ? '2px solid #111827' : '1px solid #E5E7EB',
+                                  backgroundColor: customTopic === topic.title ? '#F9FAFB' : '#FFFFFF',
+                                }}
+                                onClick={() => {
+                                  setCustomTopic(topic.title);
+                                  // Store story context for the production engine
+                                  setScript(prev => prev ? { ...prev, _brand_story_context: topic.story_context } : null);
+                                  // Store it in a way the script generator can access
+                                  window.__brandTopicContext = topic.story_context;
+                                }}
+                              >
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
+                                  {topic.title}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>
+                                  {topic.hook_concept}
+                                </div>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <span style={{
+                                    fontSize: '10px', padding: '2px 6px', borderRadius: '8px',
+                                    backgroundColor: topic.is_evergreen ? '#DCFCE7' : '#FEF3C7',
+                                    color: topic.is_evergreen ? '#166534' : '#92400E',
+                                  }}>
+                                    {topic.is_evergreen ? 'Evergreen' : 'Topical'}
+                                  </span>
+                                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
+                                    {topic.emotional_driver}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
             {/* ── Creative Mode Toggle ── */}
             {selectedNiche && (
               <>
@@ -1660,42 +2311,220 @@ export default function ShortsBuilderPage() {
             )}
 
             {/* ── Generate Script Button ── */}
-            {selectedNiche && (
-              <button
-                style={styles.generateBtn(canGenerate)}
-                onClick={handleGenerateScript}
-                disabled={!canGenerate}
-              >
-                Generate Script
-              </button>
+            <div id="generate-script-section"></div>
+            {(selectedNiche || (brandMode && selectedBrandProfile)) && (
+              <>
+                <button
+                  style={{
+                    ...styles.generateBtn(canGenerate && !scriptLoading),
+                    opacity: scriptLoading ? 0.7 : undefined,
+                    cursor: scriptLoading ? 'not-allowed' : undefined,
+                  }}
+                  onClick={handleGenerateScript}
+                  disabled={!canGenerate || scriptLoading}
+                >
+                  {scriptLoading ? 'Generating Production Package...' : 'Generate Script'}
+                </button>
+                {scriptLoading && (
+                  <div style={{
+                    textAlign: 'center', padding: '24px', color: '#6B7280', fontSize: '13px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+                  }}>
+                    <div style={{
+                      width: '32px', height: '32px', border: '3px solid #E5E7EB',
+                      borderTopColor: '#111827', borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }} />
+                    <div>Building your Fichtean Curve production package...</div>
+                    <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                      Generating beats, visual prompts, SFX cues, and music direction. This takes 15-30 seconds.
+                    </div>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* ── Script Preview ── */}
+            {/* ── Production Package Preview ── */}
             {script && (
               <>
-                <div style={styles.sectionTitle}>Generated Script</div>
-                <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '8px' }}>
-                  {script.niche} → {script.framework} → {script.topic}
+                {/* Title & Meta */}
+                <div style={styles.sectionTitle}>{script.title || 'Generated Script'}</div>
+                <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
+                  {script.niche} → {script.topic}
                   {script.creative ? ' (Creative Mode)' : ''}
+                  {script._production_package?.brand_mode && (
+                    <span style={{ marginLeft: '8px', padding: '2px 6px', borderRadius: '8px', fontSize: '10px', fontWeight: 600, backgroundColor: '#EDE9FE', color: '#5B21B6' }}>
+                      Brand Mode: {script._production_package?.content_angle?.name || 'Auto'}
+                    </span>
+                  )}
                 </div>
-                <div style={styles.scriptPreview}>
-                  {script.scenes.map((scene, i) => (
-                    <div key={i} style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: i < script.scenes.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 600, color: '#111827' }}>
-                          Scene {i + 1}: {scene.label} ({scene.duration})
-                        </span>
-                        <span style={{ fontSize: '10px', color: '#9CA3AF', fontStyle: 'italic' }}>
-                          {scene.camera}
-                        </span>
+                {/* Brand violation warnings */}
+                {script._production_package?.brand_violations?.length > 0 && (
+                  <div style={{ padding: '10px 14px', borderRadius: '6px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#DC2626', marginBottom: '4px' }}>Brand Compliance Issues</div>
+                    {script._production_package.brand_violations.map((v, i) => (
+                      <div key={i} style={{ fontSize: '11px', color: '#991B1B', marginBottom: '2px' }}>
+                        {v.severity === 'critical' ? '🔴' : '🟡'} {v.message}
                       </div>
-                      <div style={{ marginBottom: '6px' }}>{scene.narration}</div>
-                      <div style={{ fontSize: '12px', color: '#7C3AED', fontStyle: 'italic' }}>
-                        {scene.visualDescription}
-                      </div>
+                    ))}
+                  </div>
+                )}
+                {script.total_word_count && (
+                  <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '4px' }}>
+                    {script.total_word_count} words · ~{Math.round(script.total_word_count / 2.5)}s estimated
+                  </div>
+                )}
+                {script.description && (
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>{script.description}</div>
+                )}
+
+                {/* Music Direction */}
+                {script.music && (
+                  <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400E', marginBottom: '4px' }}>Music Direction</div>
+                    <div style={{ fontSize: '12px', color: '#78350F' }}>
+                      {script.music.style} · BPM: {script.music.bpm_range}
                     </div>
-                  ))}
+                    <div style={{ fontSize: '11px', color: '#92400E', marginTop: '4px' }}>{script.music.energy_curve}</div>
+                  </div>
+                )}
+
+                {/* Visual Style */}
+                {script.visual_style && (
+                  <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#EDE9FE', border: '1px solid #DDD6FE', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#5B21B6', marginBottom: '4px' }}>Visual Style</div>
+                    <div style={{ fontSize: '12px', color: '#6D28D9' }}>{script.visual_style}</div>
+                  </div>
+                )}
+
+                {/* Beats */}
+                <div style={styles.scriptPreview}>
+                  {(script.beats || script.scenes || []).map((beat, i) => {
+                    const isBeat = !!beat.beat_type;
+                    const beatLabel = isBeat
+                      ? beat.beat_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                      : (beat.label || `Scene ${i + 1}`);
+                    const beatColors = {
+                      hook: '#DC2626', context: '#2563EB', escalation_1: '#D97706',
+                      escalation_2: '#EA580C', climax: '#7C3AED', kicker: '#059669', buffer: '#6B7280',
+                    };
+                    const beatColor = isBeat ? (beatColors[beat.beat_type] || '#6B7280') : '#6B7280';
+
+                    return (
+                      <div key={i} style={{ marginBottom: '24px', paddingBottom: '20px', borderBottom: i < (script.beats || script.scenes || []).length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                        {/* Beat Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '2px 10px', borderRadius: '12px',
+                            fontSize: '11px', fontWeight: 700, color: '#FFFFFF',
+                            backgroundColor: beatColor, textTransform: 'uppercase', letterSpacing: '0.5px',
+                          }}>
+                            {beatLabel}
+                          </span>
+                          {beat.estimated_duration_seconds && (
+                            <span style={{ fontSize: '11px', color: '#9CA3AF' }}>~{beat.estimated_duration_seconds}s</span>
+                          )}
+                          {isBeat && beat.transition_out && beat.transition_out !== 'hard_cut' && (
+                            <span style={{ fontSize: '10px', color: '#D1D5DB', fontStyle: 'italic' }}>
+                              → {beat.transition_out.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Voiceover / Narration */}
+                        <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#111827', marginBottom: '10px' }}>
+                          {isBeat ? beat.voiceover : beat.narration}
+                        </div>
+
+                        {/* Text Overlay */}
+                        {isBeat && beat.text_overlay && (
+                          <div style={{
+                            display: 'inline-block', padding: '4px 12px', borderRadius: '4px',
+                            backgroundColor: '#111827', color: '#FFFFFF', fontSize: '13px', fontWeight: 700,
+                            marginBottom: '10px',
+                          }}>
+                            {beat.text_overlay}
+                          </div>
+                        )}
+
+                        {/* Visual Prompts */}
+                        {isBeat && beat.visual_prompts && beat.visual_prompts.length > 0 && (
+                          <div style={{ marginBottom: '8px' }}>
+                            {beat.visual_prompts.map((vp, vi) => (
+                              <div key={vi} style={{
+                                padding: '10px 14px', borderRadius: '6px', marginBottom: '6px',
+                                backgroundColor: '#F5F3FF', border: '1px solid #EDE9FE',
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase' }}>
+                                    Visual {beat.visual_prompts.length > 1 ? `${vi + 1}/${beat.visual_prompts.length}` : ''} · {vp.duration_hint_seconds}s
+                                  </span>
+                                  <span style={{ fontSize: '10px', color: '#A78BFA' }}>
+                                    {vp.camera_motion}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#5B21B6', lineHeight: '1.5' }}>
+                                  {vp.prompt}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Legacy visual description */}
+                        {!isBeat && beat.visualDescription && (
+                          <div style={{ fontSize: '12px', color: '#7C3AED', fontStyle: 'italic', marginBottom: '8px' }}>
+                            {beat.visualDescription}
+                          </div>
+                        )}
+
+                        {/* SFX Cues */}
+                        {isBeat && beat.sfx_cues && beat.sfx_cues.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                            {beat.sfx_cues.map((sfx, si) => (
+                              <span key={si} style={{
+                                display: 'inline-block', padding: '2px 8px', borderRadius: '10px',
+                                fontSize: '10px', fontWeight: 500, backgroundColor: '#FEF3C7', color: '#92400E',
+                                border: '1px solid #FDE68A',
+                              }}>
+                                SFX: {sfx}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Music Event */}
+                        {isBeat && beat.music_event && (
+                          <span style={{
+                            display: 'inline-block', padding: '2px 8px', borderRadius: '10px',
+                            fontSize: '10px', fontWeight: 500, backgroundColor: '#DBEAFE', color: '#1E40AF',
+                            border: '1px solid #BFDBFE',
+                          }}>
+                            Music: {beat.music_event}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {/* Loop Note */}
+                {script.loop_note && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#065F46', marginBottom: '2px' }}>Loop</div>
+                    <div style={{ fontSize: '12px', color: '#047857' }}>{script.loop_note}</div>
+                  </div>
+                )}
+
+                {/* Hashtags */}
+                {script.hashtags && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '16px' }}>
+                    {script.hashtags.map((tag, i) => (
+                      <span key={i} style={{ fontSize: '11px', color: '#6B7280' }}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   style={{
                     width: '100%',
@@ -1831,8 +2660,53 @@ export default function ShortsBuilderPage() {
                       }}
                       onClick={() => setSelectedVoice(v.id)}
                     >
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{v.id}</div>
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{v.desc}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{v.id}</div>
+                          <div style={{ fontSize: '11px', color: '#6B7280' }}>{v.desc}</div>
+                        </div>
+                        <button
+                          style={{
+                            padding: '4px 8px', borderRadius: '4px', border: '1px solid #D1D5DB',
+                            backgroundColor: previewingVoice === v.id ? '#111827' : '#F9FAFB',
+                            color: previewingVoice === v.id ? '#FFFFFF' : '#6B7280',
+                            fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                            minWidth: '32px',
+                          }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            // Stop any currently playing preview
+                            if (previewAudioRef.current) {
+                              previewAudioRef.current.pause();
+                              previewAudioRef.current = null;
+                            }
+                            if (previewingVoice === v.id) {
+                              setPreviewingVoice(null);
+                              return;
+                            }
+                            setPreviewingVoice(v.id);
+                            try {
+                              const res = await apiFetch('/api/voice/preview', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ voice_id: v.id }),
+                              });
+                              if (!res.ok) throw new Error('Preview failed');
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const audio = new Audio(url);
+                              previewAudioRef.current = audio;
+                              audio.onended = () => { setPreviewingVoice(null); URL.revokeObjectURL(url); };
+                              audio.play();
+                            } catch (err) {
+                              console.error('Voice preview failed:', err);
+                              setPreviewingVoice(null);
+                            }
+                          }}
+                        >
+                          {previewingVoice === v.id ? '■' : '▶'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1935,7 +2809,10 @@ export default function ShortsBuilderPage() {
                     if (!selectedVoice) return;
                     setVoiceoverLoading(true);
                     try {
-                      const fullNarration = script?.narration_full || script?.scenes?.map(s => s.narration).join(' ') || '';
+                      const rawNarration = script?.narration_full || script?.scenes?.map(s => s.narration).join(' ') || '';
+                      // Convert [BEAT] markers to natural pauses for TTS
+                      // Gemini TTS interprets "..." as a breath/pause — best available method
+                      const fullNarration = rawNarration.replace(/\s*\[BEAT\]\s*/g, ' ... ').trim();
                       const res = await apiFetch('/api/workbench/voiceover', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2072,21 +2949,78 @@ export default function ShortsBuilderPage() {
                       if (!musicMood) return;
                       setMusicLoading(true);
                       try {
-                        const fw = BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework);
-                        const res = await apiFetch('/api/workbench/music', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            framework_id: fw?.id,
-                            niche: selectedNiche,
-                            duration: 35,
-                            music_model: 'elevenlabs',
-                          }),
-                        });
-                        const data = await res.json();
-                        if (data.error) throw new Error(data.error);
-                        setMusicUrl(data.audio_url);
-                        setMusicGenerated(true);
+                        const musicDirection = script?.music ? `${script.music.style}. ${script.music.energy_curve}` : musicMood;
+
+                        // Calculate actual target duration from script or voiceover
+                        const scriptDuration = script?.total_word_count
+                          ? Math.ceil(script.total_word_count / 2.5) + 5 // words/2.5wps + 5s buffer
+                          : script?.beats?.reduce((sum, b) => sum + (b.estimated_duration_seconds || 8), 0) || 75;
+                        const targetMusicDuration = Math.max(30, Math.min(180, scriptDuration));
+
+                        // ── Check library first ──
+                        let foundUrl = null;
+                        try {
+                          const searchRes = await apiFetch('/api/audio/library', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              action: 'search',
+                              type: 'music',
+                              niche: selectedNiche,
+                              query: musicDirection,
+                              limit: 3,
+                            }),
+                          });
+                          const searchData = await searchRes.json();
+                          if (searchData.results?.length > 0) {
+                            foundUrl = searchData.results[0].url;
+                            console.log(`Music reused from library: "${searchData.results[0].prompt?.slice(0, 40)}..."`);
+                            apiFetch('/api/audio/library', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'increment', id: searchData.results[0].id }),
+                            }).catch(() => {});
+                          }
+                        } catch (_) { /* library search failed */ }
+
+                        if (foundUrl) {
+                          setMusicUrl(foundUrl);
+                          setMusicGenerated(true);
+                        } else {
+                          // ── Generate new music ──
+                          const res = await apiFetch('/api/workbench/music', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              niche: selectedNiche,
+                              duration: targetMusicDuration,
+                              music_model: 'elevenlabs',
+                              music_mood: musicDirection,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.error) throw new Error(data.error);
+                          setMusicUrl(data.audio_url);
+                          setMusicGenerated(true);
+
+                          // ── Save to library ──
+                          if (data.audio_url) {
+                            apiFetch('/api/audio/library', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                action: 'save',
+                                type: 'music',
+                                url: data.audio_url,
+                                prompt: musicDirection,
+                                niche: selectedNiche,
+                                duration: targetMusicDuration,
+                                style: script?.music?.style || musicMood,
+                                bpm: script?.music?.bpm_range || null,
+                              }),
+                            }).catch(err => console.warn('Music library save failed:', err));
+                          }
+                        }
                       } catch (err) {
                         console.error('Music generation failed:', err);
                       } finally {
@@ -2140,8 +3074,7 @@ export default function ShortsBuilderPage() {
                               body: JSON.stringify({
                                 audio_url: voiceoverUrl,
                                 video_model: selectedVideoModel || 'fal_veo3',
-                                framework_id: selectedFramework,
-                                video_length_preset: 30,
+                                video_length_preset: 60,
                                 voice_speed: parseFloat(voiceSpeed),
                               }),
                             });
@@ -2149,15 +3082,19 @@ export default function ShortsBuilderPage() {
                             if (data.error) throw new Error(data.error);
                             setTimingBlocks(data.blocks || []);
                             setTimingGenerated(true);
-                            // Update script scenes with actual durations from blocks
+                            // Update timing blocks on the script
                             if (data.blocks && script) {
                               setScript(prev => ({
                                 ...prev,
-                                scenes: prev.scenes.map((s, i) => ({
-                                  ...s,
-                                  duration: data.blocks[i] ? `${Math.round(data.blocks[i].clipDuration)}s` : s.duration,
-                                  narration: data.blocks[i]?.narration || s.narration,
-                                })),
+                                timingBlocks: data.blocks,
+                                // Update scenes if legacy format
+                                ...(prev.scenes ? {
+                                  scenes: prev.scenes.map((s, i) => ({
+                                    ...s,
+                                    duration: data.blocks[i] ? `${Math.round(data.blocks[i].clipDuration)}s` : s.duration,
+                                    narration: data.blocks[i]?.narration || s.narration,
+                                  })),
+                                } : {}),
                               }));
                             }
                           } catch (err) {
@@ -2197,17 +3134,15 @@ export default function ShortsBuilderPage() {
                             <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '8px' }}>
                               Scene Timing Preview:
                             </div>
-                            {(script?.scenes || [
-                              { label: 'Hook' },
-                              { label: 'Context' },
-                              { label: 'Point 1' },
-                              { label: 'Point 2' },
-                              { label: 'Point 3' },
-                              { label: 'Impact' },
-                              { label: 'CTA' },
-                            ]).map((scene, i, arr) => {
-                              const dur = 5 + Math.round(Math.random()); // 5-6s per scene
-                              const start = i * 5.5;
+                            {(timingBlocks.length > 0 ? timingBlocks.map((b, i) => ({
+                              label: b.frameworkLabel || b.narration?.slice(0, 30) || `Block ${i + 1}`,
+                              duration: b.clipDuration,
+                            })) : (script?.beats || script?.scenes || []).map((b, i) => ({
+                              label: b.beat_type?.replace(/_/g, ' ') || b.label || `Scene ${i + 1}`,
+                              duration: b.estimated_duration_seconds || 5,
+                            }))).map((scene, i, arr) => {
+                              const dur = scene.duration || 5;
+                              const start = arr.slice(0, i).reduce((sum, s) => sum + (s.duration || 5), 0);
                               return (
                                 <div key={i} style={{
                                   display: 'flex',
@@ -2311,17 +3246,99 @@ export default function ShortsBuilderPage() {
                             onClick={async () => {
                               setSfxLoading(true);
                               try {
-                                const res = await apiFetch('/api/workbench/sfx', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    niche: selectedNiche,
-                                    duration: 35,
-                                  }),
-                                });
-                                const data = await res.json();
-                                if (data.error) throw new Error(data.error);
-                                setSfxUrl(data.sfx_url || null);
+                                // Generate individual SFX per beat — check library first, generate if no match
+                                const beats = script?.beats || [];
+                                const sfxResults = [];
+                                let cumulativeTime = 0;
+                                let reusedCount = 0;
+                                let generatedCount = 0;
+
+                                for (const beat of beats) {
+                                  const cues = beat.sfx_cues || [];
+                                  if (cues.length === 0) {
+                                    cumulativeTime += (beat.estimated_duration_seconds || 5);
+                                    continue;
+                                  }
+                                  const cuePrompt = cues.join(', ') + `, ${NICHES.find(n => n.id === selectedNiche)?.name || ''} style`;
+                                  const sfxDuration = Math.min(beat.estimated_duration_seconds || 4, 6);
+
+                                  // ── Check library first ──
+                                  let sfxUrl = null;
+                                  try {
+                                    const searchRes = await apiFetch('/api/audio/library', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        action: 'search',
+                                        type: 'sfx',
+                                        niche: selectedNiche,
+                                        query: cues.join(' '),
+                                        limit: 1,
+                                      }),
+                                    });
+                                    const searchData = await searchRes.json();
+                                    if (searchData.results?.length > 0) {
+                                      sfxUrl = searchData.results[0].url;
+                                      reusedCount++;
+                                      console.log(`SFX reused from library: "${cues[0]}" → ${sfxUrl.slice(0, 50)}...`);
+                                      // Increment use count
+                                      apiFetch('/api/audio/library', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ action: 'increment', id: searchData.results[0].id }),
+                                      }).catch(() => {});
+                                    }
+                                  } catch (_) { /* library search failed, generate fresh */ }
+
+                                  // ── Generate if no library match ──
+                                  if (!sfxUrl) {
+                                    const res = await apiFetch('/api/workbench/sfx', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        niche: selectedNiche,
+                                        duration: sfxDuration,
+                                        prompt: cuePrompt,
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    sfxUrl = data.sfx_url || null;
+                                    generatedCount++;
+
+                                    // ── Save to library for future reuse ──
+                                    if (sfxUrl) {
+                                      apiFetch('/api/audio/library', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          action: 'save',
+                                          type: 'sfx',
+                                          url: sfxUrl,
+                                          prompt: cuePrompt,
+                                          niche: selectedNiche,
+                                          beat_type: beat.beat_type,
+                                          duration: sfxDuration,
+                                        }),
+                                      }).catch(err => console.warn('SFX library save failed:', err));
+                                    }
+                                  }
+
+                                  if (sfxUrl) {
+                                    sfxResults.push({
+                                      url: sfxUrl,
+                                      offset: cumulativeTime,
+                                      duration: sfxDuration,
+                                      beat: beat.beat_type,
+                                    });
+                                  }
+                                  cumulativeTime += (beat.estimated_duration_seconds || 5);
+                                }
+
+                                console.log(`SFX complete: ${reusedCount} reused from library, ${generatedCount} newly generated`);
+
+                                // Store all SFX with their timing offsets
+                                setSfxUrl(sfxResults.length > 0 ? sfxResults[0].url : null);
+                                setScript(prev => ({ ...prev, _sfx_tracks: sfxResults }));
                                 setSfxGenerated(true);
                               } catch (err) {
                                 console.error('SFX generation failed:', err);
@@ -3008,7 +4025,7 @@ export default function ShortsBuilderPage() {
               <div>
                 <div style={{ fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Script</div>
                 <div style={{ color: '#111827' }}>Niche: <strong>{NICHES.find(n => n.id === selectedNiche)?.name || '—'}</strong></div>
-                <div style={{ color: '#111827' }}>Framework: <strong>{BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework)?.name || '—'}</strong></div>
+                <div style={{ color: '#111827' }}>Structure: <strong>Fichtean Curve ({script?.beats?.length || 0} beats)</strong></div>
                 <div style={{ color: '#111827' }}>Topic: <strong>{script?.topic || customTopic || '—'}</strong></div>
                 <div style={{ color: '#111827' }}>Creative Mode: <strong>{creativeMode ? 'On' : 'Off'}</strong></div>
                 <div style={{ color: '#111827' }}>Brand Kit: <strong>{selectedBrandKit || 'None'}</strong></div>
@@ -3080,7 +4097,25 @@ export default function ShortsBuilderPage() {
                   setGeneratedClips([]);
                   setFinalVideoUrl(null);
 
-                  const scenes = script?.scenes || [];
+                  // Build scenes from beats' visual prompts (new engine) or legacy scenes
+                  let scenes = [];
+                  if (script?.beats) {
+                    // New production engine: flatten beats into scenes (one per visual prompt)
+                    for (const beat of script.beats) {
+                      for (let vi = 0; vi < (beat.visual_prompts || []).length; vi++) {
+                        const vp = beat.visual_prompts[vi];
+                        scenes.push({
+                          label: `${beat.beat_type}${beat.visual_prompts.length > 1 ? `_${vi + 1}` : ''}`,
+                          narration: vi === 0 ? beat.voiceover : '',
+                          visualDescription: vp.prompt,
+                          camera: vp.camera_motion,
+                          duration: `${vp.duration_hint_seconds || 5}s`,
+                        });
+                      }
+                    }
+                  } else {
+                    scenes = script?.scenes || [];
+                  }
                   const totalScenes = scenes.length;
                   const clips = [];
                   let previousSceneAnalysis = null;
@@ -3131,6 +4166,8 @@ export default function ShortsBuilderPage() {
                           nicheMood: NICHE_MUSIC_MOODS[selectedNiche],
                           sceneIndex: i,
                           totalScenes,
+                          continuityMode: continuityMode || 'continuous',
+                          characterReferences: script?.character_references || script?._production_package?.character_references || null,
                         }),
                       });
                       const promptData = await promptRes.json();
@@ -3176,9 +4213,9 @@ export default function ShortsBuilderPage() {
                         aspect_ratio: '9:16',
                         scene_index: i,
                         video_style: stylePromptText,
+                        // Pass character references for vision analysis consistency
+                        character_references: script?.character_references || script?._production_package?.character_references || null,
                       };
-                      // R2V: pass element references
-                      // (TODO: wire reference image upload state)
 
                       const clipRes = await apiFetch('/api/workbench/generate-clip', {
                         method: 'POST',
@@ -3188,36 +4225,89 @@ export default function ShortsBuilderPage() {
                       const clipData = await clipRes.json();
                       if (clipData.error) throw new Error(`Video gen failed scene ${i + 1}: ${clipData.error}`);
 
+                      // Save clip to Supabase immediately (safety net — FAL CDN URLs expire)
+                      let savedClipUrl = clipData.video_url;
+                      try {
+                        const saveRes = await apiFetch('/api/library/save', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            url: clipData.video_url,
+                            folder: 'pipeline/clips',
+                            filename: `scene_${i + 1}_${Date.now()}.mp4`,
+                          }),
+                        });
+                        const saveData = await saveRes.json();
+                        if (saveData.public_url) savedClipUrl = saveData.public_url;
+                      } catch (saveErr) {
+                        console.warn(`Clip ${i + 1} Supabase save failed (using FAL URL):`, saveErr);
+                      }
+
                       clips.push({
-                        url: clipData.video_url,
+                        url: savedClipUrl,
                         duration: clipData.actual_duration || clipDuration,
                       });
                       setGeneratedClips([...clips]);
 
-                      // ── Step 4: Extract last frame + analyze for next scene ──
+                      // Auto-save after each clip (preserves progress if window closes)
+                      try {
+                        await apiFetch('/api/workbench/save-draft', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            draft_id: draftId,
+                            state: {
+                              selectedNiche, customTopic, selectedHooks, creativeMode, selectedBrandKit,
+                              voiceProvider, selectedVoice, voiceStyle, customVoiceStyle, voiceSpeed, noVoice,
+                              musicMood, musicVolume, sfxEnabled, continuityMode, videoGenMode,
+                              selectedVideoModel, selectedImageModel, selectedVisualStyle,
+                              selectedLighting, selectedMood, visualIntensity,
+                              captionStyle, captionPosition, captionHighlight, noCaptions,
+                              currentStep: 5, script, voiceoverUrl, musicUrl, sfxUrl, timingBlocks,
+                              generatedClips: [...clips],
+                              topic: script?.topic || customTopic || 'Untitled',
+                            },
+                          }),
+                        }).then(r => r.json()).then(d => { if (d.draft_id && !draftId) setDraftId(d.draft_id); });
+                      } catch (_) { /* non-blocking */ }
+
+                      // ── Step 4: Use last frame + vision analysis from clip response ──
+                      // generate-clip already extracts last frame and runs vision analysis
                       if (i < totalScenes - 1) {
-                        setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Analyzing for continuity...`, pct: pctBase + 14 });
+                        // Last frame from generate-clip (already extracted + uploaded to Supabase)
+                        if (clipData.last_frame_url) {
+                          lastFrameUrl = clipData.last_frame_url;
+                          console.log(`Scene ${i + 1}: Last frame from clip response → ${lastFrameUrl.slice(0, 60)}...`);
+                        } else {
+                          console.warn(`Scene ${i + 1}: No last_frame_url in clip response — next scene will generate fresh image`);
+                          lastFrameUrl = null;
+                        }
 
-                        // Use last_frame_url from clip response if available, otherwise extract
-                        lastFrameUrl = clipData.last_frame_url || null;
-
-                        // Analyze the video with Gemini for scene continuity
-                        try {
-                          const analysisRes = await apiFetch('/api/analyze/scene-continuity', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              video_url: clipData.video_url,
-                              scene_label: scene.label,
-                              next_scene_label: scenes[i + 1]?.label || 'Next scene',
-                              narration: scene.narration,
-                            }),
-                          });
-                          const analysisData = await analysisRes.json();
-                          previousSceneAnalysis = analysisData.analysis || '';
-                        } catch (analysisErr) {
-                          console.warn('Scene analysis failed (non-fatal):', analysisErr);
-                          previousSceneAnalysis = `Previous scene "${scene.label}": ${scene.narration}`;
+                        // Vision analysis from generate-clip (already analyzed via GPT-4 vision)
+                        if (clipData.vision_analysis) {
+                          previousSceneAnalysis = clipData.vision_analysis;
+                          console.log(`Scene ${i + 1}: Vision analysis from clip response (${previousSceneAnalysis.length} chars)`);
+                        } else {
+                          // Fallback: run Gemini analysis separately
+                          setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Gemini analyzing for continuity...`, pct: pctBase + 14 });
+                          try {
+                            const analysisRes = await apiFetch('/api/analyze/scene-continuity', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                video_url: savedClipUrl,
+                                scene_label: scene.label,
+                                next_scene_label: scenes[i + 1]?.label || 'Next scene',
+                                narration: scene.narration,
+                              }),
+                            });
+                            const analysisData = await analysisRes.json();
+                            previousSceneAnalysis = analysisData.analysis || '';
+                            console.log(`Scene ${i + 1}: Gemini fallback analysis complete (${previousSceneAnalysis.length} chars)`);
+                          } catch (analysisErr) {
+                            console.warn('Scene analysis failed (non-fatal):', analysisErr);
+                            previousSceneAnalysis = `Previous scene "${scene.label}": ${scene.narration}`;
+                          }
                         }
                       }
                     }
@@ -3234,6 +4324,26 @@ export default function ShortsBuilderPage() {
                         music_volume: musicVolume / 100,
                         sfx_url: sfxUrl || null,
                         sfx_volume: 0.3,
+                        sfx_tracks: script?._sfx_tracks || null,
+                        // Build music events from production package beats
+                        music_events: (() => {
+                          const beats = script?.beats || script?._production_package?.beats || [];
+                          const events = [];
+                          let cumulativeTime = 0;
+                          for (const beat of beats) {
+                            if (beat.music_event && beat.music_event !== '') {
+                              const action = beat.music_event === 'bass_drop' ? 'bass_drop'
+                                : beat.music_event === 'dropout' ? 'dropout'
+                                : beat.music_event === 'riser' ? 'riser'
+                                : beat.music_event === 'texture_change' ? 'texture_change'
+                                : beat.music_event === 'sfx_bridge' ? 'duck'
+                                : null;
+                              if (action) events.push({ time: cumulativeTime, action });
+                            }
+                            cumulativeTime += (beat.estimated_duration_seconds || beat.word_count / 2.5 || 8);
+                          }
+                          return events.length > 0 ? events : null;
+                        })(),
                         tts_duration: timingBlocks.reduce((sum, b) => sum + (b.clipDuration || 0), 0) || null,
                         voice_speed: parseFloat(voiceSpeed),
                         caption_config: noCaptions ? null : {
@@ -3364,7 +4474,6 @@ export default function ShortsBuilderPage() {
                     const template = {
                       type: 'shorts_builder_template',
                       niche: selectedNiche,
-                      framework: selectedFramework,
                       creativeMode,
                       brandKit: selectedBrandKit,
                       voiceProvider,
@@ -3395,7 +4504,7 @@ export default function ShortsBuilderPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           draft_id: null,
-                          state: { ...template, is_flow_template: true, template_name: `${NICHES.find(n => n.id === selectedNiche)?.name || ''} — ${BUILDER_FRAMEWORKS.find(f => f.id === selectedFramework)?.name || ''} Template` },
+                          state: { ...template, is_flow_template: true, template_name: `${NICHES.find(n => n.id === selectedNiche)?.name || ''} — Fichtean Curve Template` },
                         }),
                       });
                       const data = await res.json();

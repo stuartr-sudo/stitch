@@ -126,11 +126,13 @@ export default async function handler(req, res) {
 
       // ─── Music ────────────────────────────────────────────────────
       case 'music': {
-        const { framework_id, niche, duration = 65, music_model = 'elevenlabs' } = req.body;
+        const { framework_id, niche, duration = 65, music_model = 'elevenlabs', music_mood } = req.body;
         const framework = framework_id ? getFramework(framework_id) : null;
-        // Use framework music config first, then fall back to niche-specific music mood
+        // Priority: explicit music_mood from production engine → framework → niche template → fallback
         const nicheMood = niche && SHORTS_TEMPLATES[niche] ? SHORTS_TEMPLATES[niche].music_mood : null;
-        const prompt = buildMusicPrompt(framework?.music || framework?.musicMood || nicheMood || 'cinematic background', framework?.category);
+        const prompt = music_mood
+          ? buildMusicPrompt(music_mood)
+          : buildMusicPrompt(framework?.music || framework?.musicMood || nicheMood || 'cinematic background', framework?.category);
         const validModels = ['elevenlabs', 'minimax', 'fal_lyria2', 'suno'];
         const selectedModel = validModels.includes(music_model) ? music_model : 'elevenlabs';
         const audioUrl = await genMusic(prompt, duration, keys, supabase, selectedModel);
@@ -141,8 +143,8 @@ export default async function handler(req, res) {
 
       // ─── Sound Effects ─────────────────────────────────────────────
       case 'sfx': {
-        const { niche, duration = 65 } = req.body;
-        const prompt = buildSfxPrompt(niche);
+        const { niche, duration = 65, prompt: customPrompt } = req.body;
+        const prompt = customPrompt || buildSfxPrompt(niche);
         try {
           const sfxUrl = await generateSoundEffect(prompt, duration, keys.falKey, supabase);
           return res.json({ sfx_url: sfxUrl });
@@ -262,7 +264,7 @@ Rules:
         let visionAnalysis = null;
         if (frame_type === 'end' || frame_type === 'single') {
           try {
-            visionAnalysis = await analyzeFrameContinuity(imageUrl, openai);
+            visionAnalysis = await analyzeFrameContinuity(imageUrl, openai, character_references || null);
           } catch (err) {
             console.warn(`[workbench] Vision analysis failed: ${err.message}`);
           }
@@ -279,6 +281,7 @@ Rules:
           mode, video_model = 'fal_veo3', start_frame_url, end_frame_url,
           motion_prompt = 'Smooth cinematic movement', camera_config, video_style,
           duration = 6, aspect_ratio = '9:16', scene_index,
+          character_references,
         } = req.body;
 
         if (!start_frame_url) return res.status(400).json({ error: 'start_frame_url required' });
@@ -371,7 +374,7 @@ Rules:
               lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/workbench');
               // Vision analysis for next-scene prompt continuity
               const openai = new OpenAI({ apiKey: keys.openaiKey });
-              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai);
+              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai, character_references || null);
             }
           } catch (err) {
             console.warn(`[workbench] MT last frame extraction failed: ${err.message}`);
@@ -389,7 +392,7 @@ Rules:
               lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/workbench');
               // Vision analyze for next scene's prompt
               const openai = new OpenAI({ apiKey: keys.openaiKey });
-              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai);
+              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai, character_references || null);
             }
           } catch (err) {
             console.warn(`[workbench] Last frame extraction failed: ${err.message}`);
@@ -471,7 +474,7 @@ Rules:
         const {
           clips, voiceover_url, music_url, music_volume = 0.15,
           tts_duration, voice_speed = 1.0, caption_config,
-          sfx_url, sfx_volume = 0.3,
+          sfx_url, sfx_volume = 0.3, sfx_tracks, music_events,
           avatar_mode, avatar_lipsync_url,
         } = req.body;
 
@@ -492,6 +495,8 @@ Rules:
           clipDurations, music_volume,
           effectiveTtsDuration,
           sfx_url, sfx_volume,
+          sfx_tracks || null,
+          music_events || null,
         );
 
         let finalUrl = assembledUrl;

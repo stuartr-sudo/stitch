@@ -360,6 +360,23 @@ export const VIDEO_MODELS = {
     parseResult: (output) => output?.video?.url,
     pollConfig: { maxRetries: 120, delayMs: 4000 },
   },
+  // PixVerse C1: duration 1-15 (int), uses generate_audio_switch (NOT generate_audio), R2V capable via image_references
+  'pixverse-c1': {
+    provider: 'fal',
+    label: 'PixVerse C1',
+    endpoint: 'fal-ai/pixverse/c1/image-to-video',
+    r2vEndpoint: 'fal-ai/pixverse/c1/reference-to-video',
+    buildBody: (imageUrl, prompt, duration, aspectRatio, opts = {}) => ({
+      image_url: imageUrl, prompt,
+      duration: Math.max(1, Math.min(15, Math.round(Number(duration) || 5))),
+      ...(aspectRatio && { aspect_ratio: aspectRatio }),
+      ...(opts.resolution && { resolution: opts.resolution }),
+      ...(opts.generate_audio === true && { generate_audio_switch: true }),
+      ...(opts.image_references?.length && { image_references: opts.image_references }),
+    }),
+    parseResult: (output) => output?.video?.url,
+    pollConfig: { maxRetries: 120, delayMs: 4000 },
+  },
   // Hailuo/MiniMax — no duration, no aspect_ratio, NO generate_audio, has prompt_optimizer
   fal_hailuo: {
     provider: 'fal',

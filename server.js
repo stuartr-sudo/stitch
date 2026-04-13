@@ -613,6 +613,18 @@ app.post('/api/brand/remove-bg', authenticateToken, async (req, res) => {
   res.status(500).json({ error: 'Handler not found' });
 });
 
+// Brand Profile routes (with auth)
+app.all('/api/brands/profiles*', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brands/profiles.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+app.post('/api/brands/generate-topics', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('brands/generate-topics.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
 // LoRA training routes (with auth)
 app.post('/api/lora/train', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('lora/train.js');
@@ -694,6 +706,12 @@ app.post('/api/audio/music', authenticateToken, async (req, res) => {
 
 app.post('/api/audio/captions', authenticateToken, async (req, res) => {
   const handler = await loadApiRoute('audio/captions.js');
+  if (handler) return handler(req, res);
+  res.status(500).json({ error: 'Handler not found' });
+});
+
+app.post('/api/audio/library', authenticateToken, async (req, res) => {
+  const handler = await loadApiRoute('audio/library.js');
   if (handler) return handler(req, res);
   res.status(500).json({ error: 'Handler not found' });
 });

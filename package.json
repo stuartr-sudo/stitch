@@ -11,6 +11,7 @@
     "start": "concurrently \"npm run server\" \"npm run dev\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@fal-ai/client": "^1.9.5",
     "@google/genai": "^1.49.0",
     "@google/model-viewer": "^4.2.0",
@@ -50,7 +51,8 @@
     "tailwindcss-animate": "^1.0.7",
     "use-image": "^1.1.4",
     "uuid": "^13.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",

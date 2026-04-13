@@ -58,6 +58,8 @@ export default async function handler(req, res) {
     nicheMood,
     sceneIndex,
     totalScenes,
+    continuityMode,       // 'continuous' or 'exciting'
+    characterReferences,  // array of { id, description, role } from production package
     // Model-aware prompt optimization
     targetModel,
     // Prompt template support
@@ -269,20 +271,38 @@ Rules:
   }
 
   if (tool === 'shorts') {
-    return `You are an expert AI image prompt engineer specializing in short-form video scene imagery. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for generating a STARTING IMAGE for a 5-6 second video scene.
+    let modeInstructions = '';
+    if (previousSceneAnalysis && continuityMode === 'continuous') {
+      modeInstructions = `
+CONTINUOUS MODE — FULL VISUAL CONTINUITY:
+- The previous scene analysis describes what the last frame looked like
+- Maintain visual continuity: same environment, same lighting direction, same color temperature, same characters in consistent appearance
+- The current scene's visual prompt tells you WHAT HAPPENS NEXT in the same visual space
+- Think of it as the next shot in a continuous camera movement`;
+    } else if (previousSceneAnalysis && continuityMode === 'exciting') {
+      modeInstructions = `
+EXCITING MODE — FRESH COMPOSITION, CONSISTENT CHARACTERS:
+- Generate a completely fresh image — new composition, new environment, new angle
+- The ONLY thing to carry from the previous scene analysis is CHARACTER APPEARANCE — if the same person appears, they must look the same (same clothing, hair, build, skin tone, etc.)
+- Everything else (background, lighting, color grade, framing) should be driven entirely by the current scene's visual prompt and the global visual style`;
+    }
+
+    return `You are an expert AI image prompt engineer specializing in short-form video scene imagery. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for generating a STARTING IMAGE for a 3-8 second video scene.
+
+CRITICAL — CHARACTER REFERENCE BLOCKS:
+If the visual description contains a character reference block in the format [role: physical description], you MUST preserve that block EXACTLY as written in your output prompt. Do not paraphrase, summarize, or rephrase character descriptions — identical wording across scenes is what produces consistent characters in AI image generation. Enhance the scene composition, lighting, and style AROUND the character block, but treat the character description itself as IMMUTABLE.
 
 Rules:
 - Output ONLY the prompt text — no preamble, no explanation, no quotes
 - Weave all elements together naturally into flowing descriptive text
-- This image will be animated into a 5-6 second video clip — describe a SINGLE MOMENT, not a sequence
+- The visual prompt's PRIMARY SUBJECT must depict what the voiceover is saying — not just the mood or vibe
+- This image will be animated into a video clip — describe a SINGLE MOMENT, not a sequence
 - Be extremely specific with visual details: colors, materials, lighting temperature, composition, depth of field
 - Camera direction is provided — integrate it naturally (lens, angle, movement starting point, lighting setup)
-- If a PREVIOUS SCENE ANALYSIS is provided, this is critical context:
-  - Maintain character consistency (same clothing, features, positioning context)
-  - Maintain setting continuity (same location unless the script says otherwise)
-  - Maintain lighting continuity (similar color temperature and direction)
+${modeInstructions}
+${previousSceneAnalysis ? `- PREVIOUS SCENE ANALYSIS is provided — use it for continuity as described above
   - ADVANCE the narrative — don't repeat what was in the previous scene, show the NEXT moment
-  - Use specific details from the analysis (character positions, props, environment state)
+  - Use specific details from the analysis (character positions, props, environment state)` : ''}
 - If a brand style guide is provided, align visual elements with brand colors, preferred elements, and composition style
 - If a visual style preset is provided, apply that aesthetic to every visual detail
 - Do NOT use copyrighted brand names (Pixar, Disney, DreamWorks, etc.) — describe visual characteristics instead

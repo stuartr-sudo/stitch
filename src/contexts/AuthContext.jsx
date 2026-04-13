@@ -50,11 +50,29 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkUserKeys(session.user.id).then(async () => {
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      // Dev-mode auto-login: if no session on localhost, auto-sign-in as owner
+      if (!existingSession && window.location.hostname === 'localhost') {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: 'stuartr@sewo.io',
+            password: import.meta.env.VITE_DEV_PASSWORD || '',
+          });
+          if (!error && data?.session) {
+            setSession(data.session);
+            setUser(data.session.user);
+            await checkUserKeys(data.session.user.id);
+            await checkOnboardingStatus();
+            setLoading(false);
+            return;
+          }
+        } catch (_) { /* fall through to normal flow */ }
+      }
+
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      if (existingSession?.user) {
+        checkUserKeys(existingSession.user.id).then(async () => {
           await checkOnboardingStatus();
           setLoading(false);
         });

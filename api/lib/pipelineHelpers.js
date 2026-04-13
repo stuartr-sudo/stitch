@@ -404,7 +404,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
  * @param {number[]} [clipDurations] - Actual duration of each clip in seconds
  * @returns {Promise<string>} Public URL of the assembled video
  */
-export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null, sfxUrl = null, sfxVolume = 0.3) {
+export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null, sfxUrl = null, sfxVolume = 0.3, sfxTracks = null, musicEvents = null) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
   if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
@@ -428,10 +428,56 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
   ];
 
   if (musicUrl) {
-    tracks.push({ id: 'music', type: 'audio', keyframes: [{ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume }] });
+    // Build music keyframes with volume automation from music events
+    const musicKeyframes = [];
+    if (musicEvents && musicEvents.length > 0) {
+      const sorted = [...musicEvents].sort((a, b) => a.time - b.time);
+      let lastEnd = 0;
+      for (const event of sorted) {
+        const t = Math.round(event.time * 1000);
+        if (t > lastEnd) musicKeyframes.push({ url: musicUrl, timestamp: lastEnd, duration: t - lastEnd, volume: musicVolume });
+        switch (event.action) {
+          case 'dropout':
+            musicKeyframes.push({ url: musicUrl, timestamp: t, duration: 1000, volume: 0 });
+            lastEnd = t + 1000; break;
+          case 'riser':
+            musicKeyframes.push({ url: musicUrl, timestamp: t, duration: 2000, volume: Math.min(musicVolume * 1.8, 0.30) });
+            lastEnd = t + 2000; break;
+          case 'bass_drop':
+            musicKeyframes.push({ url: musicUrl, timestamp: t, duration: 300, volume: 0 });
+            musicKeyframes.push({ url: musicUrl, timestamp: t + 300, duration: 700, volume: Math.min(musicVolume * 2, 0.35) });
+            lastEnd = t + 1000; break;
+          case 'duck': case 'texture_change':
+            musicKeyframes.push({ url: musicUrl, timestamp: t, duration: 1000, volume: 0.05 });
+            lastEnd = t + 1000; break;
+          default: lastEnd = t;
+        }
+      }
+      if (lastEnd < totalDurationMs) musicKeyframes.push({ url: musicUrl, timestamp: lastEnd, duration: totalDurationMs - lastEnd, volume: musicVolume });
+      console.log(`[assembleShort] Music volume automation: ${musicKeyframes.length} keyframes from ${musicEvents.length} events`);
+    } else {
+      musicKeyframes.push({ url: musicUrl, timestamp: 0, duration: totalDurationMs, volume: musicVolume });
+    }
+    tracks.push({ id: 'music', type: 'audio', keyframes: musicKeyframes });
   }
 
-  if (sfxUrl) {
+  // Per-beat SFX tracks (new production engine) — each positioned at the correct timestamp
+  if (sfxTracks && sfxTracks.length > 0) {
+    sfxTracks.forEach((sfx, i) => {
+      tracks.push({
+        id: `sfx_${i}`,
+        type: 'audio',
+        keyframes: [{
+          url: sfx.url,
+          timestamp: (sfx.offset || 0) * 1000,
+          duration: (sfx.duration || 4) * 1000,
+          volume: sfxVolume,
+        }],
+      });
+    });
+    console.log(`[assembleShort] Added ${sfxTracks.length} positioned SFX tracks`);
+  } else if (sfxUrl) {
+    // Legacy: single SFX track spanning the whole video
     tracks.push({ id: 'sfx', type: 'audio', keyframes: [{ url: sfxUrl, timestamp: 0, duration: totalDurationMs, volume: sfxVolume }] });
   }
 
@@ -832,7 +878,12 @@ export async function extractLastFrame(videoUrl, durationSeconds, falKey) {
  * @param {object} openai - OpenAI client instance
  * @returns {Promise<string>} visual description (≤120 words)
  */
-export async function analyzeFrameContinuity(imageUrl, openai) {
+export async function analyzeFrameContinuity(imageUrl, openai, characterReferences = null) {
+  let characterContext = '';
+  if (characterReferences && characterReferences.length > 0) {
+    characterContext = `\n\nThe following characters are defined for this video. When you see them in the frame, confirm they match their reference description or note any discrepancies:\n${characterReferences.map(c => `- ${c.role} (${c.id}): ${c.description}`).join('\n')}`;
+  }
+
   const response = await openai.chat.completions.create({
     model: 'gpt-4.1-mini-2025-04-14',
     messages: [{
@@ -841,11 +892,21 @@ export async function analyzeFrameContinuity(imageUrl, openai) {
         { type: 'image_url', image_url: { url: imageUrl } },
         {
           type: 'text',
-          text: 'Describe this image frame for AI video continuity. In under 80 words, cover: lighting direction and quality, color temperature and palette, subject position and appearance, background environment, camera angle and depth of field. Use specific visual terms suitable for AI image and video generation prompts.',
+          text: `Describe this image frame for AI video continuity. In under 120 words, cover:
+
+1. PEOPLE: When describing people visible in the frame, be SPECIFIC about their physical attributes in this order: approximate age, build, skin tone, hair (color, length, style), clothing (specific items and colors), and any distinguishing features (glasses, jewelry, scars). This description will be used to maintain character consistency in subsequent scenes.
+
+2. ENVIRONMENT: Background setting, key objects, spatial layout.
+
+3. LIGHTING: Direction, quality, color temperature and palette.
+
+4. CAMERA: Angle, depth of field, framing.
+
+Use specific visual terms suitable for AI image and video generation prompts.${characterContext}`,
         },
       ],
     }],
-    max_tokens: 150,
+    max_tokens: 250,
   });
   return response.choices[0].message.content.trim();
 }

@@ -33,6 +33,29 @@ const BrandExtractSchema = z.object({
   composition_style: z.string(),
   ai_prompt_rules: z.string(),
   logo_url: z.string(),
+  // Content Strategy fields (for Brand Mode)
+  brand_domain: z.string().describe('What the brand sells or does. 1-2 sentences.'),
+  brand_expertise: z.string().describe('What the brand knows deeply. Comma-separated areas of knowledge derived from the website content.'),
+  target_viewer: z.string().describe('Who should feel personally addressed by video content from this brand.'),
+  target_viewer_pain_points: z.array(z.string()).describe('3-5 specific problems the target audience faces, inferred from the website messaging and value proposition.'),
+  emotional_endpoint: z.string().describe('What a viewer should FEEL after watching content from this brand. One sentence starting with "I need to..." or "I should..."'),
+  primary_niche: z.enum([
+    'ai_tech_news', 'finance_money', 'motivation_self_help', 'scary_horror',
+    'history_did_you_know', 'true_crime', 'science_nature', 'relationships_dating',
+    'health_fitness', 'gaming_popculture', 'conspiracy_mystery', 'business_entrepreneur',
+    'food_cooking', 'travel_adventure', 'psychology_mindblown', 'space_cosmos',
+    'animals_wildlife', 'sports_athletes', 'education_learning', 'paranormal_ufo',
+    'diy_crafts', 'parenting', 'crypto',
+  ]).describe('The niche blueprint that best matches this brand for visual style, pacing, and music.'),
+  tone_override: z.string().describe('How this brand should sound in video narration. Describe the voice personality in 1-2 sentences.'),
+  suggested_content_angles: z.array(z.object({
+    name: z.string().describe('Short name for this angle, e.g. "The Hidden Risk"'),
+    emotional_driver: z.enum(['fear', 'identity', 'curiosity', 'injustice', 'wonder']),
+    lens: z.string().describe('What stories does this angle tell?'),
+    endpoint: z.string().describe('What should the viewer feel after watching?'),
+    hook_patterns: z.array(z.string()).describe('3 example hook lines for this angle'),
+    weight: z.number().describe('Suggested percentage weight 0-100. All angles should sum to ~100.'),
+  })).describe('3-5 suggested content angles based on the brand domain. Each angle is a different emotional lens for storytelling.'),
 });
 
 const SYSTEM_PROMPT = `You are a brand identity analyst. Extract detailed brand guidelines from the provided website content.
@@ -59,7 +82,17 @@ Field guidance:
 - lighting_prefs: Preferred lighting style for photography/video
 - composition_style: Layout and composition preferences
 - ai_prompt_rules: Any specific instructions for AI-generated content
-- logo_url: URL of brand logo if found in the page content (otherwise empty string)`;
+- logo_url: URL of brand logo if found in the page content (otherwise empty string)
+
+CONTENT STRATEGY FIELDS (for automated short-form video creation):
+- brand_domain: What this brand sells or does. 1-2 clear sentences derived from the website's hero section and value proposition.
+- brand_expertise: Comma-separated areas of deep knowledge this brand has, inferred from their content, services, blog, FAQ, etc.
+- target_viewer: Who should feel personally addressed by video content. Infer from the website's target audience, customer testimonials, pricing page, etc.
+- target_viewer_pain_points: 3-5 SPECIFIC problems the audience faces. Don't be generic — infer from the website's messaging, objection handling, FAQ, and case studies. Each pain point should be a specific belief or gap in the audience's understanding.
+- emotional_endpoint: What a viewer should feel after watching brand content. Start with "I need to..." or "I should..." — this is the feeling the brand wants to create.
+- primary_niche: Which content niche best fits this brand's visual and editorial style.
+- tone_override: How the brand should sound in voiceover narration. Derive from the website's copy tone.
+- suggested_content_angles: 3-5 content angles, each with a different emotional driver (fear, identity, curiosity, injustice, wonder). Each angle should be grounded in the brand's actual domain — not generic. Include specific hook patterns that reference the brand's industry.`;
 
 const MAX_CONTENT_LENGTH = 50000;
 

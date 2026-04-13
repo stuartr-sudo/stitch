@@ -114,7 +114,38 @@ const emptyBrand = () => ({
   blurb: '',
   website: '',
   default_loras: [],
+  // Content Strategy (Brand Mode)
+  brand_domain: '',
+  brand_expertise: '',
+  target_viewer: '',
+  target_viewer_pain_points: [],
+  emotional_endpoint: '',
+  primary_niche: '',
+  tone_override: '',
+  content_angles: [],
 });
+
+const NICHE_OPTIONS = [
+  { id: 'ai_tech_news', name: 'AI / Tech' }, { id: 'finance_money', name: 'Finance' },
+  { id: 'motivation_self_help', name: 'Motivation' }, { id: 'scary_horror', name: 'Horror' },
+  { id: 'history_did_you_know', name: 'History' }, { id: 'true_crime', name: 'True Crime' },
+  { id: 'science_nature', name: 'Science' }, { id: 'relationships_dating', name: 'Relationships' },
+  { id: 'health_fitness', name: 'Health' }, { id: 'gaming_popculture', name: 'Gaming' },
+  { id: 'conspiracy_mystery', name: 'Mystery' }, { id: 'business_entrepreneur', name: 'Business' },
+  { id: 'food_cooking', name: 'Food' }, { id: 'travel_adventure', name: 'Travel' },
+  { id: 'psychology_mindblown', name: 'Psychology' }, { id: 'space_cosmos', name: 'Space' },
+  { id: 'animals_wildlife', name: 'Animals' }, { id: 'sports_athletes', name: 'Sports' },
+  { id: 'education_learning', name: 'Education' }, { id: 'paranormal_ufo', name: 'Paranormal' },
+  { id: 'diy_crafts', name: 'DIY' }, { id: 'parenting', name: 'Parenting' }, { id: 'crypto', name: 'Crypto' },
+];
+
+const EMOTIONAL_DRIVER_OPTIONS = [
+  { id: 'fear', name: 'Fear / Loss Aversion', icon: '😨', desc: 'Cautionary tales, hidden risks' },
+  { id: 'identity', name: 'Identity / Aspiration', icon: '🪞', desc: 'Self-categorization, leveling up' },
+  { id: 'curiosity', name: 'Curiosity / Education', icon: '🔍', desc: 'Surprising mechanics, how it works' },
+  { id: 'injustice', name: 'Injustice / Outrage', icon: '⚖️', desc: 'Systemic unfairness exposed' },
+  { id: 'wonder', name: 'Wonder / Awe', icon: '✨', desc: 'Extraordinary discoveries' },
+];
 
 export default function BrandKitModal({ isOpen, onClose }) {
   const { user } = useAuth();
@@ -229,6 +260,16 @@ export default function BrandKitModal({ isOpen, onClose }) {
       blurb: brand.blurb || '',
       website: brand.website || '',
       default_loras: brand.default_loras || [],
+      // Content strategy fields (loaded from brand_profiles if linked)
+      brand_domain: '',
+      brand_expertise: '',
+      target_viewer: '',
+      target_viewer_pain_points: [],
+      emotional_endpoint: '',
+      primary_niche: '',
+      tone_override: '',
+      content_angles: [],
+      _brand_profile_id: null,
     });
     setSelectedSewoBrand(brand.brand_username || '');
     setIsConnected(false);
@@ -236,6 +277,29 @@ export default function BrandKitModal({ isOpen, onClose }) {
     setSewoImageStyle(null);
     setSewoCompany(null);
     loadYouTubeStatus(brand.brand_username);
+
+    // Load linked brand profile if exists
+    apiFetch('/api/brands/profiles').then(r => r.json()).then(data => {
+      const profile = (data.profiles || []).find(p => p.brand_kit_id === brand.id);
+      if (profile) {
+        apiFetch(`/api/brands/profiles/${profile.id}`).then(r => r.json()).then(pd => {
+          if (pd.profile) {
+            setForm(f => ({
+              ...f,
+              brand_domain: pd.profile.brand_domain || '',
+              brand_expertise: pd.profile.brand_expertise || '',
+              target_viewer: pd.profile.target_viewer || '',
+              target_viewer_pain_points: pd.profile.target_viewer_pain_points || [],
+              emotional_endpoint: pd.profile.emotional_endpoint || '',
+              primary_niche: pd.profile.primary_niche || '',
+              tone_override: pd.profile.tone_override || '',
+              content_angles: pd.profile.content_angles || [],
+              _brand_profile_id: pd.profile.id,
+            }));
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => {});
   };
 
   const handleNewBrand = () => {
@@ -433,6 +497,25 @@ export default function BrandKitModal({ isOpen, onClose }) {
         composition_style: ex.composition_style || prev.composition_style,
         ai_prompt_rules: ex.ai_prompt_rules || prev.ai_prompt_rules,
         logo_url: ex.logo_url || prev.logo_url,
+        // Content Strategy fields (auto-populated from URL extraction)
+        brand_domain: ex.brand_domain || prev.brand_domain,
+        brand_expertise: ex.brand_expertise || prev.brand_expertise,
+        target_viewer: ex.target_viewer || prev.target_viewer,
+        target_viewer_pain_points: ex.target_viewer_pain_points?.length ? ex.target_viewer_pain_points : prev.target_viewer_pain_points,
+        emotional_endpoint: ex.emotional_endpoint || prev.emotional_endpoint,
+        primary_niche: ex.primary_niche || prev.primary_niche,
+        tone_override: ex.tone_override || prev.tone_override,
+        content_angles: (ex.suggested_content_angles || []).map((a, i) => ({
+          id: a.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `angle_${i}`,
+          name: a.name,
+          emotional_driver: a.emotional_driver,
+          lens: a.lens,
+          description: a.lens,
+          endpoint: a.endpoint,
+          hook_patterns: a.hook_patterns || [],
+          weight: a.weight || Math.round(100 / (ex.suggested_content_angles?.length || 3)),
+          preferred_niche: '',
+        })) || prev.content_angles,
       }));
 
       setExtractUrl('');
@@ -467,6 +550,34 @@ export default function BrandKitModal({ isOpen, onClose }) {
       const savedId = data.brandKit?.id;
       if (savedId) setSelectedBrandId(savedId);
       loadBrands();
+
+      // Auto-create/update brand profile if content strategy fields are filled
+      if (form.brand_domain && form.target_viewer && savedId) {
+        try {
+          await apiFetch('/api/brands/profiles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: form._brand_profile_id || undefined,
+              brand_kit_id: savedId,
+              brand_name: form.brand_name.trim(),
+              brand_slug: (form.brand_username || form.brand_name).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+              brand_domain: form.brand_domain,
+              brand_expertise: form.brand_expertise || '',
+              target_viewer: form.target_viewer,
+              target_viewer_pain_points: form.target_viewer_pain_points || [],
+              emotional_endpoint: form.emotional_endpoint || '',
+              primary_niche: form.primary_niche || 'business_entrepreneur',
+              tone_override: form.tone_override || null,
+              content_angles: form.content_angles || [],
+              brand_visual_mood: form.mood_atmosphere || null,
+              brand_color_palette: (form.colors || []).map(c => typeof c === 'string' ? c : c.hex || c.value),
+            }),
+          });
+        } catch (err) {
+          console.warn('Brand profile sync failed (non-blocking):', err);
+        }
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to save brand');
     } finally {
@@ -665,10 +776,11 @@ export default function BrandKitModal({ isOpen, onClose }) {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="px-4 pt-3">
-              <TabsList className="grid w-full grid-cols-5 bg-gray-100">
+              <TabsList className="grid w-full grid-cols-6 bg-gray-100">
                 <TabsTrigger value="identity" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Identity</TabsTrigger>
                 <TabsTrigger value="voice" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Voice</TabsTrigger>
                 <TabsTrigger value="visual" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Visual</TabsTrigger>
+                <TabsTrigger value="strategy" className="text-xs data-[state=active]:bg-[#7C3AED] data-[state=active]:text-white">Strategy</TabsTrigger>
                 <TabsTrigger value="avatars" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">Avatars</TabsTrigger>
                 <TabsTrigger value="connect" className="text-xs data-[state=active]:bg-[#2C666E] data-[state=active]:text-white">SEWO</TabsTrigger>
               </TabsList>
@@ -909,6 +1021,193 @@ export default function BrandKitModal({ isOpen, onClose }) {
               </TabsContent>
 
               {/* ── Tab: Avatars ── */}
+              {/* ── Tab: Content Strategy (Brand Mode) ── */}
+              <TabsContent value="strategy" className="space-y-5 p-4">
+                <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
+                  <p className="text-xs text-purple-700">
+                    <strong>Brand Mode:</strong> These fields power the Shorts Builder's Brand Mode.
+                    When filled, this brand appears in the Brand Mode toggle for generating editorial content.
+                    The brand name is never mentioned in generated videos.
+                  </p>
+                </div>
+
+                <FieldGroup label="Brand Domain" description="What does this brand sell or do? 1-2 sentences.">
+                  <Textarea
+                    placeholder="e.g. Product liability insurance for e-commerce sellers"
+                    value={form.brand_domain}
+                    onChange={e => setForm(f => ({ ...f, brand_domain: e.target.value }))}
+                    rows={2}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Brand Expertise" description="What does this brand know deeply? Comma-separated areas of knowledge.">
+                  <Textarea
+                    placeholder="e.g. E-commerce legal risk, product liability law, Amazon seller regulations, insurance claims"
+                    value={form.brand_expertise}
+                    onChange={e => setForm(f => ({ ...f, brand_expertise: e.target.value }))}
+                    rows={2}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Target Viewer" description="Who should feel personally addressed by the content?">
+                  <Textarea
+                    placeholder="e.g. Amazon/Shopify sellers, dropshippers, small e-commerce businesses"
+                    value={form.target_viewer}
+                    onChange={e => setForm(f => ({ ...f, target_viewer: e.target.value }))}
+                    rows={2}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Viewer Pain Points" description="Specific problems the audience faces. One per line.">
+                  <Textarea
+                    placeholder={"Don't know they're personally liable for product defects\nThink Amazon protects them from lawsuits\nCan't afford a lawyer but are exposed to legal risk"}
+                    value={(form.target_viewer_pain_points || []).join('\n')}
+                    onChange={e => setForm(f => ({ ...f, target_viewer_pain_points: e.target.value.split('\n').filter(s => s.trim()) }))}
+                    rows={4}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Emotional Endpoint" description="What should the viewer FEEL after watching? One sentence.">
+                  <Input
+                    placeholder="e.g. I need to check whether I'm protected"
+                    value={form.emotional_endpoint}
+                    onChange={e => setForm(f => ({ ...f, emotional_endpoint: e.target.value }))}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Primary Niche" description="Which niche blueprint best fits this brand's visual style and pacing?">
+                  <Select value={form.primary_niche} onValueChange={v => setForm(f => ({ ...f, primary_niche: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select a niche..." /></SelectTrigger>
+                    <SelectContent>
+                      {NICHE_OPTIONS.map(n => (
+                        <SelectItem key={n.id} value={n.id}>{n.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldGroup>
+
+                <FieldGroup label="Tone Override" description="Optional. If set, overrides the niche blueprint's default tone.">
+                  <Textarea
+                    placeholder="e.g. Authoritative but approachable. Like a smart friend who happens to be a lawyer."
+                    value={form.tone_override || ''}
+                    onChange={e => setForm(f => ({ ...f, tone_override: e.target.value }))}
+                    rows={2}
+                  />
+                </FieldGroup>
+
+                {/* Content Angles */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-gray-700">Content Angles</Label>
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => setForm(f => ({
+                        ...f,
+                        content_angles: [...(f.content_angles || []), {
+                          id: `angle_${Date.now()}`,
+                          name: '',
+                          emotional_driver: 'curiosity',
+                          lens: '',
+                          description: '',
+                          endpoint: '',
+                          preferred_niche: '',
+                          hook_patterns: [],
+                          weight: 30,
+                        }],
+                      }))}
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Add Angle
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Each angle is an emotional lens for storytelling. Define 3-5 angles with weights summing to ~100%.
+                  </p>
+
+                  {(form.content_angles || []).map((angle, ai) => (
+                    <div key={angle.id || ai} className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Angle name, e.g. 'The Hidden Risk'"
+                          value={angle.name}
+                          onChange={e => {
+                            const angles = [...form.content_angles];
+                            angles[ai] = { ...angles[ai], name: e.target.value };
+                            setForm(f => ({ ...f, content_angles: angles }));
+                          }}
+                          className="flex-1 text-sm"
+                        />
+                        <select
+                          className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                          value={angle.emotional_driver}
+                          onChange={e => {
+                            const angles = [...form.content_angles];
+                            angles[ai] = { ...angles[ai], emotional_driver: e.target.value };
+                            setForm(f => ({ ...f, content_angles: angles }));
+                          }}
+                        >
+                          {EMOTIONAL_DRIVER_OPTIONS.map(d => (
+                            <option key={d.id} value={d.id}>{d.icon} {d.name}</option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number" min={0} max={100}
+                          placeholder="%"
+                          value={angle.weight || ''}
+                          onChange={e => {
+                            const angles = [...form.content_angles];
+                            angles[ai] = { ...angles[ai], weight: parseInt(e.target.value) || 0 };
+                            setForm(f => ({ ...f, content_angles: angles }));
+                          }}
+                          className="w-16 text-xs"
+                        />
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            content_angles: f.content_angles.filter((_, i) => i !== ai),
+                          }))}
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </Button>
+                      </div>
+
+                      <Textarea
+                        placeholder="Lens — what stories does this angle tell? e.g. 'What goes wrong when sellers don't have coverage'"
+                        value={angle.lens || angle.description || ''}
+                        onChange={e => {
+                          const angles = [...form.content_angles];
+                          angles[ai] = { ...angles[ai], lens: e.target.value, description: e.target.value };
+                          setForm(f => ({ ...f, content_angles: angles }));
+                        }}
+                        rows={2} className="text-xs"
+                      />
+
+                      <Input
+                        placeholder="Angle endpoint — what should viewer feel? e.g. 'I need to check whether I'm protected'"
+                        value={angle.endpoint || ''}
+                        onChange={e => {
+                          const angles = [...form.content_angles];
+                          angles[ai] = { ...angles[ai], endpoint: e.target.value };
+                          setForm(f => ({ ...f, content_angles: angles }));
+                        }}
+                        className="text-xs"
+                      />
+
+                      <Textarea
+                        placeholder="Hook patterns — one per line. e.g. 'A $[small] product just cost someone $[large].'"
+                        value={(angle.hook_patterns || []).join('\n')}
+                        onChange={e => {
+                          const angles = [...form.content_angles];
+                          angles[ai] = { ...angles[ai], hook_patterns: e.target.value.split('\n').filter(s => s.trim()) };
+                          setForm(f => ({ ...f, content_angles: angles }));
+                        }}
+                        rows={3} className="text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+
               <TabsContent value="avatars" className="space-y-4 p-4">
                 <p className="text-xs text-gray-500">
                   Avatars are characters or personas used in your video ads. Add a reference image and optional LoRA weights for consistent character generation.
