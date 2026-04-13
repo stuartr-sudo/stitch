@@ -407,7 +407,7 @@ export async function animateImage(imageUrl, motionPrompt, aspectRatio, duration
 export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, supabase, clipDurations = [], musicVolume = 0.15, ttsDuration = null, sfxUrl = null, sfxVolume = 0.3, sfxTracks = null, musicEvents = null) {
   if (!falKey) throw new Error('falKey required for short assembly');
   if (!videoUrls?.length) throw new Error('No video clips to assemble');
-  if (!voiceoverUrl) throw new Error('Voiceover URL required for short assembly');
+  // voiceoverUrl is optional — music-only or ambient shorts work without narration
 
   // Build tracks for fal-ai/ffmpeg-api/compose using actual clip durations
   let runningTimestamp = 0;
@@ -424,8 +424,12 @@ export async function assembleShort(videoUrls, voiceoverUrl, musicUrl, falKey, s
 
   const tracks = [
     { id: 'video', type: 'video', keyframes: videoKeyframes },
-    { id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0, duration: totalDurationMs }] },
   ];
+
+  // Add voiceover track if provided
+  if (voiceoverUrl) {
+    tracks.push({ id: 'voiceover', type: 'audio', keyframes: [{ url: voiceoverUrl, timestamp: 0, duration: totalDurationMs }] });
+  }
 
   if (musicUrl) {
     // Build music keyframes with volume automation from music events

@@ -401,7 +401,7 @@ export async function generateProductionPackage({
   const toolInputSchema = jsonSchema.definitions?.production_package || jsonSchema;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-opus-4-6',
     max_tokens: 8192,
     system: systemPrompt,
     messages: [
@@ -425,7 +425,7 @@ export async function generateProductionPackage({
       username: brandUsername,
       category: 'anthropic',
       operation: 'shorts_production_package',
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-4-6',
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,
     });

@@ -1249,13 +1249,17 @@ export default function ShortsBuilderPage() {
         let cumulativeTime = 0;
 
         for (const beat of beats) {
+          // Compute beat's actual video timeline duration from its visual prompts
+          const vpDurations = (beat.visual_prompts || []).map(vp => vp.duration_hint_seconds || 5);
+          const beatVideoDuration = vpDurations.length > 0 ? vpDurations.reduce((a, b) => a + b, 0) : (beat.estimated_duration_seconds || 5);
+
           const cues = beat.sfx_cues || [];
           if (cues.length === 0) {
-            cumulativeTime += (beat.estimated_duration_seconds || 5);
+            cumulativeTime += beatVideoDuration;
             continue;
           }
           const cuePrompt = cues.join(', ') + `, ${NICHES.find(n => n.id === selectedNiche)?.name || ''} style`;
-          const sfxDuration = Math.min(beat.estimated_duration_seconds || 4, 6);
+          const sfxDuration = Math.min(beatVideoDuration, 6);
 
           // Check library first
           let sfxUrl = null;
@@ -1296,7 +1300,7 @@ export default function ShortsBuilderPage() {
           if (sfxUrl) {
             sfxResults.push({ url: sfxUrl, offset: cumulativeTime, duration: sfxDuration, beat: beat.beat_type });
           }
-          cumulativeTime += (beat.estimated_duration_seconds || 5);
+          cumulativeTime += beatVideoDuration;
         }
 
         setSfxUrl(sfxResults.length > 0 ? sfxResults[0].url : null);
@@ -3455,13 +3459,17 @@ export default function ShortsBuilderPage() {
                                 let generatedCount = 0;
 
                                 for (const beat of beats) {
+                                  // Compute beat's actual video timeline duration from its visual prompts
+                                  const vpDurations = (beat.visual_prompts || []).map(vp => vp.duration_hint_seconds || 5);
+                                  const beatVideoDuration = vpDurations.length > 0 ? vpDurations.reduce((a, b) => a + b, 0) : (beat.estimated_duration_seconds || 5);
+
                                   const cues = beat.sfx_cues || [];
                                   if (cues.length === 0) {
-                                    cumulativeTime += (beat.estimated_duration_seconds || 5);
+                                    cumulativeTime += beatVideoDuration;
                                     continue;
                                   }
                                   const cuePrompt = cues.join(', ') + `, ${NICHES.find(n => n.id === selectedNiche)?.name || ''} style`;
-                                  const sfxDuration = Math.min(beat.estimated_duration_seconds || 4, 6);
+                                  const sfxDuration = Math.min(beatVideoDuration, 6);
 
                                   // ── Check library first ──
                                   let sfxUrl = null;
@@ -3532,7 +3540,7 @@ export default function ShortsBuilderPage() {
                                       beat: beat.beat_type,
                                     });
                                   }
-                                  cumulativeTime += (beat.estimated_duration_seconds || 5);
+                                  cumulativeTime += beatVideoDuration;
                                 }
 
                                 console.log(`SFX complete: ${reusedCount} reused from library, ${generatedCount} newly generated`);
@@ -4377,8 +4385,12 @@ export default function ShortsBuilderPage() {
 
                       // ── Step 2: Generate or chain starting image ──
                       let startImageUrl;
-                      if (i === 0 || continuityMode === 'exciting') {
-                        // Generate fresh starting image
+                      const needsFreshImage = i === 0 || continuityMode === 'exciting' || (continuityMode !== 'exciting' && !lastFrameUrl);
+                      if (needsFreshImage) {
+                        // Generate fresh starting image (scene 1, exciting mode, or continuous mode fallback when last frame extraction failed)
+                        if (i > 0 && continuityMode !== 'exciting' && !lastFrameUrl) {
+                          console.warn(`Scene ${i + 1}: Continuous mode but no lastFrameUrl — falling back to fresh image generation`);
+                        }
                         setGenerationProgress({ step: `Scene ${i + 1}/${totalScenes}: Generating image...`, pct: pctBase + 3 });
                         const frameRes = await apiFetch('/api/workbench/generate-frame', {
                           method: 'POST',
@@ -4541,7 +4553,10 @@ export default function ShortsBuilderPage() {
                                 : null;
                               if (action) events.push({ time: cumulativeTime, action });
                             }
-                            cumulativeTime += (beat.estimated_duration_seconds || beat.word_count / 2.5 || 8);
+                            // Use scene-level duration (sum of visual prompt durations) not beat-level estimate
+                            const vpDurations = (beat.visual_prompts || []).map(vp => vp.duration_hint_seconds || 5);
+                            const beatDuration = vpDurations.length > 0 ? vpDurations.reduce((a, b) => a + b, 0) : (beat.estimated_duration_seconds || beat.word_count / 2.5 || 8);
+                            cumulativeTime += beatDuration;
                           }
                           return events.length > 0 ? events : null;
                         })(),

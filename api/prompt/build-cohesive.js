@@ -165,7 +165,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const systemPrompt = getSystemPrompt(tool, targetModel);
+  const systemPrompt = getSystemPrompt(tool, targetModel, { previousSceneAnalysis, continuityMode });
 
   try {
     const response = await openai.chat.completions.create({
@@ -220,7 +220,7 @@ function getModelGuidance(targetModel) {
   return '';
 }
 
-function getSystemPrompt(tool, targetModel) {
+function getSystemPrompt(tool, targetModel, { previousSceneAnalysis, continuityMode } = {}) {
   const base = `You are an expert AI image prompt engineer. Your job is to take structured creative inputs and produce a single, cohesive, highly detailed prompt for an AI image generator.
 
 Rules:

@@ -20,7 +20,7 @@ import { generateGeminiVoiceover } from '../lib/voiceoverGenerator.js';
 import { getWordTimestamps } from '../lib/getWordTimestamps.js';
 import { alignBlocks } from '../lib/blockAligner.js';
 import { generateImageV2, animateImageV2, animateMultiShot } from '../lib/mediaGenerator.js';
-import { VIDEO_MODELS, veoDuration, isMultiShotCapable } from '../lib/modelRegistry.js';
+import { VIDEO_MODELS, veoDuration, isMultiShotCapable, isR2VCapable, getR2VEndpoint } from '../lib/modelRegistry.js';
 import {
   generateMusic as genMusic, assembleShort, buildMusicPrompt,
   uploadUrlToSupabase, pollFalQueue, extractLastFrame, analyzeFrameContinuity,
@@ -437,8 +437,65 @@ Rules:
           } catch (err) {
             console.warn(`[workbench] MT last frame extraction failed: ${err.message}`);
           }
+        } else if (mode === 'r2v' && isR2VCapable(video_model)) {
+          // R2V mode — use model's reference-to-video endpoint
+          const r2vEndpoint = getR2VEndpoint(video_model);
+          const model = VIDEO_MODELS[video_model];
+          const { image_references = [] } = req.body;
+
+          // Build the R2V body using the model's standard buildBody as a base, then override endpoint
+          const r2vBody = {
+            prompt: fullPrompt,
+            ...(image_references.length > 0 && { image_references }),
+            ...(start_frame_url && { image_url: start_frame_url }),
+            aspect_ratio,
+            generate_audio: false,
+          };
+
+          // Model-specific adjustments
+          if (video_model.includes('pixverse')) {
+            // PixVerse C1 uses generate_audio_switch, not generate_audio
+            delete r2vBody.generate_audio;
+            r2vBody.generate_audio_switch = false;
+            r2vBody.duration = Math.max(1, Math.min(15, Math.round(Number(duration) || 5)));
+          } else if (video_model.includes('kling')) {
+            r2vBody.duration = String(Math.max(3, Math.min(15, Math.round(Number(duration) || 5))));
+          } else if (video_model.includes('veo')) {
+            r2vBody.duration = veoDuration(duration);
+            r2vBody.resolution = '720p';
+            r2vBody.safety_tolerance = '6';
+            r2vBody.auto_fix = true;
+          } else if (video_model.includes('grok')) {
+            r2vBody.duration = Math.max(1, Math.min(15, Number(duration) || 6));
+            r2vBody.resolution = '720p';
+          }
+
+          const submitRes = await fetch(`https://queue.fal.run/${r2vEndpoint}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Key ${keys.falKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(r2vBody),
+          });
+          if (!submitRes.ok) throw new Error(`R2V submit failed: ${await submitRes.text()}`);
+          const queueData = await submitRes.json();
+          const result = await pollFalQueue(queueData.response_url || queueData.request_id, r2vEndpoint, keys.falKey, 150, 4000);
+          videoUrl = model.parseResult(result);
+          if (!videoUrl) throw new Error('No video URL from R2V generation');
+          videoUrl = await uploadUrlToSupabase(videoUrl, supabase, 'pipeline/workbench');
+
+          // Extract last frame + vision analysis for chaining
+          try {
+            lastFrameUrl = await extractLastFrame(videoUrl, duration, keys.falKey);
+            if (lastFrameUrl) {
+              lastFrameUrl = await uploadUrlToSupabase(lastFrameUrl, supabase, 'pipeline/workbench');
+              const openai = new OpenAI({ apiKey: keys.openaiKey });
+              visionAnalysis = await analyzeFrameContinuity(lastFrameUrl, openai, character_references || null);
+            }
+          } catch (err) {
+            console.warn(`[workbench] R2V last frame extraction failed: ${err.message}`);
+          }
+
         } else {
-          // I2V mode
+          // I2V mode (also fallback if R2V requested but model doesn't support it)
           videoUrl = await animateImageV2(video_model, start_frame_url, fullPrompt, aspect_ratio, duration, keys, supabase, {
             generate_audio: false,
           });
@@ -457,9 +514,31 @@ Rules:
           }
         }
 
-        // TODO: Probe actual video duration via ffprobe-equivalent
-        // For now, trust the model's output duration (this is Bug 7 from audit — fix later)
-        actualDuration = duration;
+        // Return post-quantization duration based on model's duration function
+        // (e.g., Veo quantizes 5s→6s, Kling v2 quantizes 4s→5s)
+        const model = VIDEO_MODELS[video_model];
+        if (model) {
+          // Compute what the model actually received as duration
+          const m = video_model.toLowerCase();
+          if (m.includes('veo3') || m === 'fal_veo3_lite') {
+            actualDuration = parseInt(veoDuration(duration));
+          } else if (m.includes('kling_v3') || m.includes('kling_o3') || m === 'fal_kling_v3' || m === 'fal_kling_o3') {
+            actualDuration = Math.max(3, Math.min(15, Math.round(Number(duration) || 5)));
+          } else if (m.includes('kling') || m === 'fal_kling') {
+            actualDuration = Number(duration) <= 7 ? 5 : 10;
+          } else if (m.includes('pixverse')) {
+            actualDuration = Number(duration) <= 6 ? 5 : 8;
+          } else if (m.includes('wan') && !m.includes('wan_pro')) {
+            actualDuration = Number(duration) <= 7 ? 5 : 10;
+          } else if (m.includes('veo2') || m === 'fal_veo2') {
+            const n = Number(duration) || 5;
+            actualDuration = n <= 5 ? 5 : n <= 6 ? 6 : n <= 7 ? 7 : 8;
+          } else {
+            actualDuration = duration;
+          }
+        } else {
+          actualDuration = duration;
+        }
 
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_clip', model: mode === 'mt' ? (req.body.motion_ref?.model || 'kling_motion_control') : video_model, metadata: { video_count: 1, mode } });
 
@@ -537,7 +616,7 @@ Rules:
         } = req.body;
 
         if (!clips?.length) return res.status(400).json({ error: 'clips required' });
-        if (!voiceover_url) return res.status(400).json({ error: 'voiceover_url required' });
+        // voiceover_url is optional — assembly works without narration (music-only shorts)
 
         const videoUrls = clips.map(c => c.url);
         const clipDurations = clips.map(c => c.duration);
