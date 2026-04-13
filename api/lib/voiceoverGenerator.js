@@ -293,7 +293,8 @@ export async function generateMayaVoiceover(text, keys, supabase, options = {}) 
   const audioUrl = result?.audio?.url;
   if (!audioUrl) throw new Error('Maya TTS returned no audio URL');
 
-  console.log(`[Maya TTS] Complete: duration=${result.duration}s, rtf=${result.rtf}`);
+  const durationSeconds = result.duration || null;
+  console.log(`[Maya TTS] Complete: duration=${durationSeconds}s, rtf=${result.rtf}`);
 
   // Download and re-upload to Supabase
   const audioRes = await fetch(audioUrl);
@@ -308,7 +309,7 @@ export async function generateMayaVoiceover(text, keys, supabase, options = {}) 
 
   const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
   console.log(`[Maya TTS] Uploaded to ${publicUrl}`);
-  return publicUrl;
+  return { url: publicUrl, duration: durationSeconds };
 }
 
 // ─── MINIMAX SPEECH 2.8 HD ──────────────────────────────────────────────────
@@ -369,7 +370,8 @@ export async function generateMinimaxVoiceover(text, keys, supabase, options = {
   const audioUrl = result?.audio?.url;
   if (!audioUrl) throw new Error('MiniMax TTS returned no audio URL');
 
-  console.log(`[MiniMax TTS] Complete: duration=${result.duration_ms}ms`);
+  const durationSeconds = result.duration_ms ? result.duration_ms / 1000 : null;
+  console.log(`[MiniMax TTS] Complete: duration=${durationSeconds}s`);
 
   const audioRes = await fetch(audioUrl);
   if (!audioRes.ok) throw new Error(`Failed to download MiniMax TTS audio: ${audioRes.status}`);
@@ -383,7 +385,7 @@ export async function generateMinimaxVoiceover(text, keys, supabase, options = {
 
   const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
   console.log(`[MiniMax TTS] Uploaded to ${publicUrl}`);
-  return publicUrl;
+  return { url: publicUrl, duration: durationSeconds };
 }
 
 // ─── MINIMAX VOICE CLONE ────────────────────────────────────────────────────

@@ -1101,8 +1101,9 @@ export default function ShortsBuilderPage() {
   const [sfxGenerated, setSfxGenerated] = useState(false);
   const [sfxLoading, setSfxLoading] = useState(false);
   // Timing keyframes (word alignment)
-  const [timingGenerated, setTimingGenerated] = useState(false);
-  const [timingLoading, setTimingLoading] = useState(false);
+  const [timingGenerated, setTimingGenerated] = useState(false); // LEGACY — kept for draft compat
+  const [timingLoading, setTimingLoading] = useState(false); // LEGACY
+  const [ttsDuration, setTtsDuration] = useState(null); // Actual voiceover duration in seconds
 
   // Step 1 extra
   const [selectedBrandKit, setSelectedBrandKit] = useState(null);
@@ -1168,6 +1169,148 @@ export default function ShortsBuilderPage() {
       setMusicMood(NICHE_MUSIC_MOODS[selectedNiche] || '');
     }
   }, [currentStep, selectedNiche]);
+
+  // Auto-generate music + SFX after voiceover completes (they're compulsory)
+  useEffect(() => {
+    if (!voiceoverGenerated || !script || !selectedNiche) return;
+    if (musicGenerated && sfxGenerated) return; // Already done
+
+    const autoGenerate = async () => {
+      // ── Auto-generate music if not done ──
+      if (!musicGenerated && !musicLoading) {
+        setMusicLoading(true);
+        try {
+          const musicDirection = script?.music ? `${script.music.style}. ${script.music.energy_curve}` : NICHE_MUSIC_MOODS[selectedNiche] || '';
+          const scriptDuration = ttsDuration
+            || (script?.total_word_count ? Math.ceil(script.total_word_count / 2.5) + 5 : null)
+            || script?.beats?.reduce((sum, b) => sum + (b.estimated_duration_seconds || 8), 0)
+            || 75;
+          const targetMusicDuration = Math.max(30, Math.min(180, Math.ceil(scriptDuration)));
+
+          // Check library first
+          let foundUrl = null;
+          try {
+            const searchRes = await apiFetch('/api/audio/library', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'search', type: 'music', niche: selectedNiche, query: musicDirection, limit: 1 }),
+            });
+            const searchData = await searchRes.json();
+            if (searchData.results?.length > 0) {
+              foundUrl = searchData.results[0].url;
+              apiFetch('/api/audio/library', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'increment', id: searchData.results[0].id }),
+              }).catch(() => {});
+            }
+          } catch (_) {}
+
+          if (foundUrl) {
+            setMusicUrl(foundUrl);
+          } else {
+            const res = await apiFetch('/api/workbench/music', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ niche: selectedNiche, duration: targetMusicDuration, music_model: 'elevenlabs', music_mood: musicDirection }),
+            });
+            const data = await res.json();
+            if (data.audio_url) {
+              setMusicUrl(data.audio_url);
+              apiFetch('/api/audio/library', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save', type: 'music', url: data.audio_url, prompt: musicDirection, niche: selectedNiche, duration: targetMusicDuration, style: script?.music?.style || '', bpm: script?.music?.bpm_range || null }),
+              }).catch(() => {});
+            }
+          }
+          setMusicGenerated(true);
+          setMusicMood(musicDirection);
+        } catch (err) {
+          console.error('Auto music generation failed:', err);
+        } finally {
+          setMusicLoading(false);
+        }
+      }
+    };
+
+    autoGenerate();
+  }, [voiceoverGenerated, musicGenerated, script, selectedNiche, ttsDuration]);
+
+  // Auto-generate SFX after music completes
+  useEffect(() => {
+    if (!musicGenerated || !script?.beats || sfxGenerated || sfxLoading || !sfxEnabled) return;
+
+    const autoGenerateSfx = async () => {
+      setSfxLoading(true);
+      try {
+        const beats = script.beats || [];
+        const sfxResults = [];
+        let cumulativeTime = 0;
+
+        for (const beat of beats) {
+          const cues = beat.sfx_cues || [];
+          if (cues.length === 0) {
+            cumulativeTime += (beat.estimated_duration_seconds || 5);
+            continue;
+          }
+          const cuePrompt = cues.join(', ') + `, ${NICHES.find(n => n.id === selectedNiche)?.name || ''} style`;
+          const sfxDuration = Math.min(beat.estimated_duration_seconds || 4, 6);
+
+          // Check library first
+          let sfxUrl = null;
+          try {
+            const searchRes = await apiFetch('/api/audio/library', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'search', type: 'sfx', niche: selectedNiche, query: cues.join(' '), limit: 1 }),
+            });
+            const searchData = await searchRes.json();
+            if (searchData.results?.length > 0) {
+              sfxUrl = searchData.results[0].url;
+              apiFetch('/api/audio/library', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'increment', id: searchData.results[0].id }),
+              }).catch(() => {});
+            }
+          } catch (_) {}
+
+          if (!sfxUrl) {
+            const res = await apiFetch('/api/workbench/sfx', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ niche: selectedNiche, duration: sfxDuration, prompt: cuePrompt }),
+            });
+            const data = await res.json();
+            sfxUrl = data.sfx_url || null;
+            if (sfxUrl) {
+              apiFetch('/api/audio/library', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save', type: 'sfx', url: sfxUrl, prompt: cuePrompt, niche: selectedNiche, beat_type: beat.beat_type, duration: sfxDuration }),
+              }).catch(() => {});
+            }
+          }
+
+          if (sfxUrl) {
+            sfxResults.push({ url: sfxUrl, offset: cumulativeTime, duration: sfxDuration, beat: beat.beat_type });
+          }
+          cumulativeTime += (beat.estimated_duration_seconds || 5);
+        }
+
+        setSfxUrl(sfxResults.length > 0 ? sfxResults[0].url : null);
+        setScript(prev => ({ ...prev, _sfx_tracks: sfxResults }));
+        setSfxGenerated(true);
+      } catch (err) {
+        console.error('Auto SFX generation failed:', err);
+      } finally {
+        setSfxLoading(false);
+      }
+    };
+
+    autoGenerateSfx();
+  }, [musicGenerated, sfxGenerated, script?.beats, selectedNiche, sfxEnabled]);
 
   // ── Save Draft ──────────────────────────────────────────────────────────────
   const handleSaveDraft = async () => {
@@ -3002,6 +3145,7 @@ export default function ShortsBuilderPage() {
                       const data = await res.json();
                       if (data.error) throw new Error(data.error);
                       setVoiceoverUrl(data.audio_url);
+                      if (data.tts_duration) setTtsDuration(data.tts_duration);
                       setVoiceoverGenerated(true);
                     } catch (err) {
                       console.error('Voiceover failed:', err);
@@ -3127,11 +3271,12 @@ export default function ShortsBuilderPage() {
                       try {
                         const musicDirection = script?.music ? `${script.music.style}. ${script.music.energy_curve}` : musicMood;
 
-                        // Calculate actual target duration from script or voiceover
-                        const scriptDuration = script?.total_word_count
-                          ? Math.ceil(script.total_word_count / 2.5) + 5 // words/2.5wps + 5s buffer
-                          : script?.beats?.reduce((sum, b) => sum + (b.estimated_duration_seconds || 8), 0) || 75;
-                        const targetMusicDuration = Math.max(30, Math.min(180, scriptDuration));
+                        // Calculate target duration: prefer actual TTS duration, fall back to script estimate
+                        const scriptDuration = ttsDuration
+                          || (script?.total_word_count ? Math.ceil(script.total_word_count / 2.5) + 5 : null)
+                          || script?.beats?.reduce((sum, b) => sum + (b.estimated_duration_seconds || 8), 0)
+                          || 75;
+                        const targetMusicDuration = Math.max(30, Math.min(180, Math.ceil(scriptDuration)));
 
                         // ── Check library first ──
                         let foundUrl = null;
@@ -3230,141 +3375,21 @@ export default function ShortsBuilderPage() {
                     </div>
                   )}
 
-                  {/* ── Timing Keyframes (word alignment) — comes BEFORE SFX ── */}
-                  {musicGenerated && (
-                    <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-                      <div style={styles.sectionTitle}>Timing Alignment</div>
-                      <div style={styles.sectionSubtitle}>
-                        Aligns voiceover to scene beats using word-level timestamps (Whisper).
-                        Scenes are optimized to 5-6s each — shorter scenes mean tighter edits and fewer errors.
+                  {/* ── Voiceover Duration Info ── */}
+                  {voiceoverGenerated && ttsDuration && (
+                    <div style={{ marginTop: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '20px' }}>⏱️</span>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#166534' }}>Voiceover: {Math.round(ttsDuration)}s</div>
+                        <div style={{ fontSize: '11px', color: '#15803D' }}>
+                          {script?.total_word_count || '~'} words · Clip durations from production package beats
+                        </div>
                       </div>
-
-                      <button
-                        style={styles.generateBtn(true)}
-                        onClick={async () => {
-                          setTimingLoading(true);
-                          try {
-                            const res = await apiFetch('/api/workbench/timing', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                audio_url: voiceoverUrl,
-                                video_model: selectedVideoModel || 'fal_veo3',
-                                video_length_preset: 60,
-                                voice_speed: parseFloat(voiceSpeed),
-                              }),
-                            });
-                            const data = await res.json();
-                            if (data.error) throw new Error(data.error);
-                            setTimingBlocks(data.blocks || []);
-                            setTimingGenerated(true);
-                            // Update timing blocks on the script
-                            if (data.blocks && script) {
-                              setScript(prev => ({
-                                ...prev,
-                                timingBlocks: data.blocks,
-                                // Update scenes if legacy format
-                                ...(prev.scenes ? {
-                                  scenes: prev.scenes.map((s, i) => ({
-                                    ...s,
-                                    duration: data.blocks[i] ? `${Math.round(data.blocks[i].clipDuration)}s` : s.duration,
-                                    narration: data.blocks[i]?.narration || s.narration,
-                                  })),
-                                } : {}),
-                              }));
-                            }
-                          } catch (err) {
-                            console.error('Timing failed:', err);
-                          } finally {
-                            setTimingLoading(false);
-                          }
-                        }}
-                        disabled={timingLoading}
-                      >
-                        {timingLoading ? 'Aligning timing...' : 'Generate Timing Keyframes'}
-                      </button>
-
-                      {timingGenerated && (
-                        <>
-                          <div style={{
-                            padding: '16px',
-                            borderRadius: '8px',
-                            border: '1px solid #DCFCE7',
-                            backgroundColor: '#F0FDF4',
-                            marginTop: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                          }}>
-                            <div style={{ fontSize: '24px' }}>⏱️</div>
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: 600, color: '#166534' }}>Timing Aligned</div>
-                              <div style={{ fontSize: '12px', color: '#15803D' }}>
-                                Word timestamps extracted, blocks aligned to scene beats, durations optimized (5-6s per scene).
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Timing preview — 5-6s scenes */}
-                          <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}>
-                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '8px' }}>
-                              Scene Timing Preview:
-                            </div>
-                            {(timingBlocks.length > 0 ? timingBlocks.map((b, i) => ({
-                              label: b.frameworkLabel || b.narration?.slice(0, 30) || `Block ${i + 1}`,
-                              duration: b.clipDuration,
-                            })) : (script?.beats || script?.scenes || []).map((b, i) => ({
-                              label: b.beat_type?.replace(/_/g, ' ') || b.label || `Scene ${i + 1}`,
-                              duration: b.estimated_duration_seconds || 5,
-                            }))).map((scene, i, arr) => {
-                              const dur = scene.duration || 5;
-                              const start = arr.slice(0, i).reduce((sum, s) => sum + (s.duration || 5), 0);
-                              return (
-                                <div key={i} style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '10px',
-                                  padding: '5px 0',
-                                  borderBottom: i < arr.length - 1 ? '1px solid #F3F4F6' : 'none',
-                                }}>
-                                  <div style={{ fontSize: '11px', color: '#9CA3AF', width: '50px', fontFamily: 'monospace' }}>
-                                    {String(Math.floor(start / 60)).padStart(1, '0')}:{String(Math.floor(start % 60)).padStart(2, '0')}
-                                  </div>
-                                  <div style={{
-                                    flex: 1,
-                                    height: '8px',
-                                    borderRadius: '4px',
-                                    backgroundColor: '#E5E7EB',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                  }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      left: 0,
-                                      top: 0,
-                                      height: '100%',
-                                      width: `${Math.min(dur / 6 * 100, 100)}%`,
-                                      backgroundColor: '#111827',
-                                      borderRadius: '4px',
-                                    }} />
-                                  </div>
-                                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#374151', minWidth: '80px' }}>
-                                    {scene.label}
-                                  </div>
-                                  <div style={{ fontSize: '11px', color: '#9CA3AF', minWidth: '30px' }}>
-                                    {dur}s
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
                     </div>
                   )}
 
-                  {/* ── Sound Effects — AFTER timing, auto-selected by niche ── */}
-                  {timingGenerated && (
+                  {/* ── Sound Effects — AFTER music, auto-selected by niche ── */}
+                  {musicGenerated && (
                     <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
                       <div style={styles.sectionTitle}>Sound Effects</div>
                       <div style={styles.sectionSubtitle}>
@@ -3524,7 +3549,7 @@ export default function ShortsBuilderPage() {
                             }}
                             disabled={sfxLoading}
                           >
-                            {sfxLoading ? 'Generating SFX...' : `Generate ${(timingBlocks.length || script?.scenes?.length || 7) - 1} Sound Effects`}
+                            {sfxLoading ? 'Generating SFX...' : `Generate ${(script?.beats?.length || script?.scenes?.length || 7)} Sound Effects`}
                           </button>
 
                           {sfxGenerated && (
@@ -3554,7 +3579,7 @@ export default function ShortsBuilderPage() {
                 </div>
 
                 {/* Continue to Step 3 */}
-                {(timingGenerated && (!sfxEnabled || sfxGenerated)) && (
+                {(musicGenerated && (!sfxEnabled || sfxGenerated)) && (
                   <button
                     style={{
                       width: '100%',
@@ -4520,7 +4545,7 @@ export default function ShortsBuilderPage() {
                           }
                           return events.length > 0 ? events : null;
                         })(),
-                        tts_duration: timingBlocks.reduce((sum, b) => sum + (b.clipDuration || 0), 0) || null,
+                        tts_duration: ttsDuration || null,
                         voice_speed: parseFloat(voiceSpeed),
                         caption_config: noCaptions ? null : {
                           font_name: captionStyle === 'news_ticker' ? 'Oswald' : captionStyle === 'karaoke_glow' ? 'Poppins' : 'Montserrat',

@@ -61,34 +61,41 @@ export default async function handler(req, res) {
         if (!text?.trim()) return res.status(400).json({ error: 'text required' });
 
         let audioUrl;
+        let ttsDuration = null; // Actual voiceover duration in seconds
 
         if (provider === 'maya') {
           // Maya1 TTS — voice described in text, supports inline emotion tags
           const { generateMayaVoiceover } = await import('../lib/voiceoverGenerator.js');
-          audioUrl = await generateMayaVoiceover(text, keys, supabase, {
+          const result = await generateMayaVoiceover(text, keys, supabase, {
             voiceDescription: voice_description || style_instructions || 'A 30-year-old narrator with warm, conversational tone, medium pace, natural delivery',
             temperature: 0.4,
           });
+          audioUrl = result.url;
+          ttsDuration = result.duration;
           logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'maya1', metadata: { character_count: text.length } });
 
         } else if (provider === 'minimax') {
           // MiniMax Speech 2.8 HD — supports pause tags <#1.5#>, interjections, voice modification
           const { generateMinimaxVoiceover } = await import('../lib/voiceoverGenerator.js');
-          audioUrl = await generateMinimaxVoiceover(text, keys, supabase, {
+          const result = await generateMinimaxVoiceover(text, keys, supabase, {
             voiceId: voice_id || voice || 'Wise_Woman',
             speed: speed || 1,
             pitch: pitch || 0,
             volume: 1,
           });
+          audioUrl = result.url;
+          ttsDuration = result.duration;
           logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'minimax-speech-2.8-hd', metadata: { character_count: text.length } });
 
         } else if (provider === 'elevenlabs') {
-          // ElevenLabs via FAL proxy
+          // ElevenLabs via FAL proxy — doesn't return duration directly
           audioUrl = await generateVoiceover(text, keys, supabase, { voiceId: voice });
+          // Estimate duration from word count
+          ttsDuration = Math.round(text.split(/\s+/).length / 2.5);
           logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'elevenlabs-v3', metadata: { character_count: text.length } });
 
         } else {
-          // Gemini TTS (default)
+          // Gemini TTS (default) — doesn't return duration directly
           let baseStyle = style_instructions || 'Speak in a warm, conversational tone.';
           let pacingPrefix = '';
           if (speed >= 1.3) pacingPrefix = 'Speak at a brisk, fast pace with high energy. Keep sentences flowing quickly with minimal pauses between phrases. ';
@@ -101,10 +108,12 @@ export default async function handler(req, res) {
             model: 'gemini-2.5-flash-tts',
             styleInstructions: finalStyle,
           });
+          // Estimate duration from word count adjusted for speed
+          ttsDuration = Math.round((text.split(/\s+/).length / 2.5) / (speed || 1));
           logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'gemini-2.5-flash-tts', metadata: { character_count: text.length } });
         }
 
-        return res.json({ audio_url: audioUrl, speed, provider });
+        return res.json({ audio_url: audioUrl, speed, provider, tts_duration: ttsDuration });
       }
 
       // ─── Timing (Whisper + Block Aligner) ─────────────────────────
