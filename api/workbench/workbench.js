@@ -51,31 +51,60 @@ export default async function handler(req, res) {
 
       // ─── Voiceover ────────────────────────────────────────────────
       case 'voiceover': {
-        const { text, voice = 'Perseus', style_instructions, speed = 1.0 } = req.body;
+        const {
+          text, voice = 'Perseus', style_instructions, speed = 1.0,
+          provider = 'gemini', // 'gemini' | 'elevenlabs' | 'maya' | 'minimax'
+          voice_description, // Maya: text description of the voice
+          voice_id, // MiniMax: voice_id (preset or cloned)
+          pitch = 0, // MiniMax: pitch adjustment
+        } = req.body;
         if (!text?.trim()) return res.status(400).json({ error: 'text required' });
 
-        // Build pacing directive based on requested speed so TTS generates
-        // naturally faster speech instead of relying solely on playback speedup
-        let baseStyle = style_instructions || 'Speak in a warm, conversational tone.';
-        let pacingPrefix = '';
-        if (speed >= 1.3) {
-          pacingPrefix = 'Speak at a brisk, fast pace with high energy. Keep sentences flowing quickly with minimal pauses between phrases. ';
-        } else if (speed >= 1.15) {
-          pacingPrefix = 'Speak at an uptempo, lively pace. Keep momentum between sentences with short pauses. ';
-        } else if (speed >= 1.05) {
-          pacingPrefix = 'Speak at a slightly quick, engaging pace. ';
+        let audioUrl;
+
+        if (provider === 'maya') {
+          // Maya1 TTS — voice described in text, supports inline emotion tags
+          const { generateMayaVoiceover } = await import('../lib/voiceoverGenerator.js');
+          audioUrl = await generateMayaVoiceover(text, keys, supabase, {
+            voiceDescription: voice_description || style_instructions || 'A 30-year-old narrator with warm, conversational tone, medium pace, natural delivery',
+            temperature: 0.4,
+          });
+          logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'maya1', metadata: { character_count: text.length } });
+
+        } else if (provider === 'minimax') {
+          // MiniMax Speech 2.8 HD — supports pause tags <#1.5#>, interjections, voice modification
+          const { generateMinimaxVoiceover } = await import('../lib/voiceoverGenerator.js');
+          audioUrl = await generateMinimaxVoiceover(text, keys, supabase, {
+            voiceId: voice_id || voice || 'Wise_Woman',
+            speed: speed || 1,
+            pitch: pitch || 0,
+            volume: 1,
+          });
+          logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'minimax-speech-2.8-hd', metadata: { character_count: text.length } });
+
+        } else if (provider === 'elevenlabs') {
+          // ElevenLabs via FAL proxy
+          audioUrl = await generateVoiceover(text, keys, supabase, { voiceId: voice });
+          logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'elevenlabs-v3', metadata: { character_count: text.length } });
+
+        } else {
+          // Gemini TTS (default)
+          let baseStyle = style_instructions || 'Speak in a warm, conversational tone.';
+          let pacingPrefix = '';
+          if (speed >= 1.3) pacingPrefix = 'Speak at a brisk, fast pace with high energy. Keep sentences flowing quickly with minimal pauses between phrases. ';
+          else if (speed >= 1.15) pacingPrefix = 'Speak at an uptempo, lively pace. Keep momentum between sentences with short pauses. ';
+          else if (speed >= 1.05) pacingPrefix = 'Speak at a slightly quick, engaging pace. ';
+          const finalStyle = pacingPrefix + baseStyle;
+
+          audioUrl = await generateGeminiVoiceover(text, keys, supabase, {
+            voice,
+            model: 'gemini-2.5-flash-tts',
+            styleInstructions: finalStyle,
+          });
+          logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'gemini-2.5-flash-tts', metadata: { character_count: text.length } });
         }
-        const finalStyle = pacingPrefix + baseStyle;
 
-        const audioUrl = await generateGeminiVoiceover(text, keys, supabase, {
-          voice,
-          model: 'gemini-2.5-flash-tts',
-          styleInstructions: finalStyle,
-        });
-
-        logCost({ username: req.user.email, category: 'fal', operation: 'workbench_voiceover', model: 'gemini-2.5-flash-tts', metadata: { character_count: text.length } });
-
-        return res.json({ audio_url: audioUrl, speed });
+        return res.json({ audio_url: audioUrl, speed, provider });
       }
 
       // ─── Timing (Whisper + Block Aligner) ─────────────────────────
@@ -139,6 +168,26 @@ export default async function handler(req, res) {
         if (!audioUrl) return res.status(500).json({ error: 'Music generation failed' });
         logCost({ username: req.user.email, category: 'fal', operation: 'workbench_music', model: selectedModel, metadata: { track_count: 1 } });
         return res.json({ audio_url: audioUrl });
+      }
+
+      // ─── Voice Clone (MiniMax) ─────────────────────────────────────
+      case 'voice-clone': {
+        const { audio_url, preview_text } = req.body;
+        if (!audio_url) return res.status(400).json({ error: 'audio_url required (min 10 seconds)' });
+        const { cloneVoiceMinimax } = await import('../lib/voiceoverGenerator.js');
+        const result = await cloneVoiceMinimax(audio_url, keys.falKey, preview_text || null);
+        logCost({ username: req.user.email, category: 'fal', operation: 'voice_clone', model: 'minimax-voice-clone' });
+        return res.json({ voice_id: result.voiceId, preview_url: result.previewUrl });
+      }
+
+      // ─── Voice Design (MiniMax) ───────────────────────────────────
+      case 'voice-design': {
+        const { description, preview_text } = req.body;
+        if (!description) return res.status(400).json({ error: 'description required' });
+        const { designVoiceMinimax } = await import('../lib/voiceoverGenerator.js');
+        const result = await designVoiceMinimax(description, keys.falKey, preview_text || 'Hello, this is a preview of your designed voice. How does it sound?');
+        logCost({ username: req.user.email, category: 'fal', operation: 'voice_design', model: 'minimax-voice-design' });
+        return res.json({ voice_id: result.voiceId, preview_url: result.previewUrl });
       }
 
       // ─── Sound Effects ─────────────────────────────────────────────

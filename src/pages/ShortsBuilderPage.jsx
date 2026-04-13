@@ -1077,7 +1077,12 @@ export default function ShortsBuilderPage() {
   const [selectedResearchTopic, setSelectedResearchTopic] = useState(null);
 
   // Step 2 state
-  const [voiceProvider, setVoiceProvider] = useState('gemini'); // 'gemini' | 'elevenlabs'
+  const [voiceProvider, setVoiceProvider] = useState('gemini'); // 'gemini' | 'elevenlabs' | 'maya' | 'minimax'
+  const [mayaVoiceDesc, setMayaVoiceDesc] = useState(''); // Maya: text description of voice
+  const [minimaxVoiceId, setMinimaxVoiceId] = useState(''); // MiniMax: custom voice ID (from clone/design)
+  const [voiceCloneUrl, setVoiceCloneUrl] = useState(''); // URL of audio to clone
+  const [voiceDesignDesc, setVoiceDesignDesc] = useState(''); // Description for voice design
+  const [voiceCloneLoading, setVoiceCloneLoading] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const [previewAudioRef] = useState({ current: null });
@@ -2573,10 +2578,12 @@ export default function ShortsBuilderPage() {
                 {/* ── Voice Provider ── */}
                 <div style={styles.sectionTitle}>Voice Provider</div>
                 <div style={styles.sectionSubtitle}>Choose which TTS engine generates your voiceover.</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                   {[
-                    { id: 'gemini', name: 'Gemini TTS', desc: '30 voices, natural prosody, style instructions', badge: 'Recommended' },
-                    { id: 'elevenlabs', name: 'ElevenLabs', desc: '22 voices, expressive, emotional range', badge: null },
+                    { id: 'maya', name: 'Maya1', desc: 'Describe any voice + 17 emotion tags inline', badge: 'Best' },
+                    { id: 'minimax', name: 'MiniMax 2.8', desc: 'Precise pauses, interjections, voice clone/design', badge: 'Pro' },
+                    { id: 'gemini', name: 'Gemini TTS', desc: '30 preset voices, natural prosody, style instructions', badge: null },
+                    { id: 'elevenlabs', name: 'ElevenLabs', desc: '22 preset voices, expressive, emotional range', badge: null },
                   ].map(p => (
                     <div
                       key={p.id}
@@ -2603,7 +2610,162 @@ export default function ShortsBuilderPage() {
                   ))}
                 </div>
 
-                {/* ── Voice Selection ── */}
+                {/* ── Maya Voice Description ── */}
+                {voiceProvider === 'maya' && (
+                  <>
+                    <div style={styles.sectionTitle}>Describe Your Voice</div>
+                    <div style={styles.sectionSubtitle}>
+                      Describe age, gender, accent, pitch, pace, tone, intensity. The more specific, the better. Supports inline emotion tags in the script: {'<excited>'}, {'<whisper>'}, {'<sigh>'}, {'<sarcastic>'}, etc.
+                    </div>
+                    <textarea
+                      style={{
+                        width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB',
+                        fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', minHeight: '80px',
+                      }}
+                      placeholder="e.g. A 30-year-old male with a warm baritone, slight urgency, conversational and authoritative, like a knowledgeable friend explaining something important"
+                      value={mayaVoiceDesc}
+                      onChange={e => { setMayaVoiceDesc(e.target.value); setSelectedVoice('maya_custom'); }}
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                      {[
+                        { label: 'Authoritative Male', value: 'A 35-year-old male narrator with a deep, authoritative baritone. Measured pace, slight intensity, like a documentary narrator who truly cares about the subject.' },
+                        { label: 'Warm Female', value: 'A 28-year-old woman with a warm, clear voice. Medium pitch, conversational pace, genuine and empathetic, like a trusted friend sharing something important.' },
+                        { label: 'Intense Storyteller', value: 'A male narrator in his 40s with a slightly raspy, low voice. Slow and deliberate delivery, building tension, like a campfire storyteller.' },
+                        { label: 'Energetic Young', value: 'A 25-year-old with a bright, energetic voice. Fast pace, high energy, enthusiastic without being obnoxious, like an excited friend who just discovered something wild.' },
+                        { label: 'Calm Expert', value: 'A gender-neutral voice, 30s, calm and precise. Medium-low pitch, measured pace, clinical but warm, like a scientist explaining a breakthrough to a curious audience.' },
+                      ].map(preset => (
+                        <button
+                          key={preset.label}
+                          style={{
+                            padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 500,
+                            border: mayaVoiceDesc === preset.value ? '2px solid #111827' : '1px solid #D1D5DB',
+                            backgroundColor: mayaVoiceDesc === preset.value ? '#F9FAFB' : '#FFFFFF',
+                            color: '#374151', cursor: 'pointer',
+                          }}
+                          onClick={() => { setMayaVoiceDesc(preset.value); setSelectedVoice('maya_custom'); }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* ── MiniMax Voice Selection ── */}
+                {voiceProvider === 'minimax' && (
+                  <>
+                    <div style={styles.sectionTitle}>MiniMax Voice</div>
+                    <div style={styles.sectionSubtitle}>
+                      Use a preset voice, clone from audio, or design from description. Supports precise pauses {'<#1.5#>'} and interjections (laughs), (sighs).
+                    </div>
+                    {/* Preset voices */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
+                      {[
+                        { id: 'Wise_Woman', desc: 'Wise, authoritative female' },
+                        { id: 'Young_Knight', desc: 'Confident young male' },
+                        { id: 'Determined_Man', desc: 'Strong, driven male' },
+                        { id: 'Gentle_Woman', desc: 'Soft, caring female' },
+                        { id: 'Calm_Woman', desc: 'Composed, steady female' },
+                        { id: 'Inspirational_girl', desc: 'Uplifting young female' },
+                      ].map(v => (
+                        <div
+                          key={v.id}
+                          style={{
+                            padding: '8px 12px', borderRadius: '6px', cursor: 'pointer',
+                            border: selectedVoice === v.id ? '2px solid #111827' : '1px solid #E5E7EB',
+                            backgroundColor: selectedVoice === v.id ? '#F9FAFB' : '#FFFFFF',
+                          }}
+                          onClick={() => { setSelectedVoice(v.id); setMinimaxVoiceId(v.id); }}
+                        >
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{v.id.replace(/_/g, ' ')}</div>
+                          <div style={{ fontSize: '10px', color: '#6B7280' }}>{v.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Clone / Design */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <div style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB', backgroundColor: '#FAFAFA' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Clone from Audio</div>
+                        <input
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '11px' }}
+                          placeholder="Paste audio URL (min 10s)..."
+                          value={voiceCloneUrl}
+                          onChange={e => setVoiceCloneUrl(e.target.value)}
+                        />
+                        <button
+                          style={{
+                            marginTop: '6px', padding: '4px 10px', borderRadius: '4px', border: 'none',
+                            backgroundColor: '#111827', color: '#FFFFFF', fontSize: '11px', fontWeight: 600,
+                            cursor: voiceCloneLoading ? 'not-allowed' : 'pointer', opacity: voiceCloneLoading ? 0.7 : 1,
+                          }}
+                          disabled={!voiceCloneUrl.trim() || voiceCloneLoading}
+                          onClick={async () => {
+                            setVoiceCloneLoading(true);
+                            try {
+                              const res = await apiFetch('/api/workbench/voice-clone', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ audio_url: voiceCloneUrl }),
+                              });
+                              const data = await res.json();
+                              if (data.voice_id) {
+                                setMinimaxVoiceId(data.voice_id);
+                                setSelectedVoice(data.voice_id);
+                              }
+                            } catch (err) { console.error('Voice clone failed:', err); }
+                            finally { setVoiceCloneLoading(false); }
+                          }}
+                        >
+                          {voiceCloneLoading ? 'Cloning...' : 'Clone Voice'}
+                        </button>
+                      </div>
+                      <div style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB', backgroundColor: '#FAFAFA' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Design from Description</div>
+                        <input
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '11px' }}
+                          placeholder="e.g. Confident 35yo woman, British accent..."
+                          value={voiceDesignDesc}
+                          onChange={e => setVoiceDesignDesc(e.target.value)}
+                        />
+                        <button
+                          style={{
+                            marginTop: '6px', padding: '4px 10px', borderRadius: '4px', border: 'none',
+                            backgroundColor: '#111827', color: '#FFFFFF', fontSize: '11px', fontWeight: 600,
+                            cursor: voiceCloneLoading ? 'not-allowed' : 'pointer', opacity: voiceCloneLoading ? 0.7 : 1,
+                          }}
+                          disabled={!voiceDesignDesc.trim() || voiceCloneLoading}
+                          onClick={async () => {
+                            setVoiceCloneLoading(true);
+                            try {
+                              const res = await apiFetch('/api/workbench/voice-design', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ description: voiceDesignDesc }),
+                              });
+                              const data = await res.json();
+                              if (data.voice_id) {
+                                setMinimaxVoiceId(data.voice_id);
+                                setSelectedVoice(data.voice_id);
+                              }
+                            } catch (err) { console.error('Voice design failed:', err); }
+                            finally { setVoiceCloneLoading(false); }
+                          }}
+                        >
+                          {voiceCloneLoading ? 'Designing...' : 'Design Voice'}
+                        </button>
+                      </div>
+                    </div>
+                    {minimaxVoiceId && minimaxVoiceId !== selectedVoice && (
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: '#059669' }}>
+                        Custom voice ready: {minimaxVoiceId.slice(0, 20)}...
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Preset Voice Selection (Gemini / ElevenLabs) ── */}
+                {(voiceProvider === 'gemini' || voiceProvider === 'elevenlabs') && (
+                  <>
                 <div style={styles.sectionTitle}>Choose a Voice</div>
                 <div style={styles.sectionSubtitle}>
                   {voiceProvider === 'gemini' ? '30 Gemini TTS voices — click to select.' : '22 ElevenLabs voices via FAL.ai proxy.'}
@@ -2710,6 +2872,8 @@ export default function ShortsBuilderPage() {
                     </div>
                   ))}
                 </div>
+                  </>
+                )}
 
                 {/* ── Voice Style ── */}
                 <div style={styles.sectionTitle}>Voice Style</div>
@@ -2810,9 +2974,18 @@ export default function ShortsBuilderPage() {
                     setVoiceoverLoading(true);
                     try {
                       const rawNarration = script?.narration_full || script?.scenes?.map(s => s.narration).join(' ') || '';
-                      // Convert [BEAT] markers to natural pauses for TTS
-                      // Gemini TTS interprets "..." as a breath/pause — best available method
-                      const fullNarration = rawNarration.replace(/\s*\[BEAT\]\s*/g, ' ... ').trim();
+                      // Convert [BEAT] markers based on provider
+                      let fullNarration;
+                      if (voiceProvider === 'minimax') {
+                        // MiniMax uses precise pause tags: <#0.8#> for 0.8s pause
+                        fullNarration = rawNarration.replace(/\s*\[BEAT\]\s*/g, ' <#0.8#> ').trim();
+                      } else if (voiceProvider === 'maya') {
+                        // Maya interprets natural pauses from punctuation
+                        fullNarration = rawNarration.replace(/\s*\[BEAT\]\s*/g, '... ').trim();
+                      } else {
+                        // Gemini/ElevenLabs: ellipsis as breath/pause
+                        fullNarration = rawNarration.replace(/\s*\[BEAT\]\s*/g, ' ... ').trim();
+                      }
                       const res = await apiFetch('/api/workbench/voiceover', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2821,6 +2994,9 @@ export default function ShortsBuilderPage() {
                           voice: selectedVoice,
                           style_instructions: customVoiceStyle || '',
                           speed: parseFloat(voiceSpeed),
+                          provider: voiceProvider,
+                          voice_description: voiceProvider === 'maya' ? mayaVoiceDesc : undefined,
+                          voice_id: voiceProvider === 'minimax' ? (minimaxVoiceId || selectedVoice) : undefined,
                         }),
                       });
                       const data = await res.json();

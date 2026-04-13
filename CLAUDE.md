@@ -102,7 +102,15 @@ DB tables: `brand_profiles`, `brand_topics`. Migrations applied via Supabase MCP
 
 **Workflow Engine** (`api/lib/workflowEngine.js`): Persistent state machine for long-running jobs (article→video pipeline). Steps: scrape → analyze → match_templates → create_campaign → generate_assets → concat → upload → finalize. State stored in `jobs` table. Supports pause/resume/retry.
 
-**Voiceover Generator** (`api/lib/voiceoverGenerator.js`): Two TTS backends — Gemini TTS via `fal-ai/gemini-tts` (30 voices, `generateGeminiVoiceover()`) and legacy ElevenLabs via `fal-ai/elevenlabs/tts/eleven-v3` (`generateVoiceover()`). Gemini is the default for new Shorts. 30 Gemini voices exported as `GEMINI_VOICES`. Frontend mirror: `src/lib/geminiVoices.js` with `FEATURED_VOICES`.
+**Voiceover Generator** (`api/lib/voiceoverGenerator.js`): Four TTS backends for the Shorts Builder:
+- **Maya1** (`fal-ai/maya`, `generateMayaVoiceover()`): Voice designed from text description (age, accent, pitch, pace, tone). No preset voices — describe what you want. 17 inline emotion tags (`<excited>`, `<whisper>`, `<sigh>`, `<sarcastic>`, `<gasp>`, `<angry>`, `<curious>`, etc.) embedded directly in script text. 48kHz output. Best quality for Shorts.
+- **MiniMax Speech 2.8 HD** (`fal-ai/minimax/speech-2.8-hd`, `generateMinimaxVoiceover()`): Precise pause tags `<#seconds#>` (e.g., `<#0.8#>` for 0.8s), interjection tags `(laughs)`, `(sighs)`, `(coughs)`, `(gasps)`, `(yawns)`. Voice modification: pitch, speed, volume per generation. Works with preset voice IDs AND cloned/designed custom voice IDs.
+- **MiniMax Voice Clone** (`fal-ai/minimax/voice-clone`, `cloneVoiceMinimax()`): Upload 10+ seconds of audio → returns a permanent `custom_voice_id`. Use with MiniMax Speech 2.8 for all future generations. Noise reduction + volume normalization. Workbench action: `voice-clone`.
+- **MiniMax Voice Design** (`fal-ai/minimax/voice-design`, `designVoiceMinimax()`): Describe a voice in text → returns a permanent `custom_voice_id`. Workbench action: `voice-design`.
+- **Gemini TTS** (`fal-ai/gemini-tts`, `generateGeminiVoiceover()`): 30 preset voices, style instructions, speed-aware pacing. Still available but Maya1 is recommended.
+- **ElevenLabs** (`fal-ai/elevenlabs/tts/eleven-v3`, `generateVoiceover()`): 22 preset voices via FAL proxy. Legacy option.
+
+`[BEAT]` markers in narration are converted per provider: Maya → `...` (natural pause), MiniMax → `<#0.8#>` (precise pause), Gemini/ElevenLabs → `...` (breath pause). The workbench voiceover handler (`api/workbench/workbench.js`, action `voiceover`) accepts `provider` param (`gemini`|`elevenlabs`|`maya`|`minimax`) and routes accordingly. Frontend: 4 provider cards in Step 2, Maya shows voice description textarea with 5 presets, MiniMax shows 6 preset voices + clone/design panels.
 
 **Caption System** (`api/lib/captionBurner.js`): `burnCaptions(videoUrl, captionConfig, falKey, supabase)` accepts either a full config object (font, size, color, stroke, position, animation, etc.) or a legacy string preset key (word_pop, karaoke_glow, word_highlight, news_ticker). Uses `fal-ai/workflow-utilities/auto-subtitle`. Presets exported as `CAPTION_STYLES`. API: `GET /api/styles/captions`.
 

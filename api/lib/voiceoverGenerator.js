@@ -237,6 +237,247 @@ export async function generateGeminiVoiceover(text, keys, supabase, options = {}
   return publicUrl;
 }
 
+// ─── MAYA1 TTS ──────────────────────────────────────────────────────────────
+
+/**
+ * Generate voiceover using Maya1 TTS via FAL.
+ * Maya1 uses a text DESCRIPTION for the voice (no preset voices) and supports
+ * inline emotion tags: <laugh>, <sigh>, <gasp>, <angry>, <excited>, <whisper>,
+ * <cry>, <scream>, <sarcastic>, <curious>, <chuckle>, <giggle>, <snort>, etc.
+ *
+ * @param {string} text - Narration text (can include emotion tags)
+ * @param {object} keys - { falKey }
+ * @param {object} supabase - Supabase client
+ * @param {object} options - { voiceDescription, temperature }
+ * @returns {Promise<string>} Public URL of generated audio
+ */
+export async function generateMayaVoiceover(text, keys, supabase, options = {}) {
+  const {
+    voiceDescription = 'A 30-year-old male narrator with a warm baritone, conversational tone, medium pace, slight authority, natural and engaging',
+    temperature = 0.4,
+  } = options;
+
+  const falKey = keys.falKey;
+  if (!falKey) throw new Error('FAL API key required for Maya TTS');
+  if (!text?.trim()) throw new Error('Text is required for Maya TTS');
+
+  console.log(`[Maya TTS] Generating voiceover: text length=${text.length}, voice="${voiceDescription.slice(0, 60)}..."`);
+
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/maya', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      prompt: voiceDescription,
+      temperature,
+      top_p: 0.9,
+      repetition_penalty: 1.1,
+      sample_rate: '48 kHz',
+      output_format: 'mp3',
+      max_tokens: 4000,
+    }),
+  });
+
+  if (!submitRes.ok) {
+    const err = await submitRes.text();
+    throw new Error(`Maya TTS submit failed (${submitRes.status}): ${err}`);
+  }
+
+  const submitData = await submitRes.json();
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/fal-ai/maya/requests/${submitData.request_id}`;
+  console.log(`[Maya TTS] Queued: request_id=${submitData.request_id}`);
+
+  const result = await pollFalQueue(responseUrl, 'fal-ai/maya', falKey, 120, 2000);
+
+  const audioUrl = result?.audio?.url;
+  if (!audioUrl) throw new Error('Maya TTS returned no audio URL');
+
+  console.log(`[Maya TTS] Complete: duration=${result.duration}s, rtf=${result.rtf}`);
+
+  // Download and re-upload to Supabase
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) throw new Error(`Failed to download Maya TTS audio: ${audioRes.status}`);
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+  const fileName = `pipeline/voiceover/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
+  const { error: uploadError } = await supabase.storage
+    .from('media')
+    .upload(fileName, audioBuffer, { contentType: 'audio/mpeg', upsert: false });
+  if (uploadError) throw new Error(`Maya TTS upload failed: ${uploadError.message}`);
+
+  const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
+  console.log(`[Maya TTS] Uploaded to ${publicUrl}`);
+  return publicUrl;
+}
+
+// ─── MINIMAX SPEECH 2.8 HD ──────────────────────────────────────────────────
+
+/**
+ * Generate voiceover using MiniMax Speech 2.8 HD via FAL.
+ * Supports: precise pause tags <#seconds#>, interjection tags (laughs), (sighs),
+ * pitch/speed/volume modification, custom pronunciation, and cloned voice IDs.
+ *
+ * @param {string} text - Narration text. Use <#1.5#> for 1.5s pauses, (laughs)/(sighs) for interjections.
+ * @param {object} keys - { falKey }
+ * @param {object} supabase - Supabase client
+ * @param {object} options - { voiceId, speed, pitch, volume }
+ * @returns {Promise<string>} Public URL of generated audio
+ */
+export async function generateMinimaxVoiceover(text, keys, supabase, options = {}) {
+  const {
+    voiceId = 'Wise_Woman',
+    speed = 1,
+    pitch = 0,
+    volume = 1,
+  } = options;
+
+  const falKey = keys.falKey;
+  if (!falKey) throw new Error('FAL API key required for MiniMax TTS');
+  if (!text?.trim()) throw new Error('Text is required for MiniMax TTS');
+
+  console.log(`[MiniMax TTS] Generating voiceover: voice=${voiceId}, speed=${speed}, text length=${text.length}`);
+
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/minimax/speech-2.8-hd', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: text,
+      output_format: 'url',
+      voice_setting: {
+        voice_id: voiceId,
+        speed,
+        pitch,
+        vol: volume,
+        english_normalization: false,
+      },
+    }),
+  });
+
+  if (!submitRes.ok) {
+    const err = await submitRes.text();
+    throw new Error(`MiniMax TTS submit failed (${submitRes.status}): ${err}`);
+  }
+
+  const submitData = await submitRes.json();
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/fal-ai/minimax/speech-2.8-hd/requests/${submitData.request_id}`;
+  console.log(`[MiniMax TTS] Queued: request_id=${submitData.request_id}`);
+
+  const result = await pollFalQueue(responseUrl, 'fal-ai/minimax/speech-2.8-hd', falKey, 120, 2000);
+
+  const audioUrl = result?.audio?.url;
+  if (!audioUrl) throw new Error('MiniMax TTS returned no audio URL');
+
+  console.log(`[MiniMax TTS] Complete: duration=${result.duration_ms}ms`);
+
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) throw new Error(`Failed to download MiniMax TTS audio: ${audioRes.status}`);
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+
+  const fileName = `pipeline/voiceover/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
+  const { error: uploadError } = await supabase.storage
+    .from('media')
+    .upload(fileName, audioBuffer, { contentType: 'audio/mpeg', upsert: false });
+  if (uploadError) throw new Error(`MiniMax TTS upload failed: ${uploadError.message}`);
+
+  const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
+  console.log(`[MiniMax TTS] Uploaded to ${publicUrl}`);
+  return publicUrl;
+}
+
+// ─── MINIMAX VOICE CLONE ────────────────────────────────────────────────────
+
+/**
+ * Clone a voice from an audio sample. Returns a custom_voice_id that can be
+ * used with MiniMax Speech 2.8 HD for all future generations.
+ *
+ * @param {string} audioUrl - URL of the reference audio (min 10 seconds)
+ * @param {string} falKey - FAL API key
+ * @param {string} [previewText] - Optional text to generate a preview
+ * @returns {Promise<{ voiceId: string, previewUrl?: string }>}
+ */
+export async function cloneVoiceMinimax(audioUrl, falKey, previewText = null) {
+  console.log(`[MiniMax Voice Clone] Cloning from: ${audioUrl.slice(0, 60)}...`);
+
+  const body = {
+    audio_url: audioUrl,
+    noise_reduction: true,
+    need_volume_normalization: true,
+    model: 'speech-02-hd',
+  };
+  if (previewText) body.text = previewText;
+
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/minimax/voice-clone', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!submitRes.ok) {
+    const err = await submitRes.text();
+    throw new Error(`MiniMax voice clone submit failed (${submitRes.status}): ${err}`);
+  }
+
+  const submitData = await submitRes.json();
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/fal-ai/minimax/voice-clone/requests/${submitData.request_id}`;
+
+  const result = await pollFalQueue(responseUrl, 'fal-ai/minimax/voice-clone', falKey, 60, 3000);
+
+  const voiceId = result?.custom_voice_id;
+  if (!voiceId) throw new Error('MiniMax voice clone returned no voice ID');
+
+  console.log(`[MiniMax Voice Clone] Success: voice_id=${voiceId}`);
+  return {
+    voiceId,
+    previewUrl: result?.audio?.url || null,
+  };
+}
+
+// ─── MINIMAX VOICE DESIGN ───────────────────────────────────────────────────
+
+/**
+ * Design a new voice from a text description. Returns a custom_voice_id.
+ *
+ * @param {string} description - Voice description (e.g., "A confident 35-year-old woman with slight British accent")
+ * @param {string} falKey - FAL API key
+ * @param {string} [previewText] - Text to preview the designed voice
+ * @returns {Promise<{ voiceId: string, previewUrl?: string }>}
+ */
+export async function designVoiceMinimax(description, falKey, previewText = 'Hello, this is a preview of your designed voice.') {
+  console.log(`[MiniMax Voice Design] Designing: "${description.slice(0, 60)}..."`);
+
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/minimax/voice-design', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: description,
+      preview_text: previewText,
+    }),
+  });
+
+  if (!submitRes.ok) {
+    const err = await submitRes.text();
+    throw new Error(`MiniMax voice design submit failed (${submitRes.status}): ${err}`);
+  }
+
+  const submitData = await submitRes.json();
+  const responseUrl = submitData.response_url
+    || `https://queue.fal.run/fal-ai/minimax/voice-design/requests/${submitData.request_id}`;
+
+  const result = await pollFalQueue(responseUrl, 'fal-ai/minimax/voice-design', falKey, 60, 3000);
+
+  const voiceId = result?.custom_voice_id;
+  if (!voiceId) throw new Error('MiniMax voice design returned no voice ID');
+
+  console.log(`[MiniMax Voice Design] Success: voice_id=${voiceId}`);
+  return {
+    voiceId,
+    previewUrl: result?.audio?.url || null,
+  };
+}
+
 /**
  * Generate word-level timestamps from an audio URL using FAL Whisper.
  *
