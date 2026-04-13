@@ -864,6 +864,15 @@ app.post('/api/linkedin/posts/:id/recompose', authenticateToken, (await import('
 app.post('/api/linkedin/posts/:id/regenerate', authenticateToken, (await import('./api/linkedin/regenerate-post.js')).default);
 app.post('/api/linkedin/posts/:id/publish', authenticateToken, (await import('./api/linkedin/publish.js')).default);
 
+// ─── Social Posts (Instagram & Facebook) ──────────────────────────────────
+app.post('/api/social/add-topic', authenticateToken, (await import('./api/social/add-topic.js')).default);
+app.get('/api/social/topics', authenticateToken, (await import('./api/social/list-topics.js')).default);
+app.get('/api/social/topics/:topicId', authenticateToken, (await import('./api/social/get-topic.js')).default);
+app.delete('/api/social/topics/:topicId', authenticateToken, (await import('./api/social/delete-topic.js')).default);
+app.post('/api/social/topics/:topicId/generate', authenticateToken, (await import('./api/social/generate-posts.js')).default);
+app.post('/api/social/posts/:postId/regenerate', authenticateToken, (await import('./api/social/regenerate-post.js')).default);
+app.post('/api/social/posts/:postId/publish', authenticateToken, (await import('./api/social/publish.js')).default);
+
 // ─── TikTok OAuth ─────────────────────────────────────────────────────────
 app.get('/api/tiktok/auth', authenticateToken, (await import('./api/tiktok/auth.js')).default);
 app.get('/api/tiktok/callback', (await import('./api/tiktok/callback.js')).default); // No auth — redirect from TikTok

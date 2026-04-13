@@ -1,19 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { logCost } from '../lib/costLogger.js';
 import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
-
-const ANTI_SLOP = `RULES (violating any = rejection):
-- First line MUST be under 200 characters
-- NO filler: "In today's world", "Let's dive in", "Here's the thing"
-- NO hedging: "might", "could potentially", "it's possible"
-- NO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry"
-- NO emojis, NO hashtags, NO markdown formatting, NO em dashes (—)
-- Every sentence must add new information — no repetition
-- Be specific: use real names, real numbers, real places
-- Write like a sharp human, not a language model`;
+import { generateLinkedInPosts } from '../lib/linkedinProductionEngine.js';
 
 function cleanSourceUrl(url) {
   try {
@@ -25,25 +15,6 @@ function cleanSourceUrl(url) {
     return `${u.hostname.replace(/^www\./, '')}${path}${u.search || ''}`;
   } catch { return url; }
 }
-
-function cleanPostBody(body) {
-  let text = body;
-  text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}]/gu, '');
-  text = text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/__(.+?)__/g, '$1').replace(/\*(.+?)\*/g, '$1');
-  text = text.replace(/#\w+/g, '');
-  // Replace em dashes and en dashes with plain hyphens
-  text = text.replace(/[\u2013\u2014]/g, ' - ');
-  text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
-  text = text.replace(/\.([A-Z])/g, '. $1');
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
-  return text;
-}
-
-const STYLE_PROMPTS = {
-  contrarian: `Write a LinkedIn post using the Contrarian Insight style. Make a bold claim that challenges conventional thinking about this topic, then explain why the common take is wrong. 150-250 words.\n\n${ANTI_SLOP}`,
-  story: `Write a LinkedIn post using the Story-Led style. Open with a vivid scene — a specific person, place, or moment. Tell a mini narrative that draws the reader in. 150-250 words.\n\n${ANTI_SLOP}`,
-  data: `Write a LinkedIn post using the Data/Stat Punch style. Lead with a surprising number or concrete fact from the source material. 100-200 words.\n\n${ANTI_SLOP}`,
-};
 
 export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -80,34 +51,39 @@ export default async function handler(req, res) {
 
     // Only regenerate text when NOT doing an image-only regeneration
     if (!regenerate_image) {
-      if (!keys.openaiKey) return res.status(500).json({ error: 'OpenAI key not configured' });
+      // Fetch brand context if post has a brand_kit_id
+      let brandContext = null;
+      if (post.brand_kit_id) {
+        const { data: brand } = await supabase
+          .from('brand_kit')
+          .select('brand_name, industry, target_market, tagline')
+          .eq('id', post.brand_kit_id)
+          .single();
+        if (brand) {
+          brandContext = {
+            brand_name: brand.brand_name,
+            industry: brand.industry,
+            target_audience: brand.target_market,
+            tagline: brand.tagline,
+          };
+        }
+      }
 
-      const client = new OpenAI({ apiKey: keys.openaiKey });
       const content = topic.full_content || topic.source_summary || '';
 
-      const completion = await client.chat.completions.create({
-        model: 'gpt-4.1',
-        messages: [
-          { role: 'system', content: STYLE_PROMPTS[post.post_style] },
-          { role: 'user', content: `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content}` },
-        ],
-        temperature: 0.9,
-        max_tokens: 1000,
+      // Generate 3 posts via the production engine, then pick the best match
+      const result = await generateLinkedInPosts({
+        topic,
+        content,
+        brandContext,
+        username: req.user.email,
       });
 
-      logCost({
-        username: req.user.email,
-        category: 'openai',
-        operation: 'linkedin_generation',
-        model: 'gpt-4.1',
-        input_tokens: completion.usage?.prompt_tokens || 0,
-        output_tokens: completion.usage?.completion_tokens || 0,
-      }).catch(() => {});
+      // Pick the post that matches the existing structure, or first one
+      const existingStructure = post.post_style;
+      const matched = result.posts.find(p => p.structure_used === existingStructure) || result.posts[0];
 
-      let finalBody = completion.choices[0]?.message?.content?.trim() || '';
-
-      // Clean post body
-      finalBody = cleanPostBody(finalBody);
+      let finalBody = matched.body || '';
 
       // Append source as plain text
       if (topic.source_url) {
@@ -119,6 +95,8 @@ export default async function handler(req, res) {
       }
 
       updateFields.content = finalBody;
+      updateFields.excerpt = matched.image_hook;
+      updateFields.post_style = matched.structure_used;
       updateFields.status = 'generated';
     }
 
@@ -134,7 +112,7 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             prompt: `Professional editorial photograph for LinkedIn post about: ${topic.source_title}. Clean, modern, business context. No text, no logos.`,
-            image_size: 'square_hd',
+            image_size: 'portrait_4_3',
             num_images: 1,
           }),
         });
@@ -176,7 +154,7 @@ export default async function handler(req, res) {
             const composedBuffer = await composeLinkedInSatori({
               backgroundImageUrl: baseImageUrl,
               logoUrl: brand?.logo_url,
-              excerpt: post.excerpt || '',
+              hookText: updateFields.excerpt || post.excerpt || '',
               seriesTitle: config?.series_title || 'INDUSTRY WATCH',
               postNumber: post.post_number || 1,
               carouselStyle: post.carousel_style || 'bold_editorial',

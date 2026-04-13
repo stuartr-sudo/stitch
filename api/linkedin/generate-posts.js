@@ -1,34 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 import { getUserKeys } from '../lib/getUserKeys.js';
 import { fetchUrlContent, resolveExaKey } from '../lib/newsjackScorer.js';
-import { composeImage } from '../lib/composeImage.js';
 import { composeLinkedInSatori } from '../lib/composeLinkedInSatori.js';
 import { uploadUrlToSupabase } from '../lib/pipelineHelpers.js';
 import { logCost } from '../lib/costLogger.js';
-import { getPostFormat } from '../lib/postFormatTemplates.js';
-
-const ANTI_SLOP = `RULES (violating any = rejection):
-- First line MUST be under 200 characters
-- NO filler: "In today's world", "Let's dive in", "Here's the thing"
-- NO hedging: "might", "could potentially", "it's possible"
-- NO AI clichés: "landscape", "navigate", "leverage", "robust", "delve", "tapestry"
-- NO emojis, NO hashtags, NO markdown formatting, NO em dashes (—)
-- Every sentence must add new information — no repetition
-- Be specific: use real names, real numbers, real places
-- Write like a sharp human, not a language model`;
-
-const STYLE_PROMPTS = {
-  contrarian: `Write a LinkedIn post using the Contrarian Insight style. Make a bold claim that challenges conventional thinking about this topic, then explain why the common take is wrong. 150-250 words.\n\n${ANTI_SLOP}`,
-  story: `Write a LinkedIn post using the Story-Led style. Open with a vivid scene — a specific person, place, or moment. Tell a mini narrative that draws the reader in. 150-250 words.\n\n${ANTI_SLOP}`,
-  data: `Write a LinkedIn post using the Data/Stat Punch style. Lead with a surprising number or concrete fact from the source material. 100-200 words.\n\n${ANTI_SLOP}`,
-};
+import { generateLinkedInPosts } from '../lib/linkedinProductionEngine.js';
 
 /** Strip UTM params and return clean domain/path for source attribution */
 function cleanSourceUrl(url) {
   try {
     const u = new URL(url);
-    // Strip UTM and tracking params
     for (const key of [...u.searchParams.keys()]) {
       if (key.startsWith('utm_') || key === 'ref' || key === 'source') {
         u.searchParams.delete(key);
@@ -68,15 +49,14 @@ export default async function handler(req, res) {
   const {
     topic_id, template_index,
     style_preset, brand_kit_id, carousel_style,
-    style_overrides, post_format, writing_style,
+    style_overrides, post_format,
   } = req.body || {};
-  const formatTemplate = post_format ? getPostFormat(post_format) : null;
   if (!topic_id) return res.status(400).json({ error: 'topic_id is required' });
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    // Fetch topic + verify ownership
+    // ── Fetch topic + verify ownership ──────────────────────────────────
     const { data: topic, error: topicErr } = await supabase
       .from('linkedin_topics')
       .select('*')
@@ -86,7 +66,7 @@ export default async function handler(req, res) {
 
     if (topicErr || !topic) return res.status(404).json({ error: 'Topic not found' });
 
-    // Exa enrichment: fetch full content if missing OR too short (<500 chars)
+    // ── Exa enrichment: fetch full content if missing or short ──────────
     let content = topic.full_content;
     if (!content || content.length < 500) {
       const exaKey = await resolveExaKey(req.user.id);
@@ -97,13 +77,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Resolve keys
+    // ── Resolve keys + config + brand ───────────────────────────────────
     const keys = await getUserKeys(req.user.id, req.user.email);
-    if (!keys.openaiKey) return res.status(500).json({ error: 'OpenAI key not configured' });
 
-    const client = new OpenAI({ apiKey: keys.openaiKey });
-
-    // Fetch config for CTA and brand context
     const { data: config } = await supabase
       .from('linkedin_config')
       .select('*')
@@ -117,15 +93,21 @@ export default async function handler(req, res) {
     if (brand_kit_id) brandQuery.eq('id', brand_kit_id);
     const { data: brand } = await brandQuery.maybeSingle();
 
-    const brandContext = [
-      brand?.brand_name ? `Brand: ${brand.brand_name}` : null,
-      brand?.industry ? `Industry: ${brand.industry}` : null,
-      brand?.target_audience ? `Audience: ${brand.target_audience}` : null,
-    ].filter(Boolean).join('\n');
+    // ── Generate posts via LinkedIn Production Engine (Claude) ──────────
+    const engineResult = await generateLinkedInPosts({
+      topic,
+      content,
+      brandContext: brand ? {
+        brand_name: brand.brand_name,
+        industry: brand.industry,
+        target_audience: brand.target_audience,
+        tagline: brand.tagline,
+      } : null,
+      postFormat: post_format || null,
+      username: req.user.email,
+    });
 
-    const userMessage = `Source article: ${topic.source_title}\nURL: ${topic.source_url}\n\nArticle content:\n${content || topic.source_summary || '(no content available)'}\n\n${brandContext ? `Brand context:\n${brandContext}` : ''}`;
-
-    // Determine post number and template
+    // ── Determine post number and template index ────────────────────────
     const { data: maxNum } = await supabase
       .from('linkedin_posts')
       .select('post_number')
@@ -138,102 +120,20 @@ export default async function handler(req, res) {
     const postNumber = (maxNum?.post_number || 0) + 1;
     const tplIndex = template_index != null ? template_index : (postNumber - 1) % 6;
 
-    // Determine which styles to generate
-    // When a post format is specified, generate format-specific variations
-    // When a specific writing_style is chosen (not 'all'), generate only that style
-    let styles;
-    if (formatTemplate) {
-      // Format mode: generate 3 variations using the format's LinkedIn prompt
-      styles = ['format_v1', 'format_v2', 'format_v3'];
-    } else if (writing_style && writing_style !== 'all') {
-      styles = [writing_style];
-    } else {
-      styles = ['contrarian', 'story', 'data'];
-    }
-
-    const results = await Promise.allSettled(
-      styles.map(async (style) => {
-        let systemPrompt;
-        if (formatTemplate) {
-          // Use format-specific LinkedIn prompt with anti-slop rules
-          systemPrompt = `${formatTemplate.linkedinPrompt}\n\n${ANTI_SLOP}`;
-        } else {
-          systemPrompt = STYLE_PROMPTS[style];
-        }
-
-        const completion = await client.chat.completions.create({
-          model: 'gpt-4.1',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage },
-          ],
-          temperature: formatTemplate ? 0.85 : 0.8,
-          max_tokens: 1000,
-        });
-
-        const usage = completion.usage;
-        logCost({
-          username: req.user.email,
-          category: 'openai',
-          operation: 'linkedin_generation',
-          model: 'gpt-4.1',
-          input_tokens: usage?.prompt_tokens || 0,
-          output_tokens: usage?.completion_tokens || 0,
-        }).catch(() => {});
-
-        let body = completion.choices[0]?.message?.content?.trim() || '';
-        body = cleanPostBody(body);
-
-        // Append source as plain text (not hyperlinked)
-        body += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
-
-        // Append CTA if configured (this one IS a hyperlink)
-        if (config?.linkedin_cta_text && config?.linkedin_cta_url) {
-          body += `\n${config.linkedin_cta_text} → ${config.linkedin_cta_url}`;
-        }
-
-        return { style, body };
-      })
-    );
-
-    // Generate excerpt via gpt-5-mini — pull a compelling insight from the full article
-    let excerpt = '';
-    try {
-      const excerptSource = content || topic.source_summary || topic.source_title || '';
-      const excerptCompletion = await client.chat.completions.create({
-        model: 'gpt-5-mini',
-        messages: [
-          { role: 'system', content: 'Extract the single most compelling or surprising 6-12 word phrase from this article that would make someone stop scrolling. It should capture a key insight, not just restate the headline. Use sentence case (capitalize only the first word and proper nouns). Return only the phrase, no quotation marks.' },
-          { role: 'user', content: `Headline: ${topic.source_title}\n\nArticle:\n${excerptSource.slice(0, 2000)}` },
-        ],
-        temperature: 0.3,
-        max_tokens: 50,
-      });
-      excerpt = excerptCompletion.choices[0]?.message?.content?.trim() || '';
-      // Strip any quotation marks the model may have added
-      excerpt = excerpt.replace(/^["'\u201C\u201D\u2018\u2019]+|["'\u201C\u201D\u2018\u2019]+$/g, '');
-      logCost({
-        username: req.user.email,
-        category: 'openai',
-        operation: 'linkedin_excerpt',
-        model: 'gpt-5-mini',
-        input_tokens: excerptCompletion.usage?.prompt_tokens || 0,
-        output_tokens: excerptCompletion.usage?.completion_tokens || 0,
-      }).catch(() => {});
-    } catch (err) {
-      console.warn('[linkedin/generate-posts] Excerpt generation failed:', err.message);
-      excerpt = topic.source_title?.slice(0, 80) || '';
-    }
-
-    // Generate base image via FAL Nano Banana 2
-    let squareImageUrl = null;
+    // ── Generate base image via Nano Banana 2 ───────────────────────────
+    // Use the first post's image_prompt from the engine (or fallback)
+    let baseImageUrl = null;
     let storedBaseImageUrl = null;
+
     if (keys.falKey) {
       try {
-        // Build image prompt — inject style_preset promptText if provided
-        let imagePrompt = `Professional editorial photograph for LinkedIn post about: ${topic.source_title}. Clean, modern, business context. No text, no logos.`;
+        // Use the engine-generated image prompt (much better than generic)
+        let imagePrompt = engineResult.posts[0]?.image_prompt
+          || `Professional editorial photograph for LinkedIn post about: ${topic.source_title}. No text, no logos.`;
+
+        // Inject visual style preset if provided
         if (style_preset) {
-          imagePrompt = `${style_preset}. LinkedIn post about: ${topic.source_title}. No text, no logos.`;
+          imagePrompt = `${style_preset}. ${imagePrompt}`;
         }
 
         const falRes = await fetch('https://queue.fal.run/fal-ai/nano-banana-2', {
@@ -244,14 +144,13 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             prompt: imagePrompt,
-            image_size: 'square_hd',
+            image_size: 'portrait_4_3',
             num_images: 1,
           }),
         });
 
         if (falRes.ok) {
           const falData = await falRes.json();
-          let baseImageUrl = null;
           const requestId = falData.request_id;
           if (requestId) {
             for (let i = 0; i < 30; i++) {
@@ -281,68 +180,13 @@ export default async function handler(req, res) {
             model: 'nano-banana-2',
           }).catch(() => {});
 
-          // Upload base image to Supabase for persistence (FAL CDN URLs expire)
+          // Upload base image to Supabase (FAL CDN URLs expire)
           if (baseImageUrl) {
             try {
               storedBaseImageUrl = await uploadUrlToSupabase(baseImageUrl, supabase, 'linkedin');
             } catch (err) {
               console.warn('[linkedin/generate-posts] Base image upload failed:', err.message);
-              storedBaseImageUrl = baseImageUrl; // fallback to FAL URL
-            }
-          }
-
-          // Compose branded square image using Satori compositor
-          const effectiveCarouselStyle = carousel_style || 'bold_editorial';
-          if (baseImageUrl) {
-            try {
-              const composedBuffer = await composeLinkedInSatori({
-                backgroundImageUrl: baseImageUrl,
-                logoUrl: brand?.logo_url,
-                excerpt,
-                seriesTitle: config?.series_title || 'INDUSTRY WATCH',
-                postNumber,
-                carouselStyle: effectiveCarouselStyle,
-                templateIndex: tplIndex,
-                styleOverrides: style_overrides,
-              });
-
-              const ts = Date.now();
-              const rand = Math.random().toString(36).slice(2, 8);
-              const { data: upload, error: uploadErr } = await supabase.storage
-                .from('media')
-                .upload(`linkedin/composed-sq-${ts}-${rand}.png`, composedBuffer, { contentType: 'image/png', upsert: false });
-
-              if (!uploadErr) {
-                const { data: publicUrl } = supabase.storage.from('media').getPublicUrl(upload.path);
-                squareImageUrl = publicUrl.publicUrl;
-              }
-            } catch (err) {
-              console.warn('[linkedin/generate-posts] Satori composition failed, falling back to legacy:', err.message);
-              // Fallback to legacy composeImage if Satori fails
-              if (brand?.logo_url) {
-                try {
-                  const squareBuffer = await composeImage({
-                    image_url: baseImageUrl,
-                    logo_url: brand.logo_url,
-                    series_title: config?.series_title || 'INDUSTRY WATCH',
-                    post_number: postNumber,
-                    excerpt,
-                    template_index: tplIndex,
-                    format: 'square',
-                  });
-                  const ts2 = Date.now();
-                  const rand2 = Math.random().toString(36).slice(2, 8);
-                  const { data: upload2, error: uploadErr2 } = await supabase.storage
-                    .from('media')
-                    .upload(`linkedin/composed-sq-${ts2}-${rand2}.png`, squareBuffer, { contentType: 'image/png', upsert: false });
-                  if (!uploadErr2) {
-                    const { data: publicUrl2 } = supabase.storage.from('media').getPublicUrl(upload2.path);
-                    squareImageUrl = publicUrl2.publicUrl;
-                  }
-                } catch (fallbackErr) {
-                  console.warn('[linkedin/generate-posts] Legacy fallback also failed:', fallbackErr.message);
-                }
-              }
+              storedBaseImageUrl = baseImageUrl;
             }
           }
         }
@@ -351,40 +195,97 @@ export default async function handler(req, res) {
       }
     }
 
-    // Insert successful posts
-    const posts = [];
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        const { style, body } = result.value;
-        const { data: post, error: postErr } = await supabase
-          .from('linkedin_posts')
-          .insert({
-            username: req.user.email,
-            topic_id,
-            post_style: style,
-            content: body,
-            excerpt,
-            post_number: postNumber,
-            template_index: tplIndex,
-            featured_image_square: squareImageUrl,
-            base_image_url: storedBaseImageUrl,
-            carousel_style: carousel_style || 'bold_editorial',
-            style_preset: style_preset || null,
-            brand_kit_id: brand_kit_id || null,
-            post_format: post_format || null,
-            style_overrides: style_overrides || {},
-          })
-          .select()
-          .single();
+    // ── Compose branded images per post (each gets its own hook text) ───
+    const effectiveCarouselStyle = carousel_style || 'bold_editorial';
 
-        if (!postErr && post) posts.push(post);
+    async function composeImageForPost(postData) {
+      if (!baseImageUrl) return null;
+      try {
+        const composedBuffer = await composeLinkedInSatori({
+          backgroundImageUrl: baseImageUrl,
+          logoUrl: brand?.logo_url,
+          hookText: postData.image_hook || topic.source_title?.slice(0, 50),
+          seriesTitle: config?.series_title || 'INDUSTRY WATCH',
+          postNumber,
+          carouselStyle: effectiveCarouselStyle,
+          templateIndex: tplIndex,
+          styleOverrides: style_overrides,
+        });
+
+        const ts = Date.now();
+        const rand = Math.random().toString(36).slice(2, 8);
+        const { data: upload, error: uploadErr } = await supabase.storage
+          .from('media')
+          .upload(`linkedin/composed-sq-${ts}-${rand}.png`, composedBuffer, {
+            contentType: 'image/png',
+            upsert: false,
+          });
+
+        if (!uploadErr) {
+          const { data: publicUrl } = supabase.storage.from('media').getPublicUrl(upload.path);
+          return publicUrl.publicUrl;
+        }
+      } catch (err) {
+        console.warn('[linkedin/generate-posts] Satori composition failed:', err.message);
+      }
+      return null;
+    }
+
+    // ── Process each post: clean text, compose image, insert to DB ──────
+    const posts = [];
+    for (const postData of engineResult.posts) {
+      // Clean the body text (safety net — engine should output clean text)
+      let body = cleanPostBody(postData.body);
+
+      // Append source attribution
+      body += `\n\nsrc: ${cleanSourceUrl(topic.source_url)}`;
+
+      // Append CTA if configured
+      if (config?.linkedin_cta_text && config?.linkedin_cta_url) {
+        body += `\n${config.linkedin_cta_text} → ${config.linkedin_cta_url}`;
+      }
+
+      // Compose branded image with this post's image_hook
+      const squareImageUrl = await composeImageForPost(postData);
+
+      // Insert to DB
+      const { data: post, error: postErr } = await supabase
+        .from('linkedin_posts')
+        .insert({
+          username: req.user.email,
+          topic_id,
+          post_style: postData.structure_used,
+          content: body,
+          excerpt: postData.image_hook,
+          post_number: postNumber,
+          template_index: tplIndex,
+          featured_image_square: squareImageUrl,
+          base_image_url: storedBaseImageUrl,
+          carousel_style: effectiveCarouselStyle,
+          style_preset: style_preset || null,
+          brand_kit_id: brand_kit_id || null,
+          post_format: post_format || null,
+          style_overrides: style_overrides || {},
+        })
+        .select()
+        .single();
+
+      if (!postErr && post) {
+        // Attach engine metadata for frontend display
+        post._driver_used = postData.driver_used;
+        post._structure_used = postData.structure_used;
+        posts.push(post);
       }
     }
 
-    // Update topic status
+    // ── Update topic status ─────────────────────────────────────────────
     await supabase.from('linkedin_topics').update({ status: 'generated' }).eq('id', topic_id);
 
-    return res.json({ success: true, posts });
+    return res.json({
+      success: true,
+      posts,
+      topic_analysis: engineResult.topic_analysis,
+    });
   } catch (err) {
     console.error('[linkedin/generate-posts] Error:', err);
     return res.status(500).json({ error: err.message });

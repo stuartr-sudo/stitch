@@ -1,63 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link2, Type, Loader2, LayoutGrid, Image, Film, Check, ListOrdered, BarChart3, Quote, ArrowRightLeft, Search, GitCompare, Lightbulb, Flame, BookOpen, Eye, Award, Smile, Megaphone, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link2, Type, Loader2, LayoutGrid, Image, Film, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SlideOverPanel, SlideOverBody, SlideOverFooter } from '@/components/ui/slide-over-panel';
 import StyleGrid from '@/components/ui/StyleGrid';
 import { CAROUSEL_STYLE_TEMPLATES } from '@/lib/carouselStyleTemplates';
-import { POST_FORMAT_TEMPLATES, FORMAT_CATEGORIES, getFormatsForPlatform } from '@/lib/postFormatTemplates';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
-
-const FORMAT_ICONS = {
-  educational_listicle: ListOrdered,
-  data_infographic: BarChart3,
-  step_by_step: ListOrdered,
-  checklist: Check,
-  comparison: GitCompare,
-  myth_vs_reality: Search,
-  problem_solution: Lightbulb,
-  hot_take: Flame,
-  before_after: ArrowRightLeft,
-  carousel_story: BookOpen,
-  behind_the_scenes: Eye,
-  testimonial: Award,
-  quote_card: Quote,
-  meme_humor: Smile,
-  announcement: Megaphone,
-  case_study: FileText,
-};
-
-const SUITABILITY_COLORS = {
-  excellent: 'bg-emerald-100 text-emerald-700',
-  good: 'bg-blue-100 text-blue-700',
-  fair: 'bg-amber-100 text-amber-700',
-};
-
-const PLATFORMS = [
-  { value: 'instagram', label: 'Instagram', shortRatio: '4:5', defaultRatio: '1080x1350', ratios: ['1080x1080', '1080x1350'] },
-  { value: 'linkedin', label: 'LinkedIn', shortRatio: '1:1', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
-  { value: 'tiktok', label: 'TikTok', shortRatio: '9:16', defaultRatio: '1080x1920', ratios: ['1080x1920'] },
-  { value: 'facebook', label: 'Facebook', shortRatio: '1:1', defaultRatio: '1080x1080', ratios: ['1080x1080'] },
-];
-
-const RATIO_LABELS = {
-  '1080x1080': '1:1 Square',
-  '1080x1350': '4:5 Portrait',
-  '1080x1920': '9:16 Vertical',
-};
-
-const CAROUSEL_TYPES = [
-  { value: 'static', label: 'Static Images', icon: Image, description: 'Image slides' },
-  { value: 'video', label: 'Video Carousel', icon: Film, description: 'Animated slides' },
-];
 
 function StylePreview({ layout }) {
   const { textAlign, textPosition, scrimType, scrimOpacity, scrimCoverage } = layout;
   const align = textAlign === 'center' ? 'items-center text-center' : 'items-start';
   const isItalic = layout.headlineStyle === 'italic';
 
-  // Scrim overlay
   let scrimStyle = {};
   let scrimClass = 'absolute';
   if (scrimType === 'bottom_gradient') {
@@ -72,12 +27,10 @@ function StylePreview({ layout }) {
     scrimStyle = { background: `rgba(30,30,40,${scrimOpacity})`, top: 0, bottom: 0, left: 0, width: `${scrimCoverage * 100}%` };
   }
 
-  // Text position
   let textContainerClass = `absolute flex flex-col gap-1 px-3 ${align}`;
   if (scrimType === 'left_strip') {
     textContainerClass += ' top-0 bottom-0 left-0 justify-center';
     textContainerClass = textContainerClass.replace('px-3', 'px-2');
-    Object.assign(scrimStyle, {});
   } else if (textPosition === 'bottom') {
     textContainerClass += ' bottom-0 left-0 right-0 pb-3';
   } else if (textPosition === 'top') {
@@ -101,6 +54,24 @@ function StylePreview({ layout }) {
   );
 }
 
+const PLATFORMS = [
+  { value: 'instagram', label: 'Instagram', shortRatio: '4:5', defaultRatio: '1080x1350', ratios: ['1080x1350', '1080x1080'] },
+  { value: 'linkedin', label: 'LinkedIn', shortRatio: '4:5', defaultRatio: '1080x1350', ratios: ['1080x1350', '1080x1080'] },
+  { value: 'tiktok', label: 'TikTok', shortRatio: '9:16', defaultRatio: '1080x1920', ratios: ['1080x1920'] },
+  { value: 'facebook', label: 'Facebook', shortRatio: '4:5', defaultRatio: '1080x1350', ratios: ['1080x1350', '1080x1080'] },
+];
+
+const RATIO_LABELS = {
+  '1080x1080': '1:1 Square',
+  '1080x1350': '4:5 Portrait',
+  '1080x1920': '9:16 Vertical',
+};
+
+const CAROUSEL_TYPES = [
+  { value: 'static', label: 'Static Images', icon: Image, description: 'Image slides' },
+  { value: 'video', label: 'Video Carousel', icon: Film, description: 'Animated slides' },
+];
+
 export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [sourceType, setSourceType] = useState('url');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -113,7 +84,6 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
   const [visualStyle, setVisualStyle] = useState('');
   const [carouselStyle, setCarouselStyle] = useState('bold_editorial');
   const [carouselType, setCarouselType] = useState('static');
-  const [postFormat, setPostFormat] = useState('');
   const [slideCount, setSlideCount] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -134,7 +104,6 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
       } else {
         next.add(p);
       }
-      // Update aspect ratio when exactly one platform is selected
       if (next.size === 1) {
         const plat = PLATFORMS.find(x => x.value === [...next][0]);
         if (plat) setAspectRatio(plat.defaultRatio);
@@ -176,7 +145,6 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
             style_preset: visualStyle || null,
             carousel_type: carouselType,
             carousel_style: carouselStyle,
-            post_format: postFormat || null,
           }),
         });
         const data = await res.json();
@@ -190,8 +158,6 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
         const genBody = {};
         if (sourceType === 'topic') genBody.topic = topic.trim();
         if (slideCount) genBody.slide_count = parseInt(slideCount, 10);
-
-        if (postFormat) genBody.post_format = postFormat;
 
         apiFetch(`/api/carousel/${data.carousel.id}/generate-content`, {
           method: 'POST',
@@ -217,6 +183,18 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
       icon={<LayoutGrid className="w-5 h-5" />}
     >
       <SlideOverBody className="p-5 space-y-6">
+        {/* Production Engine banner */}
+        <div className="rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-200/50 px-4 py-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-violet-600" />
+            <span className="text-sm font-medium text-violet-700">Production Engine</span>
+          </div>
+          <p className="text-xs text-violet-600/80 leading-relaxed">
+            AI selects the optimal narrative arc, emotional driver, and curiosity-driven headlines.
+            Each slide earns the next swipe with psychological engagement triggers.
+          </p>
+        </div>
+
         {/* Carousel Type */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Carousel Type</label>
@@ -302,56 +280,9 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
           </div>
         )}
 
-        {/* Post Format */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Post Format</label>
-          <div className="grid grid-cols-2 gap-2 max-h-[18rem] overflow-y-auto pr-1">
-            {/* No format option */}
-            <button
-              onClick={() => setPostFormat('')}
-              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-                !postFormat
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <span className="font-medium block">Auto</span>
-              <span className="text-xs text-gray-400 block mt-0.5">AI decides the best structure</span>
-            </button>
-            {POST_FORMAT_TEMPLATES.map(fmt => {
-              const Icon = FORMAT_ICONS[fmt.value] || ListOrdered;
-              const activePlatform = platforms.size === 1 ? [...platforms][0] : 'instagram';
-              const suitability = fmt.platforms[activePlatform]?.suitability || 'good';
-              return (
-                <button
-                  key={fmt.value}
-                  onClick={() => {
-                    setPostFormat(fmt.value);
-                    if (fmt.defaultCarouselStyle) setCarouselStyle(fmt.defaultCarouselStyle);
-                  }}
-                  className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-                    postFormat === fmt.value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="font-medium">{fmt.label}</span>
-                    <span className={`ml-auto text-[9px] font-medium px-1.5 py-0.5 rounded-full ${SUITABILITY_COLORS[suitability]}`}>
-                      {suitability}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-400 block mt-0.5 leading-tight">{fmt.description}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Carousel Style (layout template) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Carousel Style</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Layout Style</label>
           <div className="grid grid-cols-2 gap-2">
             {CAROUSEL_STYLE_TEMPLATES.map(tpl => {
               const L = tpl.layout;
@@ -365,7 +296,6 @@ export default function CarouselCreateModal({ isOpen, onClose, onCreated }) {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {/* Layout preview */}
                   <div className="relative w-full aspect-square bg-gradient-to-br from-slate-300 to-slate-400 overflow-hidden">
                     <StylePreview layout={L} />
                   </div>

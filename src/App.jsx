@@ -30,6 +30,7 @@ import ProposalsIndexPage from './pages/ProposalsIndexPage';
 import MovinMartinMockupPage from './pages/MovinMartinMockupPage';
 import LinkedInPage from './pages/LinkedInPage';
 import LinkedInPostEditor from './components/linkedin/LinkedInPostEditor';
+import SocialPostPage from './pages/SocialPostPage';
 import CarouselPage from './pages/CarouselPage';
 import StoryboardsPage from './pages/StoryboardsPage';
 import StoryboardGuidePage from './pages/StoryboardGuidePage';
@@ -43,6 +44,7 @@ import TurnaroundGuidePage from './pages/TurnaroundGuidePage';
 import CarouselGuidePage from './pages/CarouselGuidePage';
 import AdsManagerGuidePage from './pages/AdsManagerGuidePage';
 import MotionTransferGuidePage from './pages/MotionTransferGuidePage';
+import StudioPage from './pages/StudioPage';
 import SetupKeys from './pages/SetupKeys';
 import EducatePage from './pages/EducatePage';
 import LearnPage from './pages/LearnPage';
@@ -283,6 +285,15 @@ function App() {
           />
 
           <Route
+            path="/content-studio"
+            element={
+              <ProtectedRoute>
+                <StudioPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/linkedin"
             element={
               <ProtectedRoute>
@@ -295,6 +306,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <LinkedInPostEditor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/social"
+            element={
+              <ProtectedRoute>
+                <SocialPostPage />
               </ProtectedRoute>
             }
           />

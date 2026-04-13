@@ -30,6 +30,22 @@ const STATUS_COLORS = {
   failed: 'bg-red-100 text-red-700',
 };
 
+const ARC_BADGES = {
+  revelation: { label: 'Revelation', cls: 'bg-purple-100 text-purple-700' },
+  escalation: { label: 'Escalation', cls: 'bg-red-100 text-red-700' },
+  transformation: { label: 'Transformation', cls: 'bg-amber-100 text-amber-700' },
+  accumulation: { label: 'Accumulation', cls: 'bg-green-100 text-green-700' },
+  inversion: { label: 'Inversion', cls: 'bg-blue-100 text-blue-700' },
+};
+
+const DRIVER_BADGES = {
+  fear: { label: 'Fear', cls: 'bg-rose-100 text-rose-700' },
+  identity: { label: 'Identity', cls: 'bg-indigo-100 text-indigo-700' },
+  curiosity: { label: 'Curiosity', cls: 'bg-cyan-100 text-cyan-700' },
+  injustice: { label: 'Injustice', cls: 'bg-orange-100 text-orange-700' },
+  wonder: { label: 'Wonder', cls: 'bg-violet-100 text-violet-700' },
+};
+
 export default function CarouselEditor({ carouselId }) {
   const navigate = useNavigate();
   const [carousel, setCarousel] = useState(null);
@@ -409,6 +425,16 @@ export default function CarouselEditor({ carouselId }) {
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${STATUS_COLORS[carousel.status]}`}>
                 {carousel.status}
               </span>
+              {carousel.narrative_strategy?.arc_type && ARC_BADGES[carousel.narrative_strategy.arc_type] && (
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${ARC_BADGES[carousel.narrative_strategy.arc_type].cls}`}>
+                  {ARC_BADGES[carousel.narrative_strategy.arc_type].label}
+                </span>
+              )}
+              {carousel.narrative_strategy?.driver && DRIVER_BADGES[carousel.narrative_strategy.driver] && (
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${DRIVER_BADGES[carousel.narrative_strategy.driver].cls}`}>
+                  {DRIVER_BADGES[carousel.narrative_strategy.driver].label}
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     const composedBuffer = await composeLinkedInSatori({
       backgroundImageUrl: post.base_image_url,
       logoUrl: brand?.logo_url,
-      excerpt: post.excerpt || '',
+      hookText: post.excerpt || '',
       seriesTitle: config?.series_title || 'INDUSTRY WATCH',
       postNumber: post.post_number || 1,
       carouselStyle: post.carousel_style || 'bold_editorial',

@@ -3,9 +3,20 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const STYLE_BADGE = {
+  // New production engine structures
+  paradox:           'bg-purple-100 text-purple-700',
+  evidence_stack:    'bg-green-100 text-green-700',
+  story_pivot:       'bg-amber-100 text-amber-700',
+  myth_killer:       'bg-red-100 text-red-700',
+  framework:         'bg-blue-100 text-blue-700',
+  quiet_confession:  'bg-slate-100 text-slate-700',
+  // Legacy styles (backward compat)
   contrarian: 'bg-blue-100 text-blue-700',
   story:      'bg-amber-100 text-amber-700',
   data:       'bg-green-100 text-green-700',
+  format_v1:  'bg-indigo-100 text-indigo-700',
+  format_v2:  'bg-indigo-100 text-indigo-700',
+  format_v3:  'bg-indigo-100 text-indigo-700',
 };
 
 function styleBadgeClass(style) {

@@ -21,6 +21,15 @@ const PROVIDERS = [
     icon: '🤖',
   },
   {
+    key: 'anthropic',
+    name: 'Anthropic',
+    color: 'bg-amber-500',
+    colorLight: 'bg-amber-50 border-amber-200',
+    colorBar: 'bg-amber-500',
+    billingUrl: 'https://console.anthropic.com/settings/billing',
+    icon: '🧠',
+  },
+  {
     key: 'fal',
     name: 'FAL.ai',
     color: 'bg-violet-500',

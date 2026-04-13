@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const CATEGORY_TO_PROVIDER = {
   openai: 'openai',
+  anthropic: 'anthropic',
   fal: 'fal',
   wavespeed: 'wavespeed',
   elevenlabs: 'fal',
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
     return res.json({
       success: true, total: 0, entry_count: 0,
       by_model: [], by_day: [], by_category: [], by_provider: [], by_operation: [],
-      provider_daily: { openai: [], fal: [], wavespeed: [] },
+      provider_daily: { openai: [], anthropic: [], fal: [], wavespeed: [] },
     });
   }
 
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
   const byProvider = {};
   const byOperation = {};
   // Provider daily: { openai: { '2026-03-01': cost }, fal: { ... }, wavespeed: { ... } }
-  const providerDaily = { openai: {}, fal: {}, wavespeed: {} };
+  const providerDaily = { openai: {}, anthropic: {}, fal: {}, wavespeed: {} };
 
   for (const e of allEntries) {
     const cost = e.estimated_cost_usd || 0;
